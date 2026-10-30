@@ -2,6 +2,7 @@
 # Re-encode source videos to the benchmark encoding (PROTOCOL §3): 1920x1080 H.264 High, 30 fps,
 # no B-frames, GOP 30, 4 Mbps CBR, limited range signalled, no audio. The color matrix, primaries
 # and transfer are kept and signalled as in the source (PROTOCOL §8), and recorded.
+# SPS/PPS are repeated before every keyframe: over RTSP, h264_rkmpp gets them only in-band.
 # Usage: stream-server/prepare_videos.sh <out_dir> <source>...   (env: FFMPEG, FFPROBE)
 #   writes <out_dir>/<name>.mp4 and appends one line per video to <out_dir>/manifest.tsv
 set -eu
@@ -63,7 +64,7 @@ for src in "$@"; do
     "$FFMPEG" -hide_banner -loglevel error -y -i "$src" -an -sn -dn \
         -vf "fps=30,scale=1920:1080:out_range=tv,setsar=1,format=yuv420p" \
         -c:v libx264 -preset medium -profile:v high -bf 0 -g 30 -keyint_min 30 -sc_threshold 0 \
-        -b:v 4M -minrate 4M -maxrate 4M -bufsize 4M -x264-params nal-hrd=cbr \
+        -b:v 4M -minrate 4M -maxrate 4M -bufsize 4M -x264-params nal-hrd=cbr:repeat-headers=1 \
         -color_range tv $tags -movflags +faststart "$dst"
 
     # Check the result rather than trust the options.

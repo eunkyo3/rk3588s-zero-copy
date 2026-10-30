@@ -16,7 +16,7 @@ Serves the benchmark's RTSP streams (PROTOCOL §3) from a PC that is not the boa
 stream-server/prepare_videos.sh <out_dir> <source>...
 ```
 
-Re-encodes each 16:9 source to the benchmark encoding: 1920×1080 H.264 High, 30 fps, no B-frames, GOP 30, 4 Mbps CBR, limited range, no audio. It checks the result and appends a line to `<out_dir>/manifest.tsv`. The line records the output and source SHA-256 and the source's size, frame rate, pixel format, color matrix, primaries, transfer and range. The color matrix is kept as it is (PROTOCOL §8).
+Re-encodes each 16:9 source to the benchmark encoding: 1920×1080 H.264 High, 30 fps, no B-frames, GOP 30, 4 Mbps CBR, limited range, no audio. SPS and PPS are repeated before every keyframe (`repeat-headers=1`). Over RTSP, the board's `h264_rkmpp` decoder only gets them in-band; without them it returns no frames at all. It checks the result and appends a line to `<out_dir>/manifest.tsv`. The line records the output and source SHA-256 and the source's size, frame rate, pixel format, color matrix, primaries, transfer and range. The color matrix is kept as it is (PROTOCOL §8).
 
 The benchmark videos, with their sources and licenses, are listed here once they are chosen. That has to happen before M1-3.
 
