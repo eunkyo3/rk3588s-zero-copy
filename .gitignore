@@ -5,3 +5,8 @@ models/*.rknn
 models/*.onnx
 *.mp4
 *.mkv
+stream-server/mediamtx
+stream-server/mediamtx.exe
+stream-server/mediamtx.pid
+stream-server/channels/
+stream-server/logs/
