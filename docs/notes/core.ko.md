@@ -14,7 +14,7 @@ sudo ./build/bench_main --variant C --channels 4 --source 'rtsp://<server>:8554/
 
 | 옵션 | 기본값 | 의미 |
 |---|---|---|
-| `--variant` | (필수) | `none`(디코딩만) 또는 `C`. B와 A는 M1-2에서 추가한다 |
+| `--variant` | (필수) | `none`(디코딩만), `A`, `B`, `C`(docs/notes/preprocess.ko.md) |
 | `--channels` | (필수) | 1–32 |
 | `--source` | (필수) | `rtsp://…/ch{n}` 또는 로컬 파일. 파일도 스트림처럼 원래 프레임 속도로 읽는다. `{n}`은 1…N으로 바뀐다 |
 | `--condition` | `main` | `main`: 6번째 프레임마다(5 fps), `aux`: 매 프레임(30 fps) |

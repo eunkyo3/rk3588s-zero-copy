@@ -1,0 +1,20 @@
+frames: 1000
+b_binding_matches_rknn_outputs_get: 1
+border_114: C 1, B(INTER_AREA) 1, B(INTER_LINEAR) 1
+tensor C vs B                           mae=2.4109 min_psnr_db=34.36 mean_diff_rgb=-0.623,-0.638,-0.566
+tensor C vs B(INTER_LINEAR)             mae=4.5022 min_psnr_db=28.72 mean_diff_rgb=-0.737,-0.733,-0.658
+tensor R = B(INTER_LINEAR) vs B         mae=4.5384 min_psnr_db=28.52 mean_diff_rgb=-0.114,-0.096,-0.092
+detections C vs B                     pairs=15246 iou>=0.95 0.6715, |dconf|<=0.02 0.5454, both 0.4184, min_iou 0.500, max_dconf 0.258, frames with equal counts 0.5240
+detections R = B(INTER_LINEAR) vs B   pairs=14902 iou>=0.95 0.4697, |dconf|<=0.02 0.4382, both 0.2837, min_iou 0.501, max_dconf 0.344, frames with equal counts 0.3470
+class person         B   5307  C   5280 (  -0.51%)  R   5200 (  -2.02%)
+class car            B   6886  C   6885 (  -0.01%)  R   6927 (  +0.60%)
+class bus            B    157  C    180 ( +14.65%)  R    155 (  -1.27%)
+class truck          B    226  C    226 (  +0.00%)  R    217 (  -3.98%)
+class traffic light  B   2049  C   2034 (  -0.73%)  R   2041 (  -0.39%)
+class stop sign      B    106  C    183 ( +72.64%)  R      7 ( -93.40%)
+class backpack       B    590  C    582 (  -1.36%)  R    585 (  -0.85%)
+class handbag        B    291  C    288 (  -1.03%)  R    297 (  +2.06%)
+all classes    B  15740  C  15810 (  +0.44%)  R  15577 (  -1.04%)
+registered criteria: tensor FAIL, detection FAIL
+amended criteria (A5): tensor pass, detection pass
+lower_mae_against_c: INTER_AREA

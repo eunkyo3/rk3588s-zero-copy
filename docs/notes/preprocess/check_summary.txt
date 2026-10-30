@@ -1,0 +1,6 @@
+A: process_cpu_s,17.470 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,34.222 latency_p99_ms,51.247 
+B: process_cpu_s,5.050 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,46.712 latency_p99_ms,51.615 
+C: process_cpu_s,2.050 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,31.185 latency_p99_ms,33.299 
+A frames(seq<960)=160 detections=2541
+B frames(seq<960)=160 detections=2541
+C frames(seq<960)=160 detections=2538

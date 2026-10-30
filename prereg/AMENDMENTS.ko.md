@@ -34,3 +34,66 @@
 - Reason: PROTOCOL §14는 B를 처음 실행하기 전에 OpenCV 빌드를 확정하도록 한다.
 - Affected data: 없음. 아직 B를 실행하지 않았다.
 - Release: 없음(`freeze-m1` 이전)
+
+## A3 — 2026-10-30 — B의 bind는 바인딩된 입력 버퍼로 복사한다
+- Change: PROTOCOL §5.2는 B의 `bind`를 `rknn_inputs_set` 호출로 정한다. 이를 바꿔, B의 `bind`는 슬롯을 `memcpy`로 `rknn_create_mem` 입력 버퍼(컨텍스트마다 하나, UINT8 NHWC로 `rknn_set_io_mem`에 한 번 바인딩)에 복사한다. B의 `bind`를 쓰는 A도 똑같이 바뀐다.
+- Reason: librknnrt 2.3.2에서는 입력을 `rknn_inputs_set`으로 받은 컨텍스트가 `rknn_set_io_mem`으로 바인딩한 출력에 결과를 쓰지 않는다. B는 그 출력 바인딩을 C와 공유한다(§5.1, §5.3).
+  - `tools/compare_prepare`로 측정했다. 같은 입력에서 B의 바인딩된 출력이 `rknn_outputs_get`과 달랐고, 후처리는 쓰이지 않은(0인) 버퍼에서 프레임당 370개의 박스를 찾았다. `rknn_inputs_set` 뒤에 출력을 다시 바인딩해도 해결되지 않았다.
+  - B의 출력을 `rknn_outputs_get`으로 읽으면 C에 없는 출력 복사가 B에만 생긴다.
+  - `memcpy`는 NPU 입력으로의 CPU 복사라는 B의 본질을 유지하고, 출력 바인딩도 C와 같게 둔다. 이제 같은 입력에서 B의 바인딩된 출력이 `rknn_outputs_get`과 같다.
+- Affected data: 없음. `bench_main`으로 B를 실행한 적이 아직 없었다.
+- Release: 없음(`freeze-m1` 이전)
+
+## A4 — 2026-10-30 — 스케일링: RGA3의 커널과 OpenCV의 보간
+- Change: PROTOCOL §8과 §14의 스케일링 값을 확정한다.
+  - RGA: `im_opt_t.interp`는 `IM_INTERP_DEFAULT`로 둔다. RGA3는 이 값을 무시한다. default, linear, cubic, average가 비트 단위로 같은 텐서를 냈다.
+  - 임펄스로 측정한 1920×1080 → 640×360 RGA3 커널(`tools/rga_kernel`): 출력 픽셀 (c, r)은 입력 열 3c+1…3c+3, 행 3r+1…3r+3의 평균이다. Y와, 전체 해상도로 반복한 색차 모두 그렇다. 즉 OpenCV `INTER_AREA` 박스(3c…3c+2)보다 한 픽셀 어긋난 3×3 박스다.
+  - B와 A의 OpenCV: `INTER_AREA`. 정확히 1/3 배율일 때 B의 휘도 박스를 한 픽셀 옮겨 RGA3에 맞춘다. 즉 한 픽셀 옮긴 프레임에 `INTER_AREA`를 적용하고, 마지막 행과 열은 반복한다. 색차는 색차 해상도에서 옮기지 않은 `INTER_AREA`를 쓴다. 순서는 그대로 리사이즈 다음 색 변환(BT.601 제한 범위)이다.
+- Reason: §8은 RGA 설정을 먼저 고정하고, C 대비 §11.1 MAE가 낮은 쪽으로 OpenCV 보간을 고르게 한다. 한 픽셀 이동은 조정한 값이 아니라 고정된 RGA3 스케일러의 성질이다.
+  - 영상 ①의 1,000프레임(A5 참고)에서 C 대 B의 MAE는 `INTER_LINEAR`일 때 4.50, 옮긴 `INTER_AREA`일 때 2.41이었다.
+  - `tools/rga_probe`의 100프레임에서 옮기지 않은 `INTER_AREA`는 3.61이었다.
+- Affected data: 없음
+- Release: 없음(`freeze-m1` 이전)
+
+## A5 — 2026-10-30 — B 자신의 허용 변형을 기준으로 한 동등성
+- Change: PROTOCOL §11.1과 §11.2의 통과 조건을 바꾼다. 입력, 테두리 검사(모든 테두리 원소가 114), §11.2의 매칭과 히스토그램은 그대로다. 기준 쌍은 같은 프레임에서 R = `INTER_LINEAR`를 쓴 B 대 실제 쓰는 B(A4)다. `INTER_LINEAR`와 `INTER_AREA`는 §8이 B에 허용한 두 선택지다.
+  - 텐서 수준: C 대 B의 MAE가 R 이하이고, C 대 B의 프레임별 최소 PSNR이 R 이상이다.
+  - 검출 수준:
+    - (a) IoU ≥ 0.95이면서 신뢰도 차이 ≤ 0.02인 매칭 쌍의 비율이 R 이상이다.
+    - (b) 모든 클래스에서 셈한 박스 수가 일치하는 프레임의 비율이 R 이상이다.
+    - (c) 전체 클래스를 합한 C의 박스 수가 B의 ±2% 이내다.
+  - 등록된 §11.1과 §11.2의 결과, 그리고 클래스별 박스 수도 계속 계산해 보고한다.
+- Reason: 등록된 조건은 픽셀이 완전히 같은 텐서만 통과할 수 있다.
+  - 영상 ①(Pexels 36330861, 벤치마크 영상 중 1,000프레임 이상인 유일한 영상)의 1,000프레임에서 `tools/compare_prepare`(탐욕적 매칭)로 측정한 값:
+
+    | | C 대 B | R |
+    |---|---|---|
+    | 텐서 MAE | 2.41 | 4.54 |
+    | 최소 PSNR | 34.36 dB | 28.52 dB |
+    | 두 문턱을 모두 만족한 쌍 | 41.8% | 28.4% |
+    | 박스 수가 같은 프레임 | 52.4% | 34.7% |
+    | 전체 박스 수, B 대비 | +0.44% | −1.04% |
+
+  - 이 정도의 작은 입력 차이에도 INT8 모델의 신뢰도는 C와 B 사이에서 최대 0.26, OpenCV 두 변형 사이에서 최대 0.34 움직인다.
+  - 바뀐 조건은 C가 B와 다른 정도가 B의 허용 변형끼리 다른 정도를 넘지 않고, 전체 박스 수로 잰 후처리 작업량이 일치할 것을 요구한다.
+  - 클래스별로는 R도 8개 중 4개 클래스에서 2%를 넘는다(person −2.0%, truck −4.0%, handbag +2.1%, stop sign −93%). 프로젝트 책임자는 전체 클래스 합계를 택했다. C의 클래스별 최대 편차인 bus +14.7%와 stop sign +72.6%는 보고한다.
+- Affected data: 없음. M1-4의 동등성 실행 전에 기록했다.
+- Release: 없음(`freeze-m1` 이전)
+
+## A6 — 2026-10-30 — CPU 복사 없음 증거: 런타임이 출력을 CPU로 복사한다
+- Change: 프로토콜은 바꾸지 않는다. §11.4가 정한 대로, 충족하지 못한 §11.4 기준과 그 원인을 기록한다.
+- 결과: `tools/zero_copy_evidence.sh`와 `.py`로, 영상 ①에서 기본 거버너로 실행마다 10초씩 쟀다.
+  - **perf, C:** `prepare`, `bind` 또는 `rknn_run`이 스택에 있는 복사 샘플이 전체 샘플의 1채널 0.82%, 4채널 1.08%로 0.5%를 넘는다.
+    - 함수별로는 `prepare` 0개, `bind` 1개와 3개(`rknn_tensor_attr` 구조체 복사), `rknn_run` 24개와 139개다. `rknn_run` 쪽은 모두 `librknnrt.so`가 호출한 `__memcpy_generic`이거나 커널의 사용자 메모리 복사다.
+    - B에도 같은 `rknn_run` 복사가 있다(17개와 120개).
+    - C − none의 전체 복사 비중 차이는 1채널 +0.04%p, 4채널 −1.53%p다.
+  - **원인:** 모델의 출력 연산자가 NPU의 native NC1HWC2 출력을 바인딩된 NCHW INT8 버퍼로 CPU에서 변환한다. 추론 한 번에 약 1.2 MB다.
+    - native NC1HWC2 레이아웃으로 바인딩하면 `pass_through`를 주어도 `rknn_run`이 실패한다("unsupported tensor dtype … OutputOperator … fallback cpu failed").
+    - native NHWC 레이아웃은 실행당 CPU 2.5 ms 대신 15 ms가 든다(docs/notes/spike.ko.md).
+  - **strace:** C는 dma-buf `mmap`을 한 번도 호출하지 않았다. B의 전처리 스레드는 프레임마다 같은 fd에 `DMA_BUF_IOCTL_SYNC`를 두 번 호출했다(10초에 50프레임).
+  - **캐시 유지보수**(`dcache_*_poc`), 1채널 / 4채널: B 4.6% / 8.2%, C 25.6% / 28.4%, none 41.1% / 43.6%.
+    - MPP 자체가 디코딩한 프레임마다 동기화한다.
+    - 기본 거버너에서는 실행마다 CPU 클럭이 달라서 실행 사이의 비중 비교가 왜곡된다.
+- 결과 처리(§11.4): 리포트는 §11.4 perf 기준에서 C의 제로카피 성질이 충족되지 않았다고 밝힌다. 모든 C 결과에 "입력 경로에서 CPU 픽셀 복사 없음. 런타임의 출력 연산자가 B와 마찬가지로 추론마다 약 1.2 MB를 CPU로 복사함"이라는 표시를 붙인다.
+- Affected data: 없음
+- Release: 없음(`freeze-m1` 이전)

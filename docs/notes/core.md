@@ -14,7 +14,7 @@ sudo ./build/bench_main --variant C --channels 4 --source 'rtsp://<server>:8554/
 
 | Option | Default | Meaning |
 |---|---|---|
-| `--variant` | (required) | `none` (decode only) or `C`. B and A follow in M1-2 |
+| `--variant` | (required) | `none` (decode only), `A`, `B` or `C` (docs/notes/preprocess.md) |
 | `--channels` | (required) | 1–32 |
 | `--source` | (required) | `rtsp://…/ch{n}` or a local file, read at its frame rate like a stream; `{n}` becomes 1…N |
 | `--condition` | `main` | `main`: every 6th frame (5 fps); `aux`: every frame (30 fps) |

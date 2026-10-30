@@ -32,7 +32,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1-1. 공유 파이프라인 코어와 변형 C가 보드에서 동작한다([docs/notes/core.ko.md](docs/notes/core.ko.md)). 다음: 변형 B와 A(M1-2).
+**현재 상태:** M1-2. 변형 B, A, C가 보드에서 동작하고, B를 C에 맞췄으며, CPU 복사 없음 증거를 모았다([docs/notes/preprocess.ko.md](docs/notes/preprocess.ko.md)). 다음: 캘리브레이션(M1-3). 유선 송출 서버와 냉각이 필요하다.
 
 ## 하드웨어와 소프트웨어
 
