@@ -1,0 +1,7 @@
+build/
+__pycache__/
+*.pyc
+models/*.rknn
+models/*.onnx
+*.mp4
+*.mkv
