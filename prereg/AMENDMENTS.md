@@ -107,25 +107,25 @@ Each entry has this form:
 - Result, on video ① with default governors:
   - **Tools:**
     - `tools/zero_copy_evidence.sh` and `.py`: perf, 10 s per run ([output](../docs/notes/preprocess/zero_copy_evidence.txt)).
-    - `tools/copy_sizes.sh` and `.py`: a uprobe on `__memcpy_generic` that records every call's length, 4 s of one channel, 20 inferences ([output](../docs/notes/preprocess/copy_sizes.txt)).
+    - `tools/copy_sizes.sh` and `.py`: uprobes on `__memcpy_generic` and `__memmove_generic`, the variants glibc picks on this CPU, that record every call's length. 4 s of one channel, 20 or 21 inferences, no lost events ([output](../docs/notes/preprocess/copy_sizes.txt)). Kernel user-copies are not measured.
   - **Build:** all code is built with `-fno-omit-frame-pointer -fno-optimize-sibling-calls`, so a copy's caller stays on the stack. A first run without the second flag could not attribute B's `bind` copy, which was a tail call.
   - **perf, C:** copy samples with `prepare`, `bind` or `rknn_run` on the stack are 1.04% of all samples at 1 channel and 1.43% at 4 channels, above 0.5%. By the innermost of the three, at 1 / 4 channels:
     - `prepare`: 0 / 1. The 1 is the kernel copying an `fstat` result (the per-buffer cache key).
-    - `bind`: 0 / 2. One is a copy of the `rknn_tensor_attr` struct in `bind` itself; the other is a string copy in libstdc++ inside `rknn_set_io_mem`.
+    - `bind`: 0 / 2. One is a copy of the `rknn_tensor_attr` struct in `bind` itself; the other is a stream write in libstdc++ (`basic_streambuf::xsputn`) inside `rknn_set_io_mem`.
     - `rknn_run`: 39 / 171. These are `__memcpy_generic` called from `librknnrt.so`, and kernel user-copies in the runtime's `ioctl` calls.
-  - **What the copies move,** at 1 channel over 20 inferences:
-    - **C, under `rknn_run`:** 6,056 calls, 84,790 bytes. That is about 300 calls and 4.2 KB per inference, none longer than 128 bytes.
-    - **C, under `prepare` and `bind`:** 680 calls, 30,120 bytes, none longer than 512 bytes.
-    - **B, under `bind`:** 20 calls of 1,228,800 bytes, one input tensor per frame.
-    - **B, under `rknn_run`:** 5,576 calls, 78,030 bytes, the same small copies as C.
+  - **What the copies move,** at 1 channel:
+    - **C, under `rknn_run`** (21 inferences): 23,994 calls, 306,170 bytes. That is about 1,150 calls and 15 KB per inference, none longer than 512 bytes. Most are `std::vector` copies inside `librknnrt.so`, which go through `memmove`.
+    - **C, under `prepare` and `bind`:** 903 calls, 33,726 bytes, none longer than 512 bytes.
+    - **B, under `bind`** (20 frames): 20 calls of 1,228,800 bytes, one input tensor per frame.
+    - **B, under `rknn_run`** (20 inferences): 23,408 calls, 297,640 bytes. These are the same runtime copies as C's. C also makes about 24 formatting copies per inference (`printf` and libstdc++ string writes) that B does not.
   - **Positive control, B (perf):**
     - `bind`: 78 / 473 samples, its input copy.
     - `rknn_run`: 29 / 113, the same runtime copies as C.
   - **C − none, total copy samples:** +33 at 1 channel, +75 at 4 channels. As copy shares, −0.96 and −1.61 points: the runs have different sample totals.
-  - **Cause:** the criterion counts samples, not bytes. Inside `rknn_run`, the runtime makes about 300 small copies per inference, in B as in C. They move metadata, not pixel or tensor data, and together they exceed 0.5% of samples.
+  - **Cause:** the criterion counts samples, not bytes. Inside `rknn_run`, the runtime makes about 1,150 small copies per inference, in B as in C. None is longer than 512 bytes, so none moves pixel or tensor data. Together they exceed 0.5% of samples.
   - **Not covered by this criterion:** the NPU's native outputs are NC1HWC2, and the pipeline binds them as NCHW INT8, about 1.2 MB per inference.
     - Binding the native NC1HWC2 layout fails in `rknn_run` ("unsupported tensor dtype … OutputOperator … fallback cpu failed"), also with `pass_through`. This suggests that the runtime converts the outputs on the CPU.
-    - If it does, it uses code other than `memcpy`. `librknnrt.so` has no symbols, and 15.7% / 22.4% of C's samples end unresolved in it.
+    - If it does, it uses code other than `memcpy` or `memmove`. `librknnrt.so` has no symbols, and 15.7% / 22.4% of C's samples end unresolved in it.
     - B binds its outputs the same way.
   - **strace:** C made no dma-buf `mmap` call. B's preprocessing threads made two `DMA_BUF_IOCTL_SYNC` calls on the same fd per frame, 50 frames in 10 s.
   - **Cache maintenance** (`dcache_*_poc`), at 1 / 4 channels: B 8.6% / 9.5%, C 28.4% / 26.2%, none 43.9% / 43.4%.
@@ -133,7 +133,7 @@ Each entry has this form:
     - Under default governors, the CPU clock differs between runs, which distorts shares across runs.
 - Consequence (§11.4):
   - The report states that C's zero-copy property was not met under the §11.4 perf criterion.
-  - Every C result carries this label: "input path without CPU pixel copies; §11.4 perf criterion not met because of about 300 small copies (about 4 KB) per inference inside the NPU runtime, as in B".
+  - Every C result carries this label: "input path without CPU pixel copies; §11.4 perf criterion not met because of about 1,150 small copies (about 15 KB) per inference inside the NPU runtime, as in B".
   - The report also states the open question of the output conversion.
 - Affected data: none.
 - Release: none (before `freeze-m1`).

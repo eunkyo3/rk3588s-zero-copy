@@ -112,25 +112,26 @@ B가 `rknn_inputs_set`을 쓰지 않는 이유는 `tools/inputs_set_probe`가 �
 
 - **C의 복사:**
   - `prepare` 1개: 커널이 `fstat` 결과(버퍼별 캐시의 키)를 복사한 것
-  - `bind` 2개: `bind` 자체에서 `rknn_tensor_attr` 구조체를 복사한 것과, `rknn_set_io_mem` 안에서 libstdc++가 문자열을 복사한 것
+  - `bind` 2개: `bind` 자체에서 `rknn_tensor_attr` 구조체를 복사한 것과, `rknn_set_io_mem` 안에서 libstdc++가 스트림에 쓴 것
   - `rknn_run`, 나머지 전부: `librknnrt.so`가 호출한 `__memcpy_generic`과, 런타임의 `ioctl` 호출 안에서 일어난 커널의 사용자 메모리 복사
 - **양성 대조군 B:** 입력 복사가 `bind` 아래에 나타난다. `rknn_run` 복사는 C와 같다.
 
-perf는 바이트가 아니라 샘플을 센다. `tools/copy_sizes.sh`는 `__memcpy_generic`에 uprobe를 걸어, 1채널 4초(추론 20회) 동안 호출마다 길이를 기록한다([preprocess/copy_sizes.txt](preprocess/copy_sizes.txt)).
+perf는 바이트가 아니라 샘플을 센다. `tools/copy_sizes.sh`는 `__memcpy_generic`과 `__memmove_generic`에 uprobe를 걸어, 1채널 4초 동안 호출마다 길이를 기록한다([preprocess/copy_sizes.txt](preprocess/copy_sizes.txt)). C는 추론 21회, B는 20회이고, 잃은 이벤트는 없다. 커널의 사용자 메모리 복사는 재지 않는다.
 
 | | `prepare` 아래 | `bind` 아래 | `rknn_run` 아래 |
 |---|---|---|---|
-| **C** | 40번, 16,320바이트 | 640번, 13,800바이트 | 6,056번, 84,790바이트 |
-| B | — | 20번, 24,576,000바이트 | 5,576번, 78,030바이트 |
+| **C** | 42번, 17,136바이트 | 861번, 16,590바이트 | 23,994번, 306,170바이트 |
+| B | — | 20번, 24,576,000바이트 | 23,408번, 297,640바이트 |
 
 - **`rknn_run` 안의 복사:**
-  - 추론 한 번에 약 300번, 4 KB이고, 128바이트를 넘는 것은 없다. B에서도 C와 같다. 픽셀이나 텐서 데이터가 아니라 메타데이터를 옮긴다.
+  - 추론 한 번에 약 1,150번, 15 KB이고, 512바이트를 넘는 것은 없다. B에서도 C와 같다. 대부분은 `librknnrt.so` 안의 `std::vector` 복사이며 `memmove`를 거친다. 픽셀이나 텐서 데이터를 옮기는 복사는 없다.
+  - C는 여기에 더해 추론마다 약 24번의 서식 복사(`printf`와 libstdc++ 문자열 쓰기)를 하는데, B에는 없다.
   - 그래도 합치면 샘플의 0.5%를 넘는다. 즉 C의 입력 경로에는 CPU 픽셀 복사가 없지만, §11.4 규칙은 `rknn_run`을 포함하므로 실패한다.
   - A6가 이를 기록한다. 리포트는 이를 밝히고, 모든 C 결과에 표시를 붙인다.
 - **B의 입력 복사:** 프레임마다 1,228,800바이트, 640×640×3 텐서 전체다.
 - **이 기준이 다루지 않는 것:**
   - NPU의 native 출력은 NC1HWC2이고, 파이프라인은 이를 NCHW INT8로 바인딩한다. 추론 한 번에 약 1.2 MB다.
-  - native 바인딩은 `rknn_run`에서 실패한다("… OutputOperator … fallback cpu failed"). 런타임이 출력을 CPU에서 변환한다는 뜻으로 보인다. 그렇다면 `memcpy`가 아닌 코드로 변환하며, perf는 `librknnrt.so` 안의 그 코드에 이름을 붙이지 못한다.
+  - native 바인딩은 `rknn_run`에서 실패한다("… OutputOperator … fallback cpu failed"). 런타임이 출력을 CPU에서 변환한다는 뜻으로 보인다. 그렇다면 `memcpy`나 `memmove`가 아닌 코드로 변환하며, perf는 `librknnrt.so` 안의 그 코드에 이름을 붙이지 못한다.
   - B도 출력을 같은 방식으로 바인딩한다.
 - **C − none 전체 복사 샘플:** 1채널 +33개, 4채널 +75개. 비중으로는 −0.96%p와 −1.61%p인데, 실행마다 전체 샘플 수가 다르기 때문이다.
 - **strace:**
@@ -163,5 +164,5 @@ perf는 바이트가 아니라 샘플을 센다. `tools/copy_sizes.sh`는 `__mem
 | `tools/rga_probe` | 평면별로 C와 OpenCV 후보, RGA3 모델을 비교 |
 | `tools/rga_kernel` | RGA3의 임펄스 응답, 가장자리와 패딩 행, 단색 프레임에서의 색 변환, `interp` 설정 |
 | `tools/inputs_set_probe` | 바인딩된 출력에 대한 `rknn_inputs_set`, 그리고 B의 바인딩된 입력(A3) |
-| `tools/copy_sizes.sh` / `.py` | §11.4의 복사가 옮기는 바이트 수. `__memcpy_generic`에 건 uprobe로 잰다 |
+| `tools/copy_sizes.sh` / `.py` | §11.4의 복사가 옮기는 바이트 수. `__memcpy_generic`과 `__memmove_generic`에 건 uprobe로 잰다 |
 | `tools/zero_copy_evidence.sh` / `.py` | §11.4의 perf와 strace 증거 |

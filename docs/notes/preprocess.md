@@ -112,25 +112,26 @@ Copy samples with `prepare`, `bind` or `rknn_run` on the stack, by the innermost
 
 - **C's copies:**
   - `prepare`, 1 sample: the kernel copying an `fstat` result, the per-buffer cache key.
-  - `bind`, 2 samples: a copy of the `rknn_tensor_attr` struct in `bind` itself, and a string copy in libstdc++ inside `rknn_set_io_mem`.
+  - `bind`, 2 samples: a copy of the `rknn_tensor_attr` struct in `bind` itself, and a libstdc++ stream write inside `rknn_set_io_mem`.
   - `rknn_run`, the rest: `__memcpy_generic` called from `librknnrt.so`, and kernel user-copies in the runtime's `ioctl` calls.
 - **B, the positive control:** its input copy shows under `bind`. Its `rknn_run` copies are the same as C's.
 
-perf counts samples, not bytes. `tools/copy_sizes.sh` puts a uprobe on `__memcpy_generic` and records every call's length, over 4 s of one channel, which is 20 inferences ([preprocess/copy_sizes.txt](preprocess/copy_sizes.txt)):
+perf counts samples, not bytes. `tools/copy_sizes.sh` puts uprobes on `__memcpy_generic` and `__memmove_generic` and records every call's length, over 4 s of one channel ([preprocess/copy_sizes.txt](preprocess/copy_sizes.txt)). That is 21 inferences for C and 20 for B, with no lost events. Kernel user-copies are not measured.
 
 | | Under `prepare` | Under `bind` | Under `rknn_run` |
 |---|---|---|---|
-| **C** | 40 calls, 16,320 bytes | 640 calls, 13,800 bytes | 6,056 calls, 84,790 bytes |
-| B | — | 20 calls, 24,576,000 bytes | 5,576 calls, 78,030 bytes |
+| **C** | 42 calls, 17,136 bytes | 861 calls, 16,590 bytes | 23,994 calls, 306,170 bytes |
+| B | — | 20 calls, 24,576,000 bytes | 23,408 calls, 297,640 bytes |
 
 - **The copies inside `rknn_run`:**
-  - About 300 calls and 4 KB per inference, none longer than 128 bytes, in B as in C. They move metadata, not pixel or tensor data.
+  - About 1,150 calls and 15 KB per inference, none longer than 512 bytes, in B as in C. Most are `std::vector` copies inside `librknnrt.so`, through `memmove`. None moves pixel or tensor data.
+  - C also makes about 24 formatting copies per inference (`printf` and libstdc++ string writes) that B does not.
   - They still add up to more than 0.5% of samples. So C's input path has no CPU pixel copy, but the §11.4 rule counts `rknn_run` and fails.
   - A6 records this. The report states it, and every C result carries the label.
 - **B's input copy:** 1,228,800 bytes per frame, the whole 640×640×3 tensor.
 - **Not covered by the criterion:**
   - The NPU's native outputs are NC1HWC2. The pipeline binds them as NCHW INT8, about 1.2 MB per inference.
-  - The native binding fails in `rknn_run` ("… OutputOperator … fallback cpu failed"). This suggests the runtime converts the outputs on the CPU. If so, it uses code other than `memcpy`, which perf cannot name in `librknnrt.so`.
+  - The native binding fails in `rknn_run` ("… OutputOperator … fallback cpu failed"). This suggests the runtime converts the outputs on the CPU. If so, it uses code other than `memcpy` or `memmove`, which perf cannot name in `librknnrt.so`.
   - B binds its outputs the same way.
 - **C − none, total copy samples:** +33 (1 channel), +75 (4 channels). As shares, −0.96 and −1.61 points, because the runs have different sample totals.
 - **strace:**
@@ -163,5 +164,5 @@ The project owner chose four candidates. Three are prepared ([preprocess/videos_
 | `tools/rga_probe` | C against OpenCV candidates per plane, and the RGA3 models |
 | `tools/rga_kernel` | RGA3's impulse response, edges and padding rows, color conversion on flat frames, and the `interp` settings |
 | `tools/inputs_set_probe` | `rknn_inputs_set` against bound outputs, and B's bound input (A3) |
-| `tools/copy_sizes.sh` / `.py` | the bytes the copies of §11.4 move, from a uprobe on `__memcpy_generic` |
+| `tools/copy_sizes.sh` / `.py` | the bytes the copies of §11.4 move, from uprobes on `__memcpy_generic` and `__memmove_generic` |
 | `tools/zero_copy_evidence.sh` / `.py` | perf and strace evidence of §11.4 |
