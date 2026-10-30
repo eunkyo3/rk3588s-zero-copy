@@ -1,5 +1,7 @@
 #include "core/pipeline.h"
 
+#include <pthread.h>
+
 #include <algorithm>
 #include <atomic>
 #include <climits>
@@ -46,6 +48,11 @@ struct Channel {
     bool ended_early = false;
 };
 
+// Thread names show up in threads.csv, perf and strace (at most 15 characters).
+void name_current_thread(const std::string& name) {
+    pthread_setname_np(pthread_self(), name.substr(0, 15).c_str());
+}
+
 void sleep_until_ns(int64_t t) {
     timespec ts{static_cast<time_t>(t / kSecond), static_cast<long>(t % kSecond)};
     while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, nullptr) != 0) {
@@ -75,8 +82,9 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
     std::vector<std::thread> decoders;
     for (int i = 0; i < n; i++) {
         decoders.emplace_back([&, i] {
+            name_current_thread("dec-" + std::to_string(i + 1));
             Channel& c = *ch[i];
-            c.src = std::make_unique<VideoSource>(cfg.sources[i]);
+            c.src = std::make_unique<VideoSource>(cfg.sources[i], cfg.software_decode);
             c.src->open(&stop);
             {
                 std::unique_lock<std::mutex> lk(ready_m);
@@ -144,7 +152,8 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
         for (auto& v : records)
             v.reserve(expected / NpuContexts::kCount + 64);
         for (int p = 0; p < kPreprocessThreads; p++) {
-            pre.emplace_back([&] {
+            pre.emplace_back([&, p] {
+                name_current_thread("pre-" + std::to_string(p));
                 while (auto item = q1.pop()) {
                     const int64_t a0 = now_ns();
                     const int slot = slots.acquire();
@@ -165,6 +174,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
         }
         for (int k = 0; k < NpuContexts::kCount; k++) {
             workers.emplace_back([&, k] {
+                name_current_thread("npu-" + std::to_string(k));
                 while (auto p = q2.pop()) {
                     FrameRecord r{};
                     r.channel = p->channel;
@@ -193,6 +203,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
 
     // ---- metrics thread on cpu0: one sample per second, CPU snapshots at t_w and t_e ----
     std::thread metrics([&] {
+        name_current_thread("metrics");
         pin_current_thread({0});
         for (int64_t tick = res.t_start + kSecond;; tick += kSecond) {
             sleep_until_ns(tick);

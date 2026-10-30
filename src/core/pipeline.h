@@ -20,6 +20,7 @@ struct PipelineConfig {
     int sample_stride = 6;             // 6: main condition (5 fps), 1: auxiliary condition (30 fps)
     int warmup_s = 20;
     int duration_s = 120;
+    bool software_decode = false;      // variant A
 };
 
 struct FrameRecord {

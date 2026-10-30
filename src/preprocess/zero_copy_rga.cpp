@@ -45,8 +45,9 @@ void dmabuf_sync(int fd, uint64_t flags) {
 
 class ZeroCopyRga : public Backend {
 public:
-    explicit ZeroCopyRga(std::string model_path)
+    ZeroCopyRga(std::string model_path, int interp)
         : model_path_(std::move(model_path)),
+          interp_(interp),
           sources_(
               kDecoderBuffers,
               [](int fd, size_t size) {
@@ -117,6 +118,7 @@ public:
         im_opt_t opt{};
         opt.version = RGA_CURRENT_API_HEADER_VERSION;
         opt.core = kRgaCores;
+        opt.interp = interp_;
         IM_STATUS st = improcess(src, dst, pat, srect, drect, {}, -1, nullptr, &opt, IM_SYNC);
         CHECK(st == IM_STATUS_SUCCESS, "improcess failed: %s", imStrError(st));
     }
@@ -124,6 +126,13 @@ public:
     void bind(NpuContexts& npu, int k, int slot) override {
         rknn_tensor_attr attr = in_attr_;  // per call: the runtime takes a non-const pointer
         CHECK(rknn_set_io_mem(npu.ctx[k], mem_[k][slot], &attr) == RKNN_SUCC, "rknn_set_io_mem(input) failed");
+    }
+
+    void read_slot(int slot, uint8_t* out) const override {
+        const Slot& sl = slots_[slot];
+        dmabuf_sync(sl.fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ);
+        std::memcpy(out, sl.virt, size_t(model_w_) * model_h_ * 3);
+        dmabuf_sync(sl.fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_READ);
     }
 
     void shutdown(NpuContexts& npu) override {
@@ -181,6 +190,7 @@ private:
     }
 
     std::string model_path_;
+    const int interp_;
     std::string heap_;
     int model_w_ = 0, model_h_ = 0;
     rknn_tensor_attr in_attr_{};
@@ -192,6 +202,6 @@ private:
 
 }  // namespace
 
-std::unique_ptr<Backend> make_zero_copy_rga(const std::string& model_path) {
-    return std::make_unique<ZeroCopyRga>(model_path);
+std::unique_ptr<Backend> make_zero_copy_rga(const std::string& model_path, int rga_interp) {
+    return std::make_unique<ZeroCopyRga>(model_path, rga_interp);
 }

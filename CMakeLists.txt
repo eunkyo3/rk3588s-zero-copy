@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
-add_compile_options(-Wall -Wextra)
+# Frame pointers let perf attribute samples to prepare, bind and rknn_run (PROTOCOL §11.4).
+add_compile_options(-Wall -Wextra -fno-omit-frame-pointer)
 
 set(FFMPEG_PREFIX /opt/ffmpeg-rockchip CACHE PATH "ffmpeg-rockchip install prefix")
 set(RKNN_INCLUDE_DIR /opt/rknpu2/include CACHE PATH "RKNN C API headers")
@@ -36,9 +37,12 @@ add_library(core STATIC
     src/core/slot_pool.cpp
     src/core/video_source.cpp
     src/core/yolov8_post.cpp
+    src/preprocess/cpu_common.cpp
+    src/preprocess/cpu_copy.cpp
+    src/preprocess/cpu_sw.cpp
     src/preprocess/zero_copy_rga.cpp)
 target_include_directories(core PUBLIC src ${RKNN_INCLUDE_DIR})
-target_link_libraries(core PUBLIC PkgConfig::FFMPEG PkgConfig::RGA PkgConfig::DRM ${RKNNRT} pthread)
+target_link_libraries(core PUBLIC PkgConfig::FFMPEG PkgConfig::RGA PkgConfig::DRM ${OpenCV_LIBS} ${RKNNRT} pthread)
 
 add_executable(bench_main src/app/bench_main.cpp)
 target_link_libraries(bench_main PRIVATE core)
@@ -48,7 +52,16 @@ target_compile_definitions(bench_main PRIVATE
 add_executable(spike_fd_chain tools/spike_fd_chain.cpp)
 target_link_libraries(spike_fd_chain PRIVATE core ${OpenCV_LIBS})
 
+add_executable(compare_prepare tools/compare_prepare.cpp)
+target_link_libraries(compare_prepare PRIVATE core)
+
+add_executable(rga_probe tools/rga_probe.cpp)
+target_link_libraries(rga_probe PRIVATE core)
+
+add_executable(rga_kernel tools/rga_kernel.cpp)
+target_link_libraries(rga_kernel PRIVATE core)
+
 add_executable(test_core tests/test_core.cpp)
 target_link_libraries(test_core PRIVATE core)
 
-set_target_properties(bench_main spike_fd_chain test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
+set_target_properties(bench_main spike_fd_chain compare_prepare rga_probe test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)

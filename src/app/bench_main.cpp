@@ -1,6 +1,6 @@
 // The benchmark binary (PROTOCOL §5.1): one run of one variant at one channel count.
 //
-// Usage: bench_main --variant none|C --channels N --source URL [options]
+// Usage: bench_main --variant none|A|B|C --channels N --source URL [options]
 //   --source URL        rtsp://host:8554/ch{n} or a local file; {n} becomes the channel number 1..N
 //   --condition main|aux  sample every 6th frame (5 fps, default) or every frame (30 fps)
 //   --warmup S          warm-up seconds (default 20)
@@ -21,6 +21,7 @@ extern "C" {
 }
 
 #include <im2d.hpp>
+#include <opencv2/core.hpp>
 
 #include "core/metrics.h"
 #include "core/npu.h"
@@ -28,6 +29,7 @@ extern "C" {
 #include "core/report.h"
 #include "core/util.h"
 #include "preprocess/backend.h"
+#include "preprocess/cpu_common.h"
 
 #ifndef CODE_COMMIT
 #define CODE_COMMIT "unknown"
@@ -62,7 +64,7 @@ std::string utc_now(const char* format) {
 }
 
 void usage() {
-    die("usage: bench_main --variant none|C --channels N --source URL [--condition main|aux] [--warmup S] "
+    die("usage: bench_main --variant none|A|B|C --channels N --source URL [--condition main|aux] [--warmup S] "
         "[--duration S] [--model PATH] [--out DIR] [--run-kind KIND] [--repetition R] [--freeze-commit SHA]");
 }
 
@@ -89,7 +91,9 @@ int main(int argc, char** argv) {
         if (!a.count(k))
             usage();
     const std::string variant = a["variant"];
-    CHECK(variant == "none" || variant == "C", "variant %s is not implemented yet", variant.c_str());
+    CHECK(variant == "none" || variant == "A" || variant == "B" || variant == "C", "unknown variant %s",
+          variant.c_str());
+    cv::setNumThreads(1);  // PROTOCOL §8
     CHECK(a["condition"] == "main" || a["condition"] == "aux", "condition must be main or aux");
     const std::string kind = a["run-kind"];  // PROTOCOL §1: check_prereg_order relies on these
     CHECK(kind == "check" || kind == "calibration" || kind == "equivalence" || kind == "comparison" ||
@@ -99,6 +103,7 @@ int main(int argc, char** argv) {
     CHECK(channels >= 1 && channels <= 32, "channels must be 1..32");
 
     PipelineConfig cfg;
+    cfg.software_decode = variant == "A";
     cfg.sample_stride = a["condition"] == "main" ? 6 : 1;
     cfg.warmup_s = std::stoi(a["warmup"]);
     cfg.duration_s = std::stoi(a["duration"]);
@@ -121,7 +126,8 @@ int main(int argc, char** argv) {
         {"freeze_m1_commit", a["freeze-commit"]},
         {"run_kind", a["run-kind"]},
         {"model_sha256", command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1")},
-        {"decoder", std::string("h264_rkmpp, ffmpeg ") + av_version_info()},
+        {"decoder", std::string(cfg.software_decode ? "h264 (software)" : "h264_rkmpp") + ", ffmpeg " +
+                        av_version_info()},
         {"variant", variant},
         {"channels", std::to_string(channels)},
         {"condition", a["condition"]},
@@ -135,9 +141,11 @@ int main(int argc, char** argv) {
 
     NpuContexts npu;
     std::unique_ptr<Backend> backend;
-    if (variant == "C") {
+    if (variant != "none") {
         npu.open(a["model"]);
-        backend = make_zero_copy_rga(a["model"]);
+        backend = variant == "C" ? make_zero_copy_rga(a["model"], rga_interpolation())
+                  : variant == "B" ? make_cpu_copy(opencv_interpolation())
+                                   : make_cpu_software();
         backend->init(npu, kInputSlots);
     }
 
@@ -154,8 +162,12 @@ int main(int argc, char** argv) {
     }
     env += "\n  ],\n  \"queues\": {\"K\": 2, \"Q1\": " + std::to_string(2 * channels) +
            ", \"Q2\": 6, \"N\": " + std::to_string(kInputSlots) + "},\n";
-    env += "  \"decoder\": {\"name\": \"h264_rkmpp\", \"extra_hw_frames\": 8, \"afbc\": \"off\", "
-           "\"hw_device_ctx\": \"decoder default\"},\n";
+    env += cfg.software_decode
+               ? "  \"decoder\": {\"name\": \"h264\", \"threads\": \"libavcodec default (auto)\"},\n"
+               : "  \"decoder\": {\"name\": \"h264_rkmpp\", \"extra_hw_frames\": 8, \"afbc\": \"off\", "
+                 "\"hw_device_ctx\": \"decoder default\"},\n";
+    env += "  \"opencv\": {\"version\": \"" CV_VERSION "\", \"threads\": " + std::to_string(cv::getNumThreads()) +
+           "},\n";
     env += "  \"librga\": " + json_string(querystring(RGA_VERSION)) + ",\n";
     if (backend) {
         env += "  \"rknn\": {\"init_flags\": " + std::to_string(NpuContexts::kInitFlags) +
