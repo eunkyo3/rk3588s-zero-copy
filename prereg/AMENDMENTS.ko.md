@@ -24,3 +24,13 @@
 - Reason: M1-0 스파이크 결과, [docs/notes/spike.ko.md](../docs/notes/spike.ko.md)
 - Affected data: 없음. 아직 측정하지 않았다.
 - Release: 없음(`freeze-m1` 이전)
+
+## A2 — 2026-10-30 — OpenCV 빌드
+- Change: OpenCV 빌드를 확정한다(PROTOCOL §14, M1-2의 첫 B 실행 전).
+  - Ubuntu 패키지 `libopencv-core406t64`, `libopencv-imgproc406t64` 4.6.0+dfsg-13.1ubuntu1: aarch64용 OpenCV 4.6.0, 기본 NEON FP16, 병렬 프레임워크 TBB 2021.11, GCC 13.2.0으로 빌드
+  - `libopencv_core.so.4.6.0` SHA-256 `270377fc59116c2045fae2891c03a5abdeabb5c58982afd7183bc715cdeca6b3`, `libopencv_imgproc.so.4.6.0` SHA-256 `9f2b345b4b666bab4ce3d6db44fd5ef312a49f98d9233720f501460e64d9ebef`
+  - `cv::getBuildInformation()` 전체 출력은 [docs/notes/opencv_build.txt](../docs/notes/opencv_build.txt)에 있다(SHA-256 `f639ef8a42c044303ee94b2dff3dcba728e4ae713302421c8943620588c7dd26`).
+  - `bench_main`은 `cv::setNumThreads(1)`을 호출한다(PROTOCOL §8).
+- Reason: PROTOCOL §14는 B를 처음 실행하기 전에 OpenCV 빌드를 확정하도록 한다.
+- Affected data: 없음. 아직 B를 실행하지 않았다.
+- Release: 없음(`freeze-m1` 이전)
