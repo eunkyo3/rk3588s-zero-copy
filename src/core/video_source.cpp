@@ -50,6 +50,14 @@ void VideoSource::open(const std::atomic<bool>* stop) {
     CHECK(stream_ >= 0, "no video stream in %s", url_.c_str());
     time_base_ = fmt_->streams[stream_]->time_base;
 
+    if (software_) {  // variant A: libavcodec's native decoder, default (automatic) threading
+        const AVCodec* codec = avcodec_find_decoder_by_name("h264");
+        CHECK(codec, "software h264 decoder not found");
+        dec_ = avcodec_alloc_context3(codec);
+        avcodec_parameters_to_context(dec_, fmt_->streams[stream_]->codecpar);
+        CHECK(avcodec_open2(dec_, codec, nullptr) == 0, "cannot open h264 for %s", url_.c_str());
+        return;
+    }
     const AVCodec* codec = avcodec_find_decoder_by_name("h264_rkmpp");
     CHECK(codec, "h264_rkmpp not found");
     dec_ = avcodec_alloc_context3(codec);
@@ -63,7 +71,7 @@ void VideoSource::open(const std::atomic<bool>* stop) {
 // A file is read at its own frame rate, like a stream: packet i is released at the time its PTS
 // says, counted from the first packet.
 void VideoSource::pace(const AVPacket* pkt) {
-    if (live_ || pkt->pts == AV_NOPTS_VALUE)
+    if (live_ || !paced_ || pkt->pts == AV_NOPTS_VALUE)
         return;
     const int64_t t = now_ns();
     if (pace_pts0_ == AV_NOPTS_VALUE) {

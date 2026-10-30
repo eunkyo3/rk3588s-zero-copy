@@ -1,0 +1,63 @@
+== C, 1 channel, video ①
+lost events: none reported
+__memcpy_generic calls in the 4 s window: 10773
+__memmove_generic calls in the 4 s window: 18988
+__memcpy_generic under bind    :     672 calls,        14490 bytes
+__memcpy_generic under prepare :      42 calls,        17136 bytes
+__memcpy_generic under rknn_run:    6093 calls,        85274 bytes
+__memmove_generic under bind    :     189 calls,         2100 bytes
+__memmove_generic under rknn_run:   17901 calls,       220896 bytes
+under rknn_run, by immediate caller:
+  __memmove_generic   14281 calls,       160956 bytes  std::vector<int, std::allocator<int> >::vector(std::vector<int, std::a (librknnrt.so)
+  __memcpy_generic    5589 calls,        78176 bytes  [unknown] (librknnrt.so)
+  __memmove_generic    3380 calls,        40560 bytes  void std::vector<int, std::allocator<int> >::_M_assign_aux<int const*> (librknnrt.so)
+  __memmove_generic     240 calls,        19380 bytes  std::vector<unsigned char, std::allocator<unsigned char> >::vector(std (librknnrt.so)
+  __memcpy_generic     420 calls,         4494 bytes  __printf_buffer_write (libc.so.6)
+  __memcpy_generic      42 calls,         2268 bytes  std::basic_streambuf<char, std::char_traits<char> >::xsputn(char const (libstdc++.so.6.0.33)
+  __memcpy_generic      42 calls,          336 bytes  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocato (libstdc++.so.6.0.33)
+calls by size (up to):
+  __memcpy_generic bind             1 B: 147
+  __memcpy_generic bind             2 B: 21
+  __memcpy_generic bind             4 B: 21
+  __memcpy_generic bind             8 B: 147
+  __memcpy_generic bind            16 B: 168
+  __memcpy_generic bind            32 B: 147
+  __memcpy_generic bind           512 B: 21
+  __memcpy_generic prepare        512 B: 42
+  __memcpy_generic rknn_run         1 B: 105
+  __memcpy_generic rknn_run         2 B: 84
+  __memcpy_generic rknn_run         4 B: 1903
+  __memcpy_generic rknn_run         8 B: 1552
+  __memcpy_generic rknn_run        16 B: 126
+  __memcpy_generic rknn_run        32 B: 1860
+  __memcpy_generic rknn_run        64 B: 442
+  __memcpy_generic rknn_run       128 B: 21
+  __memmove_generic bind             4 B: 84
+  __memmove_generic bind            16 B: 84
+  __memmove_generic bind            32 B: 21
+  __memmove_generic rknn_run         8 B: 3969
+  __memmove_generic rknn_run        16 B: 13851
+  __memmove_generic rknn_run        32 B: 21
+  __memmove_generic rknn_run       512 B: 60
+== B, 1 channel, video ①
+lost events: none reported
+__memcpy_generic calls in the 4 s window: 9490
+__memmove_generic calls in the 4 s window: 18793
+__memcpy_generic under bind    :      20 calls,     24576000 bytes
+__memcpy_generic under rknn_run:    5528 calls,        76980 bytes
+__memmove_generic under rknn_run:   17880 calls,       220660 bytes
+under rknn_run, by immediate caller:
+  __memmove_generic   14260 calls,       160720 bytes  std::vector<int, std::allocator<int> >::vector(std::vector<int, std::a (librknnrt.so)
+  __memcpy_generic    5528 calls,        76980 bytes  [unknown] (librknnrt.so)
+  __memmove_generic    3380 calls,        40560 bytes  void std::vector<int, std::allocator<int> >::_M_assign_aux<int const*> (librknnrt.so)
+  __memmove_generic     240 calls,        19380 bytes  std::vector<unsigned char, std::allocator<unsigned char> >::vector(std (librknnrt.so)
+calls by size (up to):
+  __memcpy_generic bind       2097152 B: 20
+  __memcpy_generic rknn_run         4 B: 1900
+  __memcpy_generic rknn_run         8 B: 1420
+  __memcpy_generic rknn_run        32 B: 1808
+  __memcpy_generic rknn_run        64 B: 400
+  __memmove_generic rknn_run         8 B: 3960
+  __memmove_generic rknn_run        16 B: 13840
+  __memmove_generic rknn_run        32 B: 20
+  __memmove_generic rknn_run       512 B: 60

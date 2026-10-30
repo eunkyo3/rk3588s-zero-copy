@@ -16,7 +16,10 @@ extern "C" {
 
 class VideoSource {
 public:
-    explicit VideoSource(std::string url) : url_(std::move(url)) {}
+    // software: libavcodec's own H.264 decoder into CPU memory (variant A) instead of h264_rkmpp.
+    // paced: a file is read at its frame rate, like a stream; tools that need every frame unpace it.
+    explicit VideoSource(std::string url, bool software = false, bool paced = true)
+        : url_(std::move(url)), software_(software), paced_(paced) {}
     ~VideoSource();
 
     // Opens the input and the decoder; dies on failure.
@@ -33,6 +36,7 @@ private:
     void pace(const AVPacket* pkt);
 
     std::string url_;
+    bool software_ = false, paced_ = true;
     bool live_ = false;
     const std::atomic<bool>* stop_ = nullptr;
     AVFormatContext* fmt_ = nullptr;

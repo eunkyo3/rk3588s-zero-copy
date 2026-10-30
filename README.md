@@ -32,7 +32,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1-1. The shared pipeline core and variant C run on the board ([docs/notes/core.md](docs/notes/core.md)). Next: variants B and A (M1-2).
+**Current status:** M1-2. Variants B, A and C run on the board, and B is aligned with C ([docs/notes/preprocess.md](docs/notes/preprocess.md)). C's input path makes no CPU pixel copy, but small copies inside the NPU runtime, the same in B, exceed the §11.4 perf threshold, so that zero-copy criterion is not met ([AMENDMENTS A6](prereg/AMENDMENTS.md)). Next: calibration (M1-3), which needs the wired stream server and cooling.
 
 ## Hardware and software
 

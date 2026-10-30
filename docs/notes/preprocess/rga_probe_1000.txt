@@ -1,0 +1,12 @@
+decoder frame 1920x1080: pitch 1920, rows in memory 1088
+frames: 1000
+opencv          rgb_rs1st rgb_cvt1st       luma chroma_rs1st
+AREA                3.777      3.601      3.039      0.668
+CUBIC               4.502      4.372      3.646      0.747
+LINEAR              4.502      4.372      3.646      0.747
+LINEAR_EXACT        4.502      4.372      3.646      0.747
+NEAREST             7.829      7.662      6.403      1.123
+model shifted_luma             rgb_mae=2.411 min_psnr_db=34.36
+model shifted_luma_chroma444   rgb_mae=2.112 min_psnr_db=35.26
+model shifted_luma_chroma444_floor rgb_mae=2.042 min_psnr_db=35.28
+model shifted_luma_floor       rgb_mae=2.305 min_psnr_db=34.42
