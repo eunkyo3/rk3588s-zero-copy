@@ -250,7 +250,8 @@ int main(int argc, char** argv) {
     // PROTOCOL §11.1 / §11.2 as registered, and as amended (AMENDMENTS A5). Estimates.
     const bool orig_tensor = mae(area) <= 2 && area.min_psnr >= 35;
     const bool orig_det = det.both_ok == det.pairs && double(det.frames_same) / det.frames >= 0.99;
-    const bool a5_tensor = mae(area) <= mae(reference) && area.min_psnr >= reference.min_psnr;
+    const bool a5_tensor = mae(area) <= mae(reference) && area.min_psnr >= reference.min_psnr && c_border_ok &&
+                           area.border_ok;
     const bool a5_det = double(det.both_ok) / det.pairs >= double(det_ref.both_ok) / det_ref.pairs &&
                         double(det.frames_same) / det.frames >= double(det_ref.frames_same) / det_ref.frames &&
                         std::fabs(double(total_c - total_b) / total_b) <= 0.02;

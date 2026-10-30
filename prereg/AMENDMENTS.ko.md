@@ -52,10 +52,10 @@
   - RGA: `im_opt_t.interp`는 `IM_INTERP_DEFAULT`로 둔다. RGA3는 이 값을 무시한다. 노이즈 프레임에서 linear, cubic, average는 기본값과 바이트 단위로 같은 출력을 냈다. 값만 넣었을 때와, librga의 적용 플래그까지 켜는 `IM_INTERP(h, v)` 형식 모두 그랬다(`tools/rga_kernel`).
   - 임펄스로 측정한 1920×1080 → 640×360 RGA3 커널(`tools/rga_kernel`):
     - 출력 픽셀 (c, r)은 입력 열 3c+1…3c+3, 행 3r+1…3r+3의 평균이다. Y와, 전체 해상도로 반복한 색차 모두 그렇다. 즉 OpenCV `INTER_AREA` 박스(3c…3c+2)보다 한 픽셀 어긋난 3×3 박스다.
-    - 마지막 출력 열과 행은 프레임의 마지막 열이나 행에 3/9의 가중치를 준다.
+    - 마지막 출력 열과 행은 프레임의 마지막 열이나 행에 약 3/9의 가중치를 준다.
     - RGA3는 프레임 아래에 있는 디코더의 패딩 행을 읽지 않는다.
   - B와 A의 OpenCV: §8은 `INTER_LINEAR`나 `INTER_AREA`를 허용한다. 이 수정은 세 번째 선택지를 더하고 그것을 고른다. 정확히 1/3 배율일 때 휘도 박스를 한 픽셀 옮겨 RGA3에 맞춘 `INTER_AREA`다.
-    - 즉 한 픽셀 옮긴 프레임에 `INTER_AREA`를 적용한다. 마지막 행과 열은 프레임 가장자리를 반복하므로, 가장자리 가중치가 RGA3의 3/9가 아니라 2/9다.
+    - 즉 한 픽셀 옮긴 프레임에 `INTER_AREA`를 적용한다. 마지막 행과 열은 프레임 가장자리를 반복하므로, 가장자리 가중치가 RGA3의 약 3/9가 아니라 2/9다.
     - 색차는 색차 해상도에서 옮기지 않은 `INTER_AREA`를 쓴다.
     - 순서는 그대로 리사이즈 다음 색 변환(BT.601 제한 범위)이다.
 - Reason: §8은 RGA 설정을 먼저 고정하고, C 대비 §11.1 MAE가 낮은 쪽으로 OpenCV 보간을 고르게 한다. 한 픽셀 이동은 조정한 값이 아니라, 측정으로 확인한 고정 RGA3 스케일러의 성질이다.
@@ -102,28 +102,38 @@
 - Affected data: 없음. M1-4의 동등성 실행 전에 기록했다.
 - Release: 없음(`freeze-m1` 이전)
 
-## A6 — 2026-10-30 — CPU 복사 없음 증거: 런타임이 출력을 CPU로 복사한다
+## A6 — 2026-10-30 — CPU 복사 없음 증거: NPU 런타임 안의 작은 복사
 - Change: 프로토콜은 바꾸지 않는다. §11.4가 정한 대로, 충족하지 못한 §11.4 기준과 그 원인을 기록한다.
-- 결과: `tools/zero_copy_evidence.sh`와 `.py`로([출력](../docs/notes/preprocess/zero_copy_evidence.txt)), 영상 ①에서 기본 거버너로 실행마다 10초씩 쟀다.
-  - 모든 코드를 `-fno-omit-frame-pointer -fno-optimize-sibling-calls`로 빌드해, 복사를 호출한 함수가 스택에 남게 했다. 두 번째 플래그 없이 한 첫 실행에서는 꼬리 호출이던 B의 `bind` 복사를 귀속시키지 못했다.
+- 결과: 영상 ①, 기본 거버너
+  - **도구:**
+    - `tools/zero_copy_evidence.sh`와 `.py`: perf, 실행마다 10초([출력](../docs/notes/preprocess/zero_copy_evidence.txt))
+    - `tools/copy_sizes.sh`와 `.py`: `__memcpy_generic`에 uprobe를 걸어 호출마다 길이를 기록한다. 1채널 4초, 추론 20회([출력](../docs/notes/preprocess/copy_sizes.txt))
+  - **빌드:** 모든 코드를 `-fno-omit-frame-pointer -fno-optimize-sibling-calls`로 빌드해, 복사를 호출한 함수가 스택에 남게 했다. 두 번째 플래그 없이 한 첫 실행에서는 꼬리 호출이던 B의 `bind` 복사를 귀속시키지 못했다.
   - **perf, C:** `prepare`, `bind` 또는 `rknn_run`이 스택에 있는 복사 샘플이 전체 샘플의 1채널 1.04%, 4채널 1.43%로 0.5%를 넘는다. 셋 중 가장 안쪽 함수 기준으로, 1채널 / 4채널:
     - `prepare`: 0 / 1개. 1개는 커널이 `fstat` 결과(버퍼별 캐시의 키)를 복사한 것이다.
-    - `bind`: 0 / 2개. `rknn_set_io_mem` 안의 작은 복사다.
-    - `rknn_run`: 39 / 171개. `librknnrt.so`가 호출한 `__memcpy_generic`(35 / 153개)과, 런타임의 시스템 호출 안에서 일어난 커널의 사용자 메모리 복사(`__arch_copy_*_user`)다.
-  - **양성 대조군, B:**
-    - `bind`: 78 / 473개. 프레임마다 1.2 MB를 복사하는 `memcpy`다.
+    - `bind`: 0 / 2개. 하나는 `bind` 자체에서 `rknn_tensor_attr` 구조체를 복사한 것이고, 다른 하나는 `rknn_set_io_mem` 안에서 libstdc++가 문자열을 복사한 것이다.
+    - `rknn_run`: 39 / 171개. `librknnrt.so`가 호출한 `__memcpy_generic`과, 런타임의 `ioctl` 호출 안에서 일어난 커널의 사용자 메모리 복사다.
+  - **복사가 옮기는 양**, 1채널 추론 20회:
+    - **C, `rknn_run` 아래:** 6,056번, 84,790바이트. 추론 한 번에 약 300번, 4.2 KB이고, 128바이트를 넘는 것은 없다.
+    - **C, `prepare`와 `bind` 아래:** 680번, 30,120바이트. 512바이트를 넘는 것은 없다.
+    - **B, `bind` 아래:** 1,228,800바이트짜리 20번. 프레임마다 입력 텐서 하나다.
+    - **B, `rknn_run` 아래:** 5,576번, 78,030바이트. C와 같은 작은 복사다.
+  - **양성 대조군, B(perf):**
+    - `bind`: 78 / 473개. 입력 복사다.
     - `rknn_run`: 29 / 113개. C와 같은 런타임 복사다.
   - **C − none, 전체 복사 샘플:** 1채널 +33개, 4채널 +75개. 복사 비중으로는 −0.96%p와 −1.61%p다. 실행마다 전체 샘플 수가 다르기 때문이다.
-  - **원인:** 모델의 출력 연산자가 NPU의 native NC1HWC2 출력을 바인딩된 NCHW INT8 버퍼로 CPU에서 변환한다. 추론 한 번에 약 1.2 MB다.
-    - native NC1HWC2 레이아웃으로 바인딩하면 `pass_through`를 주어도 `rknn_run`이 실패한다("unsupported tensor dtype … OutputOperator … fallback cpu failed").
-    - native NHWC 레이아웃은 실행당 CPU 2.5 ms 대신 15.6 ms가 든다(docs/notes/spike.ko.md).
-    - `librknnrt.so`에는 심볼이 없다. C 샘플의 15.7% / 22.4%가 이 안에서 풀리지 않은 채 끝난다. 변환의 일부가 `memcpy`가 아닌 코드로 여기서 실행될 수 있고, 이 기준은 그것을 세지 않는다.
+  - **원인:** 이 기준은 바이트가 아니라 샘플을 센다. 런타임은 `rknn_run` 안에서 추론마다 약 300번의 작은 복사를 하고, B에서도 C와 같다. 이 복사는 픽셀이나 텐서 데이터가 아니라 메타데이터를 옮기는데, 합치면 샘플의 0.5%를 넘는다.
+  - **이 기준이 다루지 않는 것:** NPU의 native 출력은 NC1HWC2이고, 파이프라인은 이를 NCHW INT8로 바인딩한다. 추론 한 번에 약 1.2 MB다.
+    - native NC1HWC2 레이아웃으로 바인딩하면 `pass_through`를 주어도 `rknn_run`이 실패한다("unsupported tensor dtype … OutputOperator … fallback cpu failed"). 런타임이 출력을 CPU에서 변환한다는 뜻으로 보인다.
+    - 그렇다면 `memcpy`가 아닌 코드로 변환한다. `librknnrt.so`에는 심볼이 없고, C 샘플의 15.7% / 22.4%가 이 안에서 풀리지 않은 채 끝난다.
+    - B도 출력을 같은 방식으로 바인딩한다.
   - **strace:** C는 dma-buf `mmap`을 한 번도 호출하지 않았다. B의 전처리 스레드는 프레임마다 같은 fd에 `DMA_BUF_IOCTL_SYNC`를 두 번 호출했다(10초에 50프레임).
   - **캐시 유지보수**(`dcache_*_poc`), 1채널 / 4채널: B 8.6% / 9.5%, C 28.4% / 26.2%, none 43.9% / 43.4%
     - MPP 자체가 디코딩한 프레임마다 동기화한다.
     - 기본 거버너에서는 실행마다 CPU 클럭이 달라서 실행 사이의 비중 비교가 왜곡된다.
 - 결과 처리(§11.4):
   - 리포트는 §11.4 perf 기준에서 C의 제로카피 성질이 충족되지 않았다고 밝힌다.
-  - 모든 C 결과에 다음 표시를 붙인다: "입력 경로에서 CPU 픽셀 복사 없음. 런타임의 출력 연산자가 B와 마찬가지로 추론마다 약 1.2 MB를 CPU로 복사함"
+  - 모든 C 결과에 다음 표시를 붙인다: "입력 경로에서 CPU 픽셀 복사 없음. NPU 런타임 안에서 추론마다 약 300번(약 4 KB)의 작은 복사가 일어나 §11.4 perf 기준을 충족하지 못함. B도 같음"
+  - 리포트는 출력 변환이라는 미해결 질문도 밝힌다.
 - Affected data: 없음
 - Release: 없음(`freeze-m1` 이전)

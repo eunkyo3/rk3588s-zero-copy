@@ -10,7 +10,7 @@ M1-2 adds the CPU-copy variant B and the software-decode reference A next to C (
 | `rknn_inputs_set`, the registered bind of B, leaves the outputs bound with `rknn_set_io_mem` unwritten | A3 |
 | RGA3's 3:1 scaler is a fixed 3×3 box one pixel off OpenCV's, and B's luma box now matches it | A4 |
 | The registered equivalence criteria need pixel-identical tensors; the criteria are now relative to B's own admissible variants | A5 |
-| C's input path makes no CPU pixel copy, but the runtime copies the outputs on the CPU, so the §11.4 perf criterion is not met | A6 |
+| C's input path makes no CPU pixel copy, but small copies inside the NPU runtime exceed the §11.4 perf threshold | A6 |
 
 All measurements were made on the board on 2026-10-30, with default governors, on video ① below. The outputs in [preprocess/](preprocess/) come from the code of this change.
 
@@ -33,7 +33,7 @@ All three share the output binding (`rknn_create_mem` + `rknn_set_io_mem`, NCHW 
 - **Luma:** output pixel (c, r) is the mean of input columns 3c+1…3c+3 and rows 3r+1…3r+3, with weight 1/9. OpenCV's `INTER_AREA` averages 3c…3c+2: the same box, one pixel off.
 - **Chroma:** each chroma sample is repeated to full resolution, then gets the same box.
 - **Last row and column:**
-  - The last output column and row give the frame's last column or row a weight of 3/9. B repeats the edge, which gives 2/9. Each is one line of 640 or 360.
+  - The last output column and row give the frame's last column or row a weight of about 3/9. B repeats the edge, which gives 2/9. Each is one line of 640 or 360.
   - Decoder frames have 1,088 rows in memory for 1,080. RGA3 does not read the padding rows.
 - **`im_opt_t.interp`:** RGA3 ignores it. On a noise frame, linear, cubic and average gave output byte-identical to the default. This holds for bare values and for `IM_INTERP(h, v)`, which sets librga's apply flags.
 - **Color conversion:** on flat frames, RGA's BT.601 limited-range conversion matches OpenCV's within ±1 (mean −0.18).
@@ -112,20 +112,34 @@ Copy samples with `prepare`, `bind` or `rknn_run` on the stack, by the innermost
 
 - **C's copies:**
   - `prepare`, 1 sample: the kernel copying an `fstat` result, the per-buffer cache key.
-  - `bind`, 2 samples: small copies inside `rknn_set_io_mem`.
-  - `rknn_run`, the rest: `__memcpy_generic` called from `librknnrt.so`, and kernel user-copies inside the runtime's system calls.
-  - These copies come from the model's output operators. They convert the NPU's NC1HWC2 outputs to NCHW on the CPU, about 1.2 MB per inference. The native NC1HWC2 binding fails in `rknn_run`, also with `pass_through`.
-  - So C's input path has no CPU pixel copy, but the §11.4 rule counts `rknn_run` and fails at 0.5%.
+  - `bind`, 2 samples: a copy of the `rknn_tensor_attr` struct in `bind` itself, and a string copy in libstdc++ inside `rknn_set_io_mem`.
+  - `rknn_run`, the rest: `__memcpy_generic` called from `librknnrt.so`, and kernel user-copies in the runtime's `ioctl` calls.
+- **B, the positive control:** its input copy shows under `bind`. Its `rknn_run` copies are the same as C's.
+
+perf counts samples, not bytes. `tools/copy_sizes.sh` puts a uprobe on `__memcpy_generic` and records every call's length, over 4 s of one channel, which is 20 inferences ([preprocess/copy_sizes.txt](preprocess/copy_sizes.txt)):
+
+| | Under `prepare` | Under `bind` | Under `rknn_run` |
+|---|---|---|---|
+| **C** | 40 calls, 16,320 bytes | 640 calls, 13,800 bytes | 6,056 calls, 84,790 bytes |
+| B | — | 20 calls, 24,576,000 bytes | 5,576 calls, 78,030 bytes |
+
+- **The copies inside `rknn_run`:**
+  - About 300 calls and 4 KB per inference, none longer than 128 bytes, in B as in C. They move metadata, not pixel or tensor data.
+  - They still add up to more than 0.5% of samples. So C's input path has no CPU pixel copy, but the §11.4 rule counts `rknn_run` and fails.
   - A6 records this. The report states it, and every C result carries the label.
-- **B, the positive control:** its 1.2 MB `memcpy` per frame shows under `bind`. Its `rknn_run` copies are the same as C's.
+- **B's input copy:** 1,228,800 bytes per frame, the whole 640×640×3 tensor.
+- **Not covered by the criterion:**
+  - The NPU's native outputs are NC1HWC2. The pipeline binds them as NCHW INT8, about 1.2 MB per inference.
+  - The native binding fails in `rknn_run` ("… OutputOperator … fallback cpu failed"). This suggests the runtime converts the outputs on the CPU. If so, it uses code other than `memcpy`, which perf cannot name in `librknnrt.so`.
+  - B binds its outputs the same way.
 - **C − none, total copy samples:** +33 (1 channel), +75 (4 channels). As shares, −0.96 and −1.61 points, because the runs have different sample totals.
 - **strace:**
   - C made no dma-buf `mmap` call.
   - B's preprocessing threads made exactly two `DMA_BUF_IOCTL_SYNC` calls on the same fd per frame.
-  - In every variant, the decoder thread and MPP's parser also sync each decoded frame (30 calls per second each). MPP's own cache maintenance on the cached decoder buffers is shared by all variants.
+  - In C and in B, the decoder thread and MPP's parser also sync each decoded frame (30 calls per second each). This is MPP's own cache maintenance on the cached decoder buffers, which every variant that decodes with MPP pays.
 - **Caveats:**
   - With default governors the CPU clock differs between runs, which distorts shares across runs. The cache-maintenance column is the most affected.
-  - `librknnrt.so` and OpenCV have no symbols. 15.7% / 22.4% of C's samples end unresolved in `librknnrt.so`. Part of the output conversion may run there as code other than `memcpy`, which the criterion does not count.
+  - `librknnrt.so` and OpenCV have no symbols. 15.7% / 22.4% of C's samples end unresolved in `librknnrt.so`.
 
 ## Benchmark videos
 
@@ -149,4 +163,5 @@ The project owner chose four candidates. Three are prepared ([preprocess/videos_
 | `tools/rga_probe` | C against OpenCV candidates per plane, and the RGA3 models |
 | `tools/rga_kernel` | RGA3's impulse response, edges and padding rows, color conversion on flat frames, and the `interp` settings |
 | `tools/inputs_set_probe` | `rknn_inputs_set` against bound outputs, and B's bound input (A3) |
+| `tools/copy_sizes.sh` / `.py` | the bytes the copies of §11.4 move, from a uprobe on `__memcpy_generic` |
 | `tools/zero_copy_evidence.sh` / `.py` | perf and strace evidence of §11.4 |

@@ -39,6 +39,7 @@ def samples(path):
 def perf_summary(path):
     total = copy_all = cache = 0
     copy_stack = {"prepare": 0, "bind": 0, "rknn_run": 0}  # by the innermost of the three
+    detail = {fn: {} for fn in copy_stack}  # fn -> "leaf <- caller (dso)" -> samples
     top_cache, unresolved = {}, {}
     for frames in samples(path):
         total += 1
@@ -51,12 +52,16 @@ def perf_summary(path):
             for f, _ in frames[1:]:
                 m = STACKS.search(f)
                 if m:
-                    copy_stack[m.group(1) or m.group(2)] += 1
+                    fn = m.group(1) or m.group(2)
+                    copy_stack[fn] += 1
+                    caller, caller_dso = frames[1] if len(frames) > 1 else ("?", "?")
+                    key = f"{leaf} <- {caller} ({caller_dso.rsplit('/', 1)[-1]})"
+                    detail[fn][key] = detail[fn].get(key, 0) + 1
                     break
         if CACHE.search(leaf):
             cache += 1
             top_cache[leaf] = top_cache.get(leaf, 0) + 1
-    return total, copy_all, copy_stack, cache, top_cache, unresolved
+    return total, copy_all, copy_stack, detail, cache, top_cache, unresolved
 
 
 def strace_summary(out, variant):
@@ -90,7 +95,7 @@ def main():
     copies = {}
     for path in sorted(out.glob("perf_*.txt")):
         run = path.stem[5:]
-        total, copy_all, copy_stack, cache, top, unresolved = perf_summary(path)
+        total, copy_all, copy_stack, detail, cache, top, unresolved = perf_summary(path)
         copies[run] = (copy_all, total)
         under = sum(copy_stack.values())
         print(f"{run:<10} {total:>8} {copy_all:>7} {100 * copy_all / total:>6.2f}% "
@@ -100,7 +105,9 @@ def main():
                  if top else ""))
         print(f"{'':<10} unresolved leaf samples: "
               + ", ".join(f"{k} {100 * v / total:.1f}%" for k, v in sorted(unresolved.items(), key=lambda kv: -kv[1])[:4]))
-    for n in ("1ch", "4ch"):
+        for fn, kinds in detail.items():  # the copies under each function: leaf and its caller
+            for key, n in sorted(kinds.items(), key=lambda kv: -kv[1])[:4]:
+                print(f"{'':<10} {fn:>8}: {n:>4}  {key}")
         if f"C_{n}" in copies and f"none_{n}" in copies:
             (c, ct), (z, zt) = copies[f"C_{n}"], copies[f"none_{n}"]
             print(f"C - none, {n}: copy samples {c} - {z} = {c - z:+d}; "

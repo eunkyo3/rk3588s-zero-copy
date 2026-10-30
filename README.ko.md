@@ -32,7 +32,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1-2. 변형 B, A, C가 보드에서 동작하고, B를 C에 맞췄다([docs/notes/preprocess.ko.md](docs/notes/preprocess.ko.md)). C의 입력 경로에는 CPU 픽셀 복사가 없지만, 런타임이 출력을 CPU로 복사해서 §11.4의 CPU 복사 없음 기준은 충족하지 못했다([AMENDMENTS A6](prereg/AMENDMENTS.ko.md)). 다음: 캘리브레이션(M1-3). 유선 송출 서버와 냉각이 필요하다.
+**현재 상태:** M1-2. 변형 B, A, C가 보드에서 동작하고, B를 C에 맞췄다([docs/notes/preprocess.ko.md](docs/notes/preprocess.ko.md)). C의 입력 경로에는 CPU 픽셀 복사가 없지만, NPU 런타임 안의 작은 복사(B도 같음)가 §11.4 perf 기준을 넘어서 그 CPU 복사 없음 기준은 충족하지 못했다([AMENDMENTS A6](prereg/AMENDMENTS.ko.md)). 다음: 캘리브레이션(M1-3). 유선 송출 서버와 냉각이 필요하다.
 
 ## 하드웨어와 소프트웨어
 

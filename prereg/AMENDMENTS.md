@@ -52,10 +52,10 @@ Each entry has this form:
   - RGA: `im_opt_t.interp` stays `IM_INTERP_DEFAULT`. RGA3 ignores it. On a noise frame, linear, cubic and average gave output byte-identical to the default, both as bare values and as `IM_INTERP(h, v)`, which sets librga's apply flags (`tools/rga_kernel`).
   - RGA3's kernel for 1920×1080 → 640×360, measured with impulses (`tools/rga_kernel`):
     - Output pixel (c, r) is the mean of input columns 3c+1…3c+3 and rows 3r+1…3r+3, for Y and for the chroma repeated to full resolution. That is a 3×3 box one pixel off OpenCV's `INTER_AREA` box (3c…3c+2).
-    - The last output column and row give the frame's last column or row a weight of 3/9.
+    - The last output column and row give the frame's last column or row a weight of about 3/9.
     - RGA3 does not read the decoder's padding rows below the frame.
   - OpenCV for B and A: §8 allows `INTER_LINEAR` or `INTER_AREA`. This amendment adds a third choice and picks it: `INTER_AREA` with the luma box moved by one pixel to match RGA3, at exactly 1/3 scale.
-    - That is `INTER_AREA` on the frame shifted by one pixel. The last row and column repeat the frame's edge, which gives the edge a weight of 2/9 instead of RGA3's 3/9.
+    - That is `INTER_AREA` on the frame shifted by one pixel. The last row and column repeat the frame's edge, which gives the edge a weight of 2/9 instead of RGA3's about 3/9.
     - Chroma uses `INTER_AREA` at chroma resolution, unshifted.
     - The order stays: resize, then convert (BT.601 limited range).
 - Reason: §8 fixes RGA's settings first, then picks OpenCV's interpolation by the lower §11.1 MAE against C. The one-pixel shift is a measured property of RGA3's fixed scaler, not a tuned parameter.
@@ -102,28 +102,38 @@ Each entry has this form:
 - Affected data: none. Recorded before any equivalence run of M1-4.
 - Release: none (before `freeze-m1`).
 
-## A6 — 2026-10-30 — Zero-copy evidence: the runtime copies the outputs on the CPU
+## A6 — 2026-10-30 — Zero-copy evidence: small copies inside the NPU runtime
 - Change: none to the protocol. This records a criterion of §11.4 that was not met, and its cause, as §11.4 requires.
-- Result, from `tools/zero_copy_evidence.sh` and `.py` ([output](../docs/notes/preprocess/zero_copy_evidence.txt)), on video ① with default governors, 10 s per run.
-  - All code is built with `-fno-omit-frame-pointer -fno-optimize-sibling-calls`, so a copy's caller stays on the stack. A first run without the second flag could not attribute B's `bind` copy, which was a tail call.
+- Result, on video ① with default governors:
+  - **Tools:**
+    - `tools/zero_copy_evidence.sh` and `.py`: perf, 10 s per run ([output](../docs/notes/preprocess/zero_copy_evidence.txt)).
+    - `tools/copy_sizes.sh` and `.py`: a uprobe on `__memcpy_generic` that records every call's length, 4 s of one channel, 20 inferences ([output](../docs/notes/preprocess/copy_sizes.txt)).
+  - **Build:** all code is built with `-fno-omit-frame-pointer -fno-optimize-sibling-calls`, so a copy's caller stays on the stack. A first run without the second flag could not attribute B's `bind` copy, which was a tail call.
   - **perf, C:** copy samples with `prepare`, `bind` or `rknn_run` on the stack are 1.04% of all samples at 1 channel and 1.43% at 4 channels, above 0.5%. By the innermost of the three, at 1 / 4 channels:
     - `prepare`: 0 / 1. The 1 is the kernel copying an `fstat` result (the per-buffer cache key).
-    - `bind`: 0 / 2, small copies inside `rknn_set_io_mem`.
-    - `rknn_run`: 39 / 171. These are `__memcpy_generic` called from `librknnrt.so` (35 / 153), and kernel user-copies (`__arch_copy_*_user`) inside the runtime's system calls.
-  - **Positive control, B:**
-    - `bind`: 78 / 473 samples, its `memcpy` of 1.2 MB per frame.
+    - `bind`: 0 / 2. One is a copy of the `rknn_tensor_attr` struct in `bind` itself; the other is a string copy in libstdc++ inside `rknn_set_io_mem`.
+    - `rknn_run`: 39 / 171. These are `__memcpy_generic` called from `librknnrt.so`, and kernel user-copies in the runtime's `ioctl` calls.
+  - **What the copies move,** at 1 channel over 20 inferences:
+    - **C, under `rknn_run`:** 6,056 calls, 84,790 bytes. That is about 300 calls and 4.2 KB per inference, none longer than 128 bytes.
+    - **C, under `prepare` and `bind`:** 680 calls, 30,120 bytes, none longer than 512 bytes.
+    - **B, under `bind`:** 20 calls of 1,228,800 bytes, one input tensor per frame.
+    - **B, under `rknn_run`:** 5,576 calls, 78,030 bytes, the same small copies as C.
+  - **Positive control, B (perf):**
+    - `bind`: 78 / 473 samples, its input copy.
     - `rknn_run`: 29 / 113, the same runtime copies as C.
   - **C − none, total copy samples:** +33 at 1 channel, +75 at 4 channels. As copy shares, −0.96 and −1.61 points: the runs have different sample totals.
-  - **Cause:** the model's output operators convert the NPU's native NC1HWC2 outputs into the bound NCHW INT8 buffers on the CPU, about 1.2 MB per inference.
-    - Binding the native NC1HWC2 layout fails in `rknn_run` ("unsupported tensor dtype … OutputOperator … fallback cpu failed"), also with `pass_through`.
-    - The native NHWC layout costs 15.6 ms of CPU per run instead of 2.5 ms (docs/notes/spike.md).
-    - `librknnrt.so` has no symbols: 15.7% / 22.4% of C's samples end in it unresolved. Part of the conversion may run there as code other than `memcpy`, which this criterion does not count.
+  - **Cause:** the criterion counts samples, not bytes. Inside `rknn_run`, the runtime makes about 300 small copies per inference, in B as in C. They move metadata, not pixel or tensor data, and together they exceed 0.5% of samples.
+  - **Not covered by this criterion:** the NPU's native outputs are NC1HWC2, and the pipeline binds them as NCHW INT8, about 1.2 MB per inference.
+    - Binding the native NC1HWC2 layout fails in `rknn_run` ("unsupported tensor dtype … OutputOperator … fallback cpu failed"), also with `pass_through`. This suggests that the runtime converts the outputs on the CPU.
+    - If it does, it uses code other than `memcpy`. `librknnrt.so` has no symbols, and 15.7% / 22.4% of C's samples end unresolved in it.
+    - B binds its outputs the same way.
   - **strace:** C made no dma-buf `mmap` call. B's preprocessing threads made two `DMA_BUF_IOCTL_SYNC` calls on the same fd per frame, 50 frames in 10 s.
   - **Cache maintenance** (`dcache_*_poc`), at 1 / 4 channels: B 8.6% / 9.5%, C 28.4% / 26.2%, none 43.9% / 43.4%.
     - MPP itself syncs every decoded frame.
     - Under default governors, the CPU clock differs between runs, which distorts shares across runs.
 - Consequence (§11.4):
   - The report states that C's zero-copy property was not met under the §11.4 perf criterion.
-  - Every C result carries this label: "input path without CPU pixel copies; the runtime's output operators copy about 1.2 MB per inference on the CPU, as in B".
+  - Every C result carries this label: "input path without CPU pixel copies; §11.4 perf criterion not met because of about 300 small copies (about 4 KB) per inference inside the NPU runtime, as in B".
+  - The report also states the open question of the output conversion.
 - Affected data: none.
 - Release: none (before `freeze-m1`).

@@ -1,0 +1,39 @@
+== C, 1 channel, video ①
+memcpy calls in the 4 s window: 10682
+under bind    :     640 calls,        13800 bytes
+under prepare :      40 calls,        16320 bytes
+under rknn_run:    6056 calls,        84790 bytes
+under rknn_run, by immediate caller:
+     5576 calls,        78030 bytes  [unknown] (librknnrt.so)
+      400 calls,         4280 bytes  __printf_buffer_write (libc.so.6)
+       40 calls,         2160 bytes  std::basic_streambuf<char, std::char_traits<char> >::xsputn(char const (libstdc++.so.6.0.33)
+       40 calls,          320 bytes  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocato (libstdc++.so.6.0.33)
+calls by size (up to):
+  bind             1 B: 140
+  bind             2 B: 20
+  bind             4 B: 20
+  bind             8 B: 140
+  bind            16 B: 160
+  bind            32 B: 140
+  bind           512 B: 20
+  prepare        512 B: 40
+  rknn_run         1 B: 100
+  rknn_run         2 B: 80
+  rknn_run         4 B: 1900
+  rknn_run         8 B: 1540
+  rknn_run        16 B: 120
+  rknn_run        32 B: 1856
+  rknn_run        64 B: 440
+  rknn_run       128 B: 20
+== B, 1 channel, video ①
+memcpy calls in the 4 s window: 9562
+under bind    :      20 calls,     24576000 bytes
+under rknn_run:    5576 calls,        78030 bytes
+under rknn_run, by immediate caller:
+     5576 calls,        78030 bytes  [unknown] (librknnrt.so)
+calls by size (up to):
+  bind       2097152 B: 20
+  rknn_run         4 B: 1900
+  rknn_run         8 B: 1420
+  rknn_run        32 B: 1856
+  rknn_run        64 B: 400

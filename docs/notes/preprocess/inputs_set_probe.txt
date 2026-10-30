@@ -1,4 +1,5 @@
-mpp[8525]: mpp_platform: client 18 driver is not ready!
+video: /home/pi/media/bench/pexels_36330861.mp4, first frame
+model: models/yolov8n_i8.rknn
 librknnrt: 2.3.2 (429f97ae6b@2025-04-09T09:09:27) / driver 0.9.8
 reference (rknn_outputs_get): 17 boxes
 inputs_set         outputs still zero 1, equal to reference 0, 370 boxes

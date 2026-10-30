@@ -46,8 +46,8 @@ int main(int argc, char** argv) {
     std::vector<const int8_t*> ref_ptrs;
     for (const auto& o : reference)
         ref_ptrs.push_back(o.data());
-    std::printf("librknnrt: %s\nreference (rknn_outputs_get): %zu boxes\n", npu.sdk_version.c_str(),
-                yolov8_post(ref_ptrs, npu.outputs, mw, mh).size());
+    std::printf("video: %s, first frame\nmodel: %s\nlibrknnrt: %s\nreference (rknn_outputs_get): %zu boxes\n", argv[1],
+                argv[2], npu.sdk_version.c_str(), yolov8_post(ref_ptrs, npu.outputs, mw, mh).size());
 
     rknn_input in{};
     in.index = 0;
