@@ -32,7 +32,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1-0. `prereg-v1` is released; the board environment is set up.
+**Current status:** M1-1. The shared pipeline core and variant C run on the board ([docs/notes/core.md](docs/notes/core.md)). Next: variants B and A (M1-2).
 
 ## Hardware and software
 
