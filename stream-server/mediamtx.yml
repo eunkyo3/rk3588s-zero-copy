@@ -1,0 +1,46 @@
+# mediamtx v1.21.2 configuration for the benchmark's RTSP streams (PROTOCOL §3).
+# Start it with publish.sh, which writes channels/ and sets the log file (MTX_LOGFILE).
+
+logLevel: info
+logDestinations: [stdout, file]
+logFile: mediamtx.log
+
+# Only the publishers on this PC may publish; anyone on the link may read.
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: publish
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: read
+
+api: false
+metrics: false
+pprof: false
+playback: false
+
+rtsp: true
+rtspTransports: [tcp]
+rtspAddress: :8554
+rtmp: false
+hls: false
+webrtc: false
+srt: false
+moq: false
+
+paths:
+  # chN loops channels/chN.mp4. The publisher starts when the first reader connects and stops
+  # 1 s after the last reader leaves, so every run starts each video from the beginning.
+  # -stream_loop keeps timestamps continuous across loops. A publisher that exits is not
+  # restarted: the exit is logged, and PROTOCOL §9.3 makes the run invalid.
+  # -pkt_size 1440 matches the server's RTP payload limit, so it does not remux the packets.
+  "~^ch([0-9]+)$":
+    runOnDemand: ffmpeg -hide_banner -loglevel warning -re -stream_loop -1 -i channels/ch$G1.mp4 -c copy -f rtsp -rtsp_transport tcp -pkt_size 1440 rtsp://127.0.0.1:$RTSP_PORT/$MTX_PATH
+    runOnDemandRestart: false
+    runOnDemandStartTimeout: 10s
+    runOnDemandCloseAfter: 1s
