@@ -1,0 +1,72 @@
+mpp[23502]: mpp_platform: client 18 driver is not ready!
+rga_core_mask: 0x3
+rknn_input_attr: images dims=1x640x640x3 fmt=NHWC type=INT8 size=1228800 size_with_stride=1228800 w_stride=640 zp=-128 scale=0.00392157
+rknn_native_input_attr: images dims=1x640x640x3 fmt=NHWC type=INT8 size=1228800 size_with_stride=1228800 w_stride=640 zp=-128 scale=0.00392157
+rknn_output_attr_0: 318 dims=1x64x80x80 fmt=NCHW type=INT8 size=409600 size_with_stride=409600 w_stride=0 zp=-58 scale=0.117659
+rknn_native_output_attr_0: 318 dims=1x4x80x80x16 fmt=NC1HWC2 type=INT8 size=409600 size_with_stride=409600 w_stride=0 zp=-58 scale=0.117659
+rknn_output_attr_1: onnx::ReduceSum_326 dims=1x80x80x80 fmt=NCHW type=INT8 size=512000 size_with_stride=512000 w_stride=0 zp=-128 scale=0.00310353
+rknn_native_output_attr_1: onnx::ReduceSum_326 dims=1x6x80x80x16 fmt=NC1HWC2 type=INT8 size=614400 size_with_stride=614400 w_stride=0 zp=-128 scale=0.00310353
+rknn_output_attr_2: 331 dims=1x1x80x80 fmt=NCHW type=INT8 size=6400 size_with_stride=102400 w_stride=0 zp=-128 scale=0.00317275
+rknn_native_output_attr_2: 331 dims=1x2x80x80x16 fmt=NC1HWC2 type=INT8 size=204800 size_with_stride=204800 w_stride=0 zp=-128 scale=0.00317275
+rknn_output_attr_3: 338 dims=1x64x40x40 fmt=NCHW type=INT8 size=102400 size_with_stride=122880 w_stride=0 zp=-45 scale=0.0937474
+rknn_native_output_attr_3: 338 dims=1x4x40x40x16 fmt=NC1HWC2 type=INT8 size=102400 size_with_stride=102400 w_stride=0 zp=-45 scale=0.0937474
+rknn_output_attr_4: onnx::ReduceSum_346 dims=1x80x40x40 fmt=NCHW type=INT8 size=128000 size_with_stride=153600 w_stride=0 zp=-128 scale=0.00359438
+rknn_native_output_attr_4: onnx::ReduceSum_346 dims=1x6x40x40x16 fmt=NC1HWC2 type=INT8 size=153600 size_with_stride=153600 w_stride=0 zp=-128 scale=0.00359438
+rknn_output_attr_5: 350 dims=1x1x40x40 fmt=NCHW type=INT8 size=1600 size_with_stride=30720 w_stride=0 zp=-128 scale=0.00362673
+rknn_native_output_attr_5: 350 dims=1x2x40x40x16 fmt=NC1HWC2 type=INT8 size=51200 size_with_stride=51200 w_stride=0 zp=-128 scale=0.00362673
+rknn_output_attr_6: 357 dims=1x64x20x20 fmt=NCHW type=INT8 size=25600 size_with_stride=40960 w_stride=0 zp=-34 scale=0.0830356
+rknn_native_output_attr_6: 357 dims=1x4x20x20x16 fmt=NC1HWC2 type=INT8 size=25600 size_with_stride=25600 w_stride=0 zp=-34 scale=0.0830356
+rknn_output_attr_7: onnx::ReduceSum_365 dims=1x80x20x20 fmt=NCHW type=INT8 size=32000 size_with_stride=51200 w_stride=0 zp=-128 scale=0.00387418
+rknn_native_output_attr_7: onnx::ReduceSum_365 dims=1x6x20x20x16 fmt=NC1HWC2 type=INT8 size=38400 size_with_stride=38400 w_stride=0 zp=-128 scale=0.00387418
+rknn_output_attr_8: 369 dims=1x1x20x20 fmt=NCHW type=INT8 size=400 size_with_stride=10240 w_stride=0 zp=-128 scale=0.00392157
+rknn_native_output_attr_8: 369 dims=1x2x20x20x16 fmt=NC1HWC2 type=INT8 size=12800 size_with_stride=12800 w_stride=0 zp=-128 scale=0.00392157
+slot_heap: system-uncached-dma32
+multi_context_registration: ok
+cpu_read_mb_s: slot=264 malloc=9873
+mpp[23502]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+frame: 1920x1080 nb_objects=1 nb_layers=1 layer_format=NV12 nb_planes=2 modifier=0x0 object_size=4177920 pitch0=1920 offset1=2088960 pitch1=1920
+frames: 300
+distinct_decoder_inodes: 6 (by frame 100: 6)
+distinct_decoder_fds: 6
+fd_stability: ok (distinct inodes 6 <= buffer group limit 38 from rkmppdec.c, no new buffer after frame 100)
+mean_ms: rga=1.799 bind=0.086 run=17.738 post=0.887
+detections: total=1433 last_frame=5
+nv12_rgb_mae_vs_opencv: 4.761
+rga_max_load: scheduler[0]: rga3 7%
+rga_max_load: scheduler[1]: rga3 0%
+rga_max_load: scheduler[2]: rga2 0%
+cpu_read_mb_s: decoder=2737..5435
+bufinfo: slot ino=627 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=628 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=629 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=630 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=631 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=632 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=633 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=634 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=635 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=636 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: slot ino=637 exp_name=system-uncached-dma32 size=1228800 attached=fdab0000.npu,fdb60000.rga,
+bufinfo: decoder ino=667 exp_name=system-dma32 size=4177920 attached=fdb60000.rga,fdc38100.rkvdec-core,
+bufinfo: decoder ino=673 exp_name=system-dma32 size=4177920 attached=fdb60000.rga,fdc38100.rkvdec-core,
+bufinfo: decoder ino=676 exp_name=system-dma32 size=4177920 attached=fdb60000.rga,fdc38100.rkvdec-core,
+bufinfo: decoder ino=678 exp_name=system-dma32 size=4177920 attached=fdb60000.rga,fdc38100.rkvdec-core,
+bufinfo: decoder ino=680 exp_name=system-dma32 size=4177920 attached=fdb60000.rga,fdc38100.rkvdec-core,
+bufinfo: decoder ino=682 exp_name=system-dma32 size=4177920 attached=fdb60000.rga,fdc38100.rkvdec-core,
+same_slot_all_contexts_identical: 1
+release_test_outputs_changed_in_between: 1
+release_in_one_context_others_unaffected: 1
+rknn_run_cost: uint8_in             nchw_out   cpu_ms median=2.465 range=2.357..2.583 wall_ms median=17.545 (15 rounds x 20 runs)
+rknn_run_cost: int8_passthrough_in  nchw_out   cpu_ms median=2.496 range=2.373..2.533 wall_ms median=17.632 (15 rounds x 20 runs)
+output_binding: native_nhwc runs
+rknn_run_cost: uint8_in             nhwc_out   cpu_ms median=15.587 range=15.093..16.763 wall_ms median=33.951 (15 rounds x 20 runs)
+rknn_run_cost: int8_passthrough_in  nhwc_out   cpu_ms median=15.427 range=14.808..18.254 wall_ms median=34.060 (15 rounds x 20 runs)
+E RKNN: [04:23:25.490] Meet unsupported tensor dtype
+E RKNN: [04:23:25.490] Op type:OutputOperator, name: OutputOperator:318, fallback cpu failed. If using rknn, update to the latest toolkit2 and runtime from: https://console.zbox.filez.com/l/I00fc3 (PWD: rknn). If using rknn-llm, update from: https://github.com/airockchip/rknn-llm
+output_binding: native_nc1hwc2 FAILED (bind or rknn_run)
+det: person 0.883 197,273,264,443 (ctx 2)
+det: bus 0.864 188,216,448,389 (ctx 2)
+det: person 0.730 256,273,297,426 (ctx 2)
+det: person 0.662 404,264,453,430 (ctx 2)
+det: person 0.270 182,326,203,429 (ctx 2)
+result_image: /home/pi/spike_out/spike_result.jpg
