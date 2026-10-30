@@ -1,6 +1,7 @@
 // Variant B (PROTOCOL §5.2): the CPU maps the decoder's DRM PRIME buffer (cached per buffer),
 // brackets the read with exactly one DMA_BUF_IOCTL_SYNC START(READ) and one END(READ) per frame,
-// preprocesses with OpenCV into a CPU slot, and bind copies it in with rknn_inputs_set.
+// preprocesses with OpenCV into a CPU slot, and bind copies it into the bound input buffer
+// (AMENDMENTS A3).
 // av_hwframe_map is not used, so there is no second sync.
 #include <linux/dma-buf.h>
 #include <sys/ioctl.h>
@@ -76,9 +77,9 @@ public:
 
     std::string describe() const override {
         return std::string("\"slot_memory\": \"CPU (std::vector)\", \"decoder_buffer_access\": \"mmap per buffer, "
-                           "DMA_BUF_IOCTL_SYNC START/END(READ) per frame\", \"opencv_interpolation\": ") +
-               std::to_string(interpolation_) +
-               ", \"opencv_color\": \"COLOR_YUV2RGB_NV12 (BT.601 limited)\", \"input_binding\": "
+                           "DMA_BUF_IOCTL_SYNC START/END(READ) per frame\", \"opencv_interpolation\": \"") +
+               opencv_interpolation_name(interpolation_) +
+               "\", \"opencv_color\": \"COLOR_YUV2RGB_NV12 (BT.601 limited)\", \"input_binding\": "
                "\"memcpy into rknn_create_mem bound with rknn_set_io_mem, UINT8 NHWC\", \"decoder_buffers_per_channel_max\": " +
                std::to_string(maps_.max_entries()) + ", \"decoder_buffers_retired\": " +
                std::to_string(maps_.retired());

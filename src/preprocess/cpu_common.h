@@ -1,5 +1,5 @@
 // What B and A share (PROTOCOL §5.2): input slots in CPU memory, the OpenCV preprocessing and
-// bind through rknn_inputs_set.
+// bind by memcpy into a bound input buffer (AMENDMENTS A3).
 #pragma once
 
 #include <cstdint>
@@ -13,7 +13,7 @@
 int opencv_interpolation();
 // RGA scaling mode for C (im_opt_t.interp), fixed before the OpenCV choice (PROTOCOL §8).
 int rga_interpolation();
-const char* opencv_interpolation_name();
+const char* opencv_interpolation_name(int interpolation);
 
 // Letterbox geometry of PROTOCOL §5.2: the frame scaled to fit, centred, even sizes.
 struct Band {

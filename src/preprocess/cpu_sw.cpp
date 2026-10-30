@@ -35,7 +35,7 @@ public:
     std::string describe() const override {
         return std::string("\"slot_memory\": \"CPU (std::vector)\", \"decoder\": \"libavcodec h264 (software)\", "
                            "\"opencv_interpolation\": \"") +
-               opencv_interpolation_name() +
+               opencv_interpolation_name(opencv_interpolation()) +
                "\", \"opencv_color\": \"COLOR_YUV2RGB_I420 (BT.601 limited)\", \"input_binding\": "
                "\"memcpy into rknn_create_mem bound with rknn_set_io_mem, UINT8 NHWC\"";
     }

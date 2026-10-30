@@ -105,6 +105,9 @@ int main(int argc, char** argv) {
             const auto* desc = reinterpret_cast<const AVDRMFrameDescriptor*>(f->data[0]);
             const auto& L = desc->layers[0];
             const Band band = letterbox_band(f->width, f->height, mw, mh);
+            if (frames == 0)
+                std::printf("decoder frame %dx%d: pitch %u, rows in memory %u\n", f->width, f->height,
+                            unsigned(L.planes[0].pitch), unsigned(L.planes[1].offset / L.planes[0].pitch));
             c->prepare(f, 0, 0);
             c->read_slot(0, tc.data());
             const cv::Mat c_band = cv::Mat(mh, mw, CV_8UC3, tc.data())(cv::Rect(band.x, band.y, band.w, band.h));

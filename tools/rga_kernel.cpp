@@ -2,7 +2,9 @@
 // frame (Y=16, Cb=Cr=128) gets one bright pixel (Y=235) at column x0 (row 540) or row y0
 // (column 960), or one Cb sample is raised. RGA converts it to RGB 640x360 exactly as variant C
 // does. The output pixels that change show which input pixels each output pixel averages, and with
-// which weights. The source buffer is exactly 1920x1080 (no padding rows), unlike decoder frames.
+// which weights. The source buffer is exactly 1920x1080 (no padding rows), unlike decoder frames;
+// a last test adds padding rows the way the decoder lays frames out. Then im_opt_t.interp: each
+// setting scales a noise frame, compared byte for byte with the default.
 //
 // Usage: rga_kernel   (as root)
 #include <fcntl.h>
@@ -14,7 +16,9 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include <im2d.hpp>
 #include <opencv2/imgproc.hpp>
@@ -54,8 +58,19 @@ int main() {
     rga_buffer_t d = wrapbuffer_handle(dh, OW, OH, RK_FORMAT_RGB_888);
     imsetColorSpace(&d, IM_YUV_TO_RGB_BT601_LIMIT);
 
+    // Scales `from` into d with im_opt_t.interp = interp; returns the status.
+    auto scale = [&](const rga_buffer_t& from, int interp) {
+        im_opt_t opt{};
+        opt.version = RGA_CURRENT_API_HEADER_VERSION;
+        opt.core = IM_SCHEDULER_RGA3_CORE0;
+        opt.interp = interp;
+        const IM_STATUS st = improcess(from, d, {}, {0, 0, W, H}, {0, 0, OW, OH}, {}, -1, nullptr, &opt, IM_SYNC);
+        sync(dfd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ);
+        return st;
+    };
+
     // Luma impulse at (x0, y0) if x0 >= 0; Cb impulse at chroma sample (cx0, cy0) if cx0 > 0.
-    auto run = [&](int x0, int y0, int cx0, int cy0) {
+    auto run = [&](int x0, int y0, int cx0, int cy0, int interp = IM_INTERP_DEFAULT) {
         sync(sfd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
         std::memset(src, 16, size_t(W) * H);
         std::memset(src + size_t(W) * H, 128, size_t(W) * H / 2);
@@ -64,12 +79,8 @@ int main() {
         if (cx0 > 0)
             src[size_t(W) * H + size_t(cy0) * W + size_t(cx0) * 2] = 240;
         sync(sfd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
-        im_opt_t opt{};
-        opt.version = RGA_CURRENT_API_HEADER_VERSION;
-        opt.core = IM_SCHEDULER_RGA3_CORE0;
-        IM_STATUS st = improcess(s, d, {}, {0, 0, W, H}, {0, 0, OW, OH}, {}, -1, nullptr, &opt, IM_SYNC);
+        const IM_STATUS st = scale(s, interp);
         CHECK(st == IM_STATUS_SUCCESS, "improcess failed: %s", imStrError(st));
-        sync(dfd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ);  // ended at the next run, before RGA writes
     };
 
     // Luma: for each impulse position, every output pixel that changed, with its value.
@@ -123,13 +134,7 @@ int main() {
                 src[size_t(W) * H + i + 1] = static_cast<uint8_t>(V);
             }
             sync(sfd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
-            im_opt_t opt{};
-            opt.version = RGA_CURRENT_API_HEADER_VERSION;
-            opt.core = IM_SCHEDULER_RGA3_CORE0;
-            CHECK(improcess(s, d, {}, {0, 0, W, H}, {0, 0, OW, OH}, {}, -1, nullptr, &opt, IM_SYNC) ==
-                      IM_STATUS_SUCCESS,
-                  "improcess failed");
-            sync(dfd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ);
+            CHECK(scale(s, IM_INTERP_DEFAULT) == IM_STATUS_SUCCESS, "improcess failed");
             const uint8_t* p = &dst[(size_t(180) * OW + 320) * 3];
             uint8_t nv12[6] = {uint8_t(Y), uint8_t(Y), uint8_t(Y), uint8_t(Y), uint8_t(U), uint8_t(V)};
             cv::Mat rgb;
@@ -141,6 +146,82 @@ int main() {
             n += 3;
         }
     std::printf("mean RGA - OpenCV: %.3f\n", double(diff_sum) / n);
+
+    // Padding rows: the decoder lays out 1080 rows in 1088 (hstride). A Y=16 frame whose padding
+    // rows are Y=235: if RGA reads past row 1079, the last output row brightens.
+    {
+        constexpr int HS = 1088;
+        const size_t psize = size_t(W) * HS * 3 / 2;
+        const int pfd = heap_alloc(psize);
+        auto* p = static_cast<uint8_t*>(mmap(nullptr, psize, PROT_READ | PROT_WRITE, MAP_SHARED, pfd, 0));
+        sync(pfd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
+        std::memset(p, 16, size_t(W) * H);
+        std::memset(p + size_t(W) * H, 235, size_t(W) * (HS - H));
+        std::memset(p + size_t(W) * HS, 128, size_t(W) * HS / 2);
+        sync(pfd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
+        const rga_buffer_handle_t ph = importbuffer_fd(pfd, static_cast<int>(psize));
+        CHECK(scale(wrapbuffer_handle(ph, W, H, RK_FORMAT_YCbCr_420_SP, W, HS), IM_INTERP_DEFAULT) ==
+                  IM_STATUS_SUCCESS,
+              "improcess failed");
+        std::printf("padding rows Y=235, column 320: output rows 357, 358, 359 ->");
+        for (int y = 357; y < OH; y++) {
+            const uint8_t* q = &dst[(size_t(y) * OW + 320) * 3];
+            std::printf(" %d/%d/%d", q[0], q[1], q[2]);
+        }
+        std::printf("\n");
+        releasebuffer_handle(ph);
+        munmap(p, psize);
+        close(pfd);
+    }
+
+    // im_opt_t.interp. librga applies a mode only with IM_INTERP_HORIZ_FLAG / IM_INTERP_VERTI_FLAG
+    // set (IM_INTERP(h, v)); a bare mode number sets neither flag.
+    sync(sfd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
+    uint32_t seed = 12345;
+    for (size_t i = 0; i < src_size; i++) {
+        seed = seed * 1664525u + 1013904223u;
+        src[i] = static_cast<uint8_t>(seed >> 24);
+    }
+    sync(sfd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
+    CHECK(scale(s, IM_INTERP_DEFAULT) == IM_STATUS_SUCCESS, "improcess failed");
+    const std::vector<uint8_t> noise_default(dst, dst + dst_size);
+    const std::pair<const char*, int> settings[] = {
+        {"1 (linear, no flags)", IM_INTERP_LINEAR},
+        {"2 (cubic, no flags)", IM_INTERP_CUBIC},
+        {"3 (average, no flags)", IM_INTERP_AVERAGE},
+        {"IM_INTERP(linear, linear)", IM_INTERP(IM_INTERP_LINEAR, IM_INTERP_LINEAR)},
+        {"IM_INTERP(cubic, cubic)", IM_INTERP(IM_INTERP_CUBIC, IM_INTERP_CUBIC)},
+        {"IM_INTERP(average, average)", IM_INTERP(IM_INTERP_AVERAGE, IM_INTERP_AVERAGE)},
+    };
+    std::vector<std::pair<const char*, int>> differing;
+    for (const auto& [name, interp] : settings) {
+        const IM_STATUS st = scale(s, interp);
+        if (st != IM_STATUS_SUCCESS) {
+            std::printf("interp %-28s (0x%03x): %s\n", name, interp, imStrError(st));
+            continue;
+        }
+        int64_t diff = 0, n_diff = 0;
+        for (size_t i = 0; i < dst_size; i++) {
+            const int dv = std::abs(int(dst[i]) - int(noise_default[i]));
+            diff += dv;
+            n_diff += dv != 0;
+        }
+        std::printf("interp %-28s (0x%03x): noise frame, %lld of %zu bytes differ from default, MAE %.3f\n", name,
+                    interp, (long long)n_diff, dst_size, double(diff) / dst_size);
+        if (n_diff)
+            differing.emplace_back(name, interp);
+    }
+    for (const auto& [name, interp] : differing) {
+        std::printf("impulse response with interp %s\n", name);
+        for (int x0 : {951, 952, 953, 954}) {
+            run(x0, 540, 0, 0, interp);
+            changed("luma", x0, 540);
+        }
+        for (int y0 : {537, 538, 539, 540}) {
+            run(960, y0, 0, 0, interp);
+            changed("luma", 960, y0);
+        }
+    }
     releasebuffer_handle(sh);
     releasebuffer_handle(dh);
     return 0;

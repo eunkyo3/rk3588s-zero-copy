@@ -43,7 +43,16 @@ void resize_luma(const cv::Mat& src, cv::Mat& dst, cv::Size size, int interpolat
 // AMENDMENTS A4: INTER_AREA, the lower MAE against C (with the luma box of resize_luma).
 int opencv_interpolation() { return cv::INTER_AREA; }
 int rga_interpolation() { return 0; }  // IM_INTERP_DEFAULT; RGA3 ignores it
-const char* opencv_interpolation_name() { return "INTER_AREA, luma box moved by one pixel at 1/3 scale"; }
+const char* opencv_interpolation_name(int interpolation) {
+    switch (interpolation) {
+    case cv::INTER_AREA:
+        return "INTER_AREA, luma box moved by one pixel at 1/3 scale";
+    case cv::INTER_LINEAR:
+        return "INTER_LINEAR";
+    default:
+        return "other";
+    }
+}
 
 Band letterbox_band(int frame_w, int frame_h, int model_w, int model_h) {
     const float scale = std::min(float(model_w) / frame_w, float(model_h) / frame_h);
@@ -93,6 +102,9 @@ void CpuSlots::init(NpuContexts& npu, int n_slots) {
     attr.type = RKNN_TENSOR_UINT8;
     attr.fmt = RKNN_TENSOR_NHWC;
     attr.pass_through = 0;
+    // bind copies the slot as one block, so the input rows must not be padded.
+    CHECK(attr.w_stride == 0 || attr.w_stride == uint32_t(npu.model_w()), "input row stride %u, expected %d",
+          attr.w_stride, npu.model_w());
     for (int k = 0; k < NpuContexts::kCount; k++) {
         input_[k] = rknn_create_mem(npu.ctx[k], std::max<uint32_t>(attr.size_with_stride, uint32_t(size_)));
         CHECK(input_[k] && rknn_set_io_mem(npu.ctx[k], input_[k], &attr) == RKNN_SUCC, "input binding failed");

@@ -32,7 +32,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1-2. Variants B, A and C run on the board, B is aligned with C, and the zero-copy evidence is in ([docs/notes/preprocess.md](docs/notes/preprocess.md)). Next: calibration (M1-3), which needs the wired stream server and cooling.
+**Current status:** M1-2. Variants B, A and C run on the board, and B is aligned with C ([docs/notes/preprocess.md](docs/notes/preprocess.md)). C's input path makes no CPU pixel copy, but the runtime copies the outputs on the CPU, so the §11.4 zero-copy criterion is not met ([AMENDMENTS A6](prereg/AMENDMENTS.md)). Next: calibration (M1-3), which needs the wired stream server and cooling.
 
 ## Hardware and software
 

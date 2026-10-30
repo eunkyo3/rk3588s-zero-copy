@@ -1,6 +1,6 @@
-A: process_cpu_s,17.470 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,34.222 latency_p99_ms,51.247 
-B: process_cpu_s,5.050 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,46.712 latency_p99_ms,51.615 
-C: process_cpu_s,2.050 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,31.185 latency_p99_ms,33.299 
+A: process_cpu_s,17.430 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,38.954 latency_p99_ms,51.147 
+B: process_cpu_s,4.900 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,45.835 latency_p99_ms,50.827 
+C: process_cpu_s,2.030 decoder_drops,0 q1_drops_in_window,0 processed_in_window,150 latency_p50_ms,31.046 latency_p99_ms,33.404 
 A frames(seq<960)=160 detections=2541
 B frames(seq<960)=160 detections=2541
 C frames(seq<960)=160 detections=2538

@@ -84,7 +84,7 @@ struct DetStats {
     float min_iou = 1, max_dconf = 0;
 
     void add(const std::vector<Detection>& c, const std::vector<Detection>& b) {
-        auto near_threshold = [](const Detection& d) { return std::fabs(d.score - 0.25f) <= 0.02f; };
+        auto near_threshold = [](const Detection& d) { return d.score >= 0.23f && d.score <= 0.27f; };
         std::vector<int> b_match(b.size(), -1);
         std::vector<bool> c_matched(c.size(), false);
         std::vector<std::tuple<float, int, int>> cand;
@@ -135,12 +135,12 @@ int main(int argc, char** argv) {
     pin_current_thread({4, 5, 6, 7});
     cv::setNumThreads(1);
     if (argc < 3)
-        die("usage: compare_prepare <video.mp4> <model.rknn> [frames=1000]");
+        die("usage: compare_prepare <video.mp4> <model.rknn> [frames=1000] [rga_interp=0]");
     const int max_frames = argc > 3 ? std::atoi(argv[3]) : 1000;
     const int rga_interp = argc > 4 ? std::atoi(argv[4]) : rga_interpolation();
 
-    // B gets its own contexts: C binds every context's input with rknn_set_io_mem, and a context
-    // bound that way ignores rknn_inputs_set.
+    // Each preprocessing gets its own contexts: C and B both bind every context's input with
+    // rknn_set_io_mem, to their own buffers.
     NpuContexts npu, npu_b, npu_l;
     npu.open(argv[2]);
     npu_b.open(argv[2]);
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
     Stats area{"C vs B"}, linear{"C vs B(INTER_LINEAR)"}, reference{"R = B(INTER_LINEAR) vs B"};
     DetStats det, det_ref;
     std::map<int, int64_t> class_c, class_b, class_l;
-    bool b_binding_ok = false;
+    bool b_binding_ok = true;
     bool c_border_ok = true;
     std::vector<uint8_t> tc(size_t(mw) * mh * 3), tl(tc.size()), ta(tc.size());
     std::atomic<bool> stop{false};
@@ -192,8 +192,9 @@ int main(int argc, char** argv) {
                 const auto dc = yolov8_post(npu.output_ptrs(0), npu.outputs, mw, mh);
                 const auto db = yolov8_post(npu_b.output_ptrs(0), npu_b.outputs, mw, mh);
                 const auto dl = yolov8_post(npu_l.output_ptrs(0), npu_l.outputs, mw, mh);
-                if (frames == 0)  // B's binding against the runtime's own copy path (AMENDMENTS A3)
-                    b_binding_ok = npu_b.run_bound(0) == npu_b.reference_outputs(ta, argv[2]);
+                // B's binding against the runtime's own copy path (AMENDMENTS A3), first and last frame
+                if (frames == 0 || frames == max_frames - 1)
+                    b_binding_ok &= npu_b.run_bound(0) == npu_b.reference_outputs(ta, argv[2]);
                 det.add(dc, db);
                 det_ref.add(dl, db);
                 for (const auto& d : dc)
@@ -211,7 +212,7 @@ int main(int argc, char** argv) {
 
     auto mae = [](const Stats& s) { return s.abs_sum / double(s.elements); };
     std::printf("frames: %d\n", frames);
-    std::printf("b_binding_matches_rknn_outputs_get: %d\n", b_binding_ok);
+    std::printf("b_binding_matches_rknn_outputs_get (first and last frame): %d\n", b_binding_ok);
     std::printf("border_114: C %d, B(INTER_AREA) %d, B(INTER_LINEAR) %d\n", c_border_ok, area.border_ok,
                 linear.border_ok);
     for (const Stats* s : {&area, &linear, &reference})
@@ -223,7 +224,9 @@ int main(int argc, char** argv) {
                     "max_dconf %.3f, frames with equal counts %.4f\n",
                     name, (long long)d->pairs, double(d->iou_ok) / d->pairs, double(d->conf_ok) / d->pairs,
                     double(d->both_ok) / d->pairs, d->min_iou, d->max_dconf, double(d->frames_same) / d->frames);
-    // AMENDMENTS A5 (c): the total over all classes within 2%. Per class is reported only.
+    // AMENDMENTS A5 (c): every box post-processing returns, summed over frames and classes, within
+    // 2% of B's. Per class is reported only, for classes with at least 100 boxes in B.
+    std::printf("boxes per class (classes with at least 100 B boxes), against B:\n");
     int64_t total_b = 0, total_c = 0, total_l = 0;
     for (const auto& [cls, nb] : class_b) {
         total_b += nb;
