@@ -32,9 +32,11 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1-0, 사전 등록.
+**현재 상태:** M1-0. `prereg-v1` Release를 만들었고, 보드 환경을 갖췄다.
 
 ## 하드웨어와 소프트웨어
+
+버전, 하드웨어 블록, 등록 기준 시각은 [docs/notes/env.ko.md](docs/notes/env.ko.md)에, 모델 변환은 [models/README.ko.md](models/README.ko.md)에 있다.
 
 - FriendlyElec NanoPi R6C (RK3588S, 8 GB), FriendlyElec Ubuntu 24.04
 - C++, [ffmpeg-rockchip](https://github.com/nyanmisaka/ffmpeg-rockchip) (`h264_rkmpp`), librga (im2d), RKNN C API (librknnrt)
