@@ -10,3 +10,4 @@ stream-server/mediamtx.exe
 stream-server/mediamtx.pid
 stream-server/channels/
 stream-server/logs/
+results/**/*.u8
