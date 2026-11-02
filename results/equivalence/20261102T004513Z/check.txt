@@ -1,0 +1,46 @@
+inputs: 1000 frames of /home/pi/media/bench/pexels_36330861.mp4
+  model 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee, code 958641bbc218d3e89c5de5835e5bceeefb6ddf15, amendment A6
+  B: INTER_AREA, luma box moved by one pixel at 1/3 scale; C: RGA3, im_opt_t.interp 0; R: INTER_LINEAR
+tensor level, band 640x360 at (0, 140):
+  C vs B: MAE 2.4109, min PSNR 34.36 dB (frame 960), median PSNR 34.63 dB, mean difference RGB -0.623, -0.638, -0.566
+  R vs B: MAE 4.5384, min PSNR 28.52 dB (frame 337), median PSNR 28.92 dB, mean difference RGB +0.114, +0.096, +0.092
+  border 114: B yes, C yes, R yes
+detection level, Hungarian per class, pairs at IoU >= 0.5:
+  C vs B: 15246 pairs; IoU >= 0.95 67.15%, |dconf| <= 0.02 54.54%, both 41.84%; min IoU 0.500, max |dconf| 0.258; frames agreeing 524/1000 (52.40%)
+  R vs B: 14903 pairs; IoU >= 0.95 46.96%, |dconf| <= 0.02 43.82%, both 28.37%; min IoU 0.501, max |dconf| 0.344; frames agreeing 347/1000 (34.70%)
+  IoU of matched pairs:        C vs B    R vs B
+    [0.50, 0.80)       264    1.73%     536    3.60%
+    [0.80, 0.90)      1158    7.60%    2901   19.47%
+    [0.90, 0.95)      3587   23.53%    4467   29.97%
+    [0.95, 0.98)      6258   41.05%    5050   33.89%
+    [0.98, 0.99)      2638   17.30%    1477    9.91%
+    [0.99, 1.00]      1341    8.80%     472    3.17%
+  |dconf| of matched pairs:        C vs B    R vs B
+    0                 1218    7.99%     885    5.94%
+    (0, 0.01]         4089   26.82%    3139   21.06%
+    (0.01, 0.02]      3008   19.73%    2506   16.82%
+    (0.02, 0.05]      4303   28.22%    3802   25.51%
+    (0.05, 0.10]      2072   13.59%    2608   17.50%
+    (0.10, 0.20]       550    3.61%    1498   10.05%
+    > 0.20               6    0.04%     465    3.12%
+boxes, every box post-processing returned (classes with at least 100 B boxes):
+  car            B   6886  C   6885 (  -0.01%)  R   6927 (  +0.60%)
+  person         B   5307  C   5280 (  -0.51%)  R   5200 (  -2.02%)
+  traffic light  B   2049  C   2034 (  -0.73%)  R   2041 (  -0.39%)
+  backpack       B    590  C    582 (  -1.36%)  R    585 (  -0.85%)
+  handbag        B    291  C    288 (  -1.03%)  R    297 (  +2.06%)
+  truck          B    226  C    226 (  +0.00%)  R    217 (  -3.98%)
+  bus            B    157  C    180 ( +14.65%)  R    155 (  -1.27%)
+  stop sign      B    106  C    183 ( +72.64%)  R      7 ( -93.40%)
+  all classes    B  15740  C  15810 (  +0.44%)  R  15577 (  -1.04%)
+registered criteria (PROTOCOL §11.1, §11.2), reported:
+  tensor: MAE 2.4109 <= 2 FAIL, min PSNR 34.36 dB >= 35 FAIL, border pass: FAIL
+  detection: all 15246 pairs within both thresholds (6379 are) FAIL, frames agreeing 52.40% >= 99% FAIL: FAIL
+criteria in force (AMENDMENTS A5), which set the exit code:
+  border 114 in every B and C tensor: pass
+  tensor MAE, C 2.4109 <= R 4.5384: pass
+  tensor min PSNR, C 34.36 dB >= R 28.52 dB: pass
+  (a) pairs within both thresholds, C 41.84% >= R 28.37%: pass
+  (b) frames agreeing, C 52.40% >= R 34.70%: pass
+  (c) total boxes, |15810 - 15740| / 15740 = 0.44% <= 2%: pass
+verdict (A5): PASS

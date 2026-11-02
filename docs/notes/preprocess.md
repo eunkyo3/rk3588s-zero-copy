@@ -55,7 +55,7 @@ C against B over the 640×360 band, on the 1,000 frames of video ① (`tools/com
 
 ## Equivalence
 
-The registered criteria of §11.1 and §11.2 fail. C's detections against B on 1,000 frames of video ① (greedy matching; the M1-4 tool decides, with Hungarian matching):
+The registered criteria of §11.1 and §11.2 fail. C's detections against B on 1,000 frames of video ① (greedy matching; the M1-4 tool decides, with Hungarian matching: [equivalence.md](equivalence.md)):
 
 | | C vs B | R = B with `INTER_LINEAR` vs B |
 |---|---|---|

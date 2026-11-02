@@ -1,0 +1,3 @@
+frames: 1000
+b_binding_matches_rknn_outputs_get (first and last frame): 1
+outputs_equal_on_cores_0_1_2 (first and last frame): C 1, B 1, R 1
