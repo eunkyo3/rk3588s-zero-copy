@@ -4,14 +4,16 @@
 // The tensor set of tools/dump_tensor is preloaded into dma-heap buffers. Worker w owns the context
 // on NPU core w and cycles over the tensors whose index ≡ w (mod workers), each registered with that
 // context through rknn_create_mem_from_fd and bound with rknn_set_io_mem. A step is bind and
-// rknn_run, plus with --with-post the real post-processing on the bound outputs. There is no
+// rknn_run, plus with --with-post the real post-processing on the bound outputs. The raw limit
+// keeps the bind, which cycling the tensors needs; its time is reported (bind_ms_mean). There is no
 // prepare and no CPU copy. A step counts when it completes inside the window (§7.4).
+// Before and after the window, each worker's bound outputs are checked against rknn_outputs_get.
 //
-// Usage: calib_npu --tensors FILE [options]
-//   --with-post          post-process every output (P_cap)
-//   --cores N            workers on NPU cores 0..N-1 (default 3)
+// Usage: calib_npu --tensors FILE --fixed-clocks FILE [options]
 //   --fixed-clocks FILE  the output of tools/set_perf_mode.sh: a one-second sample in the window
 //                        below one of its values makes the run invalid (PROTOCOL §9.3 rule 1)
+//   --with-post          post-process every output (P_cap)
+//   --cores N            workers on NPU cores 0..N-1 (default 3)
 //   --warmup S, --duration S, --model PATH, --out DIR, --repetition R, --freeze-commit SHA
 //                        as for bench_main
 // Writes <out>/summary.csv, samples.csv and env.json, and prints the summary.
@@ -68,8 +70,15 @@ struct WorkerResult {
 };
 
 void usage() {
-    die("usage: calib_npu --tensors FILE [--with-post] [--cores N] [--fixed-clocks FILE] [--warmup S] "
+    die("usage: calib_npu --tensors FILE --fixed-clocks FILE [--with-post] [--cores N] [--warmup S] "
         "[--duration S] [--model PATH] [--out DIR] [--repetition R] [--freeze-commit SHA]");
+}
+
+int to_int(const std::string& s, const char* what) {
+    char* end = nullptr;
+    const long v = std::strtol(s.c_str(), &end, 10);
+    CHECK(!s.empty() && *end == '\0', "%s is not an integer: %s", what, s.c_str());
+    return static_cast<int>(v);
 }
 
 // The same heaps as C's slots (zero_copy_rga.cpp).
@@ -109,10 +118,10 @@ std::map<std::string, int64_t> read_fixed_clocks(const std::string& path) {
     while (std::getline(f, line)) {
         const size_t p = line.find(": ");
         if (p != std::string::npos)
-            m[line.substr(0, p)] = std::stoll(line.substr(p + 2));
+            m[line.substr(0, p)] = std::strtoll(line.c_str() + p + 2, nullptr, 10);
     }
     for (const char* d : kDomains)
-        CHECK(m.count(d), "%s has no %s", path.c_str(), d);
+        CHECK(m.count(d) && m[d] > 0, "%s has no %s", path.c_str(), d);
     return m;
 }
 
@@ -140,46 +149,27 @@ int main(int argc, char** argv) {
             with_post = true;
             continue;
         }
-        if (k.rfind("--", 0) != 0 || i + 1 >= argc)
+        const std::string key = k.rfind("--", 0) == 0 ? k.substr(2) : "";
+        if (i + 1 >= argc || !(key == "tensors" || key == "fixed-clocks" || a.count(key) || key == "out"))
             usage();
-        a[k.substr(2)] = argv[++i];
+        a[key] = argv[++i];
         args_json += ", " + json_string(argv[i]);
     }
     args_json += "]";
-    if (!a.count("tensors"))
+    if (!a.count("tensors") || !a.count("fixed-clocks"))
         usage();
-    const int cores = std::stoi(a["cores"]);
+    const int cores = to_int(a["cores"], "cores");
     CHECK(cores >= 1 && cores <= NpuContexts::kCount, "cores must be 1..3");
-    const int warmup_s = std::stoi(a["warmup"]), duration_s = std::stoi(a["duration"]);
+    const int warmup_s = to_int(a["warmup"], "warmup"), duration_s = to_int(a["duration"], "duration");
     CHECK(warmup_s >= 1 && duration_s >= 1, "warm-up and duration must be at least 1 s");
+    to_int(a["repetition"], "repetition");
     const std::string measurement = with_post ? "p_cap" : "npu_raw";
     const std::string out =
         a.count("out") ? a["out"]
                        : "results/calibration/" + utc_now("%Y%m%dT%H%M%SZ") + "_" + measurement + "_" + a["cores"] + "c";
     std::filesystem::create_directories(out);
-    std::map<std::string, int64_t> fixed;
-    if (a.count("fixed-clocks"))
-        fixed = read_fixed_clocks(a["fixed-clocks"]);
-
-    const Header header = {
-        {"start_time_utc", utc_now("%Y-%m-%dT%H:%M:%SZ")},
-        {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
-        {"prereg_v1_commit", kPreregCommit},
-        {"freeze_m1_commit", a["freeze-commit"]},
-        {"run_kind", "calibration"},
-        {"model_sha256", command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1")},
-        {"decoder", "none (preloaded tensors)"},
-        {"variant", "n/a (PROTOCOL §6.2)"},
-        {"channels", "n/a"},
-        {"repetition", a["repetition"]},
-        {"code_commit", CODE_COMMIT},
-        {"amendment", LATEST_AMENDMENT},
-        {"measurement", measurement},
-        {"cores", a["cores"]},
-        {"warmup_s", a["warmup"]},
-        {"duration_s", a["duration"]},
-        {"tensors", a["tensors"]},
-    };
+    std::map<std::string, int64_t> fixed = read_fixed_clocks(a["fixed-clocks"]);
+    const std::string start_time = utc_now("%Y-%m-%dT%H:%M:%SZ");
 
     // One fd and one mapping per tensor: raise the soft fd limit to the hard one.
     rlimit lim{};
@@ -201,9 +191,10 @@ int main(int argc, char** argv) {
     CHECK(file_size % tensor_bytes == 0, "%s is not a whole number of %zu-byte tensors", a["tensors"].c_str(),
           tensor_bytes);
     const int count = static_cast<int>(file_size / tensor_bytes);
-    CHECK(count >= cores, "fewer tensors than workers");
+    CHECK(count >= 2 * cores, "fewer than 2 tensors per worker");
     std::vector<Tensor> tensors(count);
-    std::vector<std::vector<uint8_t>> first(cores);  // each worker's first tensor, for the check below
+    // Each worker's first two tensors, for the output checks.
+    std::vector<std::vector<uint8_t>> check_bytes(2 * cores);
     std::string heap = "system-uncached-dma32";
     {
         FILE* f = std::fopen(a["tensors"].c_str(), "rb");
@@ -226,23 +217,52 @@ int main(int argc, char** argv) {
             std::memcpy(t.virt, buf.data(), tensor_bytes);
             std::memset(static_cast<uint8_t*>(t.virt) + tensor_bytes, 0, size - tensor_bytes);
             dmabuf_sync(t.fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
-            const int w = i % cores;
-            t.mem = rknn_create_mem_from_fd(npu.ctx[w], t.fd, t.virt, static_cast<uint32_t>(size), 0);
+            t.mem = rknn_create_mem_from_fd(npu.ctx[i % cores], t.fd, t.virt, static_cast<uint32_t>(size), 0);
             CHECK(t.mem, "rknn_create_mem_from_fd of tensor %d failed", i);
-            if (i < cores)
-                first[w] = buf;
+            if (i < 2 * cores)
+                check_bytes[i] = buf;
         }
         std::fclose(f);
     }
 
-    // Every worker's binding gives the runtime's own outputs for its first tensor (AMENDMENTS A3).
-    bool outputs_match = true;
-    for (int w = 0; w < cores; w++) {
-        rknn_tensor_attr attr = in_attr;
-        CHECK(rknn_set_io_mem(npu.ctx[w], tensors[w].mem, &attr) == RKNN_SUCC, "rknn_set_io_mem(input) failed");
-        outputs_match &= npu.run_bound(w) == npu.reference_outputs(first[w], a["model"]);
-    }
-    CHECK(outputs_match, "bound outputs differ from rknn_outputs_get");
+    // Worker w's bound outputs equal rknn_outputs_get for its tensor `which` (0 or 1). The other one
+    // runs first, so the output buffers hold different data before the checked run (AMENDMENTS A3).
+    auto outputs_match = [&](int w, int which) {
+        const int checked = w + which * cores, other = w + (1 - which) * cores;
+        auto run = [&](int i) {
+            rknn_tensor_attr attr = in_attr;
+            CHECK(rknn_set_io_mem(npu.ctx[w], tensors[i].mem, &attr) == RKNN_SUCC, "rknn_set_io_mem(input) failed");
+            return npu.run_bound(w);
+        };
+        run(other);
+        return run(checked) == npu.reference_outputs(check_bytes[checked], a["model"]);
+    };
+    bool match_before = true;
+    for (int w = 0; w < cores; w++)
+        match_before &= outputs_match(w, 0);
+    CHECK(match_before, "bound outputs differ from rknn_outputs_get");
+
+    const Header header = {
+        {"start_time_utc", start_time},
+        {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
+        {"prereg_v1_commit", kPreregCommit},
+        {"freeze_m1_commit", a["freeze-commit"]},
+        {"run_kind", "calibration"},
+        {"model_sha256", command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1")},
+        {"decoder", "none (preloaded tensors)"},
+        {"variant", "n/a (PROTOCOL §6.2)"},
+        {"channels", "n/a"},
+        {"repetition", a["repetition"]},
+        {"code_commit", CODE_COMMIT},
+        {"amendment", LATEST_AMENDMENT},
+        {"measurement", measurement},
+        {"cores", a["cores"]},
+        {"warmup_s", a["warmup"]},
+        {"duration_s", a["duration"]},
+        {"tensors", a["tensors"]},
+        {"tensor_count", std::to_string(count)},
+        {"tensor_heap", heap},
+    };
 
     std::atomic<int64_t> completed[NpuContexts::kCount] = {};  // all steps so far, for the samples
     std::vector<WorkerResult> results(cores);
@@ -306,6 +326,9 @@ int main(int argc, char** argv) {
     metrics.join();
     for (auto& t : workers)
         t.join();
+    bool match_after = true;
+    for (int w = 0; w < cores; w++)
+        match_after &= outputs_match(w, 1);
 
     // ---- summary ----
     const size_t w_idx = warmup_s - 1, e_idx = warmup_s + duration_s - 1;  // sample k at t_start + (k + 1) s
@@ -344,9 +367,9 @@ int main(int argc, char** argv) {
         for (size_t j = w_idx; j <= e_idx; j++) {
             lo = std::min(lo, samples[j].freq[q]);
             hi = std::max(hi, samples[j].freq[q]);
-            if (!fixed.empty() && samples[j].freq[q] < fixed[kDomains[q]])
-                below++;
+            below += samples[j].freq[q] < fixed[kDomains[q]];
         }
+        s.push_back({std::string("fixed_") + kDomains[q], std::to_string(fixed[kDomains[q]])});
         s.push_back({std::string("freq_min_") + kDomains[q], std::to_string(lo)});
         s.push_back({std::string("freq_max_") + kDomains[q], std::to_string(hi)});
     }
@@ -363,10 +386,11 @@ int main(int argc, char** argv) {
     }
     s.push_back({"temp_max_mc", std::to_string(temp_max)});
     s.push_back({"samples_at_or_above_trip0", std::to_string(at_trip)});  // a warning, not invalidity (§9.3)
-    const bool valid = below == 0;
-    s.push_back({"clock_check", fixed.empty() ? "not checked" : a["fixed-clocks"]});
-    s.push_back({"clock_samples_below_fixed", fixed.empty() ? "n/a" : std::to_string(below)});
-    s.push_back({"valid", fixed.empty() ? "unknown" : valid ? "1" : "0"});
+    s.push_back({"clock_samples_below_fixed", std::to_string(below)});
+    s.push_back({"bound_outputs_match_before_window", match_before ? "1" : "0"});
+    s.push_back({"bound_outputs_match_after_window", match_after ? "1" : "0"});
+    const bool valid = below == 0 && match_after;
+    s.push_back({"valid", valid ? "1" : "0"});
 
     auto open_csv = [&](const std::string& name) {
         std::ofstream f(out + "/" + name);
@@ -423,7 +447,8 @@ int main(int argc, char** argv) {
           << ", \"output_binding\": \"NCHW INT8 rknn_create_mem + rknn_set_io_mem\"},\n"
           << "  \"tensors\": {\"heap\": " << json_string(heap) << ", \"count\": " << count
           << ", \"buffer_bytes\": " << size << "},\n"
-          << "  \"bound_outputs_match_rknn_outputs_get\": " << (outputs_match ? "true" : "false") << "\n}\n";
+          << "  \"bound_outputs_match_rknn_outputs_get\": {\"before_window\": " << (match_before ? "true" : "false")
+          << ", \"after_window\": " << (match_after ? "true" : "false") << "}\n}\n";
     }
 
     for (const auto& [k, v] : s)

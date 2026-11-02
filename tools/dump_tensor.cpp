@@ -5,7 +5,7 @@
 // Usage: dump_tensor <video.mp4> <model.rknn> <out.u8> [frames=1000]
 //   <out.u8>    frames x model_h x model_w x 3 uint8 (RGB, NHWC), in decode order
 //   <out>.json  arguments, SHA-256 of the source, the model and the tensors, the preprocessing
-// Exit code 0 when all frames were written.
+// Exit code 0 when all frames were written; otherwise 1, and <out.u8> is removed.
 #include <atomic>
 #include <cstdio>
 #include <filesystem>
@@ -80,6 +80,10 @@ int main(int argc, char** argv) {
         },
         [] { die("decoder error"); });
     CHECK(!std::ferror(f) && std::fclose(f) == 0, "writing %s failed", out.c_str());
+    if (frames < max_frames) {  // a short set must not look like a complete one
+        std::filesystem::remove(out);
+        die("%s has only %d frames, %d requested", video.c_str(), frames, max_frames);
+    }
 
     std::string env = "{\n  \"args\": " + args_json + ",\n  \"start_time_utc\": " + json_string(start) +
                       ",\n  \"code_commit\": " + json_string(CODE_COMMIT) + ",\n  \"amendment\": " +
@@ -102,5 +106,5 @@ int main(int argc, char** argv) {
     std::printf("frames: %d -> %s, record %s\n", frames, out.c_str(), record.c_str());
     backend->shutdown(npu);
     npu.close();
-    return frames == max_frames ? 0 : 1;
+    return 0;
 }
