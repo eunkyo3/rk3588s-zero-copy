@@ -40,14 +40,27 @@ for d in dmc fdab0000.npu; do
     kv "devfreq_$d" "governor=$(cat "$f/governor") cur_hz=$(cat "$f/cur_freq") min_hz=$(cat "$f/min_freq") max_hz=$(cat "$f/max_freq")"
 done
 # The frequency tables themselves: their tops can change between boots (AMENDMENTS A7).
+# A file is read into a variable first, so that a missing one stops the script (set -e).
+list() {
+    v=$(cat "$1")
+    if [ -z "$v" ]; then
+        echo "collect_env: $1 is empty" >&2
+        exit 1
+    fi
+    echo $v | tr ' ' ','  # unquoted: one space between the values
+}
 for p in /sys/devices/system/cpu/cpufreq/policy*; do
-    kv "cpufreq_$(basename "$p")_table" "hw_max_khz=$(cat "$p/cpuinfo_max_freq") available_khz=$(tr -s ' ' ',' <"$p/scaling_available_frequencies" | sed 's/,$//')"
+    hw=$(cat "$p/cpuinfo_max_freq")
+    avail=$(list "$p/scaling_available_frequencies")
+    kv "cpufreq_$(basename "$p")_table" "hw_max_khz=$hw available_khz=$avail"
 done
 for d in dmc fdab0000.npu; do
-    kv "devfreq_${d}_table" "available_hz=$(tr -s ' ' ',' <"/sys/class/devfreq/$d/available_frequencies" | sed 's/,$//')"
+    avail=$(list "/sys/class/devfreq/$d/available_frequencies")
+    kv "devfreq_${d}_table" "available_hz=$avail"
 done
 # The kernel's high-temperature frequency caps (h_limit, applied above h m°C), from the boot log.
-limits=$($SUDO dmesg | sed -n 's/.* \([^ ]*\): l=\(-\{0,1\}[0-9]*\) h=\([0-9]*\) hyst=[0-9]* l_limit=[0-9]* h_limit=\([0-9]*\) .*/\1:h=\3:h_limit=\4/p' | tr '\n' ' ')
+log=$($SUDO dmesg)
+limits=$(echo "$log" | sed -n 's/.* \([^ ]*\): l=\(-\{0,1\}[0-9]*\) h=\([0-9]*\) hyst=[0-9]* l_limit=[0-9]* h_limit=\([0-9]*\).*/\1:h=\3:h_limit=\4/p' | tr '\n' ' ')
 kv opp_temperature_limits "${limits:-not in the kernel log any more}"
 for z in /sys/class/thermal/thermal_zone*; do
     kv "thermal_$(cat "$z/type")" "temp_mc=$(cat "$z/temp") trip0_mc=$(cat "$z/trip_point_0_temp" 2>/dev/null || echo none)"

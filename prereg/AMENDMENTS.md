@@ -144,7 +144,7 @@ Each entry has this form:
     - **Departure from §8:** §8 fixes the frequencies that *result* from the `performance` governor, that is, each domain's maximum. For both A76 clusters, the fixed value is instead 2208 MHz, below their maximum.
     - `tools/set_perf_mode.sh` sets the `performance` governor with each maximum at its fixed value. It fails if a value is not offered or not reached.
   - **`P_cap`** = 194.2083 inferences per second: the median of 194.5333, 194.1667 and 194.2083 (23,305 inferences completed in the 120 s window).
-  - **H2 auxiliary point** = floor(0.8 × 194.2083 / 30) = 5 channels. So the auxiliary set (§6.3) is {1, 2, 3, 4, 5}. The point coincides with H2's 5-channel point, so the auxiliary H2 verdict (HYPOTHESES) compares the same channel count as the primary one.
+  - **H2 auxiliary point** = floor(0.8 × 194.2083 / 30) = 5 channels. So the auxiliary set (§6.3) is {1, 2, 3, 4, 5}. The point coincides with H2's 5-channel point, so H2's secondary verdicts (HYPOTHESES, H2) are taken at the same channel count as its verdicts.
   - **The `P_cap` part of the unsaturated condition** (§6.2): channels × fps ≤ 4661/30 ≈ 155.37, that is, at most 31 channels at the main condition and 5 at the auxiliary one. The boundary is fixed together with `L`, by a later amendment.
   - **Raw NPU limit**, for reference only: 70.7250 inferences per second on 1 core, 137.2250 on 2 and 199.2083 on 3.
   - **Addition to §9.3 for these runs:** a run of `tools/calib_npu` is also invalid if, after its window, a context's bound outputs differ from `rknn_outputs_get` on the same tensor (A3). No run was.
@@ -155,7 +155,7 @@ Each entry has this form:
     - A fixed value taken from the maximum would therefore differ between sessions, or make every run after a reboot invalid.
     - 2208 MHz is offered on both clusters on every boot seen. It is also the kernel's high-temperature cap for both A76 clusters (`h_limit=2208000000`, applied above 85 °C).
     - The A55 cluster and the NPU keep their maxima. Their high-temperature caps are 1608 and 800 MHz.
-    - These caps are not the only limit: thermal throttling from `soc-thermal`'s 75 °C trip went lower on 2026-10-30, to 1416, 2016 and 800 MHz (`docs/notes/env.md`, thermal observation). A clock sample below a fixed value, for either reason, makes the run invalid (§9.3 rule 1).
+    - These caps are not the only limit: thermal throttling from `soc-thermal`'s 75 °C trip went lower on 2026-10-30, to 1416 MHz on the A55 cluster and 2016 MHz on the A76 clusters, with the NPU at 800 MHz (`docs/notes/env.md`, thermal observation). A clock sample below a fixed value, for either reason, makes the run invalid (§9.3 rule 1).
     - `tools/collect_env.sh` now records the frequency tables, the boot time and the `h_limit` caps before every run.
   - **Measurement:** `tools/calib_npu.sh`, session [results/calibration/20261102T073918Z_npu](../results/calibration/20261102T073918Z_npu), code `3789a7a`, ambient 28 °C, cooling "heatsink + always-on mini fan (unbranded, AliExpress)".
     - The session started with 10 minutes idle (`soc-thermal` baseline 39.9 °C), and every run passed the cooldown gate (§9.2).

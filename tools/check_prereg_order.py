@@ -78,11 +78,16 @@ def amendments(amendments_md):
         if m:
             current = m.group(1)
             names.add(current)
-        m = re.match(r"^- Release: .*\bamend-(A\d+)\b", line)
-        if m and current:
+        if not line.startswith("- Release:") or current is None:  # the format block comes first
+            continue
+        rest = line[len("- Release:"):].strip()
+        m = re.search(r"\bamend-(A\d+)\b", rest)
+        if m:
             if m.group(1) != current:
                 raise InputError(f"{amendments_md}: entry {current} names Release amend-{m.group(1)}")
             released.add(current)
+        elif not rest.startswith("none"):
+            raise InputError(f"{amendments_md}: entry {current}: cannot read its Release line: {rest!r}")
     return names, released
 
 
@@ -134,8 +139,8 @@ def check(results, refs, names, released):
     for p in files:
         h = header_of(p)
         if h is None:
-            if p.suffix == ".csv":
-                problems.append(f"{p}: a results CSV without a header (PROTOCOL §1.4)")
+            if p.suffix in (".csv", ".jsonl"):
+                problems.append(f"{p}: a results {p.suffix[1:].upper()} without a header (PROTOCOL §1.4)")
             continue
         if not h[0]:
             problems.append(f"{p}: a header without start_time_utc")
