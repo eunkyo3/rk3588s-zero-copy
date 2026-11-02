@@ -1,7 +1,7 @@
 #!/bin/sh
 # Copy the working tree (tracked and untracked files, minus .gitignore) to the board and build it
 # there. The build records the commit, with "-dirty" when the copied tree differs from it
-# (local changes or untracked files).
+# (local changes or untracked files). results/ is not copied: runs write it on the board, as root.
 # Usage: tools/deploy_board.sh [user@host] [dir]   (env: SSH, default "ssh")
 set -eu
 
@@ -14,6 +14,7 @@ if [ -n "$(git -C "$root" status --porcelain)" ]; then
 fi
 
 git -C "$root" ls-files -co --exclude-standard -z |
+    grep -zv '^results/' |
     tar -C "$root" --null -T - -cf - |
     ${SSH:-ssh} "$HOST" "mkdir -p '$DIR' && cd '$DIR' && tar xf - &&
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCODE_COMMIT=$commit >/dev/null &&
