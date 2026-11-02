@@ -1,0 +1,29 @@
+Frequency tables of the CPU clusters by boot (AMENDMENTS A7, docs/notes/calibration.md#fixed-clocks).
+Under the default ondemand governor, scaling_max_freq equals cpuinfo_max_freq, the top of the table.
+
+1. Boot of 2026-10-30. docs/notes/env.md, board baseline (tools/collect_env.sh at 2026-10-30T03:53:38Z):
+cpufreq_policy4: cpus=4 5 governor=ondemand cur_khz=600000 min_khz=408000 max_khz=2304000
+cpufreq_policy6: cpus=6 7 governor=ondemand cur_khz=600000 min_khz=408000 max_khz=2352000
+
+2. Boot before the M1-4 runs. results/equivalence/20261102T004513Z/env.txt (and the two later runs):
+cpufreq_policy4: cpus=4 5 governor=ondemand cur_khz=600000 min_khz=408000 max_khz=2352000
+cpufreq_policy6: cpus=6 7 governor=ondemand cur_khz=600000 min_khz=408000 max_khz=2352000
+
+3. Boot of 2026-11-02 at about 05:25 UTC (`uptime` read "05:33:15 up 8 min"; the journal stamps its
+   early lines 05:13, before NTP set the clock). Read by hand from sysfs at about 05:37 UTC, not saved
+   by a tool:
+policy4: cpuinfo_max=2304000 avail=[408000 600000 816000 1008000 1200000 1416000 1608000 1800000 2016000 2208000 2304000]
+policy6: cpuinfo_max=2352000 avail=[408000 600000 816000 1008000 1200000 1416000 1608000 1800000 2016000 2208000 2352000]
+
+4. Boot of 2026-11-02T07:20:16Z. tools/collect_env.sh at 2026-11-02T08:57:16Z, with the clocks fixed:
+boot_time_utc: 2026-11-02T07:20:16Z
+cpufreq_policy0_table: hw_max_khz=1800000 available_khz=408000,600000,816000,1008000,1200000,1416000,1608000,1800000
+cpufreq_policy4_table: hw_max_khz=2352000 available_khz=408000,600000,816000,1008000,1200000,1416000,1608000,1800000,2016000,2208000,2352000
+cpufreq_policy6_table: hw_max_khz=2352000 available_khz=408000,600000,816000,1008000,1200000,1416000,1608000,1800000,2016000,2208000,2352000
+devfreq_dmc_table: available_hz=528000000,1068000000,1560000000,2112000000
+devfreq_fdab0000.npu_table: available_hz=300000000,400000000,500000000,600000000,700000000,800000000,900000000,1000000000
+opp_temperature_limits: cpu0:h=85000:h_limit=1608000000 cpu4:h=85000:h_limit=2208000000 cpu6:h=85000:h_limit=2208000000 fdbd0000.rkvenc-core:h=2147483647:h_limit=0 fdbe0000.rkvenc-core:h=2147483647:h_limit=0 fdd90000.vop:h=2147483647:h_limit=0 dmc:h=2147483647:h_limit=0 fb000000.gpu:h=85000:h_limit=800000000 fdab0000.npu:h=85000:h_limit=800000000
+
+The highest entry of policy4 is 2304 MHz on boots 1 and 3 and 2352 MHz on boots 2 and 4; on boots 3
+and 4 the table has no other entry above 2208 MHz. policy6 shows 2352 MHz on all four. From now on,
+tools/collect_env.sh records the tables, the boot time and the h_limit caps before every run.

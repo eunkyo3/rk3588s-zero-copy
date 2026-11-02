@@ -3,11 +3,14 @@
 # DDR (dmc) and the NPU devfreq, each held at its fixed frequency through its maximum. The fixed
 # frequencies are the constants below (recorded in AMENDMENTS, §14):
 #   - A55 (policy0) 1800 MHz, DDR 2112 MHz, NPU 1000 MHz: the highest each offers.
-#   - A76 (policy4, policy6) 2208 MHz: the highest frequency every boot offers. The top of policy4's
-#     table changes between boots (2304 or 2352 MHz), and above 85 °C the kernel limits both A76
-#     clusters to 2208 MHz.
+#   - A76 (policy4, policy6) 2208 MHz: offered on every boot seen (docs/notes/calibration/
+#     a76_tables.txt). The top of policy4's table changes between boots (2304 or 2352 MHz), and
+#     2208 MHz is also the kernel's high-temperature cap for both A76 clusters (h_limit, above 85 °C).
+# The kernel's thermal throttling from soc-thermal's 75 °C trip can still go below these values
+# (docs/notes/env.md, thermal observation); a run with such a sample is invalid (§9.3 rule 1).
 # Prints them as "key: value" lines (the keys of summary.csv's freq_min_*); later runs are checked
-# against them (§9.3 rule 1). Fails if a frequency is not offered or not reached.
+# against them (§9.3 rule 1). Fails if a frequency is not offered or not reached; the frequencies
+# read back are the ones the drivers report (scaling_cur_freq, devfreq cur_freq).
 # A reboot restores the default governors.
 # Usage, as root: tools/set_perf_mode.sh
 set -eu
@@ -20,7 +23,11 @@ fail() {
     echo "set_perf_mode: $1" >&2
     exit 1
 }
-offers() { tr ' ' '\n' <"$1" | grep -qx "$2"; }
+offers() {
+    [ -r "$1" ] || fail "cannot read $1"
+    tr ' ' '\n' <"$1" | grep -qx "$2"
+}
+[ "$(id -u)" -eq 0 ] || fail "run as root"
 
 for pk in $CPU_KHZ; do
     d=/sys/devices/system/cpu/cpufreq/policy${pk%%:*}

@@ -14,30 +14,38 @@ Hardware limits that set the channel counts of the comparison (PROTOCOL §6), th
 
 ## Fixed clocks
 
-| Domain | Fixed | Highest offered | Above 85 °C the kernel limits it to |
+| Domain | Fixed | Highest offered | High-temperature cap (`h_limit`, above 85 °C) |
 |---|---|---|---|
 | A55, policy0 (cpu0–3) | 1800 MHz | 1800 MHz | 1608 MHz |
 | A76, policy4 (cpu4–5) | 2208 MHz | 2304 or 2352 MHz, depending on the boot | 2208 MHz |
 | A76, policy6 (cpu6–7) | 2208 MHz | 2352 MHz | 2208 MHz |
-| DDR, `dmc` | 2112 MHz | 2112 MHz | no limit |
+| DDR, `dmc` | 2112 MHz | 2112 MHz | none |
 | NPU | 1000 MHz | 1000 MHz | 800 MHz |
 
-The limits come from the kernel log (`h_limit=` lines). The highest entry of policy4's table changed between boots:
+The caps come from the kernel log (`h_limit=` lines). They are not the only limit: thermal throttling from `soc-thermal`'s 75 °C trip can go lower. On 2026-10-30 it lowered the caps to 1416 MHz (A55), 2016 MHz (A76) and 800 MHz (NPU) ([env.md](env.md#thermal-observation)).
 
-| Boot | policy4 highest |
-|---|---|
-| 2026-10-30 (M1-0 baseline) | 2304 MHz |
-| 2026-11-02, before the M1-4 runs | 2352 MHz |
-| 2026-11-02 05:13 UTC | 2304 MHz |
-| 2026-11-02 07:20 UTC | 2352 MHz |
+The highest entry of policy4's table changed between boots ([evidence](calibration/a76_tables.txt)):
 
-So both A76 clusters are fixed at 2208 MHz, which every boot offers and which the kernel's own limit above 85 °C equals. The other domains keep their maximum. `tools/set_perf_mode.sh` sets the `performance` governor with each maximum at the fixed value, and fails when a value is not offered or not reached. A clock sample below a fixed value makes a run invalid (§9.3 rule 1).
+| Boot | policy4 highest | Source |
+|---|---|---|
+| 2026-10-30 (M1-0 baseline) | 2304 MHz | `collect_env.sh` |
+| 2026-11-02, before the M1-4 runs | 2352 MHz | `collect_env.sh` |
+| 2026-11-02, about 05:25 UTC | 2304 MHz | read by hand from sysfs |
+| 2026-11-02 07:20 UTC | 2352 MHz | `collect_env.sh` |
+
+On the last two boots, 2208 MHz is the only other entry above 2016 MHz. So both A76 clusters are fixed at 2208 MHz:
+- it is offered on every boot seen;
+- it equals the kernel's high-temperature cap for both clusters.
+
+The other domains keep their maximum. `tools/set_perf_mode.sh` sets the `performance` governor with each maximum at the fixed value, and fails when a value is not offered or not reached. A clock sample below a fixed value makes a run invalid (§9.3 rule 1), whether a cap or throttling caused it.
+
+The frequencies read back are what the drivers report (`scaling_cur_freq`, devfreq `cur_freq`), not a measurement of the clock. `tools/collect_env.sh` now also records the frequency tables, the boot time and the `h_limit` caps before every run.
 
 ## P_cap and the raw NPU limit
 
 ### Method
 
-- **Tensor set** (§6.2): `tools/dump_tensor` writes the first 1,000 frames of video ① (`file_source`) as C's preprocessing (RGA3) produces them. SHA-256 `051d6f12…`, the same file as the `c.u8` of the M1-4 deciding run, kept in Release [`data-equivalence-20261102T011123Z`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z). Two dumps, with code `38ddd37` plus the uncommitted tool and with `3789a7a`, gave the same file.
+- **Tensor set** (§6.2): `tools/dump_tensor` writes the first 1,000 frames of video ① (`file_source`) as C's preprocessing (RGA3) produces them. SHA-256 `051d6f12…`, the hash of the `c.u8` that `tools/equivalence_dump` at code `669fb9b` wrote in the M1-4 deciding run, kept in Release [`data-equivalence-20261102T011123Z`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z). So the set is that run's C input. Its own record (`tensors.json`) names code `38ddd37` with the then uncommitted `dump_tensor`.
 - **`tools/calib_npu`:**
   - Loads the 1,000 tensors into `system-uncached-dma32` buffers, the heap of C's slots.
   - Worker `w` owns the context on NPU core `w` and cycles over the tensors whose index ≡ `w` (mod workers). Each tensor is registered with that context through `rknn_create_mem_from_fd`.
@@ -71,7 +79,7 @@ All 12 runs were valid. No clock sample fell below its fixed value, and no tempe
 
 Means over the 3 repetitions:
 
-| Measurement | `rknn_run` | Post-processing | Bind | NPU load per core | Process CPU in 120 s | Highest temperature |
+| Measurement | `rknn_run` | Post-processing | Bind | NPU load per core in use | Process CPU in 120 s | Highest temperature |
 |---|---|---|---|---|---|---|
 | P_cap | 15.04 ms | 0.374 ms | 0.023 ms | 91% | 32.4 s | 55.5 °C |
 | Raw, 1 core | 14.13 ms | | 0.014 ms | 94% | 7.2 s | 47.2 °C |

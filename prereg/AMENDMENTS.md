@@ -139,25 +139,31 @@ Each entry has this form:
 - Release: none (before `freeze-m1`).
 
 ## A7 — 2026-11-02 — Fixed clocks, P_cap and the H2 auxiliary point
-- Change: fixes these values of PROTOCOL §14 (M1-3).
-  - **Fixed frequencies** (§8): A55 (policy0) 1800 MHz, A76 policy4 and policy6 2208 MHz, DDR (`dmc`) 2112 MHz, NPU 1000 MHz. `tools/set_perf_mode.sh` sets the `performance` governor with each maximum at its value, and fails if a value is not offered or not reached. Every later run is checked against these values (§9.3 rule 1).
+- Change: fixes these values of PROTOCOL §14 (M1-3), and departs from §8 and adds to §9.3 as follows.
+  - **Fixed frequencies:** A55 (policy0) 1800 MHz, A76 policy4 and policy6 2208 MHz, DDR (`dmc`) 2112 MHz, NPU 1000 MHz. Every later run is checked against these values (§9.3 rule 1).
+    - **Departure from §8:** §8 fixes the frequencies that *result* from the `performance` governor, that is, each domain's maximum. For both A76 clusters, the fixed value is instead 2208 MHz, below their maximum.
+    - `tools/set_perf_mode.sh` sets the `performance` governor with each maximum at its fixed value. It fails if a value is not offered or not reached.
   - **`P_cap`** = 194.2083 inferences per second: the median of 194.5333, 194.1667 and 194.2083 (23,305 inferences completed in the 120 s window).
-  - **H2 auxiliary point** = floor(0.8 × 194.2083 / 30) = 5 channels. So the auxiliary set (§6.3) is {1, 2, 3, 4, 5}.
-  - **The `P_cap` part of the unsaturated condition** (§6.2): channels × fps ≤ 155.37, that is, at most 31 channels at the main condition and 5 at the auxiliary one. The boundary is fixed together with `L`, by a later amendment.
+  - **H2 auxiliary point** = floor(0.8 × 194.2083 / 30) = 5 channels. So the auxiliary set (§6.3) is {1, 2, 3, 4, 5}. The point coincides with H2's 5-channel point, so the auxiliary H2 verdict (HYPOTHESES) compares the same channel count as the primary one.
+  - **The `P_cap` part of the unsaturated condition** (§6.2): channels × fps ≤ 4661/30 ≈ 155.37, that is, at most 31 channels at the main condition and 5 at the auxiliary one. The boundary is fixed together with `L`, by a later amendment.
   - **Raw NPU limit**, for reference only: 70.7250 inferences per second on 1 core, 137.2250 on 2 and 199.2083 on 3.
+  - **Addition to §9.3 for these runs:** a run of `tools/calib_npu` is also invalid if, after its window, a context's bound outputs differ from `rknn_outputs_get` on the same tensor (A3). No run was.
 - Reason:
-  - **A76 at 2208 MHz, not at their maximum:**
-    - The highest entry of policy4's frequency table changes between boots: 2304 MHz on the boots of 2026-10-30 (`docs/notes/env.md`) and of 2026-11-02 05:13 UTC, 2352 MHz on the boot of the M1-4 runs and of 2026-11-02 07:20 UTC. policy6 offered 2352 MHz on all four.
-    - Above 85 °C the kernel limits both A76 clusters to 2208 MHz (`dmesg`: `h_limit=2208000000`).
-    - A fixed value taken from the maximum would therefore differ between sessions, or make every run after a reboot invalid. 2208 MHz is offered on every boot seen, on both clusters.
-    - The A55 cluster and the NPU keep their maxima. Above 85 °C the kernel limits them to 1608 and 800 MHz; a sample below the fixed value makes the run invalid (§9.3 rule 1).
+  - **A76 at 2208 MHz, not at their maximum** ([docs/notes/calibration/a76_tables.txt](../docs/notes/calibration/a76_tables.txt)):
+    - The highest entry of policy4's frequency table changes between boots. It was 2304 MHz on the boot of 2026-10-30 and on the boot of 2026-11-02 at about 05:25 UTC. It was 2352 MHz on the boot of the M1-4 runs and on the boot of 2026-11-02 07:20 UTC.
+    - The 05:25 boot was read by hand from sysfs; the others are in `collect_env.sh` output. policy6 showed 2352 MHz on all four.
+    - A fixed value taken from the maximum would therefore differ between sessions, or make every run after a reboot invalid.
+    - 2208 MHz is offered on both clusters on every boot seen. It is also the kernel's high-temperature cap for both A76 clusters (`h_limit=2208000000`, applied above 85 °C).
+    - The A55 cluster and the NPU keep their maxima. Their high-temperature caps are 1608 and 800 MHz.
+    - These caps are not the only limit: thermal throttling from `soc-thermal`'s 75 °C trip went lower on 2026-10-30, to 1416, 2016 and 800 MHz (`docs/notes/env.md`, thermal observation). A clock sample below a fixed value, for either reason, makes the run invalid (§9.3 rule 1).
+    - `tools/collect_env.sh` now records the frequency tables, the boot time and the `h_limit` caps before every run.
   - **Measurement:** `tools/calib_npu.sh`, session [results/calibration/20261102T073918Z_npu](../results/calibration/20261102T073918Z_npu), code `3789a7a`, ambient 28 °C, cooling "heatsink + always-on mini fan (unbranded, AliExpress)".
     - The session started with 10 minutes idle (`soc-thermal` baseline 39.9 °C), and every run passed the cooldown gate (§9.2).
     - 3 repetitions of the 4 measurements, interleaved. All 12 runs were valid: no clock sample below its fixed value, no temperature at a trip point (highest 55.5 °C).
-  - **Tensor set** (§6.2): `tools/dump_tensor`, the first 1,000 frames of video ① (`file_source`), written by C's preprocessing (RGA3), into `system-uncached-dma32` buffers. SHA-256 `051d6f12…`, byte-identical to the `c.u8` of the M1-4 deciding run, which is kept in Release `data-equivalence-20261102T011123Z`. A second dump with code `3789a7a` gave the same file.
-  - **Two details of the method:**
-    - The raw limit keeps the bind of each step (`rknn_set_io_mem`), which cycling the tensors needs: 0.014 to 0.021 ms per step, against 14.1 to 15.0 ms for `rknn_run`.
-    - A run is also invalid if, after its window, a context's bound outputs differ from `rknn_outputs_get` on the same tensor (A3). No run was.
+  - **Tensor set** (§6.2): `tools/dump_tensor`, the first 1,000 frames of video ① (`file_source`), written by C's preprocessing (RGA3), into `system-uncached-dma32` buffers.
+    - Its SHA-256 is `051d6f12…`. That is the hash of the `c.u8` that `tools/equivalence_dump` at code `669fb9b` wrote in the M1-4 deciding run, which is kept in Release `data-equivalence-20261102T011123Z`. The set is therefore that run's C input.
+    - The set's own record (`tensors.json`) names code `38ddd37` with the then uncommitted `dump_tensor`.
+  - **The raw limit keeps the bind of each step** (`rknn_set_io_mem`), which cycling the tensors needs: 0.014 to 0.021 ms per step, against 14.1 to 15.0 ms for `rknn_run`.
   - The cooling configuration is fixed by the thermal check (§12), not by this entry.
 - Affected data: none. M1-4 ran with the default governors; its tensors and detections do not depend on the clocks.
 - Release: none (before `freeze-m1`).
