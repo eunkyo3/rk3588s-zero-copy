@@ -167,7 +167,26 @@ class Summarize(unittest.TestCase):
         self.replace("p_cap_3c_r1", ((1, "p_cap", 3, 3600), {"trip": 4}))
         code, out, v, _ = self.s.run()
         self.assertEqual(code, 0, out)
-        self.assertEqual(v["samples_at_or_above_trip0"], "4")
+        self.assertEqual(v["samples_at_or_above_trip0_all_attempts"], "4")
+
+    def test_warnings_of_invalid_runs_are_counted(self):
+        self.s.fill()
+        self.replace("p_cap_3c_r1", ((1, "p_cap", 3, 1), {"valid": "0", "exit_code": 1, "trip": 2}),
+                     ((1, "p_cap", 3, 3600), {"attempt": 2}))
+        code, out, v, _ = self.s.run()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(v["samples_at_or_above_trip0_all_attempts"], "2")
+        self.assertEqual(v["clock_samples_below_fixed_all_attempts"], "3")
+
+    def test_no_valid_p_cap_is_incomplete(self):
+        self.s.fill()
+        for rep in (1, 2, 3):
+            self.replace(f"p_cap_3c_r{rep}", ((rep, "p_cap", 3, 1), {"valid": "0", "exit_code": 1}),
+                         ((rep, "p_cap", 3, 1), {"attempt": 2, "valid": "0", "exit_code": 1}))
+        code, out, v, _ = self.s.run()
+        self.assertEqual(code, 1, out)
+        self.assertEqual((v["p_cap_inf_per_s"], v["p_cap_valid_runs"], v["complete"]), ("none", "0", "0"))
+        self.assertNotIn("h2_aux_point", v)
 
     def test_input_errors(self):
         cases = {

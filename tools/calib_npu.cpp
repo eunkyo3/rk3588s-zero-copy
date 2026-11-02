@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -76,8 +77,10 @@ void usage() {
 
 int to_int(const std::string& s, const char* what) {
     char* end = nullptr;
+    errno = 0;
     const long v = std::strtol(s.c_str(), &end, 10);
-    CHECK(!s.empty() && *end == '\0', "%s is not an integer: %s", what, s.c_str());
+    CHECK(!s.empty() && *end == '\0' && errno == 0 && v >= 0 && v <= 1000000,
+          "%s is not an integer in 0..1000000: %s", what, s.c_str());
     return static_cast<int>(v);
 }
 
@@ -226,7 +229,8 @@ int main(int argc, char** argv) {
     }
 
     // Worker w's bound outputs equal rknn_outputs_get for its tensor `which` (0 or 1). The other one
-    // runs first, so the output buffers hold different data before the checked run (AMENDMENTS A3).
+    // runs first and must give other outputs, so a stale read cannot pass (as C's check_outputs,
+    // AMENDMENTS A3).
     auto outputs_match = [&](int w, int which) {
         const int checked = w + which * cores, other = w + (1 - which) * cores;
         auto run = [&](int i) {
@@ -234,8 +238,9 @@ int main(int argc, char** argv) {
             CHECK(rknn_set_io_mem(npu.ctx[w], tensors[i].mem, &attr) == RKNN_SUCC, "rknn_set_io_mem(input) failed");
             return npu.run_bound(w);
         };
-        run(other);
-        return run(checked) == npu.reference_outputs(check_bytes[checked], a["model"]);
+        const auto reference = npu.reference_outputs(check_bytes[checked], a["model"]);
+        const bool primed_differs = run(other) != reference;
+        return primed_differs && run(checked) == reference;
     };
     bool match_before = true;
     for (int w = 0; w < cores; w++)

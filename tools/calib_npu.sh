@@ -81,10 +81,11 @@ gate() {
     while :; do
         read_soc
         since=$(($(uptime_cs) - last_end))
+        # 30 minutes less a minute for collect_env.sh and loading the tensors.
+        [ "$since" -lt 174000 ] || fail "no run for 30 minutes: the session has ended (PROTOCOL §2)"
         if [ "$soc_now" -le $((baseline + 3000)) ] && [ "$since" -ge 6000 ]; then
             return
         fi
-        [ "$since" -lt 180000 ] || fail "no run for 30 minutes: the session has ended (PROTOCOL §2)"
         sleep 1
     done
 }
@@ -103,7 +104,7 @@ run() {
         start=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         # $flag is unquoted on purpose: it is empty or one word. A run takes about 150 s.
         # shellcheck disable=SC2086
-        timeout 600 ./build/calib_npu --tensors "$TENSORS" $flag --cores "$3" --model "$MODEL" --repetition "$1" \
+        timeout -k 30 600 ./build/calib_npu --tensors "$TENSORS" $flag --cores "$3" --model "$MODEL" --repetition "$1" \
             --freeze-commit "${FREEZE_COMMIT:-none}" --fixed-clocks "$OUT/perf_mode.txt" --out "$OUT/$name" \
             >"$OUT/$name.log" 2>&1
         status=$?

@@ -5,7 +5,8 @@ For each measurement (P_cap on 3 cores; the raw NPU limit on 1, 2 and 3 cores), 
 repetition is its last attempt: a repeat replaces an invalid run (§9.3). A repetition is
 `invalid_x2` when its repeat is invalid too, and `missing` when the session stopped before it had a
 valid run or a repeat. The value is the median of the valid repetitions' completed inferences per
-second. A measurement is complete when each repetition is valid or invalid ×2 (§9.3).
+second. A measurement is complete when each repetition is valid or invalid ×2 (§9.3) and at least
+one is valid: without a valid run there is no value.
 
 Derived from P_cap (§6.2), exactly (P_cap = completed / window, as a fraction):
   - H2 auxiliary point: floor(0.8 × P_cap / 30) channels;
@@ -71,7 +72,7 @@ def derived(p_cap):
 
 def summarize(session):
     """Per measurement: (name, [per repetition: (state, rate, completed)], median); the session's
-    shared header; and the values summed over the valid runs."""
+    shared header; and the warnings summed over every attempt, valid or not."""
     with open(session / "runs.tsv", encoding="utf-8") as f:
         runs = list(csv.DictReader(f, delimiter="\t"))
     last = {}  # (measurement, cores, repetition) -> its last attempt
@@ -81,7 +82,13 @@ def summarize(session):
             last[key] = r
 
     out, shared, starts, ntp = [], None, [], set()
-    totals = {"samples_at_or_above_trip0": 0, "clock_samples_below_fixed": 0}
+    totals = {"samples_at_or_above_trip0_all_attempts": 0, "clock_samples_below_fixed_all_attempts": 0}
+    for r in runs:  # a crashed run may have no summary
+        path = session / r["dir"] / "summary.csv"
+        if path.exists():
+            _, values = read_summary(path)
+            for k in totals:
+                totals[k] += int(values[k.removesuffix("_all_attempts")])
     for measurement, cores in MEASUREMENTS:
         reps = []
         for rep in range(1, REPETITIONS + 1):
@@ -103,8 +110,6 @@ def summarize(session):
                 raise InputError(f"{r['dir']}: {', '.join(diff)} differ from the session's first run")
             starts.append(header["start_time_utc"])
             ntp.add(header["ntp_synchronized"])
-            for k in totals:
-                totals[k] += int(values[k])
             completed = int(values["completed_in_window"])
             reps.append(("valid", Fraction(completed, int(header["duration_s"])), completed))
         rates = [x for _, x, _ in reps if x is not None]
@@ -145,7 +150,7 @@ def main(argv):
         for rep, (state, rate, completed) in enumerate(reps, 1):
             rows.append((f"{name}_r{rep}", fmt(rate) if state == "valid" else state))
             rows.append((f"{name}_r{rep}_completed", completed if state == "valid" else state))
-        complete &= all(state != "missing" for state, _, _ in reps)
+        complete &= all(state != "missing" for state, _, _ in reps) and median is not None
     p_cap = measurements[0][2]
     if p_cap is not None:
         rows += list(derived(p_cap).items())
@@ -160,8 +165,7 @@ def main(argv):
     (session / "calibration.csv").write_text(text, encoding="utf-8", newline="\n")
     print(text, end="")
     if not complete:
-        print("calib_summary: the session stopped before every repetition had a valid run or a repeat",
-              file=sys.stderr)
+        print("calib_summary: a measurement has a missing repetition or no valid run", file=sys.stderr)
     if off:
         print("calib_summary: not the protocol's settings: " + "; ".join(off), file=sys.stderr)
     return 0 if complete and not off else 1

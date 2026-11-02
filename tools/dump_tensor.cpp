@@ -5,7 +5,8 @@
 // Usage: dump_tensor <video.mp4> <model.rknn> <out.u8> [frames=1000]
 //   <out.u8>    frames x model_h x model_w x 3 uint8 (RGB, NHWC), in decode order
 //   <out>.json  arguments, SHA-256 of the source, the model and the tensors, the preprocessing
-// Exit code 0 when all frames were written; otherwise 1, and <out.u8> is removed.
+// Exit code 0 when all frames were written. A video with too few frames removes <out.u8>; after any
+// other failure the record is missing, and tools/calib_npu.sh refuses the set.
 #include <atomic>
 #include <cstdio>
 #include <filesystem>
