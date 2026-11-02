@@ -120,7 +120,7 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
   - ffmpeg는 johnvansickle.com의 7.0.2 정적 빌드를 사용자 `~/.local/bin`에 두었다. 압축 파일의 SHA-256은 `abda8d77…`이다.
   - 방화벽(`firewalld`, `public` 존)은 `10.88.0.2`에서 오는 TCP 8554만 허용한다.
   - 준비된 영상 4개를 `~/media/bench`에 두었고, 해시가 manifest와 일치한다.
-- **확인:** `bench_main --variant none`으로 `rtsp://10.88.0.1:8554/ch{n}`에서 4채널(영상 ①~④)을 10초 받았다.
+- **확인:** `bench_main --variant none`으로 `rtsp://10.88.0.1:8554/ch{n}`에서 4채널(영상 ①~④)을 워밍업 3초, 창 10초로 받았다. 캘리브레이션 실행이 아니라 기능 확인이다([results/check/20261102T083613Z_none_4ch_rtsp](../../results/check/20261102T083613Z_none_4ch_rtsp), 서버 로그 포함).
   - 모든 채널이 30.000 fps로 디코딩됐고, 수신 지연 0초, 디코더 드롭 0이었다.
   - 서버 로그에 오류와 경고가 없었다.
 - PC 로그의 시각은 현지 시각(KST, UTC+9)이고, 두 기기 모두 NTP로 동기화돼 있다.

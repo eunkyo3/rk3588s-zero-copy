@@ -120,7 +120,7 @@ The board is reached over Wi-Fi (`wlan0`) for administration. The RTSP streams (
   - ffmpeg 7.0.2, the static build from johnvansickle.com, in the user's `~/.local/bin`. Its archive SHA-256 is `abda8d77…`.
   - The firewall (`firewalld`, zone `public`) accepts TCP 8554 from `10.88.0.2` only.
   - The four prepared videos are in `~/media/bench`; their hashes match the manifest.
-- **Check:** `bench_main --variant none` read 4 channels (videos ① to ④) from `rtsp://10.88.0.1:8554/ch{n}` for 10 s.
+- **Check:** `bench_main --variant none` read 4 channels (videos ① to ④) from `rtsp://10.88.0.1:8554/ch{n}`, with a 3 s warm-up and a 10 s window: a functional check, not a calibration run ([results/check/20261102T083613Z_none_4ch_rtsp](../../results/check/20261102T083613Z_none_4ch_rtsp), with the server's log).
   - Every channel decoded at 30.000 fps, with 0 s drift and no decoder drops.
   - The server log had no errors or warnings.
 - The PC's log times are local time (KST, UTC+9), and both machines are synchronized by NTP.
