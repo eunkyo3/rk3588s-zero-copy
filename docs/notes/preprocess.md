@@ -144,17 +144,18 @@ perf counts samples, not bytes. `tools/copy_sizes.sh` puts uprobes on `__memcpy_
 
 ## Benchmark videos
 
-The project owner chose four candidates. Three are prepared ([preprocess/videos_manifest.tsv](preprocess/videos_manifest.tsv)). The originals are not committed.
+The project owner chose four candidates, and all four are prepared ([preprocess/videos_manifest.tsv](preprocess/videos_manifest.tsv)). The originals are not committed.
 
 | | Source | Creator | License | Original | Prepared |
 |---|---|---|---|---|---|
 | ① | [Pexels 36330861](https://www.pexels.com/video/urban-crosswalk-scene-with-busy-traffic-36330861/), urban crosswalk | SHOX ART | [Pexels License](https://www.pexels.com/license/) | 3840×2160, 23.98 fps, 39.5 s, BT.709 | 1,186 frames |
 | ② | [Pexels 29130409](https://www.pexels.com/video/vibrant-city-street-with-busy-traffic-29130409/), city street | Paul Bill | Pexels License | 3840×2160, 23.98 fps, 25.1 s, untagged | 752 frames |
 | ③ | [Pexels 29969146](https://www.pexels.com/video/night-traffic-and-pedestrians-in-istanbul-29969146/), Istanbul at night | Sururi Ballıdağ | Pexels License | 2560×1440, 29.97 fps, 23.8 s, BT.709 | 714 frames |
-| ④ | [Pixabay 180386](https://pixabay.com/videos/intersection-cars-pedestrian-night-180386/), Osaka at night | Kanenori | [Pixabay Content License](https://pixabay.com/service/license-summary/) | — | not yet: the site refuses scripted downloads |
+| ④ | [Pixabay 180386](https://pixabay.com/videos/intersection-cars-pedestrian-night-180386/), Osaka at night | Kanenori | [Pixabay Content License](https://pixabay.com/service/license-summary/) | 3840×2160, 59.94 fps, 31.6 s, untagged | 948 frames |
 
 - **Video ①** is the only one with at least 1,000 frames, so it is the `file_source` video of §11 and of the tensor set of M1-3.
-- **Frame rate:** ① and ② are converted from 23.98 to 30 fps, which repeats about one frame in five.
+- **Frame rate:** ① and ② are converted from 23.98 to 30 fps, which repeats about one frame in five. ④ is converted from 59.94 to 30 fps, which drops about every other frame.
+- **Video ④** was downloaded by hand, because the site refuses scripted downloads.
 
 ## Tools
 
