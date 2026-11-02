@@ -32,7 +32,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1-4(M1-3보다 먼저 진행). 변형 B, A, C가 보드에서 동작하고, B를 C에 맞췄다([docs/notes/preprocess.ko.md](docs/notes/preprocess.ko.md)). B와 C는 현재 기준([AMENDMENTS A5](prereg/AMENDMENTS.ko.md))으로는 동등하고, 등록 기준으로는 동등하지 않다([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)). C의 입력 경로에는 CPU 픽셀 복사가 없지만, NPU 런타임 안의 작은 복사(B도 같음)가 §11.4 perf 기준을 넘어서 그 CPU 복사 없음 기준은 충족하지 못했다([AMENDMENTS A6](prereg/AMENDMENTS.ko.md)). 다음: 캘리브레이션(M1-3). 유선 송출 서버와 냉각이 필요하다.
+**현재 상태:** M1-3, 캘리브레이션. 고정 클럭, `P_cap`(초당 194.2회 추론), H2 보조 지점(5채널)을 확정했다([AMENDMENTS A7](prereg/AMENDMENTS.ko.md), [docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)). 유선 송출 서버를 구성했다([docs/notes/env.ko.md](docs/notes/env.ko.md#네트워크)). 다음: 디코딩 전용 상한 `L`, §3의 반복 재생 검사, 열 확인. 앞서 끝난 것: M1-4 동등성. B와 C는 현재 기준([AMENDMENTS A5](prereg/AMENDMENTS.ko.md))으로는 동등하고, 등록 기준으로는 동등하지 않다([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)). C의 입력 경로에는 CPU 픽셀 복사가 없지만, NPU 런타임 안의 작은 복사(B도 같음)가 §11.4 perf 기준을 넘는다([AMENDMENTS A6](prereg/AMENDMENTS.ko.md)).
 
 ## 하드웨어와 소프트웨어
 

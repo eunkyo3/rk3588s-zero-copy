@@ -63,6 +63,7 @@ Not covered by the script:
 ### Notes
 
 - **A76 clusters differ.** policy4 (cpu4–5) tops out at 2304 MHz and policy6 (cpu6–7) at 2352 MHz. Fixed clocks are set per policy in M1-3, and CPU time is reported per cluster.
+  - Later boots showed that policy4's top changes between boots, 2304 or 2352 MHz. M1-3 fixed both A76 clusters at 2208 MHz ([AMENDMENTS A7](../../prereg/AMENDMENTS.md), [calibration.md](calibration.md#fixed-clocks)).
 - **A55 cluster** reports `min = max = 1800 MHz` under the default governor.
 
 ## Hardware blocks
@@ -101,12 +102,30 @@ See [models/README.md](../../models/README.md): YOLOv8n from rknn_model_zoo v2.3
 
 While the board built ffmpeg-rockchip (`make -j8`, all eight cores busy) on 2026-10-30, `soc-thermal` reached 84 °C and `bigcore` 87 °C. The kernel lowered the frequency caps to 1416 MHz on the A55 cluster, 2016 MHz on the A76 clusters and 800 MHz on the NPU. So the cooling as set up then does not keep `soc-thermal` below its 75 °C trip point under full CPU load. The cooling has to change before the M1-3 thermal check, which fixes the cooling configuration (PROTOCOL §14). The cooling at the time was not recorded.
 
+Since 2026-11-02 the board has a heatsink and an always-on mini fan (unbranded, AliExpress), and the room was at 28 °C during the first M1-3 session. During the P_cap runs `soc-thermal` stayed at or below 55.5 °C ([calibration.md](calibration.md)). The thermal check of M1-3 fixes the cooling configuration.
+
 ## Network
 
-The board is reached over Wi-Fi (`wlan0`). Neither Ethernet port (`eth0`, `eth1`) has a link yet. PROTOCOL §3 requires the RTSP streams to arrive over wired Ethernet from a separate PC.
+The board is reached over Wi-Fi (`wlan0`) for administration. The RTSP streams (PROTOCOL §3) use a direct cable from the stream PC to the board's `eth1`, set up on 2026-11-02:
+
+| | Board | Stream PC |
+|---|---|---|
+| Interface | `eth1`, 1000 Mb/s full duplex | `enp3s0`, 1000 Mb/s full duplex |
+| Address | `10.88.0.2/24` | `10.88.0.1/24` |
+| NetworkManager profile | `bench-link`: static, never the default route, IPv6 off. The DHCP profile "Wired connection 2" no longer connects on its own. | `bench-link`, the same settings |
+
+- The round-trip time is 0.2 ms.
+- **Stream PC:** Rocky Linux 9.7, kernel 5.14.0-611.13.1.el9_7, Intel Core i7-4712MQ (8 threads), 3.5 GB RAM. It is a laptop and also runs a Docker container unrelated to the benchmark.
+  - mediamtx v1.21.2 from `stream-server/fetch_mediamtx.sh`.
+  - ffmpeg 7.0.2, the static build from johnvansickle.com, in the user's `~/.local/bin`. Its archive SHA-256 is `abda8d77…`.
+  - The firewall (`firewalld`, zone `public`) accepts TCP 8554 from `10.88.0.2` only.
+  - The four prepared videos are in `~/media/bench`; their hashes match the manifest.
+- **Check:** `bench_main --variant none` read 4 channels (videos ① to ④) from `rtsp://10.88.0.1:8554/ch{n}` for 10 s.
+  - Every channel decoded at 30.000 fps, with 0 s drift and no decoder drops.
+  - The server log had no errors or warnings.
+- The PC's log times are local time (KST, UTC+9), and both machines are synchronized by NTP.
 
 ## Open items
 
-- **Cooling:** add a heatsink and fan before M1-3.
-- **Wired link and stream server:** not set up yet.
-- **perf** (needed for the zero-copy evidence in M1-2, PROTOCOL §11.4): not installed. Ubuntu has no `linux-tools` package for the vendor kernel 6.1.141. The kernel exposes the `armv8_pmuv3` PMU and `perf_event_paranoid` is 2.
+- **Cooling:** fixed by the M1-3 thermal check.
+- **perf** (needed for the zero-copy evidence in M1-2, PROTOCOL §11.4): not installed at the time of this baseline, because Ubuntu has no `linux-tools` package for the vendor kernel 6.1.141. It is now at `/usr/bin/perf`, and M1-2 used it ([AMENDMENTS A6](../../prereg/AMENDMENTS.md)). The kernel exposes the `armv8_pmuv3` PMU and `perf_event_paranoid` is 2.

@@ -63,6 +63,7 @@ ambient_c: unrecorded
 ### 참고
 
 - **A76 클러스터 두 개의 최대 클럭이 다르다.** policy4(cpu4–5)는 2304 MHz, policy6(cpu6–7)은 2352 MHz가 최대다. M1-3에서 고정 클럭을 policy별로 설정하고, CPU 시간은 클러스터별로 보고한다.
+  - 이후 부팅에서 policy4의 최대값이 부팅마다 2304 또는 2352 MHz로 바뀐다는 것을 확인했다. M1-3에서 A76 두 클러스터를 2208 MHz로 고정했다([AMENDMENTS A7](../../prereg/AMENDMENTS.ko.md), [calibration.ko.md](calibration.ko.md#고정-클럭)).
 - **A55 클러스터**는 기본 거버너에서 `min = max = 1800 MHz`로 보고된다.
 
 ## 하드웨어 블록
@@ -101,12 +102,30 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
 
 2026-10-30 보드에서 ffmpeg-rockchip을 빌드하는 동안(`make -j8`, 8코어 모두 사용) `soc-thermal`이 84 °C, `bigcore`가 87 °C까지 올랐다. 커널은 클럭 상한을 A55 클러스터 1416 MHz, A76 클러스터 2016 MHz, NPU 800 MHz로 낮췄다. 즉 당시 냉각 구성으로는 CPU 전부하에서 `soc-thermal`을 트립 포인트 75 °C 아래로 유지하지 못한다. 냉각 구성을 확정하는 M1-3 열 확인 전에 냉각을 바꿔야 한다(PROTOCOL §14). 당시 냉각 구성은 기록하지 않았다.
 
+2026-11-02부터 보드에 방열판과 상시 미니 팬(알리익스프레스 무브랜드)을 달았다. M1-3 첫 세션 동안 방 온도는 28 °C였다. P_cap 실행 중 `soc-thermal`은 최고 55.5 °C였다([calibration.ko.md](calibration.ko.md)). 냉각 구성은 M1-3 열 확인에서 확정한다.
+
 ## 네트워크
 
-보드는 Wi-Fi(`wlan0`)로 접속한다. 이더넷 포트(`eth0`, `eth1`)는 둘 다 아직 링크가 없다. PROTOCOL §3에 따라 RTSP 스트림은 별도 PC에서 유선 이더넷으로 받아야 한다.
+보드 관리는 Wi-Fi(`wlan0`)로 한다. RTSP 스트림(PROTOCOL §3)은 송출 PC와 보드 `eth1`을 잇는 직결 케이블로 받는다. 2026-11-02에 구성했다.
+
+| | 보드 | 송출 PC |
+|---|---|---|
+| 인터페이스 | `eth1`, 1000 Mb/s 전이중 | `enp3s0`, 1000 Mb/s 전이중 |
+| 주소 | `10.88.0.2/24` | `10.88.0.1/24` |
+| NetworkManager 프로필 | `bench-link`: 고정 주소, 기본 경로로 쓰지 않음, IPv6 끔. DHCP 프로필 "Wired connection 2"는 자동 연결을 껐다. | `bench-link`, 같은 설정 |
+
+- 왕복 시간은 0.2 ms다.
+- **송출 PC:** Rocky Linux 9.7, 커널 5.14.0-611.13.1.el9_7, Intel Core i7-4712MQ(8스레드), RAM 3.5 GB. 노트북이고 벤치마크와 무관한 Docker 컨테이너도 돌린다.
+  - mediamtx는 `stream-server/fetch_mediamtx.sh`로 받은 v1.21.2다.
+  - ffmpeg는 johnvansickle.com의 7.0.2 정적 빌드를 사용자 `~/.local/bin`에 두었다. 압축 파일의 SHA-256은 `abda8d77…`이다.
+  - 방화벽(`firewalld`, `public` 존)은 `10.88.0.2`에서 오는 TCP 8554만 허용한다.
+  - 준비된 영상 4개를 `~/media/bench`에 두었고, 해시가 manifest와 일치한다.
+- **확인:** `bench_main --variant none`으로 `rtsp://10.88.0.1:8554/ch{n}`에서 4채널(영상 ①~④)을 10초 받았다.
+  - 모든 채널이 30.000 fps로 디코딩됐고, 수신 지연 0초, 디코더 드롭 0이었다.
+  - 서버 로그에 오류와 경고가 없었다.
+- PC 로그의 시각은 현지 시각(KST, UTC+9)이고, 두 기기 모두 NTP로 동기화돼 있다.
 
 ## 남은 항목
 
-- **냉각:** M1-3 전에 방열판과 팬을 단다.
-- **유선 링크와 송출 서버:** 아직 구성하지 않았다.
-- **perf**(M1-2의 CPU 복사 없음 증거에 필요, PROTOCOL §11.4): 설치돼 있지 않다. 벤더 커널 6.1.141용 `linux-tools` 패키지가 Ubuntu에 없다. 커널은 `armv8_pmuv3` PMU를 제공하고, `perf_event_paranoid`는 2다.
+- **냉각:** M1-3 열 확인에서 확정한다.
+- **perf**(M1-2의 CPU 복사 없음 증거에 필요, PROTOCOL §11.4): 이 기준선을 잡을 때는 설치돼 있지 않았다. 벤더 커널 6.1.141용 `linux-tools` 패키지가 Ubuntu에 없기 때문이다. 지금은 `/usr/bin/perf`에 있고, M1-2에서 사용했다([AMENDMENTS A6](../../prereg/AMENDMENTS.ko.md)). 커널은 `armv8_pmuv3` PMU를 제공하고, `perf_event_paranoid`는 2다.
