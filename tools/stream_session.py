@@ -57,6 +57,7 @@ import datetime as dt
 import math
 import os
 import re
+import select
 import signal
 import socket
 import subprocess
@@ -315,11 +316,34 @@ class Session:
         raise Stop("no soc-thermal zone")
 
     def clock_offset(self):
-        """(PC clock minus board clock, round trip) in seconds, from the midpoint of one SSH call."""
-        t0 = time.time()
-        pc_now = float(self.pc("date -u +%s.%N").strip())
-        t1 = time.time()
-        return pc_now - (t0 + t1) / 2, t1 - t0
+        """(PC clock minus board clock, round trip) in seconds: of 5 exchanges over one open SSH
+        connection, the one with the shortest round trip, whose midpoint is then closest to the
+        moment the PC read its clock. The connection's setup is not timed."""
+        p = subprocess.Popen(SSH + ["while read -r x; do date -u +%s.%N; done"], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+        try:
+            best = None
+            for k in range(6):
+                t0 = time.time()
+                p.stdin.write("x\n")
+                p.stdin.flush()
+                if not select.select([p.stdout], [], [], 20)[0]:
+                    raise Stop("the PC did not answer the clock exchange")
+                line = p.stdout.readline()
+                t1 = time.time()
+                if not line.strip():
+                    raise Stop("the clock exchange with the PC ended")
+                if k == 0:
+                    continue  # the first answer waits for the connection's setup
+                offset, rtt = float(line) - (t0 + t1) / 2, t1 - t0
+                if best is None or rtt < best[1]:
+                    best = (offset, rtt)
+            return best
+        except (OSError, ValueError) as e:
+            raise Stop(f"clock exchange with the PC: {e}") from None
+        finally:
+            p.kill()
+            p.wait()
 
     def server_alive(self):
         """The server process is running and its RTSP port takes connections over the wired link."""
@@ -386,7 +410,7 @@ class Session:
         info = {
             "log_dir": self.server_dir,
             "log_time_zone": "UTC (TZ=UTC)",
-            "clock_offset_s": f"{offset:.3f} (PC minus board, at the midpoint of an SSH call of {rtt:.3f} s)",
+            "clock_offset_s": f"{offset:.4f} (PC minus board; round trip of the exchange {rtt:.4f} s)",
             "pc_ntp_synchronized": self.pc("timedatectl show -p NTPSynchronized --value").strip(),
             "pc_repo_commit": self.pc(f"git -C ~/{PC_REPO} rev-parse HEAD").strip(),
             "pc_repo_status": self.pc(f"git -C ~/{PC_REPO} status --porcelain -- stream-server | grep -v "
