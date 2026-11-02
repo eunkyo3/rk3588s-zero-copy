@@ -8,10 +8,11 @@ B's preprocessing with plain INTER_LINEAR; in A5 it takes C's place against B.
 Tensor level (§11.1), over the letterbox band: the mean absolute error over all frames and elements,
 and the minimum per-frame PSNR (peak 255). Every border element of every tensor must be 114.
 
-Detection level (§11.2): per frame and class, boxes are matched with the Hungarian algorithm on IoU.
+Detection level (§11.2): scores and coordinates are rounded to float32 when read, the type
+post-processing gives them. Per frame and class, boxes are matched with the Hungarian algorithm on IoU.
 IoU below 0.5 counts as 0, so the matching maximises the summed IoU of the pairs with IoU >= 0.5,
-the only pairs formed. A box whose confidence is within 0.25 +- 0.02 (as float32, the type of the
-scores), or that is matched to such a box, is left out of the counts. A frame agrees when the
+the only pairs formed. A box whose confidence is within 0.25 +- 0.02 (the edges as float32), or that
+is matched to such a box, is left out of the counts. A frame agrees when the
 counted boxes of every class are equally many.
 
 Registered criteria (§11.1, §11.2), reported: MAE <= 2, minimum PSNR >= 35 dB, the border check;
@@ -22,7 +23,11 @@ and C's minimum PSNR at least R's; (a) the share of matched pairs within both th
 share of agreeing frames at least R's; (c) |N_C - N_B| / N_B <= 0.02, N counting every box
 post-processing returned, over all frames and classes.
 
-Exit code: 0 if the criteria in force hold, 1 if they do not, 2 if the inputs are inconsistent.
+The registered input is 1,000 frames and a 640x360 band (§11); other inputs are checked the same
+way, and the report says that they are not the registered input.
+
+Exit code: 0 if the criteria in force hold, 1 if they do not, 2 if the inputs are inconsistent or the
+check could not run.
 
 Usage: tools/equivalence_check.py --b B.jsonl --c C.jsonl --r R.jsonl [--frames 1000] [--json OUT]
 """
@@ -30,8 +35,10 @@ import argparse
 import bisect
 import json
 import math
+import statistics
 import struct
 import sys
+import traceback
 from collections import Counter
 from pathlib import Path
 
@@ -44,6 +51,8 @@ PSNR_MIN = 35.0
 FRAMES_AGREE_MIN = 0.99
 TOTAL_TOLERANCE = 0.02
 CLASS_REPORT_MIN = 100  # per-class box counts are shown for classes with at least this many B boxes
+REGISTERED_FRAMES = 1000
+REGISTERED_BAND = (640, 360)
 
 
 def f32(x):
@@ -238,7 +247,7 @@ def tensor_stats(paths, header, n):
             "mae": s["abs_sum"] / (elements * n),
             "min_psnr_db": psnr[worst],
             "min_psnr_frame": worst,
-            "median_psnr_db": sorted(psnr)[n // 2],
+            "median_psnr_db": statistics.median(psnr),
             "mean_diff_rgb": [v / (elements // 3 * n) for v in s["signed_sum"]],
         }
     return result
@@ -249,10 +258,11 @@ def tensor_stats(paths, header, n):
 
 def load(path, variant):
     """(header, frames) from a JSONL file; frames is a list of (frame, pts, detections)."""
-    lines = Path(path).read_text().splitlines()
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
     if not lines:
         raise InputError(f"{path}: empty")
-    header = json.loads(lines[0]).get("header")
+    first = json.loads(lines[0])
+    header = first.get("header") if isinstance(first, dict) else None
     if not isinstance(header, dict):
         raise InputError(f"{path}: the first line is not a header")
     if header.get("variant") != variant or header.get("run_kind") != "equivalence":
@@ -261,7 +271,7 @@ def load(path, variant):
     frames = []
     for line in lines[1:]:
         rec = json.loads(line)
-        frames.append((rec["frame"], rec["pts"], [list(d) for d in rec["detections"]]))
+        frames.append((rec["frame"], rec["pts"], [[d[0]] + [f32(v) for v in d[1:]] for d in rec["detections"]]))
     return header, frames
 
 
@@ -278,6 +288,12 @@ def check_inputs(headers, frames, expected):
         raise InputError("frame indices are not 0, 1, 2, ...")
     if len(keys["B"]) != expected:
         raise InputError(f"{len(keys['B'])} frames, expected {expected}")
+    classes = len(headers["B"]["labels"])
+    for k, fr in frames.items():
+        if any(len(d) != 6 or not 0 <= d[0] < classes for _, _, dets in fr for d in dets):
+            raise InputError(f"{k}: a detection is not [class, score, x1, y1, x2, y2] with a known class")
+    if not any(dets for _, _, dets in frames["B"]):
+        raise InputError("B has no detections")
 
 
 # --- report -----------------------------------------------------------------------------------
@@ -338,8 +354,11 @@ def run(args):
     passed = all(a5.values())
 
     x, y, bw, bh = hb["band"]
+    registered_input = n == REGISTERED_FRAMES and (bw, bh) == REGISTERED_BAND
     out = [
-        f"inputs: {n} frames of {hb['source']}",
+        f"inputs: {n} frames of {hb['source']}" + ("" if registered_input else
+                                                     f" (not the registered input: {REGISTERED_FRAMES} frames, "
+                                                     f"a {REGISTERED_BAND[0]}x{REGISTERED_BAND[1]} band)"),
         f"  model {hb['model_sha256']}, code {hb['code_commit']}, amendment {hb['amendment']}",
         f"  B: {hb['preprocessing']}; C: {headers['C']['preprocessing']}; R: {headers['R']['preprocessing']}",
         f"tensor level, band {bw}x{bh} at ({x}, {y}):",
@@ -390,16 +409,17 @@ def run(args):
         f"{pct(ds['R']['frames_agreeing_share'])}: {verdict(a5['b_frames_agreeing'])}",
         f"  (c) total boxes, |{totals['C']} - {totals['B']}| / {totals['B']} = {abs(total_dev):.2%} <= 2%: "
         f"{verdict(a5['c_total_boxes'])}",
-        f"verdict (A5): {'PASS' if passed else 'FAIL'}",
+        f"verdict (A5): {'PASS' if passed else 'FAIL'}" + ("" if registered_input else ", not on the registered input"),
     ]
     print("\n".join(out))
     if args.json:
         summary = {
-            "frames": n, "headers": headers, "tensor": ts, "detection": ds, "boxes_total": totals,
+            "frames": n, "registered_input": registered_input, "headers": headers, "tensor": ts, "detection": ds,
+            "boxes_total": totals,
             "boxes_per_class": {k: {labels[c]: v for c, v in sorted(cnt.items())} for k, cnt in per_class.items()},
             "registered": {"tensor": reg_tensor, "detection": reg_det}, "a5": a5, "pass": passed,
         }
-        Path(args.json).write_text(json.dumps(finite(summary), indent=1) + "\n")
+        Path(args.json).write_text(json.dumps(finite(summary), indent=1) + "\n", encoding="utf-8")
     return 0 if passed else 1
 
 
@@ -415,6 +435,9 @@ def main(argv=None):
         return run(args)
     except (InputError, OSError, ValueError, KeyError) as e:
         print(f"equivalence_check: {e}", file=sys.stderr)
+        return 2
+    except Exception:  # a crash is not a verdict: keep 1 for "criteria not met"
+        traceback.print_exc()
         return 2
 
 

@@ -11,9 +11,9 @@
 //   <out_dir>/env.json       arguments, library versions, each backend's description, the checks
 //
 // The pipeline spreads frames over the three NPU cores; this tool runs every frame on core 0. On
-// the first and the last frame it checks that cores 1 and 2 give core 0's outputs, for each
-// preprocessing, and that B's bound outputs equal rknn_outputs_get (AMENDMENTS A3). Exit code 0
-// when all frames were written and every check holds.
+// every 100th frame and the last, it checks for each preprocessing that cores 1 and 2 give core 0's
+// outputs, and that the bound outputs equal rknn_outputs_get on the same tensor (AMENDMENTS A3).
+// Exit code 0 when all frames were written and every check holds.
 #include <atomic>
 #include <cstdio>
 #include <filesystem>
@@ -58,7 +58,8 @@ struct Variant {
     FILE* jsonl = nullptr;
     FILE* tensors = nullptr;
     std::vector<uint8_t> tensor;
-    bool cores_agree = true;
+    bool cores_agree = true;        // cores 1 and 2 give core 0's outputs
+    bool matches_reference = true;  // bound outputs equal rknn_outputs_get
 };
 
 FILE* open_out(const std::string& path) {
@@ -143,15 +144,15 @@ int main(int argc, char** argv) {
     }
     const int mw = vars[0].npu.model_w(), mh = vars[0].npu.model_h();
 
-    bool b_binding_ok = true;
     std::atomic<bool> stop{false};
-    int frames = 0;
+    int frames = 0, checked = 0;
     VideoSource src(video, /*software=*/false, /*paced=*/false);
     src.open(&stop);
     src.run(
         [&](AVFrame* f) {
             if (frames < max_frames) {
-                const bool check = frames == 0 || frames == max_frames - 1;
+                const bool check = frames % 100 == 0 || frames == max_frames - 1;
+                checked += check;
                 for (Variant& v : vars) {
                     if (frames == 0)
                         write_header(v, header, letterbox_band(f->width, f->height, mw, mh), mw, mh);
@@ -168,10 +169,9 @@ int main(int argc, char** argv) {
                             v.backend->bind(v.npu, k, 0);
                             v.cores_agree &= v.npu.run_bound(k) == core0;
                         }
+                        v.matches_reference &= core0 == v.npu.reference_outputs(v.tensor, model);
                     }
                 }
-                if (check)
-                    b_binding_ok &= vars[1].npu.run_bound(0) == vars[1].npu.reference_outputs(vars[1].tensor, model);
                 if (++frames == max_frames)
                     stop = true;
             }
@@ -180,10 +180,15 @@ int main(int argc, char** argv) {
         [] { die("decoder error"); });
 
     for (Variant& v : vars) {
-        CHECK(std::fclose(v.jsonl) == 0 && std::fclose(v.tensors) == 0, "closing %s's files failed", v.name);
+        CHECK(!std::ferror(v.jsonl) && !std::ferror(v.tensors), "writing %s's files failed", v.name);
+        CHECK(std::fclose(v.jsonl) == 0, "closing %s.jsonl failed", v.file);
+        CHECK(std::fclose(v.tensors) == 0, "closing %s.u8 failed", v.file);
     }
-    const bool cores_ok = vars[0].cores_agree && vars[1].cores_agree && vars[2].cores_agree;
-    std::string env = "{\n  \"args\": " + args_json + ",\n  \"frames\": " + std::to_string(frames) + ",\n";
+    bool checks_ok = true;
+    for (const Variant& v : vars)
+        checks_ok &= v.cores_agree && v.matches_reference;
+    std::string env = "{\n  \"args\": " + args_json + ",\n  \"frames\": " + std::to_string(frames) +
+                      ",\n  \"checked_frames\": " + std::to_string(checked) + ",\n";
     env += "  \"opencv\": {\"version\": \"" CV_VERSION "\", \"threads\": " + std::to_string(cv::getNumThreads()) +
            "},\n";
     env += "  \"librga\": " + json_string(querystring(RGA_VERSION)) + ",\n";
@@ -191,21 +196,23 @@ int main(int argc, char** argv) {
            ", \"sdk\": " + json_string(vars[0].npu.sdk_version) + ", \"npu_core\": 0},\n  \"backends\": {";
     for (int i = 0; i < 3; i++)
         env += std::string(i ? ", " : "") + json_string(vars[i].name) + ": {" + vars[i].backend->describe() + "}";
-    env += "},\n  \"checks\": {\"b_binding_matches_rknn_outputs_get\": " + std::string(b_binding_ok ? "true" : "false");
-    for (const Variant& v : vars)
-        env += std::string(", \"outputs_equal_on_cores_0_1_2_") + v.file + "\": " + (v.cores_agree ? "true" : "false");
+    env += "},\n  \"checks\": {";
+    for (int i = 0; i < 3; i++)
+        env += std::string(i ? ", " : "") + "\"outputs_equal_on_cores_0_1_2_" + vars[i].file +
+               "\": " + (vars[i].cores_agree ? "true" : "false") + ", \"bound_outputs_match_rknn_outputs_get_" +
+               vars[i].file + "\": " + (vars[i].matches_reference ? "true" : "false");
     env += "}\n}\n";
     FILE* f = open_out(out + "/env.json");
-    std::fputs(env.c_str(), f);
-    std::fclose(f);
+    CHECK(std::fputs(env.c_str(), f) >= 0 && std::fclose(f) == 0, "writing env.json failed");
 
-    std::printf("frames: %d\n", frames);
-    std::printf("b_binding_matches_rknn_outputs_get (first and last frame): %d\n", b_binding_ok);
-    std::printf("outputs_equal_on_cores_0_1_2 (first and last frame): C %d, B %d, R %d\n", vars[0].cores_agree,
-                vars[1].cores_agree, vars[2].cores_agree);
+    std::printf("frames: %d, checked: %d (every 100th and the last)\n", frames, checked);
+    std::printf("outputs_equal_on_cores_0_1_2: C %d, B %d, R %d\n", vars[0].cores_agree, vars[1].cores_agree,
+                vars[2].cores_agree);
+    std::printf("bound_outputs_match_rknn_outputs_get: C %d, B %d, R %d\n", vars[0].matches_reference,
+                vars[1].matches_reference, vars[2].matches_reference);
     for (Variant& v : vars) {
         v.backend->shutdown(v.npu);
         v.npu.close();
     }
-    return frames == max_frames && b_binding_ok && cores_ok ? 0 : 1;
+    return frames == max_frames && checks_ok ? 0 : 1;
 }
