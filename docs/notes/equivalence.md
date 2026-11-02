@@ -5,14 +5,17 @@
 PROTOCOL §11.1 and §11.2, decided under the criteria in force, those of [AMENDMENTS A5](../../prereg/AMENDMENTS.md).
 
 - **Under A5, B and C are equivalent:** all six conditions pass, and `tools/equivalence_check.py` exits with 0.
-- **Under the registered criteria, they are not:** every condition fails except the border check. §11.3 requires the report to state this.
+- **Under the registered criteria, they are not:** every condition fails except the border check. The report states this, as §11.3 and A5's last point require.
 
 The run:
 
-- **Where:** on the board, 2026-11-02T00:45:13Z, code commit `958641b`, amendment A6 in force.
+- **Where:** on the board, 2026-11-02T01:11:23Z, code commit `669fb9b`, amendment A6 in force.
 - **Governors:** default; M1-3 has not fixed the clocks yet.
 - **Input:** the first 1,000 frames of video ① (Pexels 36330861), read as `file_source`.
-- **Outputs:** in [results/equivalence/20261102T004513Z/](../../results/equivalence/20261102T004513Z/). The check's output is [check.txt](../../results/equivalence/20261102T004513Z/check.txt).
+- **Outputs:** in [results/equivalence/20261102T011123Z/](../../results/equivalence/20261102T011123Z/). The check's output is [check.txt](../../results/equivalence/20261102T011123Z/check.txt).
+- **Other runs kept** (see [Checks on the result](#checks-on-the-result)):
+  - `20261102T011343Z` repeats it on the same code.
+  - `20261102T004513Z` was made with the tools before the review fixes (code `958641b`), and is superseded.
 
 ## Method
 
@@ -23,17 +26,19 @@ The run:
 | `tools/equivalence.sh` | Runs `collect_env.sh`, the dump, then the check. The tensors (3 × 1.2 GB) stay on the board, and their SHA-256 hashes are in `tensors.sha256`. |
 
 - **R** is B's preprocessing with plain `INTER_LINEAR`, §8's other choice (A5). B is as used: `INTER_AREA` with the luma box moved by one pixel (A4).
-- **Harness checks,** on the first and the last frame. Both held:
-  - For each of C, B and R, NPU cores 1 and 2 give core 0's outputs. The pipeline spreads frames over the three cores; this tool uses core 0.
-  - B's bound outputs equal `rknn_outputs_get` (A3).
+- **Harness checks,** for each of C, B and R, on every 100th frame and the last (11 frames). Both held:
+  - NPU cores 1 and 2 give core 0's outputs. The pipeline spreads frames over the three cores; this tool uses core 0.
+  - The bound outputs equal `rknn_outputs_get` on the same tensor (A3).
 - **Matching:**
   - Per frame and class, by the Hungarian algorithm on IoU.
   - IoU below 0.5 counts as 0 before solving. The matching then maximises the summed IoU of the pairs that may form (IoU ≥ 0.5). Solving on raw IoU could choose two pairs below 0.5 over one above, and then drop both.
-- **Near-threshold exclusion:** the band 0.25 ± 0.02 is applied to the scores as float32, the type post-processing gives them.
+- **Float32:** scores and coordinates are rounded to float32 when read, the type post-processing gives them. The band 0.25 ± 0.02 has float32 edges.
+- **Exit codes:** 0 pass, 1 fail, 2 inconsistent inputs or a check that could not run. The wrapper exits with 3 for any failure before the check.
 - **Tests:** `tests/test_equivalence_check.py`.
-  - The Hungarian solver against brute force, on 500 random matrices.
-  - The masking at IoU 0.5 and the near-threshold exclusion.
-  - The exit codes on synthetic inputs.
+  - The Hungarian solver against brute force, on 500 random matrices, and a case where it differs from greedy matching.
+  - The masking at IoU 0.5.
+  - The near-threshold exclusion in both directions, and at the band's edges after the JSON round trip.
+  - Each A5 condition failing on its own; inconsistent inputs; a crash.
 
 ## Results
 
@@ -81,7 +86,7 @@ Matched pairs by IoU, and by confidence difference (share of pairs):
 | (0.10, 0.20] | 3.61% | 10.05% |
 | > 0.20 | 0.04% | 3.12% |
 
-Boxes per class, for the 8 classes with at least 100 boxes in B, against B:
+Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`check.json` has every class):
 
 | | car | person | traffic light | backpack | handbag | truck | bus | stop sign |
 |---|---|---|---|---|---|---|---|---|
@@ -109,18 +114,23 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B:
 
 ## Checks on the result
 
-- **Repeatability:** a second dump of the same 1,000 frames gave byte-identical tensors (all three SHA-256 hashes match) and identical detections for C, B and R. A second check on the same files printed the same output.
+- **Repeatability:** [20261102T011343Z](../../results/equivalence/20261102T011343Z/) repeats the run on the same code.
+  - Its `tensors.sha256` equals the deciding run's, so all three tensor files are byte-identical.
+  - Its detection lines are identical, and its `check.txt` is the same.
+  - The superseded run `20261102T004513Z` has the same tensor hashes and detection lines too. Its `check.txt` differs only in the code commit.
   - The computation is deterministic, and clocks change timing, not values. M1-3's fixed clocks are not expected to change this result.
   - A change to the B or C code before `freeze-m1` means a rerun (§15).
-- **Agreement with M1-2's estimate:** `tools/compare_prepare` used greedy matching in C++ ([preprocess/compare_v1_1000.txt](preprocess/compare_v1_1000.txt)). The two agree:
-  - **Pairs:** C vs B gives the same 15,246. For R vs B, the Hungarian matching finds one more pair (14,903 against 14,902).
-  - **Shares and tensor figures:** every share agrees to the four decimals printed, and so do the tensor figures.
-  - Two implementations, in C++ and in Python with numpy, give the same tensor figures.
+- **Agreement with M1-2's estimate:** `tools/compare_prepare` used greedy matching in C++ ([preprocess/compare_v1_1000.txt](preprocess/compare_v1_1000.txt)).
+  - **C vs B:** the pairs are the same 15,246, and every share agrees to the four decimals printed.
+  - **R vs B:** the Hungarian matching finds one more pair, 14,903 against 14,902. In frame 107 it pairs two boxes where greedy matching pairs one.
+    - The larger denominator moves R's share of IoU ≥ 0.95 from 0.4697 (6,999 of 14,902) to 46.96% (6,999 of 14,903).
+    - The other shares agree to four decimals.
+  - **Tensor figures:** the same, from two implementations, one in C++ and one in Python with numpy.
 
 ## What this means
 
 - **On every A5 measure, C is closer to B than B's two admissible OpenCV variants are to each other.** Its total box count, the post-processing workload, matches B's within 0.44%.
-- **The registered criteria fail, as M1-2 predicted (A5).** The INT8 model moves confidences by tenths under input differences of about 2 levels in 255.
+- **The registered criteria fail, as M1-2 predicted (A5).** Under input differences of about 2 levels in 255, the INT8 model moves confidences by up to 0.26. 3.6% of the pairs differ by more than 0.10.
 - **Not an independent test:**
   - A5's criteria were chosen after M1-2's estimates on these same frames were known.
   - M1-4 repeats that comparison with the registered matching algorithm, on the only video with 1,000 frames.
@@ -138,8 +148,10 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B:
 | File | Content |
 |---|---|
 | `b.jsonl`, `c.jsonl`, `r.jsonl` | A header line with the PROTOCOL §1 fields, then each frame's index, pts and detections `[class, score, x1, y1, x2, y2]` |
-| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each), kept on the board |
+| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each), kept on the board only |
 | `env.txt` | `collect_env.sh` before the run |
 | `env.json` | Arguments, library versions, each backend's description, the harness checks |
 | `dump.txt`, `dump.log` | The dump's output and its stderr |
 | `check.txt`, `check.json` | The check's report, and its numbers |
+
+The run's start time is `start_time_utc` in the JSONL headers. `env.txt` has the time of `collect_env.sh`.
