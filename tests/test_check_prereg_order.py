@@ -112,6 +112,24 @@ class Check(unittest.TestCase):
         c.write("calibration/s/sub/deeper/x.log", "log\n")
         self.assertEqual(c.run()[0], 0)
 
+    def test_jsonl_without_header(self):
+        c = self.case()
+        c.write("equivalence/e/env.txt", f"time_utc: {AFTER}\n")
+        c.write("equivalence/e/b.jsonl", '{"frame": 0}\n')
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("b.jsonl: a results JSONL without a header", out)
+
+    def test_unreadable_release_line(self):
+        c = self.case()
+        p = c.d / "amendments.md"
+        p.write_text(p.read_text(encoding="utf-8").replace("- Release: none", "- Release: amend A9", 1),
+                     encoding="utf-8")
+        c.csv("calibration/s/summary.csv", AFTER)
+        code, out = c.run()
+        self.assertEqual(code, 2, out)
+        self.assertIn("cannot read its Release line", out)
+
     def test_file_without_any_start_time(self):
         c = self.case()
         c.write("equivalence/e/dump.txt", "frames: 3\n")
