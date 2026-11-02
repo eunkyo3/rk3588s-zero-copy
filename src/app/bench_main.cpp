@@ -11,7 +11,6 @@
 //   --repetition R      repetition index (default 1)
 //   --freeze-commit SHA freeze-m1 commit, "none" before the freeze (default none)
 // Run as root: the NPU load is read from debugfs (PROTOCOL §7.7).
-#include <ctime>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -39,29 +38,6 @@ extern "C" {
 #endif
 
 namespace {
-
-// Tag prereg-v1 (Release created_at 2026-10-30T02:01:36Z, docs/notes/env.md).
-constexpr const char* kPreregCommit = "87fe874b4f196dafd48f6a175b2d7604625aedba";
-
-std::string command_output(const std::string& cmd) {
-    std::string out;
-    if (FILE* p = popen(cmd.c_str(), "r")) {
-        char buf[256];
-        while (fgets(buf, sizeof buf, p))
-            out += buf;
-        pclose(p);
-    }
-    while (!out.empty() && (out.back() == '\n' || out.back() == ' '))
-        out.pop_back();
-    return out;
-}
-
-std::string utc_now(const char* format) {
-    std::time_t t = std::time(nullptr);
-    char buf[64];
-    std::strftime(buf, sizeof buf, format, std::gmtime(&t));
-    return buf;
-}
 
 void usage() {
     die("usage: bench_main --variant none|A|B|C --channels N --source URL [--condition main|aux] [--warmup S] "

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <limits>
 
@@ -25,6 +26,26 @@ std::string fmt(double v, int digits = 3) {
 }
 
 }  // namespace
+
+std::string command_output(const std::string& cmd) {
+    std::string out;
+    if (FILE* p = popen(cmd.c_str(), "r")) {
+        char buf[256];
+        while (fgets(buf, sizeof buf, p))
+            out += buf;
+        pclose(p);
+    }
+    while (!out.empty() && (out.back() == '\n' || out.back() == ' '))
+        out.pop_back();
+    return out;
+}
+
+std::string utc_now(const char* format) {
+    std::time_t t = std::time(nullptr);
+    char buf[64];
+    std::strftime(buf, sizeof buf, format, std::gmtime(&t));
+    return buf;
+}
 
 std::string json_string(const std::string& s) {
     std::string out = "\"";

@@ -65,8 +65,13 @@ target_link_libraries(rga_kernel PRIVATE core)
 add_executable(inputs_set_probe tools/inputs_set_probe.cpp)
 target_link_libraries(inputs_set_probe PRIVATE core)
 
+add_executable(equivalence_dump tools/equivalence_dump.cpp)
+target_link_libraries(equivalence_dump PRIVATE core)
+target_compile_definitions(equivalence_dump PRIVATE
+    CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
+
 add_executable(test_core tests/test_core.cpp)
 target_link_libraries(test_core PRIVATE core)
 
-set_target_properties(bench_main spike_fd_chain compare_prepare rga_probe rga_kernel inputs_set_probe test_core
-    PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
+set_target_properties(bench_main spike_fd_chain compare_prepare rga_probe rga_kernel inputs_set_probe
+    equivalence_dump test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)

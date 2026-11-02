@@ -15,6 +15,14 @@
 
 using Header = std::vector<std::pair<std::string, std::string>>;
 
+// Tag prereg-v1 (Release created_at 2026-10-30T02:01:36Z, docs/notes/env.md).
+constexpr const char* kPreregCommit = "87fe874b4f196dafd48f6a175b2d7604625aedba";
+
+// The output of a shell command, trailing newlines and spaces removed.
+std::string command_output(const std::string& cmd);
+// The current UTC time, formatted with strftime.
+std::string utc_now(const char* format);
+
 // numpy.percentile with linear interpolation (PROTOCOL §7.3). v must not be empty.
 double percentile(std::vector<double> v, double q);
 
