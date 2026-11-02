@@ -10,7 +10,11 @@ PROTOCOL §11.1 and §11.2, decided under the criteria in force, those of [AMEND
 The run:
 
 - **Where:** on the board, 2026-11-02T01:11:23Z, code commit `669fb9b`, amendment A6 in force.
+  - The final code differs from it only in error paths of the check and its wrapper: the order of the report and the JSON, and the wrapper's exit codes.
+  - The final checker prints the same `check.txt` for this run.
 - **Governors:** default; M1-3 has not fixed the clocks yet.
+  - In this run's `env.txt`, policy 0 (cpu0–3) shows a minimum of 1.8 GHz. In the other two runs it shows 408 MHz, the default. The cause is not known.
+  - The dump runs on cpu4–7, and all three runs gave the same bytes.
 - **Input:** the first 1,000 frames of video ① (Pexels 36330861), read as `file_source`.
 - **Outputs:** in [results/equivalence/20261102T011123Z/](../../results/equivalence/20261102T011123Z/). The check's output is [check.txt](../../results/equivalence/20261102T011123Z/check.txt).
 - **Other runs kept** (see [Checks on the result](#checks-on-the-result)):
@@ -122,7 +126,7 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`che
   - A change to the B or C code before `freeze-m1` means a rerun (§15).
 - **Agreement with M1-2's estimate:** `tools/compare_prepare` used greedy matching in C++ ([preprocess/compare_v1_1000.txt](preprocess/compare_v1_1000.txt)).
   - **C vs B:** the pairs are the same 15,246, and every share agrees to the four decimals printed.
-  - **R vs B:** the Hungarian matching finds one more pair, 14,903 against 14,902. In frame 107 it pairs two boxes where greedy matching pairs one.
+  - **R vs B:** the Hungarian matching finds one more pair, 14,903 against 14,902. In frame 107 it forms two pairs (boxes 15–14 at IoU 0.606 and 16–9 at 0.503) where greedy matching forms one (16–14 at 0.618).
     - The larger denominator moves R's share of IoU ≥ 0.95 from 0.4697 (6,999 of 14,902) to 46.96% (6,999 of 14,903).
     - The other shares agree to four decimals.
   - **Tensor figures:** the same, from two implementations, one in C++ and one in Python with numpy.

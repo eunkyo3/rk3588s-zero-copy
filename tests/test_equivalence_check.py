@@ -224,6 +224,12 @@ class EndToEnd(unittest.TestCase):
             self.assertEqual(code, 2, out)
             self.assertIn("model_sha256", out)
 
+    def test_no_b_boxes_is_an_input_error(self):
+        empty = [[] for _ in range(self.N)]
+        code, out, _ = self.check(b=[[]] * self.N, c=empty, r=empty)
+        self.assertEqual(code, 2, out)
+        self.assertIn("B has no detections", out)
+
     def test_crash_is_not_a_fail(self):
         with mock.patch.object(eq, "tensor_stats", side_effect=RuntimeError("boom")):
             code, out, _ = self.check()

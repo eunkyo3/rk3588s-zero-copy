@@ -411,7 +411,7 @@ def run(args):
         f"{verdict(a5['c_total_boxes'])}",
         f"verdict (A5): {'PASS' if passed else 'FAIL'}" + ("" if registered_input else ", not on the registered input"),
     ]
-    print("\n".join(out))
+    # The JSON first: if writing it fails, no report with a verdict is printed.
     if args.json:
         summary = {
             "frames": n, "registered_input": registered_input, "headers": headers, "tensor": ts, "detection": ds,
@@ -420,6 +420,7 @@ def run(args):
             "registered": {"tensor": reg_tensor, "detection": reg_det}, "a5": a5, "pass": passed,
         }
         Path(args.json).write_text(json.dumps(finite(summary), indent=1) + "\n", encoding="utf-8")
+    print("\n".join(out))
     return 0 if passed else 1
 
 

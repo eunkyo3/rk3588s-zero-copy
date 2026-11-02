@@ -34,4 +34,8 @@ status=0
 python3 tools/equivalence_check.py --b "$OUT/b.jsonl" --c "$OUT/c.jsonl" --r "$OUT/r.jsonl" --frames "$FRAMES" \
     --json "$OUT/check.json" >"$OUT/check.txt" 2>&1 || status=$?
 cat "$OUT/check.txt"
+case $status in
+0 | 1 | 2) ;;
+*) status=2 ;; # python3 missing, or a signal: the check did not run
+esac
 exit $status
