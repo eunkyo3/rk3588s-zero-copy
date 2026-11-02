@@ -129,7 +129,7 @@ Fixed before the runs. `tools/stream_session.py` runs each of the three as one s
   - `WAR` lines and publisher (ffmpeg) output are recorded as warnings.
 - **External failures** (§9.3):
   - An input that ends early, or an unreadable server log, makes the run invalid.
-  - A stream server that is down, or a PC clock more than 20 ms behind or 100 ms ahead of the board's, also stops the session.
+  - A stream server that is down, an unreadable server log, or a PC clock more than 5 ms behind or 100 ms ahead of the board's, also stops the session.
   - An operator's stop (SIGTERM) stops the session; a run it cuts short is recorded with that reason and neither repeated nor counted.
   - A stopped `L` search is kept and flagged, and the search is run again from §10 step 1 in a new session.
 

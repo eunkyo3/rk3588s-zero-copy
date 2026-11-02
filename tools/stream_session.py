@@ -28,8 +28,9 @@ Which rules apply:
   - thermal runs: rules 2, 3 (both runs are at unsaturated conditions when L <= 31) and 4. Rule 1 is
     the check's own criterion, so it does not make a thermal run invalid.
 External failures (§9.3, last paragraph): an input that ends early, a server that is down before or
-after a run, or a log that cannot be read make the run invalid with the reason given; a server that is
-down, or a PC clock more than 20 ms behind or 100 ms ahead of the board's, stops the session. SIGTERM
+after a run, or a log that cannot be read make the run invalid with the reason given; a log that cannot
+be read, a server that is
+down, or a PC clock more than 5 ms behind or 100 ms ahead of the board's, stops the session. SIGTERM
 or SIGHUP (the operator) stops the session too: a run it cuts short is recorded with that reason and is
 neither repeated nor counted. A stopped limit search is kept and flagged, and the search is run again
 from §10 step 1 in a new session.
@@ -81,7 +82,7 @@ FPS = {"main": 5, "aux": 30}
 PROTOCOL = {"idle_s": 600, "warmup": 20, "duration": 120, "gate_s": 60, "start": LIMIT_START, "cap": LIMIT_CAP}
 DOMAINS = ["policy0_khz", "policy4_khz", "policy6_khz", "dmc_hz", "npu_hz"]
 GATE_MC, SESSION_END_S = 3000, 30 * 60 - 60  # a minute's margin for collect_env and setup
-MAX_PC_AHEAD_S, MAX_PC_BEHIND_S = 0.1, 0.02
+MAX_PC_AHEAD_S, MAX_PC_BEHIND_S = 0.1, 0.005
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
 
@@ -96,8 +97,8 @@ class Interrupted(Stop):
 
 def clock_problem(offset):
     """Why the PC's clock offset (PC minus board, s) makes rule 4 untrustworthy, or None. The bench
-    disconnects about 20 ms after the window: a PC that lags more would stamp that disconnect into the
-    window's last full second."""
+    disconnects within milliseconds of the window's end: a PC that lags by more could stamp that
+    disconnect into the window's last full second, where it would count."""
     if offset < -MAX_PC_BEHIND_S or offset > MAX_PC_AHEAD_S:
         return f"the PC's clock is {offset * 1000:.0f} ms off the board's (allowed -{MAX_PC_BEHIND_S * 1000:.0f} " \
                f"to +{MAX_PC_AHEAD_S * 1000:.0f} ms)"
@@ -284,6 +285,7 @@ class Session:
         self.seq = 0
         self.server_dir = None
         self.server_launched = False
+        self.launcher_pid = None
         self.server_started = False
         self.last_end = None
         self.invalid_x2 = []
@@ -415,11 +417,14 @@ class Session:
             raise Stop("a stream server is already running on the PC; stop it first")
         self.pc(f"cat > ~/{PC_REPO}/stream-server/session_assignment.txt",
                 stdin=Path(ASSIGNMENT).read_text(encoding="utf-8"), tries=1)
-        self.pc(f"cd ~/{PC_VIDEOS}; TZ=UTC setsid nohup systemd-inhibit --what=sleep:idle:handle-lid-switch "
-                f"--who=rk3588s-bench --why='RTSP server for a measurement session' --mode=block "
-                f"~/{PC_REPO}/stream-server/publish.sh ~/{PC_REPO}/stream-server/session_assignment.txt "
-                f"> ~/{PC_REPO}/stream-server/publish.out 2>&1 < /dev/null &", tries=1)
+        # setsid makes the launcher the leader of its own process group, so end() can stop everything
+        # it started, even a server that never reported its log directory.
+        out = self.pc(f"cd ~/{PC_VIDEOS}; TZ=UTC setsid nohup systemd-inhibit --what=sleep:idle:handle-lid-switch "
+                      f"--who=rk3588s-bench --why='RTSP server for a measurement session' --mode=block "
+                      f"~/{PC_REPO}/stream-server/publish.sh ~/{PC_REPO}/stream-server/session_assignment.txt "
+                      f"> ~/{PC_REPO}/stream-server/publish.out 2>&1 < /dev/null & echo $!", tries=1)
         self.server_launched = True
+        self.launcher_pid = int(out.strip())
         for _ in range(90):
             time.sleep(1)
             out = self.pc(f"cat ~/{PC_REPO}/stream-server/publish.out")
@@ -459,10 +464,14 @@ class Session:
         if self.server_launched:
             self.say("stopping the stream server")
             steps = []
-            if self.server_started:
+            if self.server_started:  # mediamtx first, so that it stops its publishers itself
                 steps.append(("stop", lambda: self.pc(
                     f"kill \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\"; sleep 2; "
                     f"! kill -0 \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\" 2>/dev/null", tries=1)))
+            # Then whatever is left of the launcher's process group (a server still starting, the inhibitor).
+            steps.append(("stop the launcher's process group", lambda: self.pc(
+                f"kill -- -{self.launcher_pid} 2>/dev/null; sleep 2; ! kill -0 -- -{self.launcher_pid} 2>/dev/null",
+                tries=1)))
             if self.server_dir:
                 (self.out / "server").mkdir(exist_ok=True)
                 for name in ("mediamtx.log", "assignment.tsv", "versions.txt", "console.log"):
@@ -553,8 +562,9 @@ class Session:
                 o.warnings.append(f"{len(published)} lines of publisher output")
         except Interrupted:
             raise
-        except Stop as e:
-            o.reasons.append(f"server log unavailable: {e}")
+        except Stop as e:  # infrastructure, not an outcome: stop rather than count a repeat
+            o.reasons.append(f"server log unavailable: {e} (external failure)")
+            o.external = o.external or "the server's log could not be read"
         if not alive:
             o.reasons.append("stream server down after the run (external failure)")
             o.external = o.external or "the stream server is down"

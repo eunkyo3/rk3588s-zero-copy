@@ -233,9 +233,9 @@ class Criteria(unittest.TestCase):
 class ClockProblem(unittest.TestCase):
     def test_bounds(self):
         self.assertIsNone(ss.clock_problem(0.015))
-        self.assertIsNone(ss.clock_problem(-0.019))
+        self.assertIsNone(ss.clock_problem(-0.004))
         self.assertIsNone(ss.clock_problem(0.1))
-        self.assertIsNotNone(ss.clock_problem(-0.021))  # the bench's disconnect could move into the window
+        self.assertIsNotNone(ss.clock_problem(-0.006))  # the bench's disconnect could move into the window
         self.assertIsNotNone(ss.clock_problem(0.101))
 
 
