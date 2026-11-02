@@ -36,7 +36,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 
 ## Hardware and software
 
-Versions, hardware blocks and the registration reference time: [docs/notes/env.md](docs/notes/env.md). Model conversion: [models/README.md](models/README.md).
+Versions, hardware blocks and the registration reference time: [docs/notes/env.md](docs/notes/env.md). Model files and their conversion: [models/README.md](models/README.md).
 
 - FriendlyElec NanoPi R6C (RK3588S, 8 GB), FriendlyElec Ubuntu 24.04
 - C++, [ffmpeg-rockchip](https://github.com/nyanmisaka/ffmpeg-rockchip) (`h264_rkmpp`), librga (im2d), RKNN C API (librknnrt)

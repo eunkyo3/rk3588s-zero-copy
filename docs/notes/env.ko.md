@@ -95,7 +95,7 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
 
 ## 모델
 
-[models/README.ko.md](../../models/README.ko.md) 참고. rknn_model_zoo v2.3.2의 YOLOv8n을 rknn-toolkit2 2.3.2로 INT8 변환했고, SHA-256 체크섬이 있다.
+[models/README.ko.md](../../models/README.ko.md) 참고. rknn_model_zoo v2.3.2의 YOLOv8n을 rknn-toolkit2 2.3.2로 INT8 변환했고, SHA-256 체크섬이 있다. 파일은 릴리스에 보관한다.
 
 ## 열 관찰
 
