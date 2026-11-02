@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Tests for the pure parts of tools/stream_session.py.
+"""Tests for tools/stream_session.py: its pure parts, and how a run reacts to the operator's signal.
 
 Usage: python3 tests/test_stream_session.py
 """
 import datetime as dt
+import io
 import sys
+import tempfile
+import types
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
@@ -224,6 +228,85 @@ class Criteria(unittest.TestCase):
         self.assertEqual(ss.parse_utc("2026-11-02T08:30:01.123Z"),
                          dt.datetime(2026, 11, 2, 8, 30, 1, 123000, tzinfo=UTC))
         self.assertEqual(ss.parse_utc("2026-11-02T08:30:01Z"), dt.datetime(2026, 11, 2, 8, 30, 1, tzinfo=UTC))
+
+
+class ClockProblem(unittest.TestCase):
+    def test_bounds(self):
+        self.assertIsNone(ss.clock_problem(0.015))
+        self.assertIsNone(ss.clock_problem(-0.019))
+        self.assertIsNone(ss.clock_problem(0.1))
+        self.assertIsNotNone(ss.clock_problem(-0.021))  # the bench's disconnect could move into the window
+        self.assertIsNotNone(ss.clock_problem(0.101))
+
+
+class OperatorStop(unittest.TestCase):
+    """A signal (Interrupted) during a run stops the session; the run is recorded, not repeated."""
+
+    def session(self, d):
+        s = ss.Session.__new__(ss.Session)
+        s.args = types.SimpleNamespace(warmup=1, duration=1, gate_s=0, limit=None)
+        s.out, s.seq, s.invalid_x2, s.server_dir, s.run_header = d, 0, [], "/logs", None
+        s.log = open(d / "session.log", "w", encoding="utf-8")
+        s.runs = open(d / "runs.tsv", "w", encoding="utf-8")
+        s.gate = lambda: 40000
+        s.server_alive = lambda: True
+        s.console_size = lambda: 0
+        s.sh = lambda cmd, out_file, timeout=120: 0
+        return s
+
+    def run_and_read(self, s, d):
+        with redirect_stdout(io.StringIO()), self.assertRaises(ss.Stop) as cm:
+            s.run("search", "none", 8, "main", "calibration")
+        s.runs.close()
+        s.log.close()
+        return cm.exception, (d / "runs.tsv").read_text(encoding="utf-8").splitlines()
+
+    def test_during_the_bench(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            s = self.session(d)
+
+            def sh(cmd, out_file, timeout=120):
+                if cmd[0] == "./build/bench_main":
+                    raise ss.Interrupted("signal SIGTERM")
+                return 0
+
+            s.sh = sh
+            error, rows = self.run_and_read(s, d)
+            self.assertIn("stopped by the operator", str(error))
+            self.assertEqual(len(rows), 1)  # recorded once, not repeated
+            self.assertIn("stopped by the operator (signal SIGTERM)", rows[0])
+            self.assertEqual(rows[0].split("\t")[9], "0")  # not valid, so never counted as a pass
+
+    def test_while_judging(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            s = self.session(d)
+            calls = []
+
+            def alive():
+                calls.append(1)
+                if len(calls) == 2:  # the check after the run
+                    raise ss.Interrupted("signal SIGHUP")
+                return True
+
+            s.server_alive = alive
+            error, rows = self.run_and_read(s, d)
+            self.assertEqual(len(rows), 1)
+            self.assertIn("stopped by the operator before the run was judged", rows[0])
+
+    def test_before_the_bench_records_nothing(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            s = self.session(d)
+
+            def gate():
+                raise ss.Interrupted("signal SIGTERM")
+
+            s.gate = gate
+            error, rows = self.run_and_read(s, d)
+            self.assertIsInstance(error, ss.Interrupted)
+            self.assertEqual(rows, [])
 
 
 if __name__ == "__main__":

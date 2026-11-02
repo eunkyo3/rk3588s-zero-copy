@@ -29,8 +29,10 @@ Which rules apply:
     the check's own criterion, so it does not make a thermal run invalid.
 External failures (§9.3, last paragraph): an input that ends early, a server that is down before or
 after a run, or a log that cannot be read make the run invalid with the reason given; a server that is
-down, or a clock offset to the PC above 100 ms, stops the session. A stopped limit search is kept and
-flagged, and the search is run again from §10 step 1 in a new session.
+down, or a PC clock more than 20 ms behind or 100 ms ahead of the board's, stops the session. SIGTERM
+or SIGHUP (the operator) stops the session too: a run it cuts short is recorded with that reason and is
+neither repeated nor counted. A stopped limit search is kept and flagged, and the search is run again
+from §10 step 1 in a new session.
 
 Rule 4 reads the server's log, whose lines have one-second resolution. An event counts when its second
 lies in [warm-up start, window end], both rounded down to the second. In the window end's own second
@@ -59,7 +61,6 @@ import os
 import re
 import select
 import signal
-import socket
 import subprocess
 import sys
 import time
@@ -80,13 +81,27 @@ FPS = {"main": 5, "aux": 30}
 PROTOCOL = {"idle_s": 600, "warmup": 20, "duration": 120, "gate_s": 60, "start": LIMIT_START, "cap": LIMIT_CAP}
 DOMAINS = ["policy0_khz", "policy4_khz", "policy6_khz", "dmc_hz", "npu_hz"]
 GATE_MC, SESSION_END_S = 3000, 30 * 60 - 60  # a minute's margin for collect_env and setup
-MAX_CLOCK_OFFSET_S = 0.1
+MAX_PC_AHEAD_S, MAX_PC_BEHIND_S = 0.1, 0.02
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
 
 
 class Stop(Exception):
     """The session cannot go on."""
+
+
+class Interrupted(Stop):
+    """The operator stopped the session (SIGTERM or SIGHUP). Never taken as a run's outcome."""
+
+
+def clock_problem(offset):
+    """Why the PC's clock offset (PC minus board, s) makes rule 4 untrustworthy, or None. The bench
+    disconnects about 20 ms after the window: a PC that lags more would stamp that disconnect into the
+    window's last full second."""
+    if offset < -MAX_PC_BEHIND_S or offset > MAX_PC_AHEAD_S:
+        return f"the PC's clock is {offset * 1000:.0f} ms off the board's (allowed -{MAX_PC_BEHIND_S * 1000:.0f} " \
+               f"to +{MAX_PC_AHEAD_S * 1000:.0f} ms)"
+    return None
 
 
 # ---------------------------------------------------------------- pure parts (tests/test_stream_session.py)
@@ -268,6 +283,7 @@ class Session:
         self.log = open(self.out / "session.log", "a", encoding="utf-8")
         self.seq = 0
         self.server_dir = None
+        self.server_launched = False
         self.server_started = False
         self.last_end = None
         self.invalid_x2 = []
@@ -279,7 +295,10 @@ class Session:
 
     def say(self, msg):
         line = f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ} {msg}"
-        print(line, flush=True)
+        try:
+            print(line, flush=True)
+        except OSError:  # no terminal any more; session.log keeps the line
+            pass
         self.log.write(line + "\n")
         self.log.flush()
 
@@ -319,9 +338,10 @@ class Session:
         """(PC clock minus board clock, round trip) in seconds: of 5 exchanges over one open SSH
         connection, the one with the shortest round trip, whose midpoint is then closest to the
         moment the PC read its clock. The connection's setup is not timed."""
-        p = subprocess.Popen(SSH + ["while read -r x; do date -u +%s.%N; done"], stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+        p = None
         try:
+            p = subprocess.Popen(SSH + ["while read -r x; do date -u +%s.%N; done"], stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
             best = None
             for k in range(6):
                 t0 = time.time()
@@ -333,25 +353,31 @@ class Session:
                 t1 = time.time()
                 if not line.strip():
                     raise Stop("the clock exchange with the PC ended")
+                pc_now = float(line)  # also for the first answer: anything else would shift every pair
                 if k == 0:
                     continue  # the first answer waits for the connection's setup
-                offset, rtt = float(line) - (t0 + t1) / 2, t1 - t0
+                offset, rtt = pc_now - (t0 + t1) / 2, t1 - t0
                 if best is None or rtt < best[1]:
                     best = (offset, rtt)
             return best
         except (OSError, ValueError) as e:
             raise Stop(f"clock exchange with the PC: {e}") from None
         finally:
-            p.kill()
-            p.wait()
+            if p:
+                p.kill()
+                p.wait()
 
     def server_alive(self):
-        """The server process is running and its RTSP port takes connections over the wired link."""
+        """The server process runs and listens on its RTSP port. The SSH call itself goes over the
+        wired link, so it checks the link too. (A TCP probe from the board would show in the
+        server's log as a reader connection.)"""
         try:
-            self.pc(f"kill -0 \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\"", tries=2)
-            with socket.create_connection((SERVER, RTSP_PORT), timeout=5):
-                return True
-        except (Stop, OSError):
+            self.pc(f"kill -0 \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\" && ss -ltn | grep -q ':{RTSP_PORT} '",
+                    tries=2)
+            return True
+        except Interrupted:
+            raise
+        except Stop:
             return False
 
     # -- start and end
@@ -393,6 +419,7 @@ class Session:
                 f"--who=rk3588s-bench --why='RTSP server for a measurement session' --mode=block "
                 f"~/{PC_REPO}/stream-server/publish.sh ~/{PC_REPO}/stream-server/session_assignment.txt "
                 f"> ~/{PC_REPO}/stream-server/publish.out 2>&1 < /dev/null &", tries=1)
+        self.server_launched = True
         for _ in range(90):
             time.sleep(1)
             out = self.pc(f"cat ~/{PC_REPO}/stream-server/publish.out")
@@ -420,16 +447,22 @@ class Session:
             "pc_versions": " | ".join(self.pc(f"cat {self.server_dir}/versions.txt").splitlines()),
         }
         (self.out / "server.txt").write_text("".join(f"{k}: {v}\n" for k, v in info.items()))
-        if abs(offset) > MAX_CLOCK_OFFSET_S:
-            raise Stop(f"the PC's clock is {offset:.3f} s off the board's (limit {MAX_CLOCK_OFFSET_S} s)")
+        problem = clock_problem(offset)
+        if problem:
+            raise Stop(problem)
         self.say(f"stream server up, logs in {self.server_dir}, clock offset {offset * 1000:.0f} ms")
 
     def end(self):
-        if self.server_started:
+        # A second signal must not cut the cleanup short.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+        if self.server_launched:
             self.say("stopping the stream server")
-            steps = [("stop", lambda: self.pc(f"kill \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\"; sleep 2; "
-                                              f"! kill -0 \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\" "
-                                              f"2>/dev/null", tries=1))]
+            steps = []
+            if self.server_started:
+                steps.append(("stop", lambda: self.pc(
+                    f"kill \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\"; sleep 2; "
+                    f"! kill -0 \"$(cat ~/{PC_REPO}/stream-server/mediamtx.pid)\" 2>/dev/null", tries=1)))
             if self.server_dir:
                 (self.out / "server").mkdir(exist_ok=True)
                 for name in ("mediamtx.log", "assignment.tsv", "versions.txt", "console.log"):
@@ -479,19 +512,36 @@ class Session:
         self.say(f"{name}: {variant}, {channels} ch, {condition}")
         try:
             o.code = self.sh(cmd, self.out / f"{name}.log", timeout=a.warmup + a.duration + 180)
+        except Interrupted as e:  # subprocess.run has killed the bench
+            o.code = "interrupted"
+            o.reasons.append(f"stopped by the operator ({e})")
+            o.external = "stopped by the operator"
+            self.last_end = time.monotonic()
+            return o, run_dir, temp, start, dt.datetime.now(dt.timezone.utc)
         except Stop as e:
             o.code = f"failed: {e}"
         self.last_end = time.monotonic()
         end = dt.datetime.now(dt.timezone.utc)
+        try:
+            self.judge(o, run_dir, phase, channels, condition, start, end, console_before)
+        except Interrupted as e:
+            o.reasons.append(f"stopped by the operator before the run was judged ({e})")
+            o.external = "stopped by the operator"
+        return o, run_dir, temp, start, end
 
+    def judge(self, o, run_dir, phase, channels, condition, start, end, console_before):
+        """Fills o for a finished bench run (§9.3)."""
+        a = self.args
         # The server's side: alive, its log lines and its publishers' output, kept with every run.
         alive = self.server_alive()
         lines = None
         try:
             offset, _ = self.clock_offset()
             o.offset_ms = f"{offset * 1000:.0f}"
-            if abs(offset) > MAX_CLOCK_OFFSET_S:
-                o.external = f"the PC's clock is {offset:.3f} s off the board's"
+            problem = clock_problem(offset)
+            if problem:
+                o.reasons.append(problem + " (external failure)")
+                o.external = problem
             lines = parse_server_log(self.pc(f"cat {self.server_dir}/mediamtx.log"))
             run_dir.mkdir(exist_ok=True)
             lo, hi = start - dt.timedelta(seconds=2), end + dt.timedelta(seconds=2)
@@ -501,6 +551,8 @@ class Session:
             if published:
                 (run_dir / "server_console.txt").write_text("\n".join(published) + "\n")
                 o.warnings.append(f"{len(published)} lines of publisher output")
+        except Interrupted:
+            raise
         except Stop as e:
             o.reasons.append(f"server log unavailable: {e}")
         if not alive:
@@ -516,6 +568,11 @@ class Session:
             summary = {r["key"]: r["value"] for r in rows}
             ch_rows = read_csv(channels_path)[1]
             samples = read_csv(run_dir / "samples.csv")[1]
+            missing = [z for z in self.trips if samples and f"temp_mc_{z}" not in samples[0]]
+            if missing:
+                o.reasons.append(f"samples.csv has no temperature for {', '.join(missing)}")
+                o.external = "the samples lack trip-point zones"
+                return
             o.trip_samples = trip_samples(samples, self.trips)
             if phase != "thermal":  # rule 1; for the thermal check it is the criterion
                 o.reasons += [f"clock below fixed: {d}" for d in clocks_below(summary, self.fixed)]
@@ -531,7 +588,6 @@ class Session:
                                                  parse_utc(summary["window_end_utc"]))
                 o.reasons += events  # rule 4
                 o.warnings += warnings
-        return o, run_dir, temp, start, end
 
     def run(self, phase, variant, channels, condition, run_kind, repetition=1, source=None):
         """A run, repeated once if invalid (§9.3). Returns (valid, run directory of the last attempt)."""
@@ -554,7 +610,7 @@ class Session:
             self.say(f"{name}: " + ("valid" if valid else "invalid: " + "; ".join(o.reasons))
                      + (f", passed {passed}" if passed else ""))
             if o.external:
-                raise Stop(f"{name}: {o.external} (external failure, PROTOCOL §9.3)")
+                raise Stop(f"{name}: {o.external}; the session stops (PROTOCOL §9.3)")
             if valid:
                 return True, run_dir
         self.say(f"{base}: invalid x2")
@@ -634,10 +690,7 @@ def cmd_thermal(s):
     for condition, channels in (("aux", AUX_MAX), ("main", max(main_set(s.args.limit)))):
         valid, run_dir = s.run("thermal", "B", channels, condition, "calibration")
         if valid:
-            samples = read_csv(run_dir / "samples.csv")[1]
-            missing = [z for z in s.trips if samples and f"temp_mc_{z}" not in samples[0]]
-            if missing:
-                raise Stop(f"samples.csv has no temperature for {', '.join(missing)}")
+            samples = read_csv(run_dir / "samples.csv")[1]  # a valid run has every trip zone (judge)
             problems = thermal_problems(samples, s.fixed, s.trips)
             (run_dir / "thermal_check.txt").write_text("\n".join(problems or ["pass"]) + "\n")
             state = "passed" if not problems else f"failed ({len(problems)} samples)"
@@ -672,7 +725,7 @@ def main(argv):
                            f"{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%SZ}_{kind}"
 
     def on_signal(signum, _frame):
-        raise Stop(f"signal {signal.Signals(signum).name}")
+        raise Interrupted(f"signal {signal.Signals(signum).name}")
 
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGHUP, on_signal)
