@@ -99,6 +99,39 @@ Means over the 3 repetitions:
   - `rknn_run` takes longer as cores are added: 14.13, 14.56 and 15.04 ms. A shared resource, likely memory bandwidth, limits the cores together.
 - **Spread:** the P_cap runs differ by at most 0.19%.
 
+## L, the loop check and the thermal check: method
+
+Fixed before the runs. `tools/stream_session.py` runs each of the three as one session on the board, and drives the stream PC over the wired link (`limit`, `loop-check`, `thermal --limit L`).
+
+- **Session:**
+  - fixed clocks and the environment;
+  - the stream server with the M1 assignment ([stream-server/assignment_m1.txt](../../stream-server/assignment_m1.txt): ch1 to ch32 take videos ① to ④ in turn), its log in UTC, the PC kept awake;
+  - 10 minutes idle and the cooldown gate (§9.2);
+  - the environment before every run (§9.1);
+  - the server's log lines and its publishers' output kept with every run (§3);
+  - an invalid run repeated once (§9.3).
+- **`L`** (§6.1): `--variant none` runs, from 8 channels up to the cap of 32, then confirmation as in §10.
+  - A run passes when every channel keeps drift ≤ 1 s and has no decoder drops.
+  - Rules 1, 2 and 4 of §9.3 apply. An invalid ×2 run counts as not passing.
+  - Main set: {1, 2, 4, 8, 12, 16} up to `L`, plus `L`. Unsaturated: at most min(`L`, 31) channels at 5 fps and min(`L`, 5) at 30 fps (A7).
+- **Loop check** (§3): for each video, one 1-channel `--variant none` run on its first channel, with at least two loop points in the window. It passes with zero decoder drops. Rules 1, 2 and 4 apply.
+- **Thermal check** (§12): B with 5 channels at the auxiliary condition and with `L` channels at the main condition, 140 s each.
+  - It passes when no clock sample falls below its fixed value and every temperature stays below its zone's trip point 0. This uses every one-second sample, warm-up included.
+  - Rule 1 is the check's criterion, so it does not make these runs invalid. Rules 2, 3 (both runs are unsaturated if `L` ≤ 31) and 4 apply.
+- **Rule 4,** read from a log with one-second resolution: an event counts if its second lies between the warm-up start and the window end, both rounded down.
+  - In the window end's own second, only the board's disconnect is exempt, because the bench disconnects right after the window. The publishers stop at least 1 s later.
+  - Events:
+    - an `ERR` line;
+    - a closed connection or session of the board;
+    - a publisher that stops or exits;
+    - a second publisher start on a channel within a run;
+    - a closed session of any other host.
+  - `WAR` lines and publisher (ffmpeg) output are recorded as warnings.
+- **External failures** (§9.3):
+  - An input that ends early, or an unreadable server log, makes the run invalid.
+  - A stream server that is down, or a clock offset to the PC above 100 ms, also stops the session.
+  - A stopped `L` search is kept and flagged, and the search is run again from §10 step 1 in a new session.
+
 ## Files
 
 | File | Content |

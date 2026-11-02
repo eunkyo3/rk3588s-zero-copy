@@ -111,10 +111,11 @@ class ServerEvents(unittest.TestCase):
         return ss.server_events(parsed, self.run_start, self.warmup_start, self.window_end)
 
     def test_parse_offset(self):
-        (t, level, msg), = ss.parse_server_log(log(NORMAL[0]), "+0900")
+        (t, level, msg, raw), = ss.parse_server_log(log(NORMAL[0]), "+0900")
         self.assertEqual(t, dt.datetime(2026, 11, 2, 8, 59, 59, tzinfo=UTC))
         self.assertEqual(level, "INF")
-        (t, _, _), = ss.parse_server_log(log(NORMAL[0]), "-0130")
+        self.assertEqual(raw, "2026/11/02 " + NORMAL[0])
+        (t, _, _, _), = ss.parse_server_log(log(NORMAL[0]), "-0130")
         self.assertEqual(t, dt.datetime(2026, 11, 2, 19, 29, 59, tzinfo=UTC))
 
     def test_normal_run_has_no_events(self):
@@ -150,9 +151,29 @@ class ServerEvents(unittest.TestCase):
         lines = ["18:00:00 ERR before the warm-up", "18:00:06 ERR after the window"]
         self.assertEqual(self.events(lines), ([], []))
 
+    def test_the_window_ends_second_counts_except_the_benchs_disconnect(self):
+        # 09:00:05 UTC holds the window's end (.2): a publisher exit there counts, the bench's
+        # disconnect does not.
+        lines = NORMAL[:6] + ["18:00:05 INF [path ch1] runOnDemand command exited: exit status 1"] + NORMAL[6:8]
+        events, _ = self.events(lines)
+        self.assertEqual([e.split(":")[0] for e in events], ["publisher exit"])
+
     def test_earlier_runs_do_not_count(self):
         lines = ["17:59:00 INF [path ch1] runOnDemand command started"] + NORMAL
         self.assertEqual(self.events(lines), ([], []))
+
+    def test_first_start_is_tracked_from_shortly_before_the_run(self):
+        # The PC's clock lags: the first start is stamped before the bench process started.
+        lines = ["17:59:57 INF [path ch1] runOnDemand command started",
+                 "18:00:03 INF [path ch1] runOnDemand command started"]
+        events, _ = self.events(lines)
+        self.assertEqual([e.split(":")[0] for e in events], ["publisher restart"])
+
+    def test_session_of_another_host(self):
+        lines = ["17:59:59 INF [RTSP] [session cc] created by 192.168.123.5:6000",
+                 "18:00:02 INF [RTSP] [session cc] destroyed: not in use"]
+        events, _ = self.events(lines)
+        self.assertEqual([e.split(":")[0] for e in events], ["session of another host closed"])
 
 
 class Criteria(unittest.TestCase):
@@ -161,8 +182,19 @@ class Criteria(unittest.TestCase):
         self.assertTrue(ss.channels_pass([row, dict(row, drift_max_s="1.000")]))
         self.assertFalse(ss.channels_pass([row, dict(row, drift_max_s="1.033")]))
         self.assertFalse(ss.channels_pass([row, dict(row, decoder_drops="1")]))
-        self.assertFalse(ss.channels_pass([dict(row, ended_early="1")]))
         self.assertFalse(ss.channels_pass([]))
+
+    def test_unsaturated(self):
+        # 0.8 × P_cap = 4661/30 ≈ 155.37 (A7)
+        self.assertTrue(ss.unsaturated(5, "aux", 32))     # 150
+        self.assertFalse(ss.unsaturated(6, "aux", 32))    # 180
+        self.assertTrue(ss.unsaturated(31, "main", 32))   # 155
+        self.assertFalse(ss.unsaturated(32, "main", 32))  # 160
+        self.assertFalse(ss.unsaturated(5, "aux", 4))     # above L
+
+    def test_trip_samples(self):
+        samples = [{"temp_mc_soc-thermal": "74999"}, {"temp_mc_soc-thermal": "75000"}]
+        self.assertEqual(ss.trip_samples(samples, {"soc-thermal": 75000}), 1)
 
     def test_clocks_below(self):
         fixed = {"policy0_khz": 1800000, "policy4_khz": 2208000, "policy6_khz": 2208000, "dmc_hz": 2112000000,

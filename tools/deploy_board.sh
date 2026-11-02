@@ -9,7 +9,7 @@ HOST=${1:-pi@192.168.123.90}
 DIR=${2:-rk3588s-zero-copy}
 root=$(git rev-parse --show-toplevel)
 commit=$(git -C "$root" rev-parse HEAD)
-if [ -n "$(git -C "$root" status --porcelain)" ]; then
+if [ -n "$(git -C "$root" status --porcelain -- . ':!results')" ]; then
     commit=$commit-dirty
 fi
 
