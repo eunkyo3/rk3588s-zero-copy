@@ -27,7 +27,7 @@ The run:
 |---|---|
 | `tools/equivalence_dump` | Decodes each frame once with `h264_rkmpp` and gives it to C, B and R. Each has its own three contexts. It runs every frame on NPU core 0, then the shared post-processing (confidence 0.25, NMS 0.45), and writes every frame's whole input tensor and its detections. |
 | `tools/equivalence_check.py` | Computes both levels from those files alone, and prints the registered and the A5 verdicts. The exit code follows A5. |
-| `tools/equivalence.sh` | Runs `collect_env.sh`, the dump, then the check. The tensors (3 × 1.2 GB) stay on the board, and their SHA-256 hashes are in `tensors.sha256`. |
+| `tools/equivalence.sh` | Runs `collect_env.sh`, the dump, then the check. The tensors (3 × 1.2 GB) are too large for the repository; their SHA-256 hashes are in `tensors.sha256`. |
 
 - **R** is B's preprocessing with plain `INTER_LINEAR`, §8's other choice (A5). B is as used: `INTER_AREA` with the luma box moved by one pixel (A4).
 - **Harness checks,** for each of C, B and R, on every 100th frame and the last (11 frames). Both held:
@@ -152,7 +152,7 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`che
 | File | Content |
 |---|---|
 | `b.jsonl`, `c.jsonl`, `r.jsonl` | A header line with the PROTOCOL §1 fields, then each frame's index, pts and detections `[class, score, x1, y1, x2, y2]` |
-| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each), kept on the board only |
+| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each). The deciding run's tensors are in the release [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z), compressed with xz; the other two runs' were identical and are not kept. |
 | `env.txt` | `collect_env.sh` before the run |
 | `env.json` | Arguments, library versions, each backend's description, the harness checks |
 | `dump.txt`, `dump.log` | The dump's output and its stderr |

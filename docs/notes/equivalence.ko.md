@@ -27,7 +27,7 @@ PROTOCOL §11.1과 §11.2를 현재 적용되는 기준, 즉 [AMENDMENTS A5](../
 |---|---|
 | `tools/equivalence_dump` | 각 프레임을 `h264_rkmpp`로 한 번 디코딩해 C, B, R에 넘긴다. 셋은 각자 컨텍스트 3개를 쓴다. 모든 프레임을 NPU 코어 0에서 돌리고 공용 후처리(신뢰도 0.25, NMS 0.45)를 거친 뒤, 프레임마다 입력 텐서 전체와 검출 결과를 기록한다. |
 | `tools/equivalence_check.py` | 그 파일들만으로 두 수준을 모두 계산하고, 등록 기준과 A5 기준의 판정을 출력한다. 종료 코드는 A5를 따른다. |
-| `tools/equivalence.sh` | `collect_env.sh`, 덤프, 판정을 차례로 실행한다. 텐서(3 × 1.2 GB)는 보드에 두고 SHA-256 해시만 `tensors.sha256`에 남긴다. |
+| `tools/equivalence.sh` | `collect_env.sh`, 덤프, 판정을 차례로 실행한다. 텐서(3 × 1.2 GB)는 저장소에 넣기에 너무 커서 SHA-256 해시만 `tensors.sha256`에 남긴다. |
 
 - **R**은 B의 전처리를 보정 없는 `INTER_LINEAR`로 바꾼 것이다. §8이 허용하는 다른 선택이다(A5). B는 실제 쓰는 그대로, 휘도 박스를 한 픽셀 옮긴 `INTER_AREA`다(A4).
 - **하네스 검사:** C, B, R 각각에 대해 100번째 프레임마다와 마지막 프레임(11프레임)에서 했고, 둘 다 성립했다.
@@ -152,7 +152,7 @@ B, C, R의 모든 텐서에서 테두리 원소가 전부 114다.
 | 파일 | 내용 |
 |---|---|
 | `b.jsonl`, `c.jsonl`, `r.jsonl` | PROTOCOL §1 항목을 담은 머리 줄, 이어서 프레임마다 번호, pts, 검출 `[class, score, x1, y1, x2, y2]` |
-| `tensors.sha256` | `b.u8`, `c.u8`, `r.u8`(각 1,000 × 640 × 640 × 3바이트)의 해시. 파일은 보드에만 있다. |
+| `tensors.sha256` | `b.u8`, `c.u8`, `r.u8`(각 1,000 × 640 × 640 × 3바이트)의 해시. 판정 실행의 텐서는 릴리스 [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z)에 xz로 압축해 두었다. 나머지 두 실행의 텐서는 같은 내용이라 보관하지 않는다. |
 | `env.txt` | 실행 전 `collect_env.sh` 출력 |
 | `env.json` | 인자, 라이브러리 버전, 백엔드별 설명, 하네스 검사 |
 | `dump.txt`, `dump.log` | 덤프의 출력과 stderr |
