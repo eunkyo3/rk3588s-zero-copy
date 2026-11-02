@@ -144,17 +144,18 @@ perf는 바이트가 아니라 샘플을 센다. `tools/copy_sizes.sh`는 `__mem
 
 ## 벤치마크 영상
 
-프로젝트 책임자가 후보 넷을 골랐고, 셋을 준비했다([preprocess/videos_manifest.tsv](preprocess/videos_manifest.tsv)). 원본은 커밋하지 않는다.
+프로젝트 책임자가 후보 넷을 골랐고, 넷 모두 준비했다([preprocess/videos_manifest.tsv](preprocess/videos_manifest.tsv)). 원본은 커밋하지 않는다.
 
 | | 출처 | 제작자 | 라이선스 | 원본 | 준비 결과 |
 |---|---|---|---|---|---|
 | ① | [Pexels 36330861](https://www.pexels.com/video/urban-crosswalk-scene-with-busy-traffic-36330861/), 도심 횡단보도 | SHOX ART | [Pexels License](https://www.pexels.com/license/) | 3840×2160, 23.98 fps, 39.5초, BT.709 | 1,186프레임 |
 | ② | [Pexels 29130409](https://www.pexels.com/video/vibrant-city-street-with-busy-traffic-29130409/), 도심 거리 | Paul Bill | Pexels License | 3840×2160, 23.98 fps, 25.1초, 태그 없음 | 752프레임 |
 | ③ | [Pexels 29969146](https://www.pexels.com/video/night-traffic-and-pedestrians-in-istanbul-29969146/), 이스탄불 야간 | Sururi Ballıdağ | Pexels License | 2560×1440, 29.97 fps, 23.8초, BT.709 | 714프레임 |
-| ④ | [Pixabay 180386](https://pixabay.com/videos/intersection-cars-pedestrian-night-180386/), 오사카 야간 | Kanenori | [Pixabay Content License](https://pixabay.com/service/license-summary/) | — | 아직 없음. 사이트가 스크립트 다운로드를 막는다 |
+| ④ | [Pixabay 180386](https://pixabay.com/videos/intersection-cars-pedestrian-night-180386/), 오사카 야간 | Kanenori | [Pixabay Content License](https://pixabay.com/service/license-summary/) | 3840×2160, 59.94 fps, 31.6초, 태그 없음 | 948프레임 |
 
 - **영상 ①**만 1,000프레임 이상이라, §11과 M1-3 텐서 세트의 `file_source` 영상이 된다.
-- **프레임 레이트:** ①과 ②는 23.98 fps에서 30 fps로 바꿨다. 다섯 프레임에 한 번꼴로 프레임이 반복된다.
+- **프레임 레이트:** ①과 ②는 23.98 fps에서 30 fps로 바꿨다. 다섯 프레임에 한 번꼴로 프레임이 반복된다. ④는 59.94 fps에서 30 fps로 바꿨다. 대략 두 프레임에 하나가 빠진다.
+- **영상 ④**는 사이트가 스크립트 다운로드를 막아서 직접 내려받았다.
 
 ## 도구
 
