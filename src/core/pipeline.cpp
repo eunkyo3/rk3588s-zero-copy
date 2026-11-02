@@ -134,6 +134,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
         std::unique_lock<std::mutex> lk(ready_m);
         ready_cv.wait(lk, [&] { return ready == n; });
         res.t_start = now_ns();
+        res.wall_start_ns = realtime_ns();
         res.t_w = res.t_start + cfg.warmup_s * kSecond;
         res.t_e = res.t_w + cfg.duration_s * kSecond;
         t_w = res.t_w;

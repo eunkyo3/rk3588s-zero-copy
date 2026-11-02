@@ -42,6 +42,7 @@ struct ChannelResult {
 
 struct RunResult {
     int64_t t_start = 0, t_w = 0, t_e = 0;  // timeline start, window start and end
+    int64_t wall_start_ns = 0;               // CLOCK_REALTIME at t_start, to align other machines' logs
     std::vector<ChannelResult> channels;
     std::vector<FrameRecord> frames;       // every processed frame, warm-up included
     std::vector<Sample> samples;           // one per second from t_start to t_e

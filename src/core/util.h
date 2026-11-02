@@ -29,3 +29,10 @@ inline int64_t now_ns() {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 }
+
+// CLOCK_REALTIME in nanoseconds since the epoch: only to place the timeline in UTC.
+inline int64_t realtime_ns() {
+    timespec ts{};
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+}

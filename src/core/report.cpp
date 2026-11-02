@@ -25,6 +25,15 @@ std::string fmt(double v, int digits = 3) {
     return b;
 }
 
+// Nanoseconds since the epoch as ISO 8601 UTC with milliseconds.
+std::string utc_ms(int64_t ns) {
+    const std::time_t s = static_cast<std::time_t>(ns / 1000000000);
+    char b[32], out[48];
+    std::strftime(b, sizeof b, "%Y-%m-%dT%H:%M:%S", std::gmtime(&s));
+    std::snprintf(out, sizeof out, "%s.%03dZ", b, static_cast<int>(ns / 1000000 % 1000));
+    return out;
+}
+
 }  // namespace
 
 std::string command_output(const std::string& cmd) {
@@ -143,6 +152,10 @@ Header write_results(const std::string& dir, const Header& header, const Pipelin
     // ---- summary ----
     Header s;
     s.push_back({"window_s", fmt(window_s, 0)});
+    // The timeline in UTC, to match the stream server's log (PROTOCOL §9.3 rule 4).
+    s.push_back({"warmup_start_utc", utc_ms(r.wall_start_ns)});
+    s.push_back({"window_start_utc", utc_ms(r.wall_start_ns + (r.t_w - r.t_start))});
+    s.push_back({"window_end_utc", utc_ms(r.wall_start_ns + (r.t_e - r.t_start))});
     const double proc = r.cpu_e.process_s - r.cpu_w.process_s;
     double a76 = 0, a55 = 0;
     std::vector<std::pair<double, std::string>> per_thread;

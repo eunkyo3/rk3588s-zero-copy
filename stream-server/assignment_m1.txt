@@ -1,0 +1,35 @@
+# Channel-to-video assignment of M1 (PROTOCOL §3): videos ① to ④ in turn, chosen by the project
+# owner on 2026-11-02. Fixed at freeze-m1. Paths are relative to the directory publish.sh runs in,
+# which holds the prepared videos (docs/notes/preprocess.md#benchmark-videos).
+ch1 pexels_36330861.mp4
+ch2 pexels_29130409.mp4
+ch3 pexels_29969146.mp4
+ch4 pixabay_180386.mp4
+ch5 pexels_36330861.mp4
+ch6 pexels_29130409.mp4
+ch7 pexels_29969146.mp4
+ch8 pixabay_180386.mp4
+ch9 pexels_36330861.mp4
+ch10 pexels_29130409.mp4
+ch11 pexels_29969146.mp4
+ch12 pixabay_180386.mp4
+ch13 pexels_36330861.mp4
+ch14 pexels_29130409.mp4
+ch15 pexels_29969146.mp4
+ch16 pixabay_180386.mp4
+ch17 pexels_36330861.mp4
+ch18 pexels_29130409.mp4
+ch19 pexels_29969146.mp4
+ch20 pixabay_180386.mp4
+ch21 pexels_36330861.mp4
+ch22 pexels_29130409.mp4
+ch23 pexels_29969146.mp4
+ch24 pixabay_180386.mp4
+ch25 pexels_36330861.mp4
+ch26 pexels_29130409.mp4
+ch27 pexels_29969146.mp4
+ch28 pixabay_180386.mp4
+ch29 pexels_36330861.mp4
+ch30 pexels_29130409.mp4
+ch31 pexels_29969146.mp4
+ch32 pixabay_180386.mp4
