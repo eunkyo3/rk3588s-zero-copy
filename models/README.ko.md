@@ -2,7 +2,17 @@
 
 # 모델
 
-모델 파일은 커밋하지 않는다. 다음 명령으로 다시 만든다.
+모델 파일은 커밋하지 않는다. 벤치마크가 쓰는 파일은 릴리스 [`data-model-yolov8n_i8-04a76611`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-model-yolov8n_i8-04a76611)에 보관한다. 다음 명령으로 내려받는다.
+
+```sh
+cd models
+for f in yolov8n_i8.rknn yolov8n.onnx SHA256SUMS; do
+    curl -fLO https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/data-model-yolov8n_i8-04a76611/$f
+done
+sha256sum -c SHA256SUMS && rm SHA256SUMS
+```
+
+변환은 아래 명령으로 다시 할 수 있지만, 다른 `.rknn` 파일이 나온다(아래 참고).
 
 ```sh
 tools/model/convert_yolov8n.sh
@@ -24,4 +34,4 @@ MSYS_NO_PATHCONV=1 ROOT="$(pwd -W)" tools/model/convert_yolov8n.sh
 
 **변환 결과는 비트 단위로 재현되지 않는다.** 고정한 같은 이미지에서 두 번 변환하면 ONNX 입력이 같아도 서로 다른 `.rknn` 파일이 나온다(약 1,200바이트 차이). 벤치마크는 위 SHA-256의 파일을 쓴다. 새로 변환한 파일은 다른 파일이므로 이것을 대체하면 안 된다.
 
-YOLOv8은 Ultralytics가 AGPL-3.0으로 배포한다.
+YOLOv8은 Ultralytics가 AGPL-3.0으로 배포한다. 두 파일은 여기서 파생됐으므로 같은 라이선스로 배포하며, 라이선스 전문은 릴리스에 있다.

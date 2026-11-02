@@ -95,7 +95,7 @@ The options used by the benchmark are fixed before `freeze-m1` (PROTOCOL §14). 
 
 ## Model
 
-See [models/README.md](../../models/README.md): YOLOv8n from rknn_model_zoo v2.3.2, converted to INT8 with rknn-toolkit2 2.3.2, with SHA-256 checksums.
+See [models/README.md](../../models/README.md): YOLOv8n from rknn_model_zoo v2.3.2, converted to INT8 with rknn-toolkit2 2.3.2, with SHA-256 checksums. The files are kept in a release.
 
 ## Thermal observation
 
