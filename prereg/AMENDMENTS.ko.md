@@ -268,6 +268,7 @@
     - **입력:** RTSP는 TCP로 받고(`rtsp_transport=tcp`), `timeout=5000000`(5초)을 준다. 로컬 파일(`file_source`)은 옵션 없이 연다. 그 밖의 디먹서·디코더 옵션은 설정하지 않는다.
     - **A:** libavcodec 자체의 `h264` 디코더. 옵션은 기본값이되 `thread_count = 0`이다. 즉 자동 스레딩으로, libavcodec이 affinity 마스크의 CPU(cpu4–7, §8)에서 스레드 수를 정한다.
       - **코드 변경:** 코드는 "자동 스레딩"이라고 적었지만 `thread_count`를 설정하지 않았다. 그래서 A는 libavcodec 기본값인 스레드 1개로 디코딩했을 것이다. "자동"은 `ffmpeg` 명령줄 도구의 기본값일 뿐이다. 이제 코드가 원래 의도대로 값을 설정한다. A 실행은 아직 없었다.
+      - 이 설정으로 [실행 중 라이브러리 확인](../results/check/20261103T053143Z_runtime_libs)의 A 실행 두 번 모두 스레드 5개(`av:h264:df0` ~ `df4`)로 디코딩했다. 마스크의 CPU 4개에 1을 더한 수다.
   - **라이브러리와 드라이버**(§2):
 
     | 구성 요소 | 버전 |
@@ -283,7 +284,7 @@
     | OpenCV | 4.6.0, A2에서 확정 |
     | C·C++ 런타임 | `libc6` 2.39-0ubuntu8.9; `libstdc++6` 14.2.0-4ubuntu2~24.04.1 |
 
-    - **실행 중에 여는 라이브러리:** B, C, A를 실행했을 때(1채널, `file_source`, 2026-11-03) `ldd` 목록 밖의 라이브러리는 하나만 열렸다. TBB의 메모리 할당기 `libtbbmalloc`으로, `libtbb`가 `dlopen`으로 연다. 기준 파일은 이것도 담는다.
+    - **실행 중에 여는 라이브러리:** [results/check/20261103T053143Z_runtime_libs](../results/check/20261103T053143Z_runtime_libs), 새 도구 `tools/runtime_libs.sh`로 확인했다. B, C, A를 1채널로 로컬 파일과 RTSP에서 각각 실행했을 때, `ldd` 목록 밖의 라이브러리는 하나만 열렸다. TBB의 메모리 할당기 `libtbbmalloc`으로, `libtbb`가 `dlopen`으로 연다. 기준 파일은 이것도 담는다.
   - **모델**(§4): `models/yolov8n_i8.rknn`, SHA-256 `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`. [models/README.ko.md](../models/README.ko.md)에 적힌 릴리스에 있다.
     - `yolov8n.onnx`(SHA-256 `0c8716701f471067932b797eeb67c8e5db47c693c2557c881d7679ec12e21bc5`)에서 변환했다. rknn_model_zoo v2.3.2가 배포하는 export이며, `tools/model/convert_in_container.sh`에 적힌 URL에서 내려받았다.
     - 변환에는 rknn_model_zoo 커밋 `bad6c7334531becaf90a561988519b7bec34d0ab`(태그 v2.3.2)의 `examples/yolov8/python/convert.py`와 rknn-toolkit2 2.3.2를 썼다.
@@ -307,7 +308,7 @@
     - 세션의 `inventory.txt`가 그 세션의 모든 실행에 대한 컴파일러와 플래그의 기록(§2)이다. `tools/deploy_board.sh`는 세션 밖에서 빌드하며, 실행마다 헤더에 코드 커밋이 적힌다.
   - 이 값 중 무엇이든 바꾸려면 수정 기록이 필요하고(§15), 그 기록에 영향받는 데이터를 적는다.
 - Reason: §14는 이 값들을 `freeze-m1` 전에 확정하고, §2는 그 시점에 버전, 빌드, 컴파일러와 플래그를 고정한다.
-  - **기준 파일:** 2026-11-03에 이 항목의 도구로 썼다. 이 항목의 `tools/inventory.sh`와 기준 파일을 가진 커밋 `bd66404`의 빌드(`-dirty` 아님)에서 `tools/inventory.sh docs/notes/inventory_m1.txt`가 "same"을 보고했다.
+  - **기준 파일:** 2026-11-03에 이 항목의 도구로 썼다. 이 항목의 `tools/inventory.sh`와 기준 파일을 가진 커밋 `436168b`의 빌드(`-dirty` 아님)에서 `tools/inventory.sh docs/notes/inventory_m1.txt`가 "same"을 보고했다.
     - 출력은 커밋이나 수정 기록 번호(`CODE_COMMIT`, `LATEST_AMENDMENT`)를 읽지 않는다. 설계상 `CMakeLists.txt`와 저장소 위치에는 좌우된다.
     - 이전 버전의 도구는 PR #14의 머지인 `cf7e40b`의 빌드에서도 같은 값을 냈다.
   - **`results/`의 첫 실행 이후 패키지 변경 없음:**

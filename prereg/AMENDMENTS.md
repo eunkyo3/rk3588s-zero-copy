@@ -268,6 +268,7 @@ Each entry has this form:
     - **Input:** RTSP over TCP (`rtsp_transport=tcp`) with `timeout=5000000`, that is 5 s. Local files (`file_source`) are opened without options. No other demuxer or decoder option is set.
     - **A:** libavcodec's native `h264` decoder with its default options, except `thread_count = 0`: automatic threading, where libavcodec takes the thread count from the CPUs in the affinity mask (cpu4–7, §8).
       - **Code change:** the code said "automatic threading" but did not set `thread_count`, so A would have decoded with libavcodec's default of one thread. "Automatic" is only the default of the `ffmpeg` command line. The code now sets it, as it intended. No A run had been made.
+      - With it, both A runs of [the run-time library check](../results/check/20261103T053143Z_runtime_libs) decoded with 5 threads (`av:h264:df0` to `df4`): the 4 CPUs of the mask, plus 1.
   - **Libraries and drivers** (§2):
 
     | Component | Version |
@@ -283,7 +284,7 @@ Each entry has this form:
     | OpenCV | 4.6.0, as fixed by A2 |
     | C and C++ runtime | `libc6` 2.39-0ubuntu8.9; `libstdc++6` 14.2.0-4ubuntu2~24.04.1 |
 
-    - **Libraries opened at run time:** running B, C and A (1 channel, `file_source`, 2026-11-03) mapped one library beyond `ldd`'s list: `libtbbmalloc`, TBB's memory allocator, which `libtbb` opens with `dlopen`. The reference includes it.
+    - **Libraries opened at run time:** [results/check/20261103T053143Z_runtime_libs](../results/check/20261103T053143Z_runtime_libs), from the new `tools/runtime_libs.sh`. B, C and A, 1 channel, each from a local file and over RTSP, mapped one library beyond `ldd`'s list: `libtbbmalloc`, TBB's memory allocator, which `libtbb` opens with `dlopen`. The reference includes it.
   - **Model** (§4): `models/yolov8n_i8.rknn`, SHA-256 `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`, from the release named in [models/README.md](../models/README.md).
     - It was converted from `yolov8n.onnx` (SHA-256 `0c8716701f471067932b797eeb67c8e5db47c693c2557c881d7679ec12e21bc5`), the export that rknn_model_zoo v2.3.2 distributes, downloaded from the URL in `tools/model/convert_in_container.sh`.
     - The conversion used `examples/yolov8/python/convert.py` of rknn_model_zoo commit `bad6c7334531becaf90a561988519b7bec34d0ab` (tag v2.3.2), with rknn-toolkit2 2.3.2.
@@ -307,7 +308,7 @@ Each entry has this form:
     - A session's `inventory.txt` is the record of the compiler and flags (§2) for every run in that session. `tools/deploy_board.sh` builds outside sessions, and each run's header names the code's commit.
   - Changing any of these values needs an amendment (§15), which states the data it affects.
 - Reason: §14 fixes these values before `freeze-m1`, and §2 freezes the versions, builds, compiler and flags there.
-  - **The reference:** written on 2026-11-03 by this entry's tool. At commit `bd66404`, in a build that is not `-dirty`, whose `tools/inventory.sh` and reference are this entry's, `tools/inventory.sh docs/notes/inventory_m1.txt` reported "same".
+  - **The reference:** written on 2026-11-03 by this entry's tool. At commit `436168b`, in a build that is not `-dirty`, whose `tools/inventory.sh` and reference are this entry's, `tools/inventory.sh docs/notes/inventory_m1.txt` reported "same".
     - Nothing in the output reads the commit or the amendment (`CODE_COMMIT`, `LATEST_AMENDMENT`). It depends on `CMakeLists.txt` and on where the repository is, by design.
     - An earlier version of the tool gave the same values for the build of `cf7e40b`, the merge of PR #14.
   - **No package change since the first run under `results/`:**
