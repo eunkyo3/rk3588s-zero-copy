@@ -307,7 +307,7 @@ Each entry has this form:
     - A session's `inventory.txt` is the record of the compiler and flags (§2) for every run in that session. `tools/deploy_board.sh` builds outside sessions, and each run's header names the code's commit.
   - Changing any of these values needs an amendment (§15), which states the data it affects.
 - Reason: §14 fixes these values before `freeze-m1`, and §2 freezes the versions, builds, compiler and flags there.
-  - **The reference:** written on 2026-11-03 by this entry's tool.
+  - **The reference:** written on 2026-11-03 by this entry's tool. At commit `bd66404`, in a build that is not `-dirty`, whose `tools/inventory.sh` and reference are this entry's, `tools/inventory.sh docs/notes/inventory_m1.txt` reported "same".
     - Nothing in the output reads the commit or the amendment (`CODE_COMMIT`, `LATEST_AMENDMENT`). It depends on `CMakeLists.txt` and on where the repository is, by design.
     - An earlier version of the tool gave the same values for the build of `cf7e40b`, the merge of PR #14.
   - **No package change since the first run under `results/`:**
