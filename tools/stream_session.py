@@ -100,7 +100,7 @@ def clock_problem(offset):
     disconnects within milliseconds of the window's end: a PC that lags by more could stamp that
     disconnect into the window's last full second, where it would count."""
     if offset < -MAX_PC_BEHIND_S or offset > MAX_PC_AHEAD_S:
-        return f"the PC's clock is {offset * 1000:.0f} ms off the board's (allowed -{MAX_PC_BEHIND_S * 1000:.0f} " \
+        return f"the PC's clock is {offset * 1000:.1f} ms off the board's (allowed -{MAX_PC_BEHIND_S * 1000:.0f} " \
                f"to +{MAX_PC_AHEAD_S * 1000:.0f} ms)"
     return None
 
@@ -455,7 +455,7 @@ class Session:
         problem = clock_problem(offset)
         if problem:
             raise Stop(problem)
-        self.say(f"stream server up, logs in {self.server_dir}, clock offset {offset * 1000:.0f} ms")
+        self.say(f"stream server up, logs in {self.server_dir}, clock offset {offset * 1000:.1f} ms")
 
     def end(self):
         # A second signal must not cut the cleanup short.
@@ -546,7 +546,7 @@ class Session:
         lines = None
         try:
             offset, _ = self.clock_offset()
-            o.offset_ms = f"{offset * 1000:.0f}"
+            o.offset_ms = f"{offset * 1000:.1f}"
             problem = clock_problem(offset)
             if problem:
                 o.reasons.append(problem + " (external failure)")
