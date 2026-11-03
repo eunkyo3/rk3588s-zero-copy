@@ -1,0 +1,65 @@
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# run_kind: calibration
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: none (preloaded tensors)
+# variant: n/a (PROTOCOL §6.2)
+# channels: n/a
+# code_commit: 3789a7afa32a5979630b80bd36f001c5ec3736fe
+# amendment: A6
+# warmup_s: 20
+# duration_s: 120
+# tensors: /home/pi/calib/tensors_c.u8
+# tensor_count: 1000
+# tensor_heap: system-uncached-dma32
+# start_time_utc: 2026-11-02T07:50:22Z
+# repetition: 1-3 (median)
+# ntp_synchronized: yes
+key,value
+p_cap_inf_per_s,194.2083
+p_cap_valid_runs,3
+p_cap_r1,194.5333
+p_cap_r1_completed,23344
+p_cap_r2,194.1667
+p_cap_r2_completed,23300
+p_cap_r3,194.2083
+p_cap_r3_completed,23305
+npu_raw_1c_inf_per_s,70.7250
+npu_raw_1c_valid_runs,3
+npu_raw_1c_r1,70.7333
+npu_raw_1c_r1_completed,8488
+npu_raw_1c_r2,70.7250
+npu_raw_1c_r2_completed,8487
+npu_raw_1c_r3,70.7000
+npu_raw_1c_r3_completed,8484
+npu_raw_2c_inf_per_s,137.2250
+npu_raw_2c_valid_runs,3
+npu_raw_2c_r1,137.2250
+npu_raw_2c_r1_completed,16467
+npu_raw_2c_r2,137.0750
+npu_raw_2c_r2_completed,16449
+npu_raw_2c_r3,137.2833
+npu_raw_2c_r3_completed,16474
+npu_raw_3c_inf_per_s,199.2083
+npu_raw_3c_valid_runs,3
+npu_raw_3c_r1,199.1500
+npu_raw_3c_r1_completed,23898
+npu_raw_3c_r2,199.3750
+npu_raw_3c_r2_completed,23925
+npu_raw_3c_r3,199.2083
+npu_raw_3c_r3_completed,23905
+h2_aux_point,5
+unsaturated_main_max_channels_by_p_cap,31
+unsaturated_aux_max_channels_by_p_cap,5
+fixed_policy0_khz,1800000
+fixed_policy4_khz,2208000
+fixed_policy6_khz,2208000
+fixed_dmc_hz,2112000000
+fixed_npu_hz,1000000000
+tensors_sha256,051d6f12662e0b8ef9b72f00f74f498683913c39f197deb42c34ac1a54340c67
+idle_s,600
+soc_thermal_baseline_mc,39876
+samples_at_or_above_trip0_all_attempts,0
+clock_samples_below_fixed_all_attempts,0
+complete,1
+protocol_settings,yes

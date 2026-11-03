@@ -1,0 +1,55 @@
+# start_time_utc: 2026-11-02T08:27:30Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# run_kind: calibration
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: none (preloaded tensors)
+# variant: n/a (PROTOCOL §6.2)
+# channels: n/a
+# repetition: 3
+# code_commit: 3789a7afa32a5979630b80bd36f001c5ec3736fe
+# amendment: A6
+# measurement: npu_raw
+# cores: 3
+# warmup_s: 20
+# duration_s: 120
+# tensors: /home/pi/calib/tensors_c.u8
+# tensor_count: 1000
+# tensor_heap: system-uncached-dma32
+key,value
+measurement,npu_raw
+cores,3
+tensor_count,1000
+completed_in_window,23905
+inferences_per_s,199.2083
+completed_core0,8072
+completed_core1,7916
+completed_core2,7917
+bind_ms_mean,0.019
+run_ms_mean,15.041
+process_cpu_s,24.020
+npu_load_mean_core0,93.0
+npu_load_mean_core1,93.0
+npu_load_mean_core2,93.1
+fixed_policy0_khz,1800000
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+fixed_policy4_khz,2208000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+fixed_policy6_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+fixed_dmc_hz,2112000000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+fixed_npu_hz,1000000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,55461
+samples_at_or_above_trip0,0
+clock_samples_below_fixed,0
+bound_outputs_match_before_window,1
+bound_outputs_match_after_window,1
+valid,1

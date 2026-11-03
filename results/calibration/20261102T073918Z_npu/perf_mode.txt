@@ -1,0 +1,5 @@
+policy0_khz: 1800000
+policy4_khz: 2208000
+policy6_khz: 2208000
+dmc_hz: 2112000000
+npu_hz: 1000000000
