@@ -101,7 +101,7 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
 
 ## `freeze-m1`에서 고정한 소프트웨어
 
-[inventory_m1.txt](inventory_m1.txt)에 보드의 드라이버와 부트 펌웨어, ffmpeg 빌드와 `h264_rkmpp` 옵션의 기본값, RKNN 헤더, 컴파일러·빌드 도구·플래그, 모델, 그리고 동적 링커가 `bench_main`에 대해 찾는 모든 공유 라이브러리(`ldd`)의 SHA-256과 패키지를 기록했다([AMENDMENTS A10](../../prereg/AMENDMENTS.ko.md)).
+[inventory_m1.txt](inventory_m1.txt)에 보드의 드라이버와 부트 펌웨어, ffmpeg 빌드와 `h264_rkmpp` 옵션의 기본값, RKNN 헤더, 컴파일러·빌드 도구·플래그, 모델, 그리고 동적 링커가 `bench_main`에 대해 찾는 모든 공유 라이브러리(`ldd`)와 libtbb가 실행 중에 여는 `libtbbmalloc`의 SHA-256과 패키지를 기록했다([AMENDMENTS A10](../../prereg/AMENDMENTS.ko.md)).
 
 - `tools/inventory.sh`가 보드에서 이 파일을 쓴다. `tools/stream_session.py`는 세션을 시작할 때마다 이 도구를 실행하고, 출력이 다르거나 이 파일이 A10의 파일이 아니면 멈춘다.
 - 세션은 송출 서버를 시작하기 전에 PC의 mediamtx와 ffmpeg의 SHA-256도 확인한다.

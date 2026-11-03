@@ -3,7 +3,8 @@
 # A10), as "key: value" lines: OS, kernel, drivers and boot firmware; the ffmpeg build and the
 # defaults of h264_rkmpp's options; librknnrt, librga and the RKNN headers; the compiler, the build
 # tools and the flags of the build in build/; the model; and the SHA-256 of every shared library the
-# dynamic linker resolves for build/bench_main (ldd), with its package.
+# dynamic linker resolves for build/bench_main (ldd), and of libtbbmalloc, which libtbb opens at run
+# time, each with its package.
 # Nothing in the output depends on the code's commit or amendment (CODE_COMMIT, LATEST_AMENDMENT).
 # It does depend on CMakeLists.txt and on where the repository is (the include paths).
 # Exit 0, or 1 if a value cannot be read. With a reference file, compares with it instead: exit 0 if
@@ -31,20 +32,20 @@ kv() {
 sha() {
     s=$(sha256sum "$1" | cut -c1-64)
     [ -n "$s" ] || fail "cannot hash $1"
-    echo "$s"
+    printf '%s\n' "$s"
 }
 # The first line a command prints on stdout. MPP prints a notice on stderr whenever it loads.
 first_line() {
     l=$("$@" 2>/dev/null | head -n 1)
     [ -n "$l" ] || fail "no output from $*"
-    echo "$l"
+    printf '%s\n' "$l"
 }
 # The value of "NAME = value" in a CMake flags.make file, and of "NAME:TYPE=value" in the cache.
 cmake_var() { sed -n "s/^$2 = //p" "build/CMakeFiles/$1/flags.make"; }
 cache_var() { sed -n "s/^$1:[A-Z]*=//p" build/CMakeCache.txt; }
 
 inventory() {
-    kv os "$(. /etc/os-release && echo "$PRETTY_NAME")"
+    kv os "$(. /etc/os-release && printf '%s' "$PRETTY_NAME")"
     kv kernel "$(uname -r) $(uname -v)"
     kv boot_firmware "$(tr ' ' '\n' </proc/cmdline | sed -n 's/^androidboot\.fwver=//p')"
     kv rknpu_driver "$($SUDO cat /sys/kernel/debug/rknpu/version | sed 's/^RKNPU driver: //')"
@@ -58,7 +59,7 @@ inventory() {
     opts=$("$FFMPEG" -hide_banner -h decoder=h264_rkmpp 2>/dev/null |
         sed -n 's/^  -\([a-z_]*\) .*(default \(.*\))$/h264_rkmpp_default_\1: \2/p')
     [ -n "$opts" ] || fail "no options of h264_rkmpp"
-    echo "$opts"
+    printf '%s\n' "$opts"
 
     kv librknnrt "$(strings /usr/lib/librknnrt.so | sed -n 's/.*librknnrt version: //p' | head -n 1)"
     kv librga "$(strings /usr/lib/aarch64-linux-gnu/librga.so.2 | sed -n 's/.*rga_api version //p' | head -n 1)"
@@ -94,7 +95,7 @@ inventory() {
     case "$libs" in
         *"not found"*) fail "ldd: a library of $BENCH is not found" ;;
     esac
-    paths=$(echo "$libs" | awk '$2 == "=>" {print $3} $1 ~ /^\// {print $1}')
+    paths=$(printf '%s\n' "$libs" | awk '$2 == "=>" {print $3} $1 ~ /^\// {print $1}')
     [ -n "$paths" ] || fail "ldd lists no library for $BENCH"
     paths="$paths /usr/lib/aarch64-linux-gnu/libtbbmalloc.so.2"
     for l in $paths; do
