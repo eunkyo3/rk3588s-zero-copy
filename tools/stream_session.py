@@ -280,7 +280,7 @@ class Session:
         for k in ("COOLING", "AMBIENT_C"):
             if not os.environ.get(k):
                 raise Stop(f"set {k} (PROTOCOL §2)")
-        for f in ("build/bench_main", "build/CMakeCache.txt", ASSIGNMENT, MANIFEST):
+        for f in ("build/bench_main", "build/CMakeCache.txt", ASSIGNMENT, MANIFEST, INVENTORY):
             if not Path(f).exists():
                 raise Stop(f"no {f}")
         self.out.mkdir(parents=True, exist_ok=True)
