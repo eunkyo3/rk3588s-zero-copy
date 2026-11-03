@@ -363,7 +363,7 @@ Each entry has this form:
     | dma-buf memory (MiB) | 166 to 1,310 | 1,531 | 1,862 | 2,747 |
 
     - At 10 channels, every channel started the window behind and caught up, at up to 31.3 fps. So 10 is close to the decoder's limit, and 8 leaves room for the load that B and C add.
-    - Memory is not the limit. The decoder's dma-bufs took about 150 to 172 MiB per channel. The DMA zone (memory below 4 GiB) still had at least 88 MiB of free pages at every count, the least at 16 channels.
+    - Memory is not the limit. The decoder's dma-bufs took about 150 to 172 MiB per channel. The DMA zone (memory below 4 GiB) still had at least 87 MiB of free pages at every count, the least at 16 channels.
     - **Server warnings:** from 6 channels up, mediamtx logged "reader is too slow, discarding … frames".
       - At 6, 8 and 10 channels, these lines came before or early in the warm-up, never in a window.
       - At 12 and 16 channels, they went on through the window, where the decoder fell behind.
