@@ -128,7 +128,7 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
 - **시간:** PC는 chrony로 국내 공개 서버에 시간을 맞춘다(stratum 2).
   - 2026-11-03 02:19 UTC부터 보드는 유선 링크로 PC 시간에 맞춘다. `/etc/systemd/timesyncd.conf.d/50-bench.conf`가 `NTP=10.88.0.1`, `FallbackNTP=ntp.ubuntu.com`을 정하고, 04:10 UTC부터는 `PollIntervalMaxSec=64`도 정한다.
   - PC의 `/etc/chrony.conf`에는 `allow 10.88.0.2/32`가 있고, 방화벽은 `10.88.0.2`의 NTP만 받는다.
-  - 그전에는 보드가 Wi-Fi로 `ntp.ubuntu.com`에 맞췄고, PC와의 차이가 +8 ms에서 −5 ms 너머까지 흔들렸다. 지금은 ±0.5 ms 안에 머문다([AMENDMENTS A9](../../prereg/AMENDMENTS.ko.md)).
+  - 그전에는 보드가 Wi-Fi로 `ntp.ubuntu.com`에 맞췄고, PC 시계에서 보드 시계를 뺀 차이가 +8 ms(PC가 빠름)에서 −5 ms 너머까지 흔들렸다. PC 시간에 맞춘 뒤 세션들은 0 ~ −3 ms를 기록했고, 폴링 간격을 바꾼 뒤 `timesyncd`가 보고한 차이는 −0.14 ms다([AMENDMENTS A9](../../prereg/AMENDMENTS.ko.md)).
 
 ## 남은 항목
 

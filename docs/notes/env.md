@@ -128,7 +128,7 @@ The board is reached over Wi-Fi (`wlan0`) for administration. The RTSP streams (
 - **Time:** the PC takes its time with chrony from public servers in Korea (stratum 2).
   - Since 2026-11-03 02:19 UTC, the board takes its time from the PC over the wired link: `/etc/systemd/timesyncd.conf.d/50-bench.conf` sets `NTP=10.88.0.1`, `FallbackNTP=ntp.ubuntu.com`, and, since 04:10 UTC, `PollIntervalMaxSec=64`.
   - On the PC, `/etc/chrony.conf` has `allow 10.88.0.2/32`, and the firewall accepts NTP from `10.88.0.2` only.
-  - Before, the board used `ntp.ubuntu.com` over Wi-Fi, and its offset to the PC wandered from +8 ms to beyond −5 ms. Now it stays within ±0.5 ms ([AMENDMENTS A9](../../prereg/AMENDMENTS.md)).
+  - Before, the board used `ntp.ubuntu.com` over Wi-Fi, and the PC's clock minus the board's wandered from +8 ms (PC ahead) to beyond −5 ms. On the PC's time, the sessions recorded 0 to −3 ms; after the poll change, `timesyncd` reported −0.14 ms ([AMENDMENTS A9](../../prereg/AMENDMENTS.md)).
 
 ## Open items
 

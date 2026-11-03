@@ -151,22 +151,23 @@ All 28 runs were valid and passed: the search from 8 to 32 channels, then 3 conf
 | 32, 4 runs | ≤ 0.033 s | 0 | 41.8–44.0 s | 47.2 °C |
 
 - Drift never exceeded 0.033 s, one frame. No run had a rule 4 event or a warning. The PC's clock was 4 to 8 ms ahead of the board's.
-- Decoding costs about 1.35 s of CPU per channel in 120 s, 1.1% of a core, at the fixed clocks.
+- At the fixed clocks, decoding costs about 1.35 s of CPU per channel in 120 s at 32 channels, 1.1% of a core. From 8 to 32 channels, each added channel adds about 1.4 s.
 
 ### Derived values (§6.1, §6.2)
 
 - **Main set:** {1, 2, 4, 8, 12, 16, 32}.
 - **Unsaturated:** at most 31 channels at the main condition and 5 at the auxiliary one. In the main set only 32 is saturated: 32 × 5 = 160 inferences/s > 155.37.
-- **H3:** B and C are also searched up to 32 channels. If both sustain at least 31 (`L` − 1), H3's practical verdict is *indeterminate (ceiling reached)* (HYPOTHESES, H3).
+- **H3:** B and C are also searched up to 32 channels. If the confirmed counts `n_B` and `n_C` are both at least 31 (`L` − 1), H3's practical verdict is *indeterminate (ceiling reached)* (HYPOTHESES, H3).
+- PROTOCOL sets no bound on the ambient temperature. `P_cap` ran at 28 °C, the sessions below at 24 to 26 °C.
 
 ## Loop check: results
 
 Session [results/check/20261103T032849Z_loop](../../results/check/20261103T032849Z_loop):
 - 2026-11-03, 03:38–03:51 UTC, code `5c9bc80`, amendment A8;
-- ambient 25 °C in its header (the user reported 26 °C at 03:50);
+- ambient 25 °C in its header (the operator reported 26 °C at 03:50);
 - `soc-thermal` baseline 37.8 °C.
 
-**Passed:** each video's 1-channel run is valid, crosses at least two loop points in its window, and has no decoder drops.
+**Passed:** each video's 1-channel run is valid, crosses at least two loop points in its window, and has no decoder drops. The loop points are computed from each video's duration.
 
 | Video | Channel | Loop points in the window | Decoder drops |
 |---|---|---|---|
@@ -190,6 +191,7 @@ Session [results/calibration/20261103T035136Z_thermal](../../results/calibration
 | B, 32 channels, main | 67.5 °C | 68.4 °C, `bigcore0` and `bigcore1` | always at the fixed values |
 
 - Every one-second sample counts, warm-up included: 140 per run.
+- Rule 3 of §9.3 applies to the 5-channel run only: 32 channels at 5 fps is saturated.
 - At 32 channels, `soc-thermal` stayed 7.5 °C below its trip point.
 - B's throughput and latency in these runs are not analysed. They are calibration runs, not comparison runs (§12).
 
@@ -207,12 +209,18 @@ They are kept under `results/` and flagged. None of their runs counts.
 - **Clock:**
   - The board took its time from `ntp.ubuntu.com` over Wi-Fi (SNTP); the PC takes it from servers in Korea with chrony. Their offset wandered from +8 ms (PC ahead) to beyond −5 ms.
   - The records say −5 ms because `tools/stream_session.py` rounded offsets to whole milliseconds; it now keeps 0.1 ms.
-  - Since 02:19 UTC the board takes its time from the PC over the wired link, and since 04:10 UTC it polls at least every 64 s ([env.md](env.md#network)). The offset stays within ±0.5 ms.
+  - Since 02:19 UTC the board takes its time from the PC over the wired link, and since 04:10 UTC it polls the PC no less often than every 64 s ([env.md](env.md#network)).
+  - The sessions run on the PC's time recorded offsets of 0 to −3 ms, inside the bounds. After the poll change, `timesyncd` reported −0.14 ms; no session has run since.
 - **Build defect:**
   - `tools/deploy_board.sh` restored each file's original time. A deploy from `main` for the held-out check rebuilt `pipeline.cpp` and `report.cpp` from `main`'s versions.
-  - The next deploy, from this branch, brought back their own versions with older times, so make skipped them. Only `bench_main.cpp` was rebuilt, because its commit changed, and it was built against this branch's `RunResult`.
+  - The next deploy, from this branch, brought back their own versions with older times, so make skipped them. The tools whose commit define changed, `bench_main` among them, were rebuilt against this branch's `RunResult`.
   - Since commit `5c9bc80`, the copy takes the time of extraction, so each deploy rebuilds every file it copies.
-  - The `L` session (`9553f70`) and the held-out check (`07fe535`) are not affected. Every file that differed from the board's previous build was newer than its objects, and all their runs ended normally.
+  - **The `L` session (`9553f70`) is not affected.** Its 28 runs exited normally. Their `summary.csv` holds `warmup_start_utc` and `window_*_utc`, which only this branch's `pipeline.cpp` and `report.cpp` write, with times that match `runs.tsv`.
+  - **The held-out check (`07fe535`) is not affected.** `tools/equivalence_dump` uses none of `RunResult`, `run_pipeline` or the result writers. The four `src/` files that differ between `main` and this branch change only these and a clock helper they use.
+  - **Earlier builds:** the defect needs a deploy whose files are older than the objects of the build before it, made from other sources. No deploy log is kept for earlier builds. Their results carry checks of their own: M1-4's three runs gave the same bytes and its harness checks held, and every `P_cap` run passed its output checks (A7).
+- **Repeated checks:**
+  - The loop check and the thermal check each ran three times. The first loop check's two valid runs are not used: the check was redone in full in a new session.
+  - A session with invalid ×2 runs has no result. It is not a failure of §12, which would call for a cooling change. Calibration checks are redone before `freeze-m1` (§15).
 
 ## Files
 
