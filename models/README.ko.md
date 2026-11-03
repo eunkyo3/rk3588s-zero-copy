@@ -24,7 +24,7 @@ MSYS_NO_PATHCONV=1 ROOT="$(pwd -W)" tools/model/convert_yolov8n.sh
 
 - **원본:** [rknn_model_zoo](https://github.com/airockchip/rknn_model_zoo) `v2.3.2`(`examples/yolov8`)가 배포하는 RKNN용 YOLOv8n ONNX. 출력이 박스 디코딩 직전에서 끝나므로 후처리는 CPU에서 한다.
 - **변환:** 같은 태그의 `examples/yolov8/python/convert.py`, 대상 `rk3588`, INT8. `mean 0, std 255`가 모델에 들어 있어 입력은 uint8 RGB NHWC 640×640이다.
-- **양자화 데이터셋:** rknn_model_zoo `datasets/COCO/coco_subset_20.txt`(COCO 이미지 20장)
+- **양자화 데이터셋:** rknn_model_zoo 커밋 `bad6c73`(태그 `v2.3.2`)의 `datasets/COCO/coco_subset_20.txt`가 나열하는 COCO 이미지 20장. [coco_subset_20.sha256](coco_subset_20.sha256)에 목록 파일과 이미지마다의 SHA-256이 `datasets/COCO` 기준 경로로 있다(AMENDMENTS A10).
 - **체크섬:** 내려받은 ONNX는 변환 전에 고정된 SHA-256과 대조한다. `models/yolov8n.sha256`은 변환 시 기록한다.
 
 | 파일 | SHA-256 |

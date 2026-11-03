@@ -93,11 +93,19 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
 | `fast_parse` | true |
 | `buf_mode` | half |
 
-벤치마크가 쓸 옵션은 `freeze-m1` 전에 확정한다(PROTOCOL §14). 이 프로젝트에서는 AFBC를 끈다. RGA가 프레임을 읽고 B가 프레임을 매핑하는데, 둘 다 선형 레이아웃을 전제로 하며 스파이크가 이를 assert한다.
+벤치마크는 `afbc=off`만 설정하고 나머지는 기본값을 쓴다([AMENDMENTS A10](../../prereg/AMENDMENTS.ko.md)). 이 프로젝트에서는 AFBC를 끈다. RGA가 프레임을 읽고 B가 프레임을 매핑하는데, 둘 다 선형 레이아웃을 전제로 하며 스파이크가 이를 assert한다.
 
 ## 모델
 
 [models/README.ko.md](../../models/README.ko.md) 참고. rknn_model_zoo v2.3.2의 YOLOv8n을 rknn-toolkit2 2.3.2로 INT8 변환했고, SHA-256 체크섬이 있다. 파일은 릴리스에 보관한다.
+
+## `freeze-m1`에서 고정한 소프트웨어
+
+[inventory_m1.txt](inventory_m1.txt)에 보드의 드라이버와 부트 펌웨어, ffmpeg 빌드와 `h264_rkmpp` 옵션의 기본값, RKNN 헤더, 컴파일러·빌드 도구·플래그, 모델, 그리고 동적 링커가 `bench_main`에 대해 찾는 모든 공유 라이브러리(`ldd`)와 libtbb가 실행 중에 여는 `libtbbmalloc`의 SHA-256과 패키지를 기록했다([AMENDMENTS A10](../../prereg/AMENDMENTS.ko.md)).
+
+- `tools/inventory.sh`가 보드에서 이 파일을 쓴다. `tools/stream_session.py`는 세션을 시작할 때마다 이 도구를 실행하고, 출력이 다르거나 이 파일이 A10의 파일이 아니면 멈춘다.
+- 세션은 송출 서버를 시작하기 전에 PC의 mediamtx와 ffmpeg의 SHA-256도 확인한다.
+- 손으로 확인하려면 보드의 저장소에서 `tools/inventory.sh docs/notes/inventory_m1.txt`를 실행한다.
 
 ## 열 관찰
 
@@ -132,5 +140,5 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
 
 ## 남은 항목
 
-- **냉각:** M1-3 열 확인에서 확정한다.
+- **냉각:** M1-3 열 확인에서 확정했다. 방열판과 상시 미니 팬이다([AMENDMENTS A9](../../prereg/AMENDMENTS.ko.md)).
 - **perf**(M1-2의 CPU 복사 없음 증거에 필요, PROTOCOL §11.4): 이 기준선을 잡을 때는 설치돼 있지 않았다. 벤더 커널 6.1.141용 `linux-tools` 패키지가 Ubuntu에 없기 때문이다. 지금은 `/usr/bin/perf`에 있고, M1-2에서 사용했다([AMENDMENTS A6](../../prereg/AMENDMENTS.ko.md)). 커널은 `armv8_pmuv3` PMU를 제공하고, `perf_event_paranoid`는 2다.

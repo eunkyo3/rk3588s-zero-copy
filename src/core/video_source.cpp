@@ -50,11 +50,14 @@ void VideoSource::open(const std::atomic<bool>* stop) {
     CHECK(stream_ >= 0, "no video stream in %s", url_.c_str());
     time_base_ = fmt_->streams[stream_]->time_base;
 
-    if (software_) {  // variant A: libavcodec's native decoder, default (automatic) threading
+    if (software_) {  // variant A: libavcodec's native decoder with automatic threading (AMENDMENTS A10)
         const AVCodec* codec = avcodec_find_decoder_by_name("h264");
         CHECK(codec, "software h264 decoder not found");
         dec_ = avcodec_alloc_context3(codec);
         avcodec_parameters_to_context(dec_, fmt_->streams[stream_]->codecpar);
+        // 0 = automatic: libavcodec picks the count from the CPUs in the affinity mask. Its own
+        // default is 1; "auto" is only the ffmpeg command line's default.
+        dec_->thread_count = 0;
         CHECK(avcodec_open2(dec_, codec, nullptr) == 0, "cannot open h264 for %s", url_.c_str());
         return;
     }
