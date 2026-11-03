@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
     env += "\n  ],\n  \"queues\": {\"K\": 2, \"Q1\": " + std::to_string(2 * channels) +
            ", \"Q2\": 6, \"N\": " + std::to_string(kInputSlots) + "},\n";
     env += cfg.software_decode
-               ? "  \"decoder\": {\"name\": \"h264\", \"threads\": \"libavcodec default (auto)\"},\n"
+               ? "  \"decoder\": {\"name\": \"h264\", \"threads\": \"auto (thread_count 0)\"},\n"
                : "  \"decoder\": {\"name\": \"h264_rkmpp\", \"extra_hw_frames\": 8, \"afbc\": \"off\", "
                  "\"hw_device_ctx\": \"decoder default\"},\n";
     env += "  \"opencv\": {\"version\": \"" CV_VERSION "\", \"threads\": " + std::to_string(cv::getNumThreads()) +
