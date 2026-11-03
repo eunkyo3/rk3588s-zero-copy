@@ -505,6 +505,7 @@ def h3_replay(trials, limit=LIMIT, start=H3_START):
                 continue
         continued.pop(key, None)  # this run is done: nothing of it is left to repeat or to replace
         replaced.pop(key, None)
+        t["counted"] = True  # for tools/m1_report.py: the trials whose outcome the schedule took
         try:
             nxt = gen.send(t["sustained"])
         except StopIteration as e:
