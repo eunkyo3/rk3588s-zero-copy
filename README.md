@@ -167,3 +167,11 @@ Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summar
 | `tests/` | unit tests of the pipeline core and of three Python tools |
 | `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration |
 | `results/` | the raw results of every run; large tensor dumps are kept in Releases. Each file's header names its code, model and amendment (PROTOCOL §1). |
+
+## License
+
+This repository is licensed under the [Apache License 2.0](LICENSE).
+
+- The box decoding in `src/core/yolov8_post.cpp` follows rknn_model_zoo v2.3.2 (Apache-2.0, Rockchip).
+- The model files are not in this repository. They derive from Ultralytics YOLOv8 and are distributed under AGPL-3.0, whose text is in their Release ([models/README.md](models/README.md)).
+- The benchmark videos are not in this repository either. Their sources and licenses are listed in [docs/notes/preprocess.md](docs/notes/preprocess.md#benchmark-videos).

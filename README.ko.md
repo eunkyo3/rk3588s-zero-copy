@@ -167,3 +167,11 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 | `tests/` | 파이프라인 코어와 Python 도구 3개의 테스트 |
 | `docs/notes/` | 마일스톤별 기록: 환경, 스파이크, 전처리, 코어, 동등성, 캘리브레이션 |
 | `results/` | 모든 실행의 원자료. 큰 텐서 덤프는 Release에 둔다. 파일마다 헤더에 코드, 모델, 수정 기록 번호가 있다(PROTOCOL §1). |
+
+## 라이선스
+
+이 저장소는 [Apache License 2.0](LICENSE)을 따른다.
+
+- `src/core/yolov8_post.cpp`의 박스 디코딩은 rknn_model_zoo v2.3.2(Apache-2.0, Rockchip)를 따랐다.
+- 모델 파일은 이 저장소에 없다. Ultralytics YOLOv8에서 파생됐으므로 AGPL-3.0으로 배포하며, 라이선스 전문은 해당 Release에 있다([models/README.ko.md](models/README.ko.md)).
+- 벤치마크 영상도 이 저장소에 없다. 출처와 라이선스는 [docs/notes/preprocess.ko.md](docs/notes/preprocess.ko.md#벤치마크-영상)에 있다.
