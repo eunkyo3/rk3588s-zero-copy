@@ -167,3 +167,50 @@ Each entry has this form:
   - The cooling configuration is fixed by the thermal check (§12), not by this entry.
 - Affected data: none. M1-4 ran with the default governors; its tensors and detections do not depend on the clocks.
 - Release: none (before `freeze-m1`).
+
+## A8 — 2026-11-03 — Held-out check of the equivalence criteria
+- Change: registers, before it runs, a check that applies A5's criteria to videos they were not chosen on. A5's criteria stay in force, and M1-4's verdict under them stands.
+  - **Inputs:** every frame of videos ②, ③ and ④ ([docs/notes/preprocess.md](../docs/notes/preprocess.md#benchmark-videos)), as prepared for the benchmark, read as `file_source`:
+
+    | Video | Frames | SHA-256 |
+    |---|---|---|
+    | ② `pexels_29130409` | 752 | `e560dd8481d5fe1c615f208fae192fc7fd583097d202e785dc026eae8fb75b41` |
+    | ③ `pexels_29969146` | 714 | `592b6847e2e63e07393af6f4a04b691be438c23eba2c73f79b021dca877c2772` |
+    | ④ `pixabay_180386` | 948 | `2538f54d36e0d763ec3e13f9e606bf01e2d142fff82181eb156f792576b0555b` |
+
+    According to the repository's records, B, C and R have not preprocessed or run inference on these videos before this entry. The only earlier run on them is the RTSP check of 2026-11-02, which decoded only (`--variant none`).
+    The M1-3 sessions running while this entry is written use them too. The `L` search and the loop check decode only. The thermal check runs B alone: it records B's box count per frame, and no tensors. Nothing compares those runs with C or R.
+  - **Procedure:** `tools/equivalence_holdout.sh` on the board.
+    - It first checks each video's SHA-256 and frame count against the table, and stops if one differs.
+    - For each video, `tools/equivalence_dump` runs C, B and R on every frame, as in M1-4: the same decoded frame for all three, NPU core 0, with the harness checks of M1-4.
+    - Then `tools/equivalence_check.py --set` pools the three videos, in the order ②, ③, ④.
+    - **Code:** a build that is not `-dirty`, whose latest amendment is A8, with no change under `src/`, `tools/`, `models/` or `CMakeLists.txt` since the merge of the pull request that adds this entry. So the check runs before any later amendment is merged.
+  - **Which run decides:**
+    - Every run is kept and reported. The first run whose check completes (exit 0 or 1) decides.
+    - A run that stops earlier (exit 2 or 3, for example when a harness check fails) decides nothing. Its cause is recorded, and the check is run again.
+    - If B's, C's or R's code changes before `freeze-m1`, M1-4 is redone (§15), and so is this check. The report then gives both results.
+    - A rerun that needs changed code, after a stopped run or a change of B, C or R, runs on that code and names its amendment. The Code rule above applies to the first run only.
+  - **Verdict:** A5's six conditions, unchanged, on the 2,414 pooled frames:
+    - the border check of B and C;
+    - C's MAE at most R's, and C's minimum per-frame PSNR at least R's;
+    - (a) and (b) at least R's;
+    - (c) C's total box count within 2% of B's.
+  - **Reported, not verdicts:** each video's own results under A5, the registered criteria of §11.1 and §11.2 on the pool, and the box counts per class.
+  - **What follows from the result:**
+    - The result is reported whatever it is. A pass is reported as A5's equivalence holding on videos its criteria were not chosen on, together with any video that fails on its own.
+    - A failure goes into the report's summary. Every hypothesis verdict then carries this caveat: B and C were shown equivalent under A5 only on video ①, the video A5's criteria were chosen on.
+    - Either way, the comparison runs of §12 go ahead. §11.3 does not apply, because M1-4's verdict under A5, on its own input, stands.
+    - No criterion, setting or implementation changes because of this check's result. A change made later for another reason needs its own amendment.
+  - **Registration:** although this entry comes before `freeze-m1`, it gets a Release, `amend-A8`, created after the pull request that adds it is merged. Its `created_at` is the reference time (§1).
+    - The check's results name A8 as the latest amendment, so `tools/check_prereg_order.py` checks that they start after that time.
+    - The check runs before `freeze-m1`.
+- Reason: A5's criteria were chosen after C's and R's results on video ① were known, and after A4 had moved B toward C (A5, "Not an independent test").
+  - Applying them unchanged to videos that played no part in that choice tests whether they hold beyond the video they were chosen on. Fixing in advance what follows from each outcome keeps the result from being used selectively.
+  - Videos ②, ③ and ④ each have fewer than the 1,000 frames §11 registers, so the check pools them.
+    - The pool has 2,414 frames, comparable with the 1,000 frames A5's criteria were chosen on.
+    - A single video has as few as 714 frames, which makes condition (c), a 2% bound on a box count, more sensitive to chance.
+  - **Tool changes:**
+    - `tools/equivalence_check.py` gains `--set DIR FRAMES`, which pools sources. Its single-source output is unchanged: on a test case of 120 frames, the old and new versions print the same report and write the same JSON.
+    - `tools/equivalence_holdout.sh` is new.
+- Affected data: none. M1-4's results and verdict are unchanged.
+- Release: `amend-A8`.

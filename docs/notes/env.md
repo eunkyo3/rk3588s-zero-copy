@@ -10,8 +10,9 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 |---|---|---|
 | [`prereg-v1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-v1) | `87fe874b4f196dafd48f6a175b2d7604625aedba` | 2026-10-30T02:01:36Z |
 | `freeze-m1` | not created yet | |
+| `amend-A8` | not created yet | |
 
-`created_at` is the reference time (PROTOCOL §1). The tagged commit is the merge of PR #1, whose committer date (2026-10-30T01:58:11Z) is not used.
+`created_at` is the reference time (PROTOCOL §1). The tagged commit is the merge of PR #1, whose committer date (2026-10-30T01:58:11Z) is not used. `amend-A8` is the Release of an amendment made before `freeze-m1`, so that the check it registers has a reference time ([A8](../../prereg/AMENDMENTS.md)).
 
 ## Board baseline
 
