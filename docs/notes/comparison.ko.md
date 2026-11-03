@@ -83,6 +83,22 @@
   - 그래서 확인은 공유 채널 수 2 하나뿐이었고, B, C, C, B, B, C 순으로 돌았다.
   - 모든 실행이 유효하고 sustain했다. n_B = n_C = 2
 
+### M1.1: 4K 설계(A11)
+
+- **실행:** `sweep 4k`, 실행 종류 `m1.1`, `results/m1.1/<UTC>_4k/`에 남는다. B와 C, 1·2·4·8채널, 본편 조건, 반복 3회
+  - 채널 순서는 §9.1의 방법을 새 생성기로 적용한 것이다. 1, 8, 4, 2
+  - 블록, 변형 순서, 냉각 대기 관문, 유효성, 세션, 이어서 하기는 위 스윕과 같다.
+  - 규칙 3은 모든 실행에 적용한다(A11).
+- **영상 세트:** [stream-server/assignment_4k.txt](../../stream-server/assignment_4k.txt). 송출 PC의 `media/bench4k`에서 송출한다.
+  - 4K 세션마다 서버의 `assignment.tsv`를 A11에 적힌 영상 ①, ②, ④의 SHA-256과 대조하고, 다르면 멈춘다.
+  - M1 세션은 지금처럼 M1 세트를 쓴다.
+- **순서:** §12의 모든 스윕 뒤다. 위의 순서가 이미 그렇게 정한다("4k"가 마지막).
+  - 먼저 4K 반복 재생 검사를 한다. `loop-check --set 4k`이고, `results/check/<UTC>_loop_4k/`에 남는다.
+  - 도구는 그런 검사가 프로토콜 설정으로 완료된 뒤에만 4K 세션을 시작한다. 영상이 통과했는지는 여기서 따지지 않는다. A11은 통과하지 못한 영상을 보고하고 그대로 진행한다.
+- **텐서**(A11)는 `freeze-m1` 뒤에 보드에서 손으로 돌린다.
+  - `tools/equivalence_dump ~/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 커밋> m1.1`
+  - 이어서 그 디렉터리에 `tools/equivalence_check.py`를 돌린다. 수치를 보고하고, 아무것도 판정하지 않는다.
+
 ### 시간
 
 - 프로토콜대로의 실행 한 번은 약 2.5분이고, 냉각 대기 관문이 최소 60초를 더한다.
@@ -96,4 +112,5 @@
 | `results/comparison/<UTC>_main/`, `…_aux/` | 세션마다 하나: `runs.tsv`, 실행들, `idle_baseline.csv`, 서버 로그, `result.csv` |
 | `results/comparison/<UTC>_h3/` | H3 세션마다 하나, 같은 파일들 |
 | `results/reference/<UTC>_reference/` | A 집합의 같은 것 |
+| `results/m1.1/<UTC>_4k/` | 4K 설계(A11)의 같은 것 |
 | `tools/stream_session.py sweep`, `h3` | 스윕이나 H3의 세션 하나를 돌린다([테스트](../../tests/test_stream_session.py)) |

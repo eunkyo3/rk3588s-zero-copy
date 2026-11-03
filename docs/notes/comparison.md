@@ -83,6 +83,22 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
   - So the confirmation was the shared count 2 alone, in the order B, C, C, B, B, C.
   - Every run was valid and sustained: n_B = n_C = 2.
 
+### M1.1: the 4K design (A11)
+
+- **Runs:** `sweep 4k`, run kind `m1.1`, in `results/m1.1/<UTC>_4k/`. B and C at 1, 2, 4 and 8 channels, main condition, × 3 repetitions.
+  - The channel order is §9.1's procedure with a fresh generator: 8 comes second, giving 1, 8, 4, 2.
+  - Blocks, variant order, gate, validity, sessions and resuming are those of the sweeps above.
+  - Rule 3 applies to every run (A11).
+- **Video set:** [stream-server/assignment_4k.txt](../../stream-server/assignment_4k.txt), served from `media/bench4k` on the stream PC.
+  - Each 4K session checks the server's `assignment.tsv` against A11's SHA-256 of videos ①, ② and ④, and stops on a difference.
+  - The M1 sessions keep the M1 set, as before.
+- **Order:** after every sweep of §12, as the order above already says ("4k" last).
+  - First comes the 4K loop check: `loop-check --set 4k`, in `results/check/<UTC>_loop_4k/`.
+  - The tool starts a 4K session only once such a check has completed with the protocol's settings. Whether its videos passed does not matter here: A11 reports a failing video and goes ahead.
+- **Tensors** (A11), after `freeze-m1`, by hand on the board:
+  - `tools/equivalence_dump ~/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 commit> m1.1`;
+  - then `tools/equivalence_check.py` on its directory. Its numbers are reported, and nothing is judged.
+
 ### Time
 
 - A protocol run takes about 2.5 minutes, and the gate adds at least 60 s.
@@ -96,4 +112,5 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 | `results/comparison/<UTC>_main/`, `…_aux/` | one session each: `runs.tsv`, the runs, `idle_baseline.csv`, the server's log, `result.csv` |
 | `results/comparison/<UTC>_h3/` | one H3 session each, the same files |
 | `results/reference/<UTC>_reference/` | the same, for the A set |
+| `results/m1.1/<UTC>_4k/` | the same, for the 4K design (A11) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |

@@ -15,6 +15,9 @@ Subcommands:
                seeded shuffle; per count, 3 repetitions, B->C, C->B, B->C. A sweep spans as many
                sessions as it needs: each session reads the earlier sessions' runs.tsv of its sweep,
                first redoes the repetitions they left incomplete (§9.1, §9.3), then goes on.
+  sweep 4k     the exploratory 4K design of AMENDMENTS A11 (M1.1): B and C at 1, 2, 4 and 8 channels of
+               the 4K set, run kind m1.1, after every sweep of §12 and after the 4K loop check
+               (loop-check --set 4k). The session checks the 4K videos' SHA-256 against A11.
   h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
@@ -71,9 +74,9 @@ are recorded as warnings.
 Usage, on the board as root from the repository (bench_main built by tools/deploy_board.sh), detached
 from the login session (setsid nohup):
   COOLING=<text> AMBIENT_C=<°C> python3 tools/stream_session.py limit [--out DIR]
-  COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--out DIR]
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--set 4k] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py thermal --limit L [--out DIR]
-  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference}
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference,4k}
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
 --gate-s, for limit and h3 --start and --cap, and for sweep --counts. A sweep or h3 session with any of
@@ -103,15 +106,21 @@ from pathlib import Path
 SERVER, BOARD_IP, RTSP_PORT = "10.88.0.1", "10.88.0.2", 8554
 SSH = ["ssh", "-i", "/home/pi/.ssh/bench_stream", "-o", "UserKnownHostsFile=/home/pi/.ssh/known_hosts",
        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", f"eunkyo@{SERVER}"]
-PC_REPO, PC_VIDEOS = "rk3588s-zero-copy", "media/bench"  # relative to the PC user's home
-ASSIGNMENT = "stream-server/assignment_m1.txt"
+PC_REPO = "rk3588s-zero-copy"  # relative to the PC user's home
+VIDEO_SETS = {  # assignment, the PC's video directory, the board's manifest, the videos' SHA-256 to check
+    "m1": ("stream-server/assignment_m1.txt", "media/bench", "/home/pi/media/bench/manifest.tsv", None),  # A9
+    "4k": ("stream-server/assignment_4k.txt", "media/bench4k", "/home/pi/media/bench4k/manifest.tsv", {  # A11
+        "pexels_36330861.mp4": "dc02ec11ee5774588b90233e5e364bac37f2b4e8e0be771fd023e06539a59a8e",
+        "pexels_29130409.mp4": "0cd2060610d94766a27bc109d646348801b4abb75276537dc4557631bc08e7e8",
+        "pixabay_180386.mp4": "f886a60d179264fa6683188fd1a5b6ac2178d311a10c05f7380a246ad88d6a2b"}),
+}
+ASSIGNMENT, PC_VIDEOS, MANIFEST, VIDEO_SHA256 = VIDEO_SETS["m1"]  # main() selects the set of the session
 INVENTORY = "docs/notes/inventory_m1.txt"  # the board's software, build and model that freeze-m1 freezes (A10)
 INVENTORY_SHA256 = "f6e5a78a15e5fecbae5ab5c132d866dcddd8eaec9562c48d6413d83f97f934dd"  # of INVENTORY as A10 fixes it
 PC_BINARIES = {  # the stream PC's, as A10 fixes them: name -> SHA-256
     "mediamtx": "0ffb7f18210d08ee38cb16668c4f3a2c96622e69d401119c0026d078a2b89523",
     "ffmpeg": "e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99",
 }
-MANIFEST = "/home/pi/media/bench/manifest.tsv"
 LIMIT_START, LIMIT_CAP = 8, 32  # §6.1
 MAIN_SET = (1, 2, 4, 8, 12, 16)  # §6.1
 P_CAP_BUDGET = Fraction(4661, 30)  # 0.8 × P_cap, inferences per second (A7)
@@ -129,11 +138,12 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     "main": ((1, 2, 4, 8, 12, 16, 32), "main", ("B", "C"), "comparison"),
     "aux": ((1, 2, 3, 4, 5), "aux", ("B", "C"), "comparison"),
     "reference": ((1, 2), "main", ("A",), "reference"),
+    "4k": ((1, 2, 4, 8), "main", ("B", "C"), "m1.1"),  # A11, with the 4K video set
 }
 IDLE_BASELINE_S = 120  # §7.2
 H3_START, SUSTAIN_FPS = 8, 4.75  # §10 (min(8, L)), HYPOTHESES H3
 H3_PHASES = ("h3_search", "h3_confirm")
-ORDER = ("main", "aux", "h3", "reference")  # docs/notes/comparison.md
+ORDER = ("main", "aux", "h3", "reference", "4k")  # docs/notes/comparison.md
 SESSION_NAME = r"\d{8}T\d{6}Z_"  # results/<kind>/<UTC>_<sweep or h3>
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
@@ -572,6 +582,22 @@ def durable(f):
     os.fsync(f.fileno())
 
 
+def video_problems(assignment_tsv, expected):
+    """The server's assignment.tsv (channel, video, SHA-256) against the expected {video name: SHA-256}."""
+    problems = []
+    for line in assignment_tsv.splitlines():
+        f = line.split("\t")
+        if len(f) != 3:
+            problems.append(f"bad line in the server's assignment.tsv: {line!r}")
+            continue
+        name = Path(f[1]).name
+        if name not in expected:
+            problems.append(f"{f[0]} serves {name}, which is not in the set")
+        elif f[2] != expected[name]:
+            problems.append(f"{f[0]} serves {name} with SHA-256 {f[2]}, the set has {expected[name]}")
+    return problems if assignment_tsv.strip() else ["the server's assignment.tsv is empty"]
+
+
 def keyed(text):
     return {k: v for k, _, v in (line.partition(": ") for line in text.splitlines()) if v}
 
@@ -795,6 +821,10 @@ class Session:
             "pc_binaries_sha256": " ".join(binaries.split()),
         }
         (self.out / "server.txt").write_text("".join(f"{k}: {v}\n" for k, v in info.items()))
+        if VIDEO_SHA256:
+            problems = video_problems(self.pc(f"cat {self.server_dir}/assignment.tsv"), VIDEO_SHA256)
+            if problems:
+                raise Stop("; ".join(problems[:5]))
         problem = clock_problem(offset)
         if problem:
             raise Stop(problem)
@@ -1063,11 +1093,26 @@ def redo_pending():
     return out
 
 
+def loop_check_done(video_set):
+    """Whether a loop check of the video set has completed with the protocol's settings:
+    results/check/<UTC>_loop_<set> whose result.csv says protocol_settings yes. Whether its videos
+    passed does not matter here (A11: a video that fails is reported, and the runs go ahead)."""
+    for d in Path("results", "check").glob(f"*_loop_{video_set}"):
+        result = d / "result.csv"
+        if re.fullmatch(SESSION_NAME + "loop_" + re.escape(video_set), d.name) and result.exists():
+            rows = {r["key"]: r["value"] for r in read_csv(result)[1]}
+            if rows.get("protocol_settings") == "yes":
+                return True
+    return False
+
+
 def order_problem(name):
     """Why a protocol session of name cannot start now (docs/notes/comparison.md), or None."""
     for earlier in ORDER[:ORDER.index(name)]:
         if progress(earlier) != "complete":
             return f"{earlier} comes before {name} and is not complete"
+    if name == "4k" and not loop_check_done("4k"):
+        return "the loop check of the 4K set (loop-check --set 4k) comes before the first 4K session (A11)"
     if progress(name) == "complete":
         return f"{name} is complete"
     return None
@@ -1207,14 +1252,20 @@ def main(argv):
     ap.add_argument("--start", type=int, default=PROTOCOL["start"])
     ap.add_argument("--cap", type=int, default=PROTOCOL["cap"])
     ap.add_argument("--counts", type=int, nargs="+", help="sweep, smoke tests only: these counts of the sweep")
+    ap.add_argument("--set", choices=list(VIDEO_SETS), help="loop-check: the video set (default m1)")
     args = ap.parse_args(argv)
     if (args.command == "sweep") != (args.sweep is not None):
-        ap.error("sweep needs main, aux or reference; the other commands take none")
+        ap.error("sweep needs main, aux, reference or 4k; the other commands take none")
     if args.counts and (args.command != "sweep" or not set(args.counts) <= set(SWEEPS[args.sweep][0])
                         or len(set(args.counts)) != len(args.counts)):
         ap.error("--counts is for sweep, with distinct counts of that sweep")
     if args.limit is not None and args.command != "thermal":
         ap.error("--limit is for thermal")
+    if args.set and args.command != "loop-check":
+        ap.error("--set is for loop-check; sweep 4k uses the 4K set by itself")
+    video_set = args.set or ("4k" if args.sweep == "4k" else "m1")
+    global ASSIGNMENT, PC_VIDEOS, MANIFEST, VIDEO_SHA256
+    ASSIGNMENT, PC_VIDEOS, MANIFEST, VIDEO_SHA256 = VIDEO_SETS[video_set]
     if args.command == "thermal" and not (args.limit and 1 <= args.limit <= 32):
         ap.error("thermal needs --limit L (1..32)")
     if args.idle_s < 60:
@@ -1234,7 +1285,7 @@ def main(argv):
     else:
         kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal"}[args.command]
         run_kind = "check" if kind == "loop" else "calibration"
-        args.out = args.out or f"results/{run_kind}/{now}_{kind}"
+        args.out = args.out or f"results/{run_kind}/{now}_{kind}" + (f"_{video_set}" if video_set != "m1" else "")
 
     def on_signal(signum, _frame):
         raise Interrupted(f"signal {signal.Signals(signum).name}")
