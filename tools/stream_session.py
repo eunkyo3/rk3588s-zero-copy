@@ -15,6 +15,9 @@ Subcommands:
                seeded shuffle; per count, 3 repetitions, B->C, C->B, B->C. A sweep spans as many
                sessions as it needs: each session reads the earlier sessions' runs.tsv of its sweep,
                first redoes the repetitions they left incomplete (§9.1, §9.3), then goes on.
+  h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
+               method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
+               each session replays the earlier sessions' runs through the same schedule and goes on.
 
 Each session:
   - first records the board's software, build and model (tools/inventory.sh), and stops if they differ
@@ -40,6 +43,8 @@ Which rules apply:
     the check's own criterion, so it does not make a thermal run invalid.
   - sweep runs: rules 1, 2 and 4, and rule 3 at unsaturated conditions (§6.2 with L = 32, A9): every
     count but 32 at the main condition, every auxiliary and every A count.
+  - h3 runs: rules 1, 2 and 4 (§10). A run sustains as HYPOTHESES H3 defines it; an invalid x2 run
+    counts as not sustained.
 External failures (§9.3, last paragraph): an input that ends early, a server that is down before or
 after a run, or a log that cannot be read make the run invalid with the reason given; a log that cannot
 be read, a server that is
@@ -62,10 +67,11 @@ from the login session (setsid nohup):
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py thermal --limit L [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference}
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
---gate-s, for limit --start and --cap, and for sweep --counts. A sweep with any of them is a smoke test:
-its runs are of kind check, it goes to results/check/<UTC>_<sweep>_smoke, and it neither reads nor
-counts toward the sweep's sessions.
+--gate-s, for limit and h3 --start and --cap, and for sweep --counts. A sweep or h3 session with any of
+them is a smoke test: its runs are of kind check, it goes to results/check/<UTC>_<sweep or h3>_smoke, and
+it neither reads nor counts toward the protocol sessions.
 Writes <out>/runs.tsv, one directory per run with the server's log lines, server/ (the whole server
 log), result.csv; prints progress. Exit code 0 when the session completed (whatever it found), 1 when
 it stopped early, 2 for bad arguments.
@@ -118,6 +124,8 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     "reference": ((1, 2), "main", ("A",), "reference"),
 }
 IDLE_BASELINE_S = 120  # §7.2
+H3_START, SUSTAIN_FPS = 8, 4.75  # §10 (min(8, L)), HYPOTHESES H3
+H3_PHASES = ("h3_search", "h3_confirm")
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
 
@@ -333,8 +341,9 @@ def sweep_state(records, variants):
     return complete, pending
 
 
-def load_records(session_dirs, sweep):
-    """The attempts of a sweep's sessions, in order, from their runs.tsv (see sweep_state)."""
+def load_records(session_dirs, phases):
+    """The attempts of a sweep's or of h3's sessions, in order, from their runs.tsv (see sweep_state
+    and h3_trials). phases: the runs.tsv phases to read."""
     out = []
     for d in session_dirs:
         path = Path(d) / "runs.tsv"
@@ -342,11 +351,155 @@ def load_records(session_dirs, sweep):
             continue
         with open(path, encoding="utf-8") as f:
             for row in csv.DictReader(f, delimiter="\t"):
-                if row["phase"] == sweep:
-                    out.append({"session": Path(d).name, "name": row["name"], "channels": int(row["channels"]),
-                                "repetition": int(row["repetition"]), "variant": row["variant"],
-                                "attempt": int(row["attempt"]), "valid": row["valid"] == "1"})
+                if row["phase"] in phases:
+                    out.append({"session": Path(d).name, "name": row["name"], "phase": row["phase"],
+                                "channels": int(row["channels"]), "repetition": int(row["repetition"]),
+                                "variant": row["variant"], "attempt": int(row["attempt"]),
+                                "valid": row["valid"] == "1", "passed": row["passed"] == "1"})
     return out
+
+
+def sustained(rows):
+    """HYPOTHESES H3: every channel at >= 4.75 fps inference, with drift <= 1 s and no decoder drops."""
+    return bool(rows) and all(float(r["inference_fps"]) >= SUSTAIN_FPS and float(r["drift_max_s"]) <= 1.0
+                              and int(r["decoder_drops"]) == 0 for r in rows)
+
+
+def h3_schedule(limit=LIMIT, start=H3_START):
+    """§10 for B and C as one schedule: a generator that yields each run as (variant, phase, channels,
+    repetition, pair) and is sent whether it sustained. It returns {variant: confirmed n}.
+
+    - Search (step 1): one run per variant and step, B->C at odd steps and C->B at even ones while both
+      search (step 4); up from min(8, L) while runs sustain, or down from it until one does.
+    - Confirmation (step 2), in rounds: each variant still confirming needs 3 runs at n (if n >= 1)
+      and 3 at n + 1 (if n < L) that it does not have yet. A round runs the counts in ascending order;
+      at a count both need, the 6 runs are interleaved B->C, C->B, B->C, and each such pair is marked
+      with pair = (channels, i), i = 1, 2, 3 (docs/notes/comparison.md: a pair is not split over
+      sessions). Then each variant goes up, down or is confirmed, "up" first.
+    The repetition is 1 for a search run and 1 to 3 for a confirmation run at its count.
+    """
+    start = min(start, limit)
+    st = {v: {"next": start, "up": True, "n": 0, "done": False} for v in ("B", "C")}
+    step = 1
+    while not all(x["done"] for x in st.values()):
+        for v in (("B", "C") if step % 2 else ("C", "B")):
+            x = st[v]
+            if x["done"]:
+                continue
+            c = x["next"]
+            ok = yield (v, "h3_search", c, 1, None)
+            if ok:
+                x["n"] = c
+                x["done"] = not x["up"] or c >= limit
+                x["next"] = c + 1
+            elif x["up"] and c == start and c > 1:  # the start does not sustain: go down
+                x["up"], x["next"] = False, c - 1
+            elif not x["up"] and c > 1:
+                x["next"] = c - 1
+            else:
+                x["done"] = True
+        step += 1
+
+    n = {v: st[v]["n"] for v in ("B", "C")}
+    runs = {"B": {}, "C": {}}  # variant -> channels -> outcomes of its confirmation runs there
+    confirming = ["B", "C"]
+    while confirming:
+        need = {}
+        for v in confirming:
+            for c in (n[v], n[v] + 1):
+                if 1 <= c <= limit and c not in runs[v]:
+                    need.setdefault(c, []).append(v)
+        for c in sorted(need):
+            if len(need[c]) == 2:
+                for i in (1, 2, 3):
+                    for v in (("B", "C") if i % 2 else ("C", "B")):
+                        runs[v].setdefault(c, []).append((yield (v, "h3_confirm", c, i, (c, i))))
+            else:
+                v = need[c][0]
+                for i in (1, 2, 3):
+                    runs[v].setdefault(c, []).append((yield (v, "h3_confirm", c, i, None)))
+        still = []
+        for v in confirming:
+            at_n = sum(runs[v][n[v]]) if n[v] >= 1 else None
+            above = sum(runs[v][n[v] + 1]) if n[v] < limit else None
+            if above is not None and above >= 2:
+                n[v] += 1
+                still.append(v)
+            elif at_n is not None and at_n <= 1:
+                n[v] -= 1
+                still.append(v)
+        confirming = still
+    return n
+
+
+def h3_trials(records):
+    """The h3 runs of earlier sessions as trials: consecutive attempts of one run within a session.
+    Each trial is a dict with session, names, variant, phase, channels, repetition, final (valid, or
+    invalid x2) and sustained (False unless valid and passed)."""
+    out = []
+    for r in records:
+        last = out[-1] if out else None
+        key = (r["session"], r["variant"], r["phase"], r["channels"], r["repetition"])
+        if last and not last["final"] and key == (last["session"], last["variant"], last["phase"],
+                                                  last["channels"], last["repetition"]) and r["attempt"] == 2:
+            t = last
+        else:
+            t = {"session": r["session"], "names": [], "variant": r["variant"], "phase": r["phase"],
+                 "channels": r["channels"], "repetition": r["repetition"]}
+            out.append(t)
+        t["names"].append(f"{r['session']}/{r['name']}")
+        t["final"] = r["valid"] or r["attempt"] == 2
+        t["sustained"] = r["valid"] and r["passed"]
+    return out
+
+
+def h3_replay(trials, limit=LIMIT, start=H3_START):
+    """Replays earlier sessions' trials through h3_schedule. Returns (schedule, next run or None, n or
+    None, continued, replaced): continued maps a run (variant, phase, channels, repetition) to 2 when
+    its next attempt is the repeat of an earlier session's invalid first attempt; replaced lists, per
+    such run, the earlier runs it replaces. A pair's first run whose partner did not finish in the same
+    session is replaced; an unfinished partner continues with its repeat (§9.1, §9.3)."""
+    gen = h3_schedule(limit, start)
+    nxt, n = next(gen), None
+    continued, replaced = {}, {}
+    i = 0
+    while i < len(trials):
+        t = trials[i]
+        if nxt is None or (t["variant"], t["phase"], t["channels"], t["repetition"]) != nxt[:4]:
+            raise Stop(f"h3 records out of §10's order at {t['names'][0]}: expected {nxt and nxt[:4]}")
+        key = nxt[:4]
+        if not t["final"]:  # the session ended before the repeat: the next session repeats it
+            continued[key] = 2
+            replaced.setdefault(key, []).extend(t["names"])
+            i += 1
+            continue
+        pair = nxt[4]
+        if pair is not None and pair_first(nxt):
+            partner = trials[i + 1] if i + 1 < len(trials) else None
+            if partner is None or partner["session"] != t["session"] or not partner["final"]:
+                replaced.setdefault(key, []).extend(t["names"])
+                continued.pop(key, None)
+                if partner is not None and partner["session"] == t["session"]:  # unfinished partner
+                    pkey = (partner["variant"], partner["phase"], partner["channels"], partner["repetition"])
+                    continued[pkey] = 2
+                    replaced.setdefault(pkey, []).extend(partner["names"])
+                    i += 2
+                else:
+                    i += 1
+                continue
+        continued.pop(key, None)
+        try:
+            nxt = gen.send(t["sustained"])
+        except StopIteration as e:
+            nxt, n = None, e.value
+        i += 1
+    return gen, nxt, n, continued, replaced
+
+
+def pair_first(run):
+    """Whether run, a confirmation run with a pair mark, is the first of its pair: B's at i = 1 and 3,
+    C's at i = 2."""
+    return run[0] == ("B" if run[3] % 2 else "C")
 
 
 def proc_stat_nonidle(text):
@@ -771,7 +924,7 @@ class Session:
         source = source or f"rtsp://{SERVER}:{RTSP_PORT}/ch{{n}}"
         self.seq += 1
         base = f"{self.seq:02d}_{phase}_{variant}_{channels}ch"
-        if phase in SWEEPS:
+        if phase in SWEEPS or phase == "h3_confirm":
             base += f"_r{repetition}"
         for attempt in range(first_attempt, 3):
             name = base if attempt == 1 else base + "_repeat"
@@ -781,6 +934,8 @@ class Session:
             passed = ""
             if valid and phase in ("search", "confirm"):
                 passed = "1" if channels_pass(read_csv(run_dir / "channels.csv")[1]) else "0"
+            if valid and phase in H3_PHASES:
+                passed = "1" if sustained(read_csv(run_dir / "channels.csv")[1]) else "0"
             self.runs.write("\t".join(map(str, [
                 self.seq, name, phase, variant, channels, condition, repetition, attempt, o.code, int(valid), passed,
                 "; ".join(o.reasons), "; ".join(o.warnings), o.trip_samples, temp, o.offset_ms,
@@ -836,8 +991,9 @@ def cmd_limit(s):
 
 
 def sweep_sessions(sweep, current):
-    """The sweep's earlier protocol sessions: results/<kind>/<UTC>_<sweep>, by name (UTC), not current."""
-    kind = SWEEPS[sweep][3]
+    """The earlier protocol sessions of a sweep or of h3: results/<kind>/<UTC>_<name>, by name (UTC),
+    not current."""
+    kind = "comparison" if sweep == "h3" else SWEEPS[sweep][3]
     return sorted(d for d in Path("results", kind).glob(f"*_{sweep}")
                   if d.is_dir() and d.resolve() != Path(current).resolve())
 
@@ -864,7 +1020,7 @@ def cmd_sweep(s):
     _, condition, variants, run_kind = SWEEPS[a.sweep]
     write_idle_baseline(s, s.run_kind)
     earlier = [] if s.smoke else sweep_sessions(a.sweep, s.out)
-    complete, pending = sweep_state(load_records(earlier, a.sweep), variants)
+    complete, pending = sweep_state(load_records(earlier, (a.sweep,)), variants)
     plan = sweep_plan(a.sweep, a.counts)
     todo = [p for p in plan if (p[0], p[1]) in pending] + \
            [p for p in plan if (p[0], p[1]) not in pending and (p[0], p[1]) not in complete]
@@ -878,12 +1034,32 @@ def cmd_sweep(s):
                   first_attempt=first.get(variant, 1), replaces=" ".join(replaced))
         done_here.append(f"{channels}ch_r{repetition}")
     s.runs.flush()
-    complete, pending = sweep_state(load_records(earlier + [s.out], a.sweep), variants)
+    complete, pending = sweep_state(load_records(earlier + [s.out], (a.sweep,)), variants)
     left = [f"{c}ch_r{r}" for c, r, _ in plan if (c, r) not in complete]
     s.write_result([("sweep", a.sweep), ("channel_order", " ".join(map(str, channel_order(a.counts or SWEEPS[a.sweep][0])))),
                     ("earlier_sessions", " ".join(d.name for d in earlier) or "none"),
                     ("repetitions_run_here", " ".join(done_here) or "none"),
                     ("repetitions_left", " ".join(left) or "none")], s.run_kind)
+
+
+def cmd_h3(s):
+    a = s.args
+    write_idle_baseline(s, s.run_kind)
+    earlier = [] if s.smoke else sweep_sessions("h3", s.out)
+    gen, nxt, n, continued, replaced = h3_replay(h3_trials(load_records(earlier, H3_PHASES)), a.cap, a.start)
+    s.say(f"h3: {len(earlier)} earlier sessions; " + (f"next {nxt[:4]}" if nxt else f"already done: {n}"))
+    while nxt is not None:
+        variant, phase, channels, repetition, _ = nxt
+        key = nxt[:4]
+        valid, run_dir = s.run(phase, variant, channels, "main", s.run_kind, repetition,
+                               first_attempt=continued.pop(key, 1), replaces=" ".join(replaced.pop(key, [])))
+        ok = valid and sustained(read_csv(run_dir / "channels.csv")[1])
+        try:
+            nxt = gen.send(ok)
+        except StopIteration as e:
+            nxt, n = None, e.value
+    s.write_result([("n_B", n["B"]), ("n_C", n["C"]), ("limit", a.cap),
+                    ("earlier_sessions", " ".join(d.name for d in earlier) or "none")], s.run_kind)
 
 
 def loop_channels():
@@ -936,7 +1112,7 @@ def cmd_thermal(s):
 
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep"])
+    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3"])
     ap.add_argument("sweep", nargs="?", choices=list(SWEEPS), help="sweep: which one")
     ap.add_argument("--out")
     ap.add_argument("--limit", type=int, help="thermal: L, which gives the largest main count")
@@ -960,11 +1136,12 @@ def main(argv):
         ap.error("need 1 <= --start <= --cap <= 32 (the assignment has 32 channels)")
     now = f"{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%SZ}"
     smoke = any(getattr(args, k) != v for k, v in PROTOCOL.items()) or bool(args.counts)
-    if args.command == "sweep":
-        run_kind = "check" if smoke else SWEEPS[args.sweep][3]
+    if args.command in ("sweep", "h3"):
+        name = args.sweep or "h3"
+        run_kind = "check" if smoke else ("comparison" if name == "h3" else SWEEPS[name][3])
         if args.out and not smoke and Path(args.out).parent != Path("results", run_kind):
-            ap.error(f"a sweep's sessions go to results/{run_kind}/<UTC>_{args.sweep}, where the next one finds them")
-        args.out = args.out or f"results/{run_kind}/{now}_{args.sweep}" + ("_smoke" if smoke else "")
+            ap.error(f"these sessions go to results/{run_kind}/<UTC>_{name}, where the next one finds them")
+        args.out = args.out or f"results/{run_kind}/{now}_{name}" + ("_smoke" if smoke else "")
     else:
         kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal"}[args.command]
         run_kind = "check" if kind == "loop" else "calibration"
@@ -985,7 +1162,8 @@ def main(argv):
         return 2
     try:
         s.start()
-        {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal, "sweep": cmd_sweep}[args.command](s)
+        {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal, "sweep": cmd_sweep,
+         "h3": cmd_h3}[args.command](s)
         status = 0
     except Stop as e:
         s.say(f"stopped: {e}")

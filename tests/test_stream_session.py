@@ -340,8 +340,9 @@ class Sweeps(unittest.TestCase):
             other = dict(row, phase="thermal")
             (session / "runs.tsv").write_text("\t".join(cols) + "\n" + "\t".join(row[c] for c in cols) + "\n"
                                               + "\t".join(other[c] for c in cols) + "\n", encoding="utf-8")
-            self.assertEqual(ss.load_records([session, Path(d) / "missing"], "main"),
-                             [rec("20261104T000000Z_main", "01_main_B_8ch_r1", 8, 1, "B", 1, True)])
+            self.assertEqual(ss.load_records([session, Path(d) / "missing"], ("main",)),
+                             [dict(rec("20261104T000000Z_main", "01_main_B_8ch_r1", 8, 1, "B", 1, True),
+                                   phase="main", passed=False)])
 
     def test_idle_baseline(self):
         before = "cpu  1 1 1 1 1 1 1 1 0 0\ncpu0 10 0 5 100 7 1 1 0 0 0\ncpu4 0 0 0 0 0 0 0 0 0 0\nintr 5\n"
@@ -353,6 +354,138 @@ class Sweeps(unittest.TestCase):
         self.assertEqual((rows["system_cpu0-3_s"], rows["system_cpu4-5_s"], rows["system_cpu6-7_s"]),
                          ("0.140", "1.000", "0.000"))
         self.assertEqual(rows["system_cpu_total_s"], "1.140")
+
+
+def drive(limit_b, limit_c, limit=32, start=8, noisy=None):
+    """Runs h3_schedule against variants that sustain up to their limit; noisy maps (variant, phase,
+    channels, repetition) to an outcome that overrides it. Returns (runs, n)."""
+    gen, runs = ss.h3_schedule(limit, start), []
+    run = next(gen)
+    try:
+        while True:
+            runs.append(run)
+            ok = (noisy or {}).get(run[:4], run[2] <= {"B": limit_b, "C": limit_c}[run[0]])
+            run = gen.send(ok)
+    except StopIteration as e:
+        return runs, e.value
+
+
+def trials_of(runs, outcomes, session="s1"):
+    """Trials of one session, all final, as h3_trials would give them."""
+    return [{"session": session, "names": [f"{session}/{k:02d}"], "variant": r[0], "phase": r[1],
+             "channels": r[2], "repetition": r[3], "final": True, "sustained": o}
+            for k, (r, o) in enumerate(zip(runs, outcomes), 1)]
+
+
+class H3(unittest.TestCase):
+    """§10: the search, the confirmation and their order, and resuming them across sessions."""
+
+    def test_sustained(self):
+        row = {"inference_fps": "4.750", "drift_max_s": "1.000", "decoder_drops": "0"}
+        self.assertTrue(ss.sustained([row, row]))
+        self.assertFalse(ss.sustained([row, dict(row, inference_fps="4.749")]))
+        self.assertFalse(ss.sustained([dict(row, drift_max_s="1.001")]))
+        self.assertFalse(ss.sustained([dict(row, decoder_drops="1")]))
+        self.assertFalse(ss.sustained([]))
+
+    def test_search_alternates_and_confirms(self):
+        runs, n = drive(limit_b=9, limit_c=11)
+        self.assertEqual(n, {"B": 9, "C": 11})
+        search = [r[:3] for r in runs if r[1] == "h3_search"]
+        self.assertEqual(search, [("B", "h3_search", 8), ("C", "h3_search", 8), ("C", "h3_search", 9),
+                                  ("B", "h3_search", 9), ("B", "h3_search", 10), ("C", "h3_search", 10),
+                                  ("C", "h3_search", 11), ("C", "h3_search", 12)])
+        confirm = [(r[0], r[2], r[3], r[4]) for r in runs if r[1] == "h3_confirm"]
+        # Counts ascending; B needs 9 and 10, C needs 11 and 12: no count is shared.
+        self.assertEqual([c[:2] for c in confirm], [("B", 9)] * 3 + [("B", 10)] * 3 + [("C", 11)] * 3 + [("C", 12)] * 3)
+        self.assertTrue(all(c[3] is None for c in confirm))
+
+    def test_shared_counts_are_interleaved(self):
+        runs, n = drive(limit_b=10, limit_c=10)
+        confirm = [(r[0], r[2], r[3], r[4]) for r in runs if r[1] == "h3_confirm"]
+        self.assertEqual(confirm[:6], [("B", 10, 1, (10, 1)), ("C", 10, 1, (10, 1)), ("C", 10, 2, (10, 2)),
+                                       ("B", 10, 2, (10, 2)), ("B", 10, 3, (10, 3)), ("C", 10, 3, (10, 3))])
+        self.assertEqual([c[1] for c in confirm[6:]], [11] * 6)
+        self.assertEqual(n, {"B": 10, "C": 10})
+
+    def test_down_from_the_start_and_zero(self):
+        runs, n = drive(limit_b=5, limit_c=0)
+        self.assertEqual([r[2] for r in runs if r[1] == "h3_search" and r[0] == "B"], [8, 7, 6, 5])
+        self.assertEqual([r[2] for r in runs if r[1] == "h3_search" and r[0] == "C"], list(range(8, 0, -1)))
+        self.assertEqual(n, {"B": 5, "C": 0})
+        self.assertFalse(any(r[1] == "h3_confirm" and r[0] == "C" and r[2] == 0 for r in runs))
+
+    def test_cap(self):
+        runs, n = drive(limit_b=32, limit_c=32)
+        self.assertEqual(max(r[2] for r in runs), 32)  # no run above L
+        self.assertEqual(n, {"B": 32, "C": 32})
+
+    def test_confirmation_goes_up_and_down(self):
+        # C's search stops at 10, but 2 of 3 runs at 11 sustain: n goes up to 11, then 12 is checked.
+        up = {("C", "h3_search", 11, 1): False}
+        runs, n = drive(limit_b=6, limit_c=11, noisy=up)
+        self.assertEqual(n["C"], 11)
+        # B's search reaches 7, but 2 of 3 runs at 7 fail: n goes down to 6, keeping the runs at 7.
+        down = {("B", "h3_confirm", 7, 1): False, ("B", "h3_confirm", 7, 2): False}
+        runs, n = drive(limit_b=7, limit_c=12, noisy=down)
+        self.assertEqual(n["B"], 6)
+        b7 = [r for r in runs if r[0] == "B" and r[1] == "h3_confirm" and r[2] == 7]
+        self.assertEqual(len(b7), 3)  # not run again as the new n + 1
+
+    def test_replay_continues_where_the_records_end(self):
+        runs, n = drive(limit_b=9, limit_c=11)
+        outcomes = [r[2] <= {"B": 9, "C": 11}[r[0]] for r in runs]
+        for cut in (0, 1, 5, len(runs) - 1):
+            _, nxt, done, continued, replaced = ss.h3_replay(trials_of(runs[:cut], outcomes[:cut]))
+            self.assertEqual((nxt, done, continued, replaced), (runs[cut], None, {}, {}))
+        _, nxt, done, _, _ = ss.h3_replay(trials_of(runs, outcomes))
+        self.assertEqual((nxt, done), (None, n))
+
+    def test_replay_rejects_records_out_of_order(self):
+        runs, _ = drive(limit_b=9, limit_c=11)
+        swapped = [runs[1], runs[0]] + runs[2:4]
+        with self.assertRaises(ss.Stop):
+            ss.h3_replay(trials_of(swapped, [True] * 4))
+
+    def test_replay_an_unfinished_repeat(self):
+        runs, _ = drive(limit_b=9, limit_c=11)
+        trials = trials_of(runs[:3], [True] * 3)
+        trials[2]["final"] = False  # invalid first attempt, then the session ended
+        _, nxt, _, continued, replaced = ss.h3_replay(trials)
+        self.assertEqual(nxt, runs[2])
+        self.assertEqual(continued, {runs[2][:4]: 2})
+        self.assertEqual(replaced, {runs[2][:4]: ["s1/03"]})
+
+    def test_replay_a_split_pair(self):
+        runs, _ = drive(limit_b=10, limit_c=10)
+        first = next(k for k, r in enumerate(runs) if r[4] is not None)
+        outcomes = [r[2] <= 10 for r in runs]
+        # The session ended after the pair's first run: it is redone with its partner.
+        trials = trials_of(runs[:first + 1], outcomes[:first + 1])
+        _, nxt, _, continued, replaced = ss.h3_replay(trials)
+        self.assertEqual((nxt, continued), (runs[first], {}))
+        self.assertEqual(replaced, {runs[first][:4]: [f"s1/{first + 1:02d}"]})
+        # The partner's first attempt was invalid: the first run is redone, the partner continues.
+        trials = trials_of(runs[:first + 2], outcomes[:first + 2])
+        trials[-1]["final"] = False
+        _, nxt, _, continued, replaced = ss.h3_replay(trials)
+        self.assertEqual(nxt, runs[first])
+        self.assertEqual(continued, {runs[first + 1][:4]: 2})
+        # The same pair, finished in the next session, counts.
+        later = trials_of(runs[first:first + 2], outcomes[first:first + 2], session="s2")
+        later[1]["names"] = ["s2/02_repeat"]
+        _, nxt, _, continued, _ = ss.h3_replay(trials + later)
+        self.assertEqual((nxt, continued), (runs[first + 2], {}))
+
+    def test_trials_from_records(self):
+        records = [dict(rec("s1", "01", 8, 1, "B", 1, False), phase="h3_search", passed=False),
+                   dict(rec("s1", "01_repeat", 8, 1, "B", 2, True), phase="h3_search", passed=True),
+                   dict(rec("s1", "02", 8, 1, "C", 1, False), phase="h3_search", passed=False),
+                   dict(rec("s2", "01_repeat", 8, 1, "C", 2, False), phase="h3_search", passed=False)]
+        trials = ss.h3_trials(records)
+        self.assertEqual([(t["names"], t["final"], t["sustained"]) for t in trials],
+                         [(["s1/01", "s1/01_repeat"], True, True), (["s1/02"], False, False),
+                          (["s2/01_repeat"], True, False)])
 
 
 class OperatorStop(unittest.TestCase):
