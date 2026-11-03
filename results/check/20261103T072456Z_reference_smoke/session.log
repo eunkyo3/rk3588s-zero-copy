@@ -1,0 +1,11 @@
+2026-11-03T07:25:01Z starting the stream server
+2026-11-03T07:25:07Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261103T072503Z-56819, clock offset 0.3 ms
+2026-11-03T07:25:07Z idle for 60 s
+2026-11-03T07:26:07Z soc-thermal baseline 40430 m°C
+2026-11-03T07:26:07Z reference: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-03T07:26:08Z 01_reference_A_1ch_r1: A, 1 ch, main
+2026-11-03T07:26:33Z 01_reference_A_1ch_r1: valid
+2026-11-03T07:26:39Z 02_reference_A_1ch_r2: A, 1 ch, main
+2026-11-03T07:26:44Z 02_reference_A_1ch_r2: invalid: stopped by the operator (signal SIGTERM)
+2026-11-03T07:26:44Z stopped: 02_reference_A_1ch_r2: stopped by the operator; the session stops (PROTOCOL §9.3)
+2026-11-03T07:26:44Z stopping the stream server

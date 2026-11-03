@@ -1,0 +1,32 @@
+2026/11/03 07:25:04 INF MediaMTX v1.21.2, linux, amd64
+2026/11/03 07:25:04 INF configuration loaded from /home/eunkyo/rk3588s-zero-copy/stream-server/mediamtx.yml
+2026/11/03 07:25:04 INF [RTSP] started with listeners on :8554 (TCP/RTSP)
+2026/11/03 07:26:08 INF [RTSP] [conn 10.88.0.2:51150] opened
+2026/11/03 07:26:08 INF [path ch1] runOnDemand command started
+2026/11/03 07:26:08 INF [RTSP] [conn 127.0.0.1:33242] opened
+2026/11/03 07:26:08 INF [RTSP] [session f61644d5] created by 127.0.0.1:33242
+2026/11/03 07:26:08 INF [path ch1] stream is available and online, 1 track (H264)
+2026/11/03 07:26:08 INF [RTSP] [session f61644d5] is publishing to path 'ch1'
+2026/11/03 07:26:08 INF [RTSP] [session 9e9d85c2] created by 10.88.0.2:51150
+2026/11/03 07:26:08 INF [RTSP] [session 9e9d85c2] is reading from path 'ch1', with TCP, 1 track (H264)
+2026/11/03 07:26:32 INF [RTSP] [conn 10.88.0.2:51150] closed: read tcp 10.88.0.1:8554->10.88.0.2:51150: read: connection reset by peer
+2026/11/03 07:26:32 INF [RTSP] [session 9e9d85c2] destroyed: not in use
+2026/11/03 07:26:33 INF [path ch1] runOnDemand command stopped: not needed by anyone
+2026/11/03 07:26:33 INF [RTSP] [session f61644d5] destroyed: torn down by 127.0.0.1:33242
+2026/11/03 07:26:33 INF [RTSP] [conn 127.0.0.1:33242] closed: EOF
+2026/11/03 07:26:39 INF [RTSP] [conn 10.88.0.2:34316] opened
+2026/11/03 07:26:39 INF [path ch1] runOnDemand command started
+2026/11/03 07:26:39 INF [RTSP] [conn 127.0.0.1:53796] opened
+2026/11/03 07:26:39 INF [RTSP] [session 612ae3ce] created by 127.0.0.1:53796
+2026/11/03 07:26:39 INF [path ch1] stream is available and online, 1 track (H264)
+2026/11/03 07:26:39 INF [RTSP] [session 612ae3ce] is publishing to path 'ch1'
+2026/11/03 07:26:39 INF [RTSP] [session 5b9e20cf] created by 10.88.0.2:34316
+2026/11/03 07:26:39 INF [RTSP] [session 5b9e20cf] is reading from path 'ch1', with TCP, 1 track (H264)
+2026/11/03 07:26:44 INF [RTSP] [conn 10.88.0.2:34316] closed: EOF
+2026/11/03 07:26:44 INF [RTSP] [session 5b9e20cf] destroyed: not in use
+2026/11/03 07:26:44 INF shutting down gracefully
+2026/11/03 07:26:44 INF [RTSP] closing
+2026/11/03 07:26:44 INF [RTSP] [conn 127.0.0.1:53796] closed: terminated
+2026/11/03 07:26:44 INF [RTSP] [session 612ae3ce] destroyed: terminated
+2026/11/03 07:26:44 INF [path ch1] runOnDemand command stopped: path destroyed
+2026/11/03 07:26:44 INF waiting for running hooks
