@@ -49,9 +49,15 @@ External failures (§9.3, last paragraph): an input that ends early, a server th
 after a run, or a log that cannot be read make the run invalid with the reason given; a log that cannot
 be read, a server that is
 down, or a PC clock more than 5 ms behind or 100 ms ahead of the board's, stops the session. SIGTERM
-or SIGHUP (the operator) stops the session too: a run it cuts short is recorded with that reason and is
-neither repeated nor counted. A stopped limit search is kept and flagged, and the search is run again
-from §10 step 1 in a new session.
+or SIGHUP (the operator) stops the session too. In limit, loop-check and thermal sessions a run it cuts
+short is recorded with that reason and is neither repeated nor counted; a stopped limit search is kept
+and flagged, and the search is run again from §10 step 1 in a new session. In sweep and h3 sessions,
+a run cut short by the operator, by an external failure or by the session's death (a reboot) is an
+invalid attempt (§9.3), and the next session goes on as docs/notes/comparison.md says.
+
+Sweep and h3 sessions follow the order main, aux, h3, reference: a session starts only when the
+earlier ones are complete and its own is not. Each attempt is written to started.tsv before it runs,
+so that one the session's death cuts short is still known to the next session.
 
 Rule 4 reads the server's log, whose lines have one-second resolution. An event counts when its second
 lies in [warm-up start, window end], both rounded down to the second. In the window end's own second
@@ -126,6 +132,8 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
 IDLE_BASELINE_S = 120  # §7.2
 H3_START, SUSTAIN_FPS = 8, 4.75  # §10 (min(8, L)), HYPOTHESES H3
 H3_PHASES = ("h3_search", "h3_confirm")
+ORDER = ("main", "aux", "h3", "reference")  # docs/notes/comparison.md
+SESSION_NAME = r"\d{8}T\d{6}Z_"  # results/<kind>/<UTC>_<sweep or h3>
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
 
@@ -317,10 +325,11 @@ def sweep_state(records, variants):
     channels, repetition, variant, attempt (1, or 2 for the repeat of an invalid run) and valid.
     A run is final when it is valid or its repeat is invalid too (invalid x2). A repetition is complete
     when all its runs are final within one session. An incomplete one is redone at the start of the
-    next session, all of its runs: a run whose last attempt was an invalid first one continues with its
-    repeat (attempt 2); every other run starts again at attempt 1. Its earlier runs are kept, and are
-    replaced. Returns (complete, pending): complete is a set of (channels, repetition); pending maps
-    (channels, repetition) to ({variant: first attempt}, [names of the runs it replaces]).
+    next session, all of its runs: a run whose last attempt, in any earlier session, was an invalid
+    first one continues with its repeat (attempt 2); every other run starts again at attempt 1. Its
+    earlier runs are kept, and are replaced. Returns (complete, pending): complete is a set of
+    (channels, repetition); pending maps (channels, repetition) to ({variant: first attempt},
+    [names of the runs it replaces]).
     """
     by_rep = {}
     for r in records:
@@ -332,10 +341,9 @@ def sweep_state(records, variants):
                        for r in recs if r["session"] == s) for v in variants) for s in sessions):
             complete.add(key)
             continue
-        last = [r for r in recs if r["session"] == sessions[-1]]
         first = {}
         for v in variants:
-            mine = [r for r in last if r["variant"] == v]
+            mine = [r for r in recs if r["variant"] == v]
             first[v] = 2 if mine and not mine[-1]["valid"] and mine[-1]["attempt"] == 1 else 1
         pending[key] = (first, [f"{r['session']}/{r['name']}" for r in recs])
     return complete, pending
@@ -343,19 +351,26 @@ def sweep_state(records, variants):
 
 def load_records(session_dirs, phases):
     """The attempts of a sweep's or of h3's sessions, in order, from their runs.tsv (see sweep_state
-    and h3_trials). phases: the runs.tsv phases to read."""
+    and h3_trials). phases: the runs.tsv phases to read. An attempt in started.tsv without a row in
+    runs.tsv was cut short by the session's death (a reboot): it counts as invalid (§9.3), with
+    lost = True."""
     out = []
     for d in session_dirs:
-        path = Path(d) / "runs.tsv"
-        if not path.exists():
-            continue
-        with open(path, encoding="utf-8") as f:
-            for row in csv.DictReader(f, delimiter="\t"):
-                if row["phase"] in phases:
-                    out.append({"session": Path(d).name, "name": row["name"], "phase": row["phase"],
-                                "channels": int(row["channels"]), "repetition": int(row["repetition"]),
-                                "variant": row["variant"], "attempt": int(row["attempt"]),
-                                "valid": row["valid"] == "1", "passed": row["passed"] == "1"})
+        rows, started = [], []
+        for name, target in (("runs.tsv", rows), ("started.tsv", started)):
+            path = Path(d) / name
+            if path.exists():
+                with open(path, encoding="utf-8") as f:
+                    target.extend(r for r in csv.DictReader(f, delimiter="\t") if r["phase"] in phases)
+        done = {r["name"] for r in rows}
+        rows += [dict(r, valid="0", passed="", lost="1") for r in started if r["name"] not in done]
+        rows.sort(key=lambda r: (int(r["seq"]), int(r["attempt"])))
+        for row in rows:
+            out.append({"session": Path(d).name, "name": row["name"], "phase": row["phase"],
+                        "channels": int(row["channels"]), "repetition": int(row["repetition"]),
+                        "variant": row["variant"], "attempt": int(row["attempt"]),
+                        "valid": row["valid"] == "1", "passed": row["passed"] == "1",
+                        "lost": row.get("lost") == "1"})
     return out
 
 
@@ -548,6 +563,12 @@ def pc_binary_problems(sha256sum_output):
             for (name, want), got in zip(PC_BINARIES.items(), hashes) if got != want]
 
 
+def durable(f):
+    """Flushes f to the disk, so that a reboot does not lose what was written."""
+    f.flush()
+    os.fsync(f.fileno())
+
+
 def keyed(text):
     return {k: v for k, _, v in (line.partition(": ") for line in text.splitlines()) if v}
 
@@ -589,7 +610,10 @@ class Session:
         self.runs.write("seq\tname\tphase\tvariant\tchannels\tcondition\trepetition\tattempt\texit\tvalid\t"
                         "passed\treasons\twarnings\ttrip_samples\tgate_soc_mc\tclock_offset_ms\tstart_utc\tend_utc\t"
                         "replaces\n")
-        self.runs.flush()
+        self.started = open(self.out / "started.tsv", "w", encoding="utf-8")
+        self.started.write("seq\tname\tphase\tvariant\tchannels\tcondition\trepetition\tattempt\tstart_utc\n")
+        for f in (self.runs, self.started):
+            durable(f)
 
     def say(self, msg):
         line = f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ} {msg}"
@@ -928,6 +952,11 @@ class Session:
             base += f"_r{repetition}"
         for attempt in range(first_attempt, 3):
             name = base if attempt == 1 else base + "_repeat"
+            # Before the run: if the session dies during it, the next session still knows of it.
+            self.started.write("\t".join(map(str, [self.seq, name, phase, variant, channels, condition, repetition,
+                                                   attempt, f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ}"]))
+                               + "\n")
+            durable(self.started)
             o, run_dir, temp, start, end = self.attempt(name, phase, variant, channels, condition, run_kind,
                                                         repetition, source)
             valid = not o.reasons
@@ -940,7 +969,7 @@ class Session:
                 self.seq, name, phase, variant, channels, condition, repetition, attempt, o.code, int(valid), passed,
                 "; ".join(o.reasons), "; ".join(o.warnings), o.trip_samples, temp, o.offset_ms,
                 f"{start:%Y-%m-%dT%H:%M:%SZ}", f"{end:%Y-%m-%dT%H:%M:%SZ}", replaces])) + "\n")
-            self.runs.flush()
+            durable(self.runs)
             self.say(f"{name}: " + ("valid" if valid else "invalid: " + "; ".join(o.reasons))
                      + (f", passed {passed}" if passed else ""))
             if o.external:
@@ -990,12 +1019,39 @@ def cmd_limit(s):
     s.write_result(rows, "calibration")
 
 
-def sweep_sessions(sweep, current):
-    """The earlier protocol sessions of a sweep or of h3: results/<kind>/<UTC>_<name>, by name (UTC),
-    not current."""
-    kind = "comparison" if sweep == "h3" else SWEEPS[sweep][3]
-    return sorted(d for d in Path("results", kind).glob(f"*_{sweep}")
-                  if d.is_dir() and d.resolve() != Path(current).resolve())
+def session_kind(name):
+    return "comparison" if name == "h3" else SWEEPS[name][3]
+
+
+def sweep_sessions(sweep, current=None):
+    """The protocol sessions of a sweep or of h3: results/<kind>/<UTC>_<name>, by name (UTC), not
+    current."""
+    pattern = re.compile(SESSION_NAME + re.escape(sweep) + "$")
+    return sorted(d for d in Path("results", session_kind(sweep)).glob(f"*_{sweep}")
+                  if d.is_dir() and pattern.match(d.name)
+                  and (current is None or d.resolve() != Path(current).resolve()))
+
+
+def progress(name):
+    """'complete', 'started' or 'new' for a sweep or h3, from its protocol sessions."""
+    sessions = sweep_sessions(name)
+    if not sessions:
+        return "new"
+    if name == "h3":
+        _, nxt, _, _, _ = h3_replay(h3_trials(load_records(sessions, H3_PHASES)))
+        return "complete" if nxt is None else "started"
+    complete, _ = sweep_state(load_records(sessions, (name,)), SWEEPS[name][2])
+    return "complete" if all((c, r) in complete for c, r, _ in sweep_plan(name)) else "started"
+
+
+def order_problem(name):
+    """Why a protocol session of name cannot start now (docs/notes/comparison.md), or None."""
+    for earlier in ORDER[:ORDER.index(name)]:
+        if progress(earlier) != "complete":
+            return f"{earlier} comes before {name} and is not complete"
+    if progress(name) == "complete":
+        return f"{name} is complete"
+    return None
 
 
 def write_idle_baseline(s, run_kind):
@@ -1026,20 +1082,23 @@ def cmd_sweep(s):
            [p for p in plan if (p[0], p[1]) not in pending and (p[0], p[1]) not in complete]
     s.say(f"{a.sweep}: {len(complete)} of {len(plan)} repetitions complete in earlier sessions, "
           f"{len(pending)} to redo, {len(todo)} to run")
-    done_here = []
-    for channels, repetition, order in todo:
-        first, replaced = pending.get((channels, repetition), ({}, []))
-        for variant in order:
-            s.run(a.sweep, variant, channels, condition, s.run_kind, repetition,
-                  first_attempt=first.get(variant, 1), replaces=" ".join(replaced))
-        done_here.append(f"{channels}ch_r{repetition}")
-    s.runs.flush()
-    complete, pending = sweep_state(load_records(earlier + [s.out], (a.sweep,)), variants)
-    left = [f"{c}ch_r{r}" for c, r, _ in plan if (c, r) not in complete]
-    s.write_result([("sweep", a.sweep), ("channel_order", " ".join(map(str, channel_order(a.counts or SWEEPS[a.sweep][0])))),
-                    ("earlier_sessions", " ".join(d.name for d in earlier) or "none"),
-                    ("repetitions_run_here", " ".join(done_here) or "none"),
-                    ("repetitions_left", " ".join(left) or "none")], s.run_kind)
+    done_here, status = [], "stopped"
+    try:
+        for channels, repetition, order in todo:
+            first, replaced = pending.get((channels, repetition), ({}, []))
+            for variant in order:
+                s.run(a.sweep, variant, channels, condition, s.run_kind, repetition,
+                      first_attempt=first.get(variant, 1), replaces=" ".join(replaced))
+            done_here.append(f"{channels}ch_r{repetition}")
+        status = "completed"
+    finally:  # also when the session stops: what it ran and what is left
+        complete, _ = sweep_state(load_records(earlier + [s.out], (a.sweep,)), variants)
+        left = [f"{c}ch_r{r}" for c, r, _ in plan if (c, r) not in complete]
+        s.write_result([("sweep", a.sweep), ("session_status", status),
+                        ("channel_order", " ".join(map(str, channel_order(a.counts or SWEEPS[a.sweep][0])))),
+                        ("earlier_sessions", " ".join(d.name for d in earlier) or "none"),
+                        ("repetitions_run_here", " ".join(done_here) or "none"),
+                        ("repetitions_left", " ".join(left) or "none")], s.run_kind)
 
 
 def cmd_h3(s):
@@ -1048,18 +1107,24 @@ def cmd_h3(s):
     earlier = [] if s.smoke else sweep_sessions("h3", s.out)
     gen, nxt, n, continued, replaced = h3_replay(h3_trials(load_records(earlier, H3_PHASES)), a.cap, a.start)
     s.say(f"h3: {len(earlier)} earlier sessions; " + (f"next {nxt[:4]}" if nxt else f"already done: {n}"))
-    while nxt is not None:
-        variant, phase, channels, repetition, _ = nxt
-        key = nxt[:4]
-        valid, run_dir = s.run(phase, variant, channels, "main", s.run_kind, repetition,
-                               first_attempt=continued.pop(key, 1), replaces=" ".join(replaced.pop(key, [])))
-        ok = valid and sustained(read_csv(run_dir / "channels.csv")[1])
-        try:
-            nxt = gen.send(ok)
-        except StopIteration as e:
-            nxt, n = None, e.value
-    s.write_result([("n_B", n["B"]), ("n_C", n["C"]), ("limit", a.cap),
-                    ("earlier_sessions", " ".join(d.name for d in earlier) or "none")], s.run_kind)
+    status = "stopped"
+    try:
+        while nxt is not None:
+            variant, phase, channels, repetition, _ = nxt
+            key = nxt[:4]
+            valid, run_dir = s.run(phase, variant, channels, "main", s.run_kind, repetition,
+                                   first_attempt=continued.pop(key, 1), replaces=" ".join(replaced.pop(key, [])))
+            ok = valid and sustained(read_csv(run_dir / "channels.csv")[1])
+            try:
+                nxt = gen.send(ok)
+            except StopIteration as e:
+                nxt, n = None, e.value
+        status = "completed"
+    finally:  # also when the session stops: where the search is
+        s.write_result([("session_status", status), ("n_B", n["B"] if n else "not yet"),
+                        ("n_C", n["C"] if n else "not yet"), ("next_run", " ".join(map(str, nxt[:4])) if nxt else "none"),
+                        ("limit", a.cap), ("earlier_sessions", " ".join(d.name for d in earlier) or "none")],
+                       s.run_kind)
 
 
 def loop_channels():
@@ -1126,8 +1191,11 @@ def main(argv):
     args = ap.parse_args(argv)
     if (args.command == "sweep") != (args.sweep is not None):
         ap.error("sweep needs main, aux or reference; the other commands take none")
-    if args.counts and (args.command != "sweep" or not set(args.counts) <= set(SWEEPS[args.sweep][0])):
-        ap.error("--counts is for sweep, with counts of that sweep")
+    if args.counts and (args.command != "sweep" or not set(args.counts) <= set(SWEEPS[args.sweep][0])
+                        or len(set(args.counts)) != len(args.counts)):
+        ap.error("--counts is for sweep, with distinct counts of that sweep")
+    if args.limit is not None and args.command != "thermal":
+        ap.error("--limit is for thermal")
     if args.command == "thermal" and not (args.limit and 1 <= args.limit <= 32):
         ap.error("thermal needs --limit L (1..32)")
     if args.idle_s < 60:
@@ -1138,9 +1206,11 @@ def main(argv):
     smoke = any(getattr(args, k) != v for k, v in PROTOCOL.items()) or bool(args.counts)
     if args.command in ("sweep", "h3"):
         name = args.sweep or "h3"
-        run_kind = "check" if smoke else ("comparison" if name == "h3" else SWEEPS[name][3])
-        if args.out and not smoke and Path(args.out).parent != Path("results", run_kind):
-            ap.error(f"these sessions go to results/{run_kind}/<UTC>_{name}, where the next one finds them")
+        run_kind = "check" if smoke else session_kind(name)
+        if args.out and Path(args.out).parent != Path("results", run_kind):
+            ap.error(f"this session goes to results/{run_kind}/" + ("" if smoke else "<UTC>_" + name))
+        if args.out and not smoke and not re.fullmatch(SESSION_NAME + re.escape(name), Path(args.out).name):
+            ap.error(f"a protocol session is named <UTC>_{name}, where the next one finds it")
         args.out = args.out or f"results/{run_kind}/{now}_{name}" + ("_smoke" if smoke else "")
     else:
         kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal"}[args.command]
@@ -1153,6 +1223,10 @@ def main(argv):
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGHUP, on_signal)
     try:
+        if args.command in ("sweep", "h3") and not smoke:
+            problem = order_problem(args.sweep or "h3")
+            if problem:
+                raise Stop(f"not starting: {problem} (docs/notes/comparison.md)")
         s = Session(args)
         s.smoke, s.run_kind = smoke, run_kind
         if args.command == "loop-check":

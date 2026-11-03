@@ -6,6 +6,7 @@ Usage: python3 tests/test_stream_session.py
 import datetime as dt
 import hashlib
 import io
+import os
 import sys
 import tempfile
 import types
@@ -342,7 +343,75 @@ class Sweeps(unittest.TestCase):
                                               + "\t".join(other[c] for c in cols) + "\n", encoding="utf-8")
             self.assertEqual(ss.load_records([session, Path(d) / "missing"], ("main",)),
                              [dict(rec("20261104T000000Z_main", "01_main_B_8ch_r1", 8, 1, "B", 1, True),
-                                   phase="main", passed=False)])
+                                   phase="main", passed=False, lost=False)])
+
+    def test_the_last_attempt_counts_across_sessions(self):
+        # C's first attempt failed in s1; s2 redid B and ended before C: C's next attempt is its repeat.
+        records = [rec("s1", "01", 8, 1, "B", 1, True), rec("s1", "02", 8, 1, "C", 1, False),
+                   rec("s2", "01", 8, 1, "B", 1, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 2})
+
+    def test_an_attempt_the_session_died_in(self):
+        cols = ["seq", "name", "phase", "variant", "channels", "condition", "repetition", "attempt", "exit",
+                "valid", "passed", "reasons", "warnings", "trip_samples", "gate_soc_mc", "clock_offset_ms",
+                "start_utc", "end_utc", "replaces"]
+        started_cols = ["seq", "name", "phase", "variant", "channels", "condition", "repetition", "attempt",
+                        "start_utc"]
+        with tempfile.TemporaryDirectory() as d:
+            session = Path(d) / "20261104T000000Z_main"
+            session.mkdir()
+            done = dict.fromkeys(cols, "")
+            done.update(seq="1", name="01_main_B_8ch_r1", phase="main", variant="B", channels="8",
+                        repetition="1", attempt="1", valid="1")
+            (session / "runs.tsv").write_text("\t".join(cols) + "\n" + "\t".join(done[c] for c in cols) + "\n",
+                                              encoding="utf-8")
+            started = [dict(done, attempt="1"), dict(done, seq="2", name="02_main_C_8ch_r1", variant="C")]
+            (session / "started.tsv").write_text(
+                "\t".join(started_cols) + "\n" + "".join("\t".join(r[c] for c in started_cols) + "\n" for r in started),
+                encoding="utf-8")
+            records = ss.load_records([session], ("main",))
+            self.assertEqual([(r["name"], r["valid"], r["lost"]) for r in records],
+                             [("01_main_B_8ch_r1", True, False), ("02_main_C_8ch_r1", False, True)])
+            # The lost attempt is C's invalid first one: the next session repeats it, after B again.
+            self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 2})
+
+    def test_sessions_by_name_and_order(self):
+        here = os.getcwd()
+        with tempfile.TemporaryDirectory() as d:
+            os.chdir(d)
+            try:
+                for name in ("comparison/20261104T000000Z_main", "comparison/20261104T010000Z_main_smoke",
+                             "comparison/20261104T020000Z_aux", "comparison/x_main", "check/20261104T030000Z_main"):
+                    Path("results", name).mkdir(parents=True)
+                self.assertEqual([p.name for p in ss.sweep_sessions("main")], ["20261104T000000Z_main"])
+                self.assertEqual(ss.sweep_sessions("main", "results/comparison/20261104T000000Z_main"), [])
+                self.assertEqual(ss.progress("main"), "started")  # a session without runs completes nothing
+                self.assertEqual(ss.progress("reference"), "new")
+                self.assertIsNone(ss.order_problem("main"))
+                self.assertIn("main comes before aux", ss.order_problem("aux"))
+                self.assertIn("main comes before h3", ss.order_problem("h3"))
+            finally:
+                os.chdir(here)
+
+    def test_a_repeat_started_in_an_earlier_session(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            s = OperatorStop.session(None, d)
+            o = ss.Outcome()
+            o.reasons, o.code = ["bench exit -11"], -11
+            s.attempt = lambda *a: (o, d / "x", 40000, dt.datetime.now(UTC), dt.datetime.now(UTC))
+            with redirect_stdout(io.StringIO()):
+                valid, _ = s.run("main", "C", 8, "main", "comparison", 1, first_attempt=2, replaces="s1/02")
+            s.runs.close()
+            s.started.close()
+            s.log.close()
+            rows = [r.split("\t") for r in (d / "runs.tsv").read_text(encoding="utf-8").splitlines()]
+            self.assertFalse(valid)
+            self.assertEqual(len(rows), 1)  # only the repeat, which makes it invalid x2
+            self.assertEqual((rows[0][1], rows[0][7], rows[0][9], rows[0][18]), ("01_main_C_8ch_r1_repeat", "2", "0", "s1/02"))
+            self.assertEqual(s.invalid_x2, ["01_main_C_8ch_r1"])
+            started = (d / "started.tsv").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(started[0].split("\t")[1], "01_main_C_8ch_r1_repeat")
 
     def test_idle_baseline(self):
         before = "cpu  1 1 1 1 1 1 1 1 0 0\ncpu0 10 0 5 100 7 1 1 0 0 0\ncpu4 0 0 0 0 0 0 0 0 0 0\nintr 5\n"
@@ -497,6 +566,7 @@ class OperatorStop(unittest.TestCase):
         s.out, s.seq, s.invalid_x2, s.server_dir, s.run_header = d, 0, [], "/logs", None
         s.log = open(d / "session.log", "w", encoding="utf-8")
         s.runs = open(d / "runs.tsv", "w", encoding="utf-8")
+        s.started = open(d / "started.tsv", "w", encoding="utf-8")
         s.gate = lambda: 40000
         s.server_alive = lambda: True
         s.console_size = lambda: 0
@@ -507,6 +577,7 @@ class OperatorStop(unittest.TestCase):
         with redirect_stdout(io.StringIO()), self.assertRaises(ss.Stop) as cm:
             s.run("search", "none", 8, "main", "calibration")
         s.runs.close()
+        s.started.close()
         s.log.close()
         return cm.exception, (d / "runs.tsv").read_text(encoding="utf-8").splitlines()
 

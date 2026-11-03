@@ -1,0 +1,11 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc	replaces
+1	01_h3_search_B_1ch	h3_search	B	1	main	1	1	0	1	1			0	41615	0.2	2026-11-03T07:17:23Z	2026-11-03T07:17:31Z	
+2	02_h3_search_C_1ch	h3_search	C	1	main	1	1	0	1	1			0	40692	0.2	2026-11-03T07:17:38Z	2026-11-03T07:17:47Z	
+3	03_h3_search_C_2ch	h3_search	C	2	main	1	1	0	1	1			0	39769	0.2	2026-11-03T07:17:54Z	2026-11-03T07:18:02Z	
+4	04_h3_search_B_2ch	h3_search	B	2	main	1	1	0	1	1			0	39769	0.2	2026-11-03T07:18:09Z	2026-11-03T07:18:18Z	
+5	05_h3_confirm_B_2ch_r1	h3_confirm	B	2	main	1	1	0	1	1			0	39769	0.2	2026-11-03T07:18:25Z	2026-11-03T07:18:33Z	
+6	06_h3_confirm_C_2ch_r1	h3_confirm	C	2	main	1	1	0	1	1			0	39769	0.2	2026-11-03T07:18:40Z	2026-11-03T07:18:49Z	
+7	07_h3_confirm_C_2ch_r2	h3_confirm	C	2	main	2	1	0	1	1			0	39769	0.2	2026-11-03T07:18:55Z	2026-11-03T07:19:04Z	
+8	08_h3_confirm_B_2ch_r2	h3_confirm	B	2	main	2	1	0	1	1			0	40692	0.2	2026-11-03T07:19:10Z	2026-11-03T07:19:19Z	
+9	09_h3_confirm_B_2ch_r3	h3_confirm	B	2	main	3	1	0	1	1			0	40692	0.2	2026-11-03T07:19:25Z	2026-11-03T07:19:34Z	
+10	10_h3_confirm_C_2ch_r3	h3_confirm	C	2	main	3	1	0	1	1			0	40692	0.2	2026-11-03T07:19:41Z	2026-11-03T07:19:50Z	
