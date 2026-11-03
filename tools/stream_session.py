@@ -503,7 +503,8 @@ def h3_replay(trials, limit=LIMIT, start=H3_START):
                 else:
                     i += 1
                 continue
-        continued.pop(key, None)
+        continued.pop(key, None)  # this run is done: nothing of it is left to repeat or to replace
+        replaced.pop(key, None)
         try:
             nxt = gen.send(t["sustained"])
         except StopIteration as e:

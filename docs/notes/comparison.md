@@ -76,7 +76,8 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 - **Sessions:** H3 also spans as many sessions as it needs.
   - Each session replays the earlier sessions' runs through the same schedule, then goes on with the next run. A record out of the schedule's order stops the session.
   - A run whose last attempt was an invalid first attempt continues with its repeat, as in a sweep.
-  - **Interleaved pairs:** the two runs of an interleaved pair at a shared count are a repetition in §9.1's sense. A search step's B and C runs are single runs, not a repetition: a session may end between them. If a session ends between them, both are redone; the finished one is kept and replaced. If the second's first attempt was invalid, the first is redone and the second continues with its repeat.
+  - **Interleaved pairs:** the two runs of an interleaved pair at a shared count are a repetition in §9.1's sense. If a session ends between the two runs of a pair, both are redone; the finished one is kept and replaced. If the second's first attempt was invalid, the first is redone and the second continues with its repeat.
+  - A search step's B and C runs are single runs, not a repetition: a session may end between them.
 - **Smoke test:** [results/check/20261103T071611Z_h3_smoke](../../results/check/20261103T071611Z_h3_smoke), `--start 1 --cap 2`, 2 s warm-up, 5 s window.
   - The search ran B1, C1, then C2, B2. At 2 = `L` there is no n + 1.
   - So the confirmation was the shared count 2 alone, in the order B, C, C, B, B, C.

@@ -550,6 +550,22 @@ class H3(unittest.TestCase):
         _, nxt, _, continued, _ = ss.h3_replay(trials + later)
         self.assertEqual((nxt, continued), (runs[first + 2], {}))
 
+    def test_a_redone_run_leaves_nothing_pending(self):
+        runs, n = drive(limit_b=10, limit_c=10)
+        outcomes = [r[2] <= 10 for r in runs]
+        # s1 ends on an invalid first attempt of run 3; s2 repeats it and finishes H3.
+        s1 = trials_of(runs[:3], outcomes[:3])
+        s1[-1]["final"] = False
+        s2 = trials_of(runs[2:], outcomes[2:], session="s2")
+        _, nxt, done, continued, replaced = ss.h3_replay(s1 + s2)
+        self.assertEqual((nxt, done, continued, replaced), (None, n, {}, {}))
+        # A split pair, redone in full in the next session, leaves nothing either.
+        first = next(k for k, r in enumerate(runs) if r[4] is not None)
+        s1 = trials_of(runs[:first + 1], outcomes[:first + 1])
+        s2 = trials_of(runs[first:], outcomes[first:], session="s2")
+        _, nxt, done, continued, replaced = ss.h3_replay(s1 + s2)
+        self.assertEqual((nxt, done, continued, replaced), (None, n, {}, {}))
+
     def test_trials_from_records(self):
         records = [dict(rec("s1", "01", 8, 1, "B", 1, False), phase="h3_search", passed=False),
                    dict(rec("s1", "01_repeat", 8, 1, "B", 2, True), phase="h3_search", passed=True),
