@@ -24,7 +24,7 @@ This builds a Docker image with rknn-toolkit2 (the same version as the board's l
 
 - **Source:** the RKNN-friendly YOLOv8n ONNX export distributed by [rknn_model_zoo](https://github.com/airockchip/rknn_model_zoo) `v2.3.2` (`examples/yolov8`). Its outputs stop before box decoding, so the post-processing runs on the CPU.
 - **Conversion:** `examples/yolov8/python/convert.py` from the same tag, target `rk3588`, INT8. `mean 0, std 255` is built into the model, so the input is uint8 RGB NHWC 640×640.
-- **Calibration set:** rknn_model_zoo `datasets/COCO/coco_subset_20.txt` (20 COCO images).
+- **Calibration set:** the 20 COCO images that rknn_model_zoo `datasets/COCO/coco_subset_20.txt` lists, at commit `bad6c73` (tag `v2.3.2`). [coco_subset_20.sha256](coco_subset_20.sha256) gives the SHA-256 of the list and of each image, relative to `datasets/COCO` (AMENDMENTS A10).
 - **Checksums:** the downloaded ONNX is checked against its pinned SHA-256 before conversion. `models/yolov8n.sha256` is written by the conversion.
 
 | File | SHA-256 |

@@ -93,11 +93,18 @@ RGA3 scales with a different sampling than RGA2, so the C path pins RGA work to 
 | `fast_parse` | true |
 | `buf_mode` | half |
 
-The options used by the benchmark are fixed before `freeze-m1` (PROTOCOL §14). AFBC stays off in this project: RGA reads the frames and B maps them, and both expect a linear layout, which the spike asserts.
+The benchmark sets `afbc=off` and keeps the other defaults ([AMENDMENTS A10](../../prereg/AMENDMENTS.md)). AFBC stays off in this project: RGA reads the frames and B maps them, and both expect a linear layout, which the spike asserts.
 
 ## Model
 
 See [models/README.md](../../models/README.md): YOLOv8n from rknn_model_zoo v2.3.2, converted to INT8 with rknn-toolkit2 2.3.2, with SHA-256 checksums. The files are kept in a release.
+
+## Software frozen at `freeze-m1`
+
+[inventory_m1.txt](inventory_m1.txt) records the drivers, the ffmpeg build and `h264_rkmpp`'s options, the RKNN headers, the compiler and build flags, the model, and the SHA-256 of every shared library `bench_main` loads, with its package ([AMENDMENTS A10](../../prereg/AMENDMENTS.md)).
+
+- `tools/inventory.sh` writes it on the board. `tools/stream_session.py` runs the tool at the start of every session and stops if the output differs.
+- To check by hand, from the repository on the board: `tools/inventory.sh docs/notes/inventory_m1.txt`.
 
 ## Thermal observation
 
@@ -132,5 +139,5 @@ The board is reached over Wi-Fi (`wlan0`) for administration. The RTSP streams (
 
 ## Open items
 
-- **Cooling:** fixed by the M1-3 thermal check.
+- **Cooling:** fixed by the M1-3 thermal check: a heatsink and an always-on mini fan ([AMENDMENTS A9](../../prereg/AMENDMENTS.md)).
 - **perf** (needed for the zero-copy evidence in M1-2, PROTOCOL §11.4): not installed at the time of this baseline, because Ubuntu has no `linux-tools` package for the vendor kernel 6.1.141. It is now at `/usr/bin/perf`, and M1-2 used it ([AMENDMENTS A6](../../prereg/AMENDMENTS.md)). The kernel exposes the `armv8_pmuv3` PMU and `perf_event_paranoid` is 2.

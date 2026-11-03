@@ -252,3 +252,57 @@ Each entry has this form:
   - PROTOCOL sets no bound on the ambient temperature. `P_cap` ran at 28 °C, these sessions at 24 to 26 °C.
 - Affected data: none. The `L` session ran before the time change, with offsets of +4 to +8 ms, inside the bounds. The held-out check of A8 reads local files and does not use the stream PC.
 - Release: none (before `freeze-m1`).
+
+## A10 — 2026-11-03 — Software, build and model for `freeze-m1`
+- Change: fixes the remaining values of PROTOCOL §14 that are due before `freeze-m1`. The channel-to-video assignment, also due then, was fixed by A9.
+  - **Reference:** [docs/notes/inventory_m1.txt](../docs/notes/inventory_m1.txt) (SHA-256 `a28d43cee0de4a65fd787c0b158418808b483dca820024868dc16fae8b9faaaf`), written on the board by the new `tools/inventory.sh`. It holds every value below, and the SHA-256 of every shared library that `bench_main` loads, with its package and version. The list below summarizes it; where they disagree, the file governs.
+  - **Decoder** (§5.1):
+    - **Build:** [ffmpeg-rockchip](https://github.com/nyanmisaka/ffmpeg-rockchip) commit `8b4385e985c0a50bf7d3f96cf3cb6d0b63c53e6c` (branch 7.1), built on the board by `tools/setup/build_ffmpeg_rockchip.sh` with gcc 13.3.0, into `/opt/ffmpeg-rockchip`.
+      - Configuration: `--enable-shared --disable-static --disable-doc --enable-version3 --enable-libdrm --enable-rkmpp --enable-rkrga`, with the prefix and an rpath to it.
+      - libavcodec 61.19.101, libavformat 61.7.103, libavutil 59.39.100, libswresample 5.3.100.
+    - **Options, B and C:** `h264_rkmpp`, opened with `afbc=off`, set explicitly. Its other options keep their defaults: `deint` true, `fast_parse` true, `buf_mode` half.
+      - `deint` enables the IEP de-interlacer for interlaced input. The four prepared videos are progressive (`field_order`, ffprobe).
+      - Output `AV_PIX_FMT_DRM_PRIME`, chosen in `get_format`; `extra_hw_frames=8`; no `hw_device_ctx` (§5.1, §8).
+    - **Input:** RTSP over TCP (`rtsp_transport=tcp`) with `timeout=5000000`, that is 5 s. Local files (`file_source`) are opened without options. No other demuxer or decoder option is set.
+    - **A:** libavcodec's native `h264` decoder, with its default options and automatic threading.
+  - **Libraries and drivers** (§2):
+
+    | Component | Version |
+    |---|---|
+    | OS, kernel | Ubuntu 24.04.4 LTS; 6.1.141 `#16 SMP Thu Dec  4 14:51:28 CST 2025` |
+    | RKNPU driver, RGA driver | v0.9.8; v1.3.10 |
+    | librknnrt | 2.3.2 (`429f97ae6b@2025-04-09T09:09:27`), SHA-256 `d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8`. It came with the board's image, not from a package. |
+    | RKNN headers | rknn-toolkit2 v2.3.2, in `/opt/rknpu2/include` (`tools/setup/fetch_rknn_headers.sh`) |
+    | librga | 1.10.3, package `librga2` 2.2.0-1 |
+    | MPP | package `librockchip-mpp1` 20251211-1 |
+    | libdrm | package `libdrm2` 2.4.125-1ubuntu0.1~24.04.2 |
+    | OpenCV | 4.6.0, as fixed by A2 |
+    | C and C++ runtime | `libc6` 2.39-0ubuntu8.9; `libstdc++6` 14.2.0-4ubuntu2~24.04.1 |
+
+  - **Model** (§4): `models/yolov8n_i8.rknn`, SHA-256 `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`, from the release named in [models/README.md](../models/README.md).
+    - It was converted from `yolov8n.onnx` (SHA-256 `0c8716701f471067932b797eeb67c8e5db47c693c2557c881d7679ec12e21bc5`) of rknn_model_zoo v2.3.2, commit `bad6c7334531becaf90a561988519b7bec34d0ab`, by that commit's `examples/yolov8/python/convert.py` with rknn-toolkit2 2.3.2.
+    - Settings: target `rk3588`, INT8, `mean 0, std 255`. Every other setting is the toolkit's default.
+    - **Quantization dataset:** the 20 COCO images that `datasets/COCO/coco_subset_20.txt` lists at that commit. [models/coco_subset_20.sha256](../models/coco_subset_20.sha256) gives the SHA-256 of the list and of each image.
+  - **`rknn_init` flags** (§8): `rknn_init(&ctx, model, size, 0, NULL)`, that is, flags 0 and no extension, for every variant.
+    - So no flag is set: neither `RKNN_FLAG_ASYNC_MASK` nor any `RKNN_FLAG_DISABLE_FLUSH_*` flag.
+    - `rknn_run(ctx, NULL)` blocks until the inference ends.
+    - Then `rknn_set_core_mask(ctx_i, RKNN_NPU_CORE_0 << i)` pins context i to NPU core i, for i = 0, 1, 2.
+    - The flags are the constant `NpuContexts::kInitFlags` in `src/core/npu.h`.
+  - **Compiler and flags:** on the board, g++ 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1), GNU ld 2.42, CMake 3.28.3 and GNU Make 4.3, through `tools/deploy_board.sh`.
+    - CMake build type Release. Every C++ file is compiled with `-O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls -pthread`.
+    - No `-march` or `-mcpu` is given, so GCC's default target applies.
+    - `bench_main` is linked with `-O3 -DNDEBUG -pthread` and the rpath `/lib:/opt/ffmpeg-rockchip/lib`.
+  - **Stream PC** (§3): mediamtx v1.21.2, binary SHA-256 `0ffb7f18210d08ee38cb16668c4f3a2c96622e69d401119c0026d078a2b89523`; ffmpeg 7.0.2, the static build from johnvansickle.com, binary SHA-256 `e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99`. §14 does not list them; they are fixed here too.
+    - `stream-server/publish.sh` checks mediamtx's version, and records both versions at every server start.
+  - **Check:** `tools/stream_session.py` now runs `tools/inventory.sh` at the start of every session, before it sets the clocks, and keeps the output as `inventory.txt`. If the output differs from the reference, the session stops before its first run. The sessions of §12 do the same.
+  - Changing any of these values needs an amendment (§15), which states the data it affects.
+- Reason: §14 fixes these values before `freeze-m1`, and §2 freezes the versions, builds, compiler and flags there.
+  - The reference was written on 2026-11-03 at about 04:47 UTC from a build of this change. A build of `cf7e40b`, the merge of PR #14, gave the same values. The only difference was a space at the end of the link line, which the tool now drops. So the output does not depend on the code's commit.
+  - **Unchanged since the first run under `results/`:**
+    - The package logs show the last change on 2026-10-30 at 07:26 UTC: `libc6` from 2.39-0ubuntu8.7 to 8.9, installed together with its debugging symbols for perf (A6).
+    - The ffmpeg-rockchip libraries were installed at 01:33 UTC that day. The RKNN headers date from 04:02 UTC that day. librknnrt is the image's (2026-08-13).
+    - Every run under `results/` started on 2026-11-02 or later, so every one of them used the libraries above.
+    - `unattended-upgrades` is not installed, and APT's periodic jobs are not configured, so packages change only by hand.
+  - The quantization images were downloaded from that commit of rknn_model_zoo, and their hashes were computed then. The conversion of 2026-10-30 used the same commit (`models/yolov8n.sha256`).
+- Affected data: none. No value changed.
+- Release: none (before `freeze-m1`).

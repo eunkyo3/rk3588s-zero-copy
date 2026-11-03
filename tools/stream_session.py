@@ -11,6 +11,8 @@ Subcommands:
                and every temperature stays below its zone's trip_point_0_temp.
 
 Each session:
+  - first records the software, model and build (tools/inventory.sh), and stops if they differ from
+    docs/notes/inventory_m1.txt (AMENDMENTS A10);
   - fixes the clocks (tools/set_perf_mode.sh) and records the environment (tools/collect_env.sh);
   - starts stream-server/publish.sh on the stream PC with the M1 assignment, with its log in UTC and
     under systemd-inhibit so the PC does not sleep, and stops it at the end, keeping its logs; records
@@ -73,6 +75,7 @@ SSH = ["ssh", "-i", "/home/pi/.ssh/bench_stream", "-o", "UserKnownHostsFile=/hom
        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", f"eunkyo@{SERVER}"]
 PC_REPO, PC_VIDEOS = "rk3588s-zero-copy", "media/bench"  # relative to the PC user's home
 ASSIGNMENT = "stream-server/assignment_m1.txt"
+INVENTORY = "docs/notes/inventory_m1.txt"  # the software, model and build that freeze-m1 freezes (A10)
 MANIFEST = "/home/pi/media/bench/manifest.tsv"
 LIMIT_START, LIMIT_CAP = 8, 32  # §6.1
 MAIN_SET = (1, 2, 4, 8, 12, 16)  # §6.1
@@ -386,6 +389,10 @@ class Session:
 
     def start(self):
         a = self.args
+        if self.sh(["tools/inventory.sh"], self.out / "inventory.txt") != 0:
+            raise Stop("inventory.sh failed: " + (self.out / "inventory.txt").read_text())
+        if (self.out / "inventory.txt").read_text() != Path(INVENTORY).read_text():
+            raise Stop(f"the software, model or build differs from {INVENTORY} (A10): compare inventory.txt")
         if self.sh(["tools/set_perf_mode.sh"], self.out / "perf_mode.txt") != 0:
             raise Stop("set_perf_mode.sh failed: " + (self.out / "perf_mode.txt").read_text())
         self.fixed = {k: int(v) for k, v in keyed((self.out / "perf_mode.txt").read_text()).items()}

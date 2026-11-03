@@ -252,3 +252,57 @@
   - PROTOCOL은 주변 온도에 한계를 두지 않는다. `P_cap`은 28 °C에서, 이 세션들은 24~26 °C에서 실행했다.
 - Affected data: 없음. `L` 세션은 시간 설정을 바꾸기 전에 실행했고, 시계 차이는 +4 ~ +8 ms로 허용 범위 안이었다. A8의 홀드아웃 검사는 로컬 파일을 읽으며 송출 PC를 쓰지 않는다.
 - Release: 없음(`freeze-m1` 이전)
+
+## A10 — 2026-11-03 — `freeze-m1`의 소프트웨어, 빌드, 모델
+- Change: PROTOCOL §14에서 `freeze-m1` 전에 정해야 하는 값 중 남은 것을 확정한다. 같은 시점에 정하는 채널-영상 배정은 A9가 확정했다.
+  - **기준 파일:** [docs/notes/inventory_m1.txt](../docs/notes/inventory_m1.txt)(SHA-256 `a28d43cee0de4a65fd787c0b158418808b483dca820024868dc16fae8b9faaaf`). 새 도구 `tools/inventory.sh`가 보드에서 썼다. 아래의 모든 값과, `bench_main`이 불러오는 모든 공유 라이브러리의 SHA-256을 패키지·버전과 함께 담는다. 아래 목록은 그 요약이며, 둘이 다르면 파일이 우선한다.
+  - **디코더**(§5.1):
+    - **빌드:** [ffmpeg-rockchip](https://github.com/nyanmisaka/ffmpeg-rockchip) 커밋 `8b4385e985c0a50bf7d3f96cf3cb6d0b63c53e6c`(브랜치 7.1). `tools/setup/build_ffmpeg_rockchip.sh`가 보드에서 gcc 13.3.0으로 빌드해 `/opt/ffmpeg-rockchip`에 설치했다.
+      - 구성: `--enable-shared --disable-static --disable-doc --enable-version3 --enable-libdrm --enable-rkmpp --enable-rkrga`, 그리고 설치 경로와 그 경로의 rpath
+      - libavcodec 61.19.101, libavformat 61.7.103, libavutil 59.39.100, libswresample 5.3.100
+    - **옵션, B와 C:** `h264_rkmpp`를 `afbc=off`로 연다. 이 옵션만 명시적으로 설정한다. 나머지 옵션은 기본값 그대로다. `deint` true, `fast_parse` true, `buf_mode` half
+      - `deint`는 인터레이스 입력에 IEP 디인터레이서를 켠다. 준비한 영상 4개는 모두 프로그레시브다(ffprobe의 `field_order`).
+      - 출력은 `get_format`에서 고르는 `AV_PIX_FMT_DRM_PRIME`이고, `extra_hw_frames=8`이며, `hw_device_ctx`는 쓰지 않는다(§5.1, §8).
+    - **입력:** RTSP는 TCP로 받고(`rtsp_transport=tcp`), `timeout=5000000`(5초)을 준다. 로컬 파일(`file_source`)은 옵션 없이 연다. 그 밖의 디먹서·디코더 옵션은 설정하지 않는다.
+    - **A:** libavcodec 자체의 `h264` 디코더. 옵션은 기본값이고 스레드 수는 자동이다.
+  - **라이브러리와 드라이버**(§2):
+
+    | 구성 요소 | 버전 |
+    |---|---|
+    | OS, 커널 | Ubuntu 24.04.4 LTS; 6.1.141 `#16 SMP Thu Dec  4 14:51:28 CST 2025` |
+    | RKNPU 드라이버, RGA 드라이버 | v0.9.8; v1.3.10 |
+    | librknnrt | 2.3.2(`429f97ae6b@2025-04-09T09:09:27`), SHA-256 `d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8`. 패키지가 아니라 보드 이미지에 들어 있던 파일이다. |
+    | RKNN 헤더 | rknn-toolkit2 v2.3.2, `/opt/rknpu2/include`(`tools/setup/fetch_rknn_headers.sh`) |
+    | librga | 1.10.3, 패키지 `librga2` 2.2.0-1 |
+    | MPP | 패키지 `librockchip-mpp1` 20251211-1 |
+    | libdrm | 패키지 `libdrm2` 2.4.125-1ubuntu0.1~24.04.2 |
+    | OpenCV | 4.6.0, A2에서 확정 |
+    | C·C++ 런타임 | `libc6` 2.39-0ubuntu8.9; `libstdc++6` 14.2.0-4ubuntu2~24.04.1 |
+
+  - **모델**(§4): `models/yolov8n_i8.rknn`, SHA-256 `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`. [models/README.ko.md](../models/README.ko.md)에 적힌 릴리스에 있다.
+    - rknn_model_zoo v2.3.2(커밋 `bad6c7334531becaf90a561988519b7bec34d0ab`)의 `yolov8n.onnx`(SHA-256 `0c8716701f471067932b797eeb67c8e5db47c693c2557c881d7679ec12e21bc5`)를, 같은 커밋의 `examples/yolov8/python/convert.py`와 rknn-toolkit2 2.3.2로 변환했다.
+    - 설정: 대상 `rk3588`, INT8, `mean 0, std 255`. 나머지 설정은 모두 툴킷의 기본값이다.
+    - **양자화 데이터셋:** 그 커밋의 `datasets/COCO/coco_subset_20.txt`가 나열하는 COCO 이미지 20장. [models/coco_subset_20.sha256](../models/coco_subset_20.sha256)에 목록 파일과 이미지마다의 SHA-256이 있다.
+  - **`rknn_init` 플래그**(§8): 모든 변형에서 `rknn_init(&ctx, model, size, 0, NULL)`, 즉 플래그 0이고 확장 인자가 없다.
+    - 따라서 아무 플래그도 켜지 않는다. `RKNN_FLAG_ASYNC_MASK`도, 어떤 `RKNN_FLAG_DISABLE_FLUSH_*` 플래그도 없다.
+    - `rknn_run(ctx, NULL)`은 추론이 끝날 때까지 반환하지 않는다.
+    - 이어서 `rknn_set_core_mask(ctx_i, RKNN_NPU_CORE_0 << i)`로 컨텍스트 i를 NPU 코어 i에 고정한다(i = 0, 1, 2).
+    - 플래그는 `src/core/npu.h`의 상수 `NpuContexts::kInitFlags`다.
+  - **컴파일러와 플래그:** 보드에서 `tools/deploy_board.sh`로 빌드한다. g++ 13.3.0(Ubuntu 13.3.0-6ubuntu2~24.04.1), GNU ld 2.42, CMake 3.28.3, GNU Make 4.3
+    - CMake 빌드 유형은 Release다. 모든 C++ 파일을 `-O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls -pthread`로 컴파일한다.
+    - `-march`나 `-mcpu`는 주지 않으므로 GCC의 기본 대상이 적용된다.
+    - `bench_main`은 `-O3 -DNDEBUG -pthread`와 rpath `/lib:/opt/ffmpeg-rockchip/lib`로 링크한다.
+  - **송출 PC**(§3): mediamtx v1.21.2(바이너리 SHA-256 `0ffb7f18210d08ee38cb16668c4f3a2c96622e69d401119c0026d078a2b89523`), ffmpeg 7.0.2(johnvansickle.com 정적 빌드, 바이너리 SHA-256 `e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99`). §14 목록에는 없지만 여기서 함께 확정한다.
+    - `stream-server/publish.sh`는 mediamtx 버전을 검사하고, 서버를 시작할 때마다 두 버전을 기록한다.
+  - **검사:** 이제 `tools/stream_session.py`는 세션을 시작할 때마다, 클럭을 고정하기 전에 `tools/inventory.sh`를 실행하고 그 출력을 `inventory.txt`로 남긴다. 출력이 기준 파일과 다르면 첫 실행 전에 세션을 멈춘다. §12의 세션도 똑같이 한다.
+  - 이 값 중 무엇이든 바꾸려면 수정 기록이 필요하고(§15), 그 기록에 영향받는 데이터를 적는다.
+- Reason: §14는 이 값들을 `freeze-m1` 전에 확정하고, §2는 그 시점에 버전, 빌드, 컴파일러와 플래그를 고정한다.
+  - 기준 파일은 2026-11-03 04:47 UTC쯤 이 변경의 빌드에서 썼다. PR #14의 머지인 `cf7e40b`의 빌드도 같은 값을 냈다. 링크 줄 끝의 공백 하나만 달랐는데, 이제 도구가 그 공백을 지운다. 따라서 출력은 코드 커밋에 좌우되지 않는다.
+  - **`results/`의 첫 실행 이후로 바뀌지 않았다:**
+    - 패키지 기록상 마지막 변경은 2026-10-30 07:26 UTC다. perf용 디버깅 심볼과 함께 `libc6`가 2.39-0ubuntu8.7에서 8.9로 올라갔다(A6).
+    - ffmpeg-rockchip 라이브러리는 그날 01:33 UTC에, RKNN 헤더는 그날 04:02 UTC에 설치했다. librknnrt는 이미지에 들어 있던 것이다(2026-08-13).
+    - `results/`의 모든 실행은 2026-11-02 이후에 시작했으므로, 모두 위 라이브러리로 실행됐다.
+    - `unattended-upgrades`가 설치돼 있지 않고 APT 주기 작업도 설정돼 있지 않아서, 패키지는 손으로만 바뀐다.
+  - 양자화 이미지는 rknn_model_zoo의 그 커밋에서 내려받아 해시를 계산했다. 2026-10-30의 변환도 같은 커밋을 썼다(`models/yolov8n.sha256`).
+- Affected data: 없음. 바뀐 값이 없다.
+- Release: 없음(`freeze-m1` 이전)
