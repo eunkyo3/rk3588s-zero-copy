@@ -210,14 +210,14 @@ They are kept under `results/` and flagged. None of their runs counts.
   - The board took its time from `ntp.ubuntu.com` over Wi-Fi (SNTP); the PC takes it from servers in Korea with chrony. Their offset wandered from +8 ms (PC ahead) to beyond −5 ms.
   - The records say −5 ms because `tools/stream_session.py` rounded offsets to whole milliseconds; it now keeps 0.1 ms.
   - Since 02:19 UTC the board takes its time from the PC over the wired link, and since 04:10 UTC it polls the PC no less often than every 64 s ([env.md](env.md#network)).
-  - The sessions run on the PC's time recorded offsets of 0 to −3 ms, inside the bounds. After the poll change, `timesyncd` reported −0.14 ms; no session has run since.
+  - The sessions run on the PC's time recorded offsets of 0 to −3 ms, inside the bounds. After the poll change, `timesyncd` reported −0.14 ms, read by hand and not recorded; no session has run since.
 - **Build defect:**
   - `tools/deploy_board.sh` restored each file's original time. A deploy from `main` for the held-out check rebuilt `pipeline.cpp` and `report.cpp` from `main`'s versions.
   - The next deploy, from this branch, brought back their own versions with older times, so make skipped them. The tools whose commit define changed, `bench_main` among them, were rebuilt against this branch's `RunResult`.
   - Since commit `5c9bc80`, the copy takes the time of extraction, so each deploy rebuilds every file it copies.
   - **The `L` session (`9553f70`) is not affected.** Its 28 runs exited normally. Their `summary.csv` holds `warmup_start_utc` and `window_*_utc`, which only this branch's `pipeline.cpp` and `report.cpp` write, with times that match `runs.tsv`.
   - **The held-out check (`07fe535`) is not affected.** `tools/equivalence_dump` uses none of `RunResult`, `run_pipeline` or the result writers. The four `src/` files that differ between `main` and this branch change only these and a clock helper they use.
-  - **Earlier builds:** the defect needs a deploy whose files are older than the objects of the build before it, made from other sources. No deploy log is kept for earlier builds. Their results carry checks of their own: M1-4's three runs gave the same bytes and its harness checks held, and every `P_cap` run passed its output checks (A7).
+  - **Earlier builds:** the defect needs a deploy whose files are older than the objects of the build before it, made from other sources. No deploy log is kept for earlier builds. Their results carry checks of their own: M1-4's three runs gave the same bytes and its harness checks held, and every `P_cap` run passed its output checks (A7; `tools/calib_npu.cpp`).
 - **Repeated checks:**
   - The loop check and the thermal check each ran three times. The first loop check's two valid runs are not used: the check was redone in full in a new session.
   - A session with invalid ×2 runs has no result. It is not a failure of §12, which would call for a cooling change. Calibration checks are redone before `freeze-m1` (§15).

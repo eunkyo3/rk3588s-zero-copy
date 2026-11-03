@@ -238,13 +238,13 @@ Each entry has this form:
 
   - **Time:** the PC's clock minus the board's wandered from +8 ms (PC ahead) to beyond −5 ms. At 02:10 UTC it stopped the first loop check, after two valid runs, and the first thermal check before its first run.
     - The sessions run with the board on the PC's time recorded offsets of 0 to −3 ms, inside the bounds.
-    - After the poll change at 04:10 UTC, `timesyncd` reported an offset of −0.14 ms. No session has run since.
+    - After the poll change at 04:10 UTC, `timesyncd` reported an offset of −0.14 ms, read by hand and not recorded. No session has run since.
   - **Build defect:** two later sessions, a loop check from 02:25 and a thermal check from 03:01 UTC, had every run crash at its end (exit −11).
     - `tools/deploy_board.sh` restored each file's original time. A build from `main` for the held-out check had rebuilt `pipeline.cpp` and `report.cpp` from `main`'s versions. The next deploy, from this branch, brought back its own versions of these files with older times, so make skipped them. The tools whose commit define changed, `bench_main` among them, were rebuilt against this branch's `RunResult`. Objects of two versions were linked together.
     - Commit `5c9bc80` makes the copy take the time of extraction, so each deploy rebuilds every file it copies.
     - The `L` session is not affected. Its 28 runs exited normally, and their `summary.csv` holds `warmup_start_utc` and `window_*_utc`, which only this branch's `pipeline.cpp` and `report.cpp` write, with times that match `runs.tsv`.
     - The held-out check of A8 is not affected. `tools/equivalence_dump` uses none of `RunResult`, `run_pipeline` or the result writers, and the four `src/` files that differ between `main` and this branch change only these and a clock helper they use.
-    - The defect needs a deploy whose files are older than the objects of the build before it, made from other sources. No deploy log is kept for earlier builds. Their results carry checks of their own: M1-4's three runs gave the same bytes and its harness checks held, and every `P_cap` run passed its output checks (A7).
+    - The defect needs a deploy whose files are older than the objects of the build before it, made from other sources. No deploy log is kept for earlier builds. Their results carry checks of their own: M1-4's three runs gave the same bytes and its harness checks held, and every `P_cap` run passed its output checks (A7; `tools/calib_npu.cpp`).
   - **Repeated checks:** the loop check and the thermal check each ran three times.
     - The first loop check's two valid runs are not used: the check was redone in full in a new session.
     - A session with invalid ×2 runs has no result. It is not a failure of §12, which would call for a cooling change. These calibration checks are redone before `freeze-m1` (§15).
