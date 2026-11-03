@@ -20,6 +20,7 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 - **Blocks:** one block per count, in that order. A block has 3 repetitions. In each repetition, B and C run in the order B→C, C→B, B→C (§9.1). A runs once per repetition.
 - **Order of the sweeps:** main, then auxiliary, then H3, then the A set. The 4K design of A11 comes after all of them. PROTOCOL does not order the sweeps.
   - The tool starts a session only when the sweeps before its own are complete and its own is not.
+  - While a sweep or H3 has a repetition or a repeat to redo, the tool starts no other session at all, smoke tests and calibration included.
   - So the session after one that left a repetition incomplete is always a session of the same sweep, as §9.1 and §9.3 require of "the next session".
 - **One sweep per session.** A sweep takes as many sessions as it needs.
 
@@ -30,10 +31,10 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
   - fixed clocks (A7) and the stream server with the M1 assignment (A9);
   - 10 minutes idle (§9.2). Over its last 60 s the session takes the `soc-thermal` baseline. Over its last 120 s it takes the idle baseline of system CPU (§7.2), in `idle_baseline.csv`. Its `window_s` is the measured length, slightly over 120 s; the report scales the baseline to each run's window.
 - **Every run:**
-  - is written to `started.tsv` before it starts, so that a run the session's death cuts short (a reboot) is still known;
   - waits for the cooldown gate (§9.2);
   - records the environment first (§9.1);
   - carries the `freeze-m1` commit in its header;
+  - is written to `started.tsv` just before its bench starts, after the gate and the checks. So a run the session's death cuts short (a reboot) is still known, and a run that never started leaves no trace;
   - is judged by §9.3, with A9's method for rule 4 and for external failures.
 - **Rule 3 applies at unsaturated conditions** (§6.2 with `L` = 32, A9): every main count except 32, every auxiliary count, and both A counts.
 - **The ambient temperature** is what the operator reports at the session's start.
@@ -75,7 +76,7 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 - **Sessions:** H3 also spans as many sessions as it needs.
   - Each session replays the earlier sessions' runs through the same schedule, then goes on with the next run. A record out of the schedule's order stops the session.
   - A run whose last attempt was an invalid first attempt continues with its repeat, as in a sweep.
-  - **Interleaved pairs:** the two runs of an interleaved pair at a shared count are a repetition in §9.1's sense. If a session ends between them, both are redone; the finished one is kept and replaced. If the second's first attempt was invalid, the first is redone and the second continues with its repeat.
+  - **Interleaved pairs:** the two runs of an interleaved pair at a shared count are a repetition in §9.1's sense. A search step's B and C runs are single runs, not a repetition: a session may end between them. If a session ends between them, both are redone; the finished one is kept and replaced. If the second's first attempt was invalid, the first is redone and the second continues with its repeat.
 - **Smoke test:** [results/check/20261103T071611Z_h3_smoke](../../results/check/20261103T071611Z_h3_smoke), `--start 1 --cap 2`, 2 s warm-up, 5 s window.
   - The search ran B1, C1, then C2, B2. At 2 = `L` there is no n + 1.
   - So the confirmation was the shared count 2 alone, in the order B, C, C, B, B, C.
@@ -84,7 +85,7 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 ### Time
 
 - A protocol run takes about 2.5 minutes, and the gate adds at least 60 s.
-- So the main sweep (42 runs) takes about 2.5 to 3 hours, the auxiliary sweep (30 runs) about 2 hours, and the A set (6 runs) about 20 minutes. H3 depends on where the searches stop: up to 50 search runs and 12 or more confirmation runs.
+- So the main sweep (42 runs) takes about 2.5 to 3 hours, the auxiliary sweep (30 runs) about 2 hours, and the A set (6 runs) about 20 minutes. H3 depends on where the searches stop: up to 50 search runs and 6 or more confirmation runs.
 - Each session adds 10 minutes of idling.
 
 ## Files and tools

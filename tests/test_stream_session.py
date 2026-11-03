@@ -390,6 +390,12 @@ class Sweeps(unittest.TestCase):
                 self.assertIsNone(ss.order_problem("main"))
                 self.assertIn("main comes before aux", ss.order_problem("aux"))
                 self.assertIn("main comes before h3", ss.order_problem("h3"))
+                self.assertEqual(ss.redo_pending(), [])
+                cols = ["seq", "name", "phase", "variant", "channels", "repetition", "attempt", "valid", "passed"]
+                Path("results/comparison/20261104T000000Z_main/runs.tsv").write_text(
+                    "\t".join(cols) + "\n" + "\t".join(["1", "01_main_B_8ch_r1", "main", "B", "8", "1", "1", "1", ""])
+                    + "\n", encoding="utf-8")
+                self.assertEqual(ss.redo_pending(), ["main"])  # B ran, C did not: the next session redoes both
             finally:
                 os.chdir(here)
 
@@ -410,8 +416,6 @@ class Sweeps(unittest.TestCase):
             self.assertEqual(len(rows), 1)  # only the repeat, which makes it invalid x2
             self.assertEqual((rows[0][1], rows[0][7], rows[0][9], rows[0][18]), ("01_main_C_8ch_r1_repeat", "2", "0", "s1/02"))
             self.assertEqual(s.invalid_x2, ["01_main_C_8ch_r1"])
-            started = (d / "started.tsv").read_text(encoding="utf-8").splitlines()
-            self.assertEqual(started[0].split("\t")[1], "01_main_C_8ch_r1_repeat")
 
     def test_idle_baseline(self):
         before = "cpu  1 1 1 1 1 1 1 1 0 0\ncpu0 10 0 5 100 7 1 1 0 0 0\ncpu4 0 0 0 0 0 0 0 0 0 0\nintr 5\n"
@@ -597,6 +601,9 @@ class OperatorStop(unittest.TestCase):
             self.assertEqual(len(rows), 1)  # recorded once, not repeated
             self.assertIn("stopped by the operator (signal SIGTERM)", rows[0])
             self.assertEqual(rows[0].split("\t")[9], "0")  # not valid, so never counted as a pass
+            # The bench had started, so started.tsv has the attempt.
+            started = (d / "started.tsv").read_text(encoding="utf-8").splitlines()
+            self.assertEqual([r.split("\t")[1] for r in started], ["01_search_none_8ch"])
 
     def test_while_judging(self):
         with tempfile.TemporaryDirectory() as t:
@@ -627,6 +634,8 @@ class OperatorStop(unittest.TestCase):
             error, rows = self.run_and_read(s, d)
             self.assertIsInstance(error, ss.Interrupted)
             self.assertEqual(rows, [])
+            # Nothing in started.tsv either: the next session starts the run afresh, not as a repeat.
+            self.assertEqual((d / "started.tsv").read_text(encoding="utf-8"), "")
 
 
 if __name__ == "__main__":

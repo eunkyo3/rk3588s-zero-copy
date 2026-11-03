@@ -57,7 +57,8 @@ invalid attempt (§9.3), and the next session goes on as docs/notes/comparison.m
 
 Sweep and h3 sessions follow the order main, aux, h3, reference: a session starts only when the
 earlier ones are complete and its own is not. Each attempt is written to started.tsv before it runs,
-so that one the session's death cuts short is still known to the next session.
+just before its bench starts, so that one the session's death cuts short is still known to the next
+session. While a sweep or h3 has a repetition to redo, no other session starts, smoke tests included.
 
 Rule 4 reads the server's log, whose lines have one-second resolution. An event counts when its second
 lies in [warm-up start, window end], both rounded down to the second. In the window end's own second
@@ -844,7 +845,7 @@ class Session:
     def console_size(self):
         return int(self.pc(f"stat -c %s {self.server_dir}/console.log").strip())
 
-    def attempt(self, name, phase, variant, channels, condition, run_kind, repetition, source):
+    def attempt(self, name, phase, variant, channels, condition, run_kind, repetition, source, attempt_no=1):
         """One bench run, judged. Returns (Outcome, run directory, gate temperature, start, end)."""
         a, o = self.args, Outcome()
         temp = self.gate()
@@ -859,6 +860,11 @@ class Session:
                "--run-kind", run_kind, "--repetition", str(repetition), "--freeze-commit", FREEZE_M1_COMMIT,
                "--out", str(run_dir)]
         start = dt.datetime.now(dt.timezone.utc)
+        # Just before the bench, after the gate and the checks: if the session dies during the run,
+        # the next session still knows of it; a run that never started leaves no row.
+        self.started.write("\t".join(map(str, [self.seq, name, phase, variant, channels, condition, repetition,
+                                               attempt_no, f"{start:%Y-%m-%dT%H:%M:%SZ}"])) + "\n")
+        durable(self.started)
         self.say(f"{name}: {variant}, {channels} ch, {condition}")
         try:
             o.code = self.sh(cmd, self.out / f"{name}.log", timeout=a.warmup + a.duration + 180)
@@ -952,13 +958,8 @@ class Session:
             base += f"_r{repetition}"
         for attempt in range(first_attempt, 3):
             name = base if attempt == 1 else base + "_repeat"
-            # Before the run: if the session dies during it, the next session still knows of it.
-            self.started.write("\t".join(map(str, [self.seq, name, phase, variant, channels, condition, repetition,
-                                                   attempt, f"{dt.datetime.now(dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ}"]))
-                               + "\n")
-            durable(self.started)
             o, run_dir, temp, start, end = self.attempt(name, phase, variant, channels, condition, run_kind,
-                                                        repetition, source)
+                                                        repetition, source, attempt)
             valid = not o.reasons
             passed = ""
             if valid and phase in ("search", "confirm"):
@@ -1042,6 +1043,22 @@ def progress(name):
         return "complete" if nxt is None else "started"
     complete, _ = sweep_state(load_records(sessions, (name,)), SWEEPS[name][2])
     return "complete" if all((c, r) in complete for c, r, _ in sweep_plan(name)) else "started"
+
+
+def redo_pending():
+    """The sweeps, or h3, whose protocol sessions left a repetition or a repeat to redo."""
+    out = []
+    for name in ORDER:
+        sessions = sweep_sessions(name)
+        if not sessions:
+            continue
+        if name == "h3":
+            _, _, _, continued, replaced = h3_replay(h3_trials(load_records(sessions, H3_PHASES)))
+            if continued or replaced:
+                out.append(name)
+        elif sweep_state(load_records(sessions, (name,)), SWEEPS[name][2])[1]:
+            out.append(name)
+    return out
 
 
 def order_problem(name):
@@ -1223,8 +1240,13 @@ def main(argv):
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGHUP, on_signal)
     try:
-        if args.command in ("sweep", "h3") and not smoke:
-            problem = order_problem(args.sweep or "h3")
+        this = (args.sweep or "h3") if args.command in ("sweep", "h3") and not smoke else None
+        waiting = [w for w in redo_pending() if w != this]
+        if waiting:
+            raise Stop(f"not starting: {', '.join(waiting)} has a repetition to redo, so its next session comes "
+                       "first (docs/notes/comparison.md)")
+        if this:
+            problem = order_problem(this)
             if problem:
                 raise Stop(f"not starting: {problem} (docs/notes/comparison.md)")
         s = Session(args)
