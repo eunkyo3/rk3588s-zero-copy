@@ -4,15 +4,103 @@
 
 How much does a zero-copy video pipeline actually save on an RK3588S, and under which conditions? This repository answers that with a pre-registered experiment on a NanoPi R6C. The code is here to make the experiment reproducible.
 
+The project will publish:
+- a report that gives each pre-registered hypothesis its verdicts, with the measurements behind them;
+- a multi-channel detection demo;
+- scripts that reproduce the results.
+
+It is an experiment, not a library. A result in which zero copy saves nothing is a valid answer.
+
 ## The comparison
 
 Two pipelines share the same RTSP input, decoder (ffmpeg-rockchip `h264_rkmpp`, DRM PRIME frames), model (YOLOv8n INT8) and pipeline structure. Only the path from the decoded frame to the NPU input differs.
 
 | Variant | Decoded frame → NPU input |
 |---|---|
-| **B** CPU copy | `mmap` the frame, preprocess with OpenCV, copy in with `rknn_inputs_set` |
+| **B** CPU copy | `mmap` the frame, preprocess with OpenCV, copy with `memcpy` into a bound NPU input buffer ([AMENDMENTS A3](prereg/AMENDMENTS.md)) |
 | **C** zero copy | dma-buf fd → RGA → dma-heap buffer registered with `rknn_create_mem_from_fd` |
 | A (reference) | software decoding + the B path, 1–2 channels only |
+| none | decoding only, to find how many channels the decoder sustains |
+
+## Architecture
+
+### Test setup
+
+```mermaid
+flowchart LR
+    subgraph PC["Stream PC"]
+        V["4 videos<br>1080p30 H.264"] --> P["ffmpeg publishers<br>remux only, looped"]
+        P --> M["mediamtx<br>RTSP :8554"]
+    end
+    subgraph BOARD["NanoPi R6C, RK3588S"]
+        BM["bench_main<br>one variant, N channels"]
+    end
+    M -- "RTSP over TCP, ch1 to ch32<br>wired Ethernet" --> BM
+```
+
+A separate PC serves the streams, so that serving them costs the board nothing. Channel `chN` loops one of four videos, and its publisher starts when the board connects, so every run starts each video from the beginning. The server's log is one of the validity checks of every run (PROTOCOL §9.3).
+
+### Pipeline
+
+All variants run the same stages (PROTOCOL §5.1). Only A decodes in software instead of on the VPU.
+
+```mermaid
+flowchart LR
+    D["Decoder threads<br>1 per channel<br>h264_rkmpp on the VPU"] --> S["Sampler<br>every 6th frame: 5 fps<br>or every frame: 30 fps"]
+    S --> Q1["Q1<br>2 × channels<br>drops the oldest"]
+    Q1 --> PP["Preprocessing pool<br>2 threads<br>acquire slot → prepare"]
+    PP --> Q2["Q2<br>depth 6"]
+    Q2 --> W["NPU workers<br>3, one per NPU core<br>bind → rknn_run<br>→ post-process"]
+    W -. "slot returned" .-> PP
+```
+
+- 11 input slots are shared by the preprocessing pool and the NPU workers. Q1 is the only queue that drops.
+- Each NPU worker owns one RKNN context on one NPU core. It takes any slot from Q2 and binds it to its own context.
+- The pipeline, and every thread the libraries start, run on the four A76 cores (cpu4–7). A thread on cpu0 samples every second the NPU load, temperatures, clocks, the process's memory and each channel's count of decoded frames.
+- CPU, DDR and NPU clocks are fixed ([AMENDMENTS A7](prereg/AMENDMENTS.md)). A run in which a clock falls below its fixed value is invalid.
+
+### B and C
+
+Only `prepare`, `bind` and the memory behind the input slots differ (PROTOCOL §5.2):
+
+```mermaid
+flowchart TB
+    F["Decoded frame<br>DRM PRIME dma-buf, NV12 1920×1080"]
+    subgraph B["B: CPU copy"]
+        B1["mmap, DMA_BUF sync<br>the CPU reads the frame"] --> B2["OpenCV on an A76 core<br>resize, then NV12 → RGB"]
+        B2 --> B3["slot in CPU memory"] --> B4["bind: memcpy into<br>the context's input buffer"]
+    end
+    subgraph C["C: zero copy"]
+        C1["import the dma-buf fd<br>into RGA"] --> C2["RGA3<br>scale and NV12 → RGB"]
+        C2 --> C3["slot: dma-heap buffer<br>registered with every context"] --> C4["bind: rknn_set_io_mem"]
+    end
+    F --> B1
+    F --> C1
+    B4 --> N["NPU: rknn_run<br>YOLOv8n INT8, 640×640"]
+    C4 --> N
+    N --> PO["CPU post-processing<br>box decoding, NMS"]
+```
+
+Both write the 640×360 image into the middle of a 640×640 slot whose border was filled once at start. In C the CPU does not read or write pixel data while streaming. perf profiles check this (PROTOCOL §11.4); what they found is in [AMENDMENTS A6](prereg/AMENDMENTS.md).
+
+## Stack
+
+| Layer | Used | Note |
+|---|---|---|
+| Board | FriendlyElec NanoPi R6C: RK3588S, 4 Cortex-A76 and 4 Cortex-A55 cores, 3-core NPU, 8 GB | heatsink and fan; the M1-3 thermal check fixes the cooling |
+| OS | FriendlyElec Ubuntu 24.04, kernel 6.1 | RKNPU driver 0.9.8 |
+| Decoding | [ffmpeg-rockchip](https://github.com/nyanmisaka/ffmpeg-rockchip) commit `8b4385e9`, `h264_rkmpp` over Rockchip MPP | DRM PRIME frames. A uses ffmpeg's software H.264 decoder. |
+| C's preprocessing | librga 1.10.3, im2d API, on the two RGA3 cores | |
+| B's and A's preprocessing | OpenCV 4.6.0 (Ubuntu packages), single-threaded | [AMENDMENTS A2](prereg/AMENDMENTS.md) |
+| Inference | RKNN runtime (librknnrt) 2.3.2, C API | three contexts, one per NPU core |
+| Model | YOLOv8n from rknn_model_zoo v2.3.2, INT8 with rknn-toolkit2 2.3.2 | [models/README.md](models/README.md) |
+| Code | C++17, CMake, gcc 13.3 | |
+| Streams | mediamtx v1.21.2 and ffmpeg on a separate Linux PC | [stream-server/README.md](stream-server/README.md) |
+| Scripts | POSIX shell; Python 3, standard library only, plus numpy for `tools/equivalence_check.py` | sessions, analysis, checks |
+
+Exact versions and the hardware blocks: [docs/notes/env.md](docs/notes/env.md).
+
+## Pre-registration
 
 The hypotheses, verdict rules and measurement protocol were registered before any measurement:
 
@@ -34,10 +122,56 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 
 **Current status:** M1-3, calibration. The fixed clocks, `P_cap` (194.2 inferences/s) and the H2 auxiliary point (5 channels) are fixed ([AMENDMENTS A7](prereg/AMENDMENTS.md), [docs/notes/calibration.md](docs/notes/calibration.md)). The wired stream server is set up ([docs/notes/env.md](docs/notes/env.md#network)). Next: the decode-only limit `L`, the loop check of §3 and the thermal check. Done before: M1-4, equivalence: B and C are equivalent under the criteria in force ([AMENDMENTS A5](prereg/AMENDMENTS.md)), and not under the registered criteria ([docs/notes/equivalence.md](docs/notes/equivalence.md)). C's input path makes no CPU pixel copy, but small copies inside the NPU runtime, the same in B, exceed the §11.4 perf threshold ([AMENDMENTS A6](prereg/AMENDMENTS.md)).
 
-## Hardware and software
+The comparison results come with the report of `v0.1-m1`.
 
-Versions, hardware blocks and the registration reference time: [docs/notes/env.md](docs/notes/env.md). Model files and their conversion: [models/README.md](models/README.md).
+## Build and run
 
-- FriendlyElec NanoPi R6C (RK3588S, 8 GB), FriendlyElec Ubuntu 24.04
-- C++, [ffmpeg-rockchip](https://github.com/nyanmisaka/ffmpeg-rockchip) (`h264_rkmpp`), librga (im2d), RKNN C API (librknnrt)
-- RTSP streams served by mediamtx from a separate PC over wired Ethernet
+On the board. The FriendlyElec image provides MPP, librga and librknnrt.
+
+```sh
+sudo apt-get update && sudo apt-get install cmake libopencv-dev
+tools/setup/build_ffmpeg_rockchip.sh   # build-essential, pkg-config, libdrm-dev, then ffmpeg-rockchip into /opt/ffmpeg-rockchip
+tools/setup/fetch_rknn_headers.sh      # RKNN C API headers into /opt/rknpu2/include
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCODE_COMMIT=$(git rev-parse HEAD) # in a git clone
+cmake --build build -j4
+```
+
+From another machine, `tools/deploy_board.sh [user@host]` copies the working tree to the board and builds it there. Every result header carries the commit given to CMake as `CODE_COMMIT` (`unknown` without it). `deploy_board.sh` sets it, with `-dirty` when the copied tree differs from the commit.
+
+Then:
+1. Download the model into `models/` ([models/README.md](models/README.md)).
+2. Start the stream server on the PC ([stream-server/README.md](stream-server/README.md)).
+3. Run one variant on N channels, as root (the NPU load is read from debugfs):
+
+```sh
+sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
+```
+
+`{n}` becomes the channel number. A run warms up for 20 s and measures for 120 s. It writes `summary.csv`, `channels.csv`, `frames.csv`, `samples.csv`, `threads.csv` and `env.json` to `results/check/<UTC time>_C_8ch/`. Options are listed at the top of [src/app/bench_main.cpp](src/app/bench_main.cpp).
+
+Runs that count also follow the order, cooldown gate and validity rules of PROTOCOL §9. So far `tools/calib_npu.sh` applies them to the `P_cap` calibration; the session tools for later runs come with their milestones. One-command reproduction comes with M3.
+
+Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py` and `tests/test_equivalence_check.py` for the Python tools (the last needs numpy).
+
+## Repository layout
+
+| Path | Content |
+|---|---|
+| `prereg/` | hypotheses, protocol and amendments. English governs; `*.ko.md` are translations. |
+| `src/core/` | the shared pipeline: input, queues, slots, NPU contexts, post-processing, metrics, reports |
+| `src/preprocess/` | the variant-specific part: B (`cpu_copy`), C (`zero_copy_rga`), A (`cpu_sw`) |
+| `src/app/bench_main.cpp` | the benchmark binary: one run of one variant at one channel count |
+| `tools/` | fixed clocks, calibration, equivalence and zero-copy evidence tools, diagnostics, the pre-registration order check, board setup, model conversion, deployment, environment capture |
+| `stream-server/` | mediamtx configuration, video preparation, and the publisher, which checks the channel assignment it is given |
+| `models/` | model download and conversion. The files are kept in a Release. |
+| `tests/` | unit tests of the pipeline core and of three Python tools |
+| `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration |
+| `results/` | the raw results of every run; large tensor dumps are kept in Releases. Each file's header names its code, model and amendment (PROTOCOL §1). |
+
+## License
+
+This repository is licensed under the [Apache License 2.0](LICENSE).
+
+- The box decoding in `src/core/yolov8_post.cpp` follows rknn_model_zoo v2.3.2 (Apache-2.0, Rockchip).
+- The model files are not in this repository. They derive from Ultralytics YOLOv8 and are distributed under AGPL-3.0, whose text is in their Release ([models/README.md](models/README.md)).
+- The benchmark videos are not in this repository either. Their sources and licenses are listed in [docs/notes/preprocess.md](docs/notes/preprocess.md#benchmark-videos).
