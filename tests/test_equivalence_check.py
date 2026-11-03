@@ -119,7 +119,9 @@ class FrameAgreement(unittest.TestCase):
         self.assertEqual(near, [True, True, False])
 
 
-class EndToEnd(unittest.TestCase):
+class Cases:
+    """Writes equivalence_dump output for B, C and R."""
+
     H, W, BAND = 8, 8, [0, 2, 8, 4]
     N = 4
     A = box(0, 0.9, 0, 4, 2, 6)
@@ -143,6 +145,8 @@ class EndToEnd(unittest.TestCase):
             tensors.append(t)
         np.stack(tensors).tofile(d / f"{variant.lower()}.u8")
 
+
+class EndToEnd(Cases, unittest.TestCase):
     def check(self, b=None, c=None, r=None, b_t=None, c_t=None, r_t=None, frames=None):
         """Writes a case (by default C = R = B in detections; B 100, C 101, R 103 in pixels) and runs
         the check. Returns (exit code, output, A5 conditions or None)."""
@@ -235,6 +239,105 @@ class EndToEnd(unittest.TestCase):
             code, out, _ = self.check()
         self.assertEqual(code, 2, out)
         self.assertIn("RuntimeError: boom", out)
+
+
+class Pooled(Cases, unittest.TestCase):
+    """--set: sources pooled in order (AMENDMENTS A8)."""
+
+    def write_set(self, d, source, b=None, c=None, r=None, b_t=None, c_t=None, r_t=None, **header):
+        d.mkdir()
+        base = [[self.A] for _ in range(self.N)]
+        self.write(d, "B", b or base, b_t or [100] * self.N, source=source, **header)
+        self.write(d, "C", c or base, c_t or [101] * self.N, source=source, **header)
+        self.write(d, "R", r or base, r_t or [103] * self.N, source=source, **header)
+
+    def run_sets(self, d, *names, frames=None):
+        argv = []
+        for name in names:
+            argv += ["--set", str(d / name), str(frames or self.N)]
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = eq.main(argv + ["--json", str(d / "out.json")])
+        summary = json.loads((d / "out.json").read_text()) if (d / "out.json").exists() else None
+        return code, out.getvalue() + err.getvalue(), summary
+
+    def test_pool_and_per_source(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            self.write_set(d / "s1", "v1.mp4")
+            self.write_set(d / "s2", "v2.mp4", c_t=[100, 100, 100, 107])  # C exact but for one frame
+            code, out, summary = self.run_sets(d, "s1", "s2")
+        self.assertEqual(code, 1, out)
+        self.assertIn("inputs: 8 frames pooled over 2 sources (not the registered input", out)
+        self.assertIn("  v2.mp4: 4 frames", out)
+        self.assertIn("min PSNR 31.23 dB (frame 3 of v2.mp4)", out)
+        self.assertIn("verdict (A5): FAIL, pooled over 2 sources, not on the registered input", out)
+        # Pooled MAE of C: 1 in the 4 frames of v1, 7 in one frame of v2, over 8 frames.
+        self.assertAlmostEqual(summary["tensor"]["C"]["mae"], (4 * 1 + 7) / 8)
+        self.assertEqual([s["source"] for s in summary["sources"]], ["v1.mp4", "v2.mp4"])
+        self.assertTrue(summary["sources"][0]["pass"])
+        self.assertEqual([k for k, v in summary["sources"][1]["a5"].items() if not v], ["tensor_min_psnr"])
+        self.assertEqual([k for k, v in summary["a5"].items() if not v], ["tensor_min_psnr"])
+        self.assertEqual(len(summary["headers"]), 2)
+
+    def test_the_pool_sets_the_exit_code(self):
+        # v2 alone misses the 2% box rule (5 C boxes against 4 B boxes); pooled with 60 frames of
+        # v1 (64 B boxes, 65 C boxes, 1.56%) it passes.
+        extra = [[self.A, box(1, 0.26, 5, 7, 2, 4)]] + [[self.A] for _ in range(self.N - 1)]
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            self.N = 60
+            self.write_set(d / "s1", "v1.mp4")
+            self.N = 4
+            self.write_set(d / "s2", "v2.mp4", c=extra)
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                code = eq.main(["--set", str(d / "s1"), "60", "--set", str(d / "s2"), "4",
+                                "--json", str(d / "out.json")])
+            summary = json.loads((d / "out.json").read_text())
+        self.assertEqual(code, 0, out.getvalue() + err.getvalue())
+        self.assertTrue(summary["pass"])
+        self.assertFalse(summary["sources"][1]["pass"])
+        self.assertIn("v2.mp4, 4 frames:", out.getvalue())
+        self.assertIn("(c) +25.00%; border yes: FAIL", out.getvalue())
+
+    def test_sources_must_share_model_and_code(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            self.write_set(d / "s1", "v1.mp4")
+            self.write_set(d / "s2", "v2.mp4", code_commit="other")
+            code, out, _ = self.run_sets(d, "s1", "s2")
+        self.assertEqual(code, 2, out)
+        self.assertIn("header field code_commit differs between the sources", out)
+
+    def test_a_source_given_twice(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            self.write_set(d / "s1", "v1.mp4")
+            code, out, _ = self.run_sets(d, "s1", "s1")
+        self.assertEqual(code, 2, out)
+        self.assertIn("a source is given twice", out)
+
+    def test_each_source_has_its_frame_count(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            self.write_set(d / "s1", "v1.mp4")
+            self.write_set(d / "s2", "v2.mp4")
+            code, out, _ = self.run_sets(d, "s1", "s2", frames=self.N + 1)
+        self.assertEqual(code, 2, out)
+        self.assertIn(f"{self.N} frames, expected {self.N + 1}", out)
+
+    def test_set_excludes_the_single_source_options(self):
+        for extra in (["--b", "b.jsonl"], ["--frames", "4"]):
+            with self.subTest(extra=extra), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as e:
+                eq.main(["--set", "d", "4"] + extra)
+            self.assertEqual(e.exception.code, 2)
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as e:
+            eq.main(["--set", "d", "four"])
+        self.assertEqual(e.exception.code, 2)
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as e:
+            eq.main(["--b", "b.jsonl"])
+        self.assertEqual(e.exception.code, 2)
 
 
 if __name__ == "__main__":

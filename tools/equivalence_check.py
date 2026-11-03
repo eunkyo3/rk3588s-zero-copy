@@ -26,10 +26,16 @@ post-processing returned, over all frames and classes.
 The registered input is 1,000 frames and a 640x360 band (§11); other inputs are checked the same
 way, and the report says that they are not the registered input.
 
+Pooled (the held-out check of AMENDMENTS A8): with --set DIR FRAMES once per source, DIR holding
+b.jsonl, c.jsonl and r.jsonl from one tools/equivalence_dump run, the frames of all sources are
+taken together in the order given, and the criteria apply to that pool. Each source's own results
+are reported as well; they do not set the exit code.
+
 Exit code: 0 if the criteria in force hold, 1 if they do not, 2 if the inputs are inconsistent or the
 check could not run.
 
 Usage: tools/equivalence_check.py --b B.jsonl --c C.jsonl --r R.jsonl [--frames 1000] [--json OUT]
+       tools/equivalence_check.py --set DIR FRAMES [--set DIR FRAMES ...] [--json OUT]
 """
 import argparse
 import bisect
@@ -210,8 +216,8 @@ def detection_stats(side, base):
 # --- tensors ----------------------------------------------------------------------------------
 
 
-def tensor_stats(paths, header, n):
-    """MAE and per-frame PSNR of C and R against B over the band, and the border check."""
+def tensor_sums(paths, header, n):
+    """One source's sums of C and R against B over the band, its per-frame PSNRs and its border check."""
     import numpy as np
 
     h, w = header["model_h"], header["model_w"]
@@ -239,17 +245,28 @@ def tensor_stats(paths, header, n):
             s["signed_sum"] = [a + int(b) for a, b in zip(s["signed_sum"], d.sum(axis=(0, 1)))]
             sq = int((d * d).sum())
             s["psnr"].append(math.inf if sq == 0 else 10 * math.log10(255.0**2 * elements / sq))
-    result = {"border_114": border_ok, "elements_per_frame": elements}
-    for k, s in out.items():
-        psnr = s["psnr"]
-        worst = min(range(n), key=psnr.__getitem__)
+    return {"frames": n, "border_114": border_ok, "elements_per_frame": elements, **out}
+
+
+def tensor_stats(parts):
+    """MAE and per-frame PSNR of C and R against B over the band, and the border check, over the
+    frames of every part (tensor_sums of one source each, in order)."""
+    elements = parts[0]["elements_per_frame"]
+    n = sum(p["frames"] for p in parts)
+    result = {"border_114": {k: all(p["border_114"][k] for p in parts) for k in parts[0]["border_114"]},
+              "elements_per_frame": elements}
+    for k in ("C", "R"):
+        psnr = [(v, i, f) for i, p in enumerate(parts) for f, v in enumerate(p[k]["psnr"])]
+        worst = min(psnr, key=lambda t: t[0])  # the first of equal minima
         result[k] = {
-            "mae": s["abs_sum"] / (elements * n),
-            "min_psnr_db": psnr[worst],
-            "min_psnr_frame": worst,
-            "median_psnr_db": statistics.median(psnr),
-            "mean_diff_rgb": [v / (elements // 3 * n) for v in s["signed_sum"]],
+            "mae": sum(p[k]["abs_sum"] for p in parts) / (elements * n),
+            "min_psnr_db": worst[0],
+            "min_psnr_frame": worst[2],
+            "median_psnr_db": statistics.median(v for v, _, _ in psnr),
+            "mean_diff_rgb": [sum(p[k]["signed_sum"][c] for p in parts) / (elements // 3 * n) for c in range(3)],
         }
+        if len(parts) > 1:
+            result[k]["min_psnr_source"] = parts[worst[1]]["source"]
     return result
 
 
@@ -296,6 +313,17 @@ def check_inputs(headers, frames, expected):
         raise InputError("B has no detections")
 
 
+def check_sets(headers):
+    """Sources pooled together share the model, the code and the geometry, and differ in source."""
+    for key in ("model_sha256", "code_commit", "amendment", "model_w", "model_h", "band", "labels"):
+        values = {json.dumps(h["B"].get(key)) for h in headers}
+        if len(values) != 1:
+            raise InputError(f"header field {key} differs between the sources: {sorted(values)}")
+    sources = [h["B"].get("source") for h in headers]
+    if len(set(sources)) != len(sources):
+        raise InputError(f"a source is given twice: {sources}")
+
+
 # --- report -----------------------------------------------------------------------------------
 
 
@@ -321,27 +349,14 @@ def finite(x):
     return x
 
 
-def run(args):
-    paths = {"B": args.b, "C": args.c, "R": args.r}
-    headers, frames = {}, {}
-    for k, p in paths.items():
-        headers[k], frames[k] = load(p, k)
-    check_inputs(headers, frames, args.frames)
-    hb = headers["B"]
-    n = len(frames["B"])
-    labels = hb["labels"]
-    dets = {k: [d for _, _, d in fr] for k, fr in frames.items()}
-    tensors = {k: str(Path(p).parent / headers[k]["tensors"]) for k, p in paths.items()}
-
-    ts = tensor_stats(tensors, hb, n)
+def evaluate(sets):
+    """The statistics and the A5 conditions over the frames of `sets`: (headers, frames, tensor_sums)
+    per source, pooled in order."""
+    dets = {k: [d for _, fr, _ in sets for _, _, d in fr[k]] for k in ("B", "C", "R")}
+    ts = tensor_stats([part for _, _, part in sets])
     ds = {k: detection_stats(dets[k], dets["B"]) for k in ("C", "R")}
     totals = {k: sum(len(d) for d in dets[k]) for k in dets}
-    per_class = {k: Counter(b[0] for d in dets[k] for b in d) for k in dets}
-
     border = ts["border_114"]["B"] and ts["border_114"]["C"]
-    reg_tensor = ts["C"]["mae"] <= MAE_MAX and ts["C"]["min_psnr_db"] >= PSNR_MIN and border
-    reg_det = (ds["C"]["both_ok"] == ds["C"]["pairs"]
-               and ds["C"]["frames_agreeing_share"] >= FRAMES_AGREE_MIN)
     total_dev = (totals["C"] - totals["B"]) / totals["B"]
     a5 = {
         "border_114_b_and_c": border,
@@ -351,14 +366,55 @@ def run(args):
         "b_frames_agreeing": ds["C"]["frames_agreeing_share"] >= ds["R"]["frames_agreeing_share"],
         "c_total_boxes": abs(total_dev) <= TOTAL_TOLERANCE,
     }
-    passed = all(a5.values())
+    return {"dets": dets, "tensor": ts, "detection": ds, "totals": totals, "border": border,
+            "total_dev": total_dev, "a5": a5, "pass": all(a5.values())}
+
+
+def run(args):
+    if args.set:
+        groups = [({k: str(Path(d) / f"{k.lower()}.jsonl") for k in ("B", "C", "R")}, frames)
+                  for d, frames in args.set]
+    else:
+        groups = [({"B": args.b, "C": args.c, "R": args.r}, args.frames)]
+    loaded = []  # every JSONL is checked before any tensor is read
+    for paths, expected in groups:
+        headers, frames = {}, {}
+        for k, p in paths.items():
+            headers[k], frames[k] = load(p, k)
+        check_inputs(headers, frames, expected)
+        loaded.append((paths, headers, frames))
+    check_sets([h for _, h, _ in loaded])
+    sets = []
+    for paths, headers, frames in loaded:
+        tensors = {k: str(Path(p).parent / headers[k]["tensors"]) for k, p in paths.items()}
+        part = tensor_sums(tensors, headers["B"], len(frames["B"]))
+        part["source"] = headers["B"]["source"]
+        sets.append((headers, frames, part))
+    pooled = len(sets) > 1
+    headers = sets[0][0]
+    hb = headers["B"]
+    labels = hb["labels"]
+
+    ev = evaluate(sets)
+    ts, ds, totals, a5, passed = ev["tensor"], ev["detection"], ev["totals"], ev["a5"], ev["pass"]
+    border, total_dev = ev["border"], ev["total_dev"]
+    n = len(ev["dets"]["B"])
+    per_class = {k: Counter(b[0] for d in ev["dets"][k] for b in d) for k in ev["dets"]}
+    reg_tensor = ts["C"]["mae"] <= MAE_MAX and ts["C"]["min_psnr_db"] >= PSNR_MIN and border
+    reg_det = (ds["C"]["both_ok"] == ds["C"]["pairs"]
+               and ds["C"]["frames_agreeing_share"] >= FRAMES_AGREE_MIN)
+    per_source = [(h["B"]["source"], len(fr["B"]), evaluate([(h, fr, part)])) for h, fr, part in sets] if pooled else []
 
     x, y, bw, bh = hb["band"]
-    registered_input = n == REGISTERED_FRAMES and (bw, bh) == REGISTERED_BAND
-    out = [
-        f"inputs: {n} frames of {hb['source']}" + ("" if registered_input else
-                                                     f" (not the registered input: {REGISTERED_FRAMES} frames, "
-                                                     f"a {REGISTERED_BAND[0]}x{REGISTERED_BAND[1]} band)"),
+    registered_input = not pooled and n == REGISTERED_FRAMES and (bw, bh) == REGISTERED_BAND
+    not_registered = (f" (not the registered input: {REGISTERED_FRAMES} frames, "
+                      f"a {REGISTERED_BAND[0]}x{REGISTERED_BAND[1]} band)")
+    if pooled:
+        out = [f"inputs: {n} frames pooled over {len(sets)} sources" + not_registered]
+        out += [f"  {source}: {frames} frames" for source, frames, _ in per_source]
+    else:
+        out = [f"inputs: {n} frames of {hb['source']}" + ("" if registered_input else not_registered)]
+    out += [
         f"  model {hb['model_sha256']}, code {hb['code_commit']}, amendment {hb['amendment']}",
         f"  B: {hb['preprocessing']}; C: {headers['C']['preprocessing']}; R: {headers['R']['preprocessing']}",
         f"tensor level, band {bw}x{bh} at ({x}, {y}):",
@@ -366,7 +422,7 @@ def run(args):
     for k, name in (("C", "C vs B"), ("R", "R vs B")):
         s = ts[k]
         out.append(f"  {name}: MAE {s['mae']:.4f}, min PSNR {s['min_psnr_db']:.2f} dB (frame "
-                   f"{s['min_psnr_frame']}), median PSNR {s['median_psnr_db']:.2f} dB, mean difference RGB "
+                   f"{s['min_psnr_frame']}{' of ' + s['min_psnr_source'] if pooled else ''}), median PSNR {s['median_psnr_db']:.2f} dB, mean difference RGB "
                    + ", ".join(f"{v:+.3f}" for v in s["mean_diff_rgb"]))
     out.append("  border 114: " + ", ".join(f"{k} {'yes' if v else 'NO'}" for k, v in ts["border_114"].items()))
     out.append("detection level, Hungarian per class, pairs at IoU >= 0.5:")
@@ -409,16 +465,32 @@ def run(args):
         f"{pct(ds['R']['frames_agreeing_share'])}: {verdict(a5['b_frames_agreeing'])}",
         f"  (c) total boxes, |{totals['C']} - {totals['B']}| / {totals['B']} = {abs(total_dev):.2%} <= 2%: "
         f"{verdict(a5['c_total_boxes'])}",
-        f"verdict (A5): {'PASS' if passed else 'FAIL'}" + ("" if registered_input else ", not on the registered input"),
     ]
+    if pooled:
+        out.append("per source, reported (the verdict is on the pool):")
+        for source, frames, e in per_source:
+            t, d = e["tensor"], e["detection"]
+            out.append(f"  {source}, {frames} frames: MAE C {t['C']['mae']:.4f} / R {t['R']['mae']:.4f}; min PSNR "
+                       f"C {t['C']['min_psnr_db']:.2f} / R {t['R']['min_psnr_db']:.2f} dB; (a) C "
+                       f"{pct(d['C']['both_ok_share'])} / R {pct(d['R']['both_ok_share'])}; (b) C "
+                       f"{pct(d['C']['frames_agreeing_share'])} / R {pct(d['R']['frames_agreeing_share'])}; (c) "
+                       f"{e['total_dev']:+.2%}; border {'yes' if e['border'] else 'NO'}: "
+                       f"{'PASS' if e['pass'] else 'FAIL'}")
+    out.append(f"verdict (A5): {'PASS' if passed else 'FAIL'}" + (f", pooled over {len(sets)} sources" if pooled else "")
+               + ("" if registered_input else ", not on the registered input"))
     # The JSON first: if writing it fails, no report with a verdict is printed.
     if args.json:
         summary = {
-            "frames": n, "registered_input": registered_input, "headers": headers, "tensor": ts, "detection": ds,
+            "frames": n, "registered_input": registered_input,
+            "headers": [h for h, _, _ in sets] if pooled else headers, "tensor": ts, "detection": ds,
             "boxes_total": totals,
             "boxes_per_class": {k: {labels[c]: v for c, v in sorted(cnt.items())} for k, cnt in per_class.items()},
             "registered": {"tensor": reg_tensor, "detection": reg_det}, "a5": a5, "pass": passed,
         }
+        if pooled:
+            summary["sources"] = [{"source": source, "frames": frames, "tensor": e["tensor"],
+                                   "detection": e["detection"], "boxes_total": e["totals"], "a5": e["a5"],
+                                   "pass": e["pass"]} for source, frames, e in per_source]
         Path(args.json).write_text(json.dumps(finite(summary), indent=1) + "\n", encoding="utf-8")
     print("\n".join(out))
     return 0 if passed else 1
@@ -426,12 +498,26 @@ def run(args):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--b", required=True, help="B's JSONL from tools/equivalence_dump")
-    ap.add_argument("--c", required=True, help="C's JSONL")
-    ap.add_argument("--r", required=True, help="R's JSONL (B with INTER_LINEAR, AMENDMENTS A5)")
-    ap.add_argument("--frames", type=int, default=1000, help="expected frame count (PROTOCOL §11: 1000)")
+    ap.add_argument("--b", help="B's JSONL from tools/equivalence_dump")
+    ap.add_argument("--c", help="C's JSONL")
+    ap.add_argument("--r", help="R's JSONL (B with INTER_LINEAR, AMENDMENTS A5)")
+    ap.add_argument("--frames", type=int, help="expected frame count (default and PROTOCOL §11: 1000)")
+    ap.add_argument("--set", nargs=2, action="append", metavar=("DIR", "FRAMES"),
+                    help="a source to pool (AMENDMENTS A8): DIR holds b.jsonl, c.jsonl and r.jsonl; "
+                         "FRAMES is its expected frame count. Give it once per source.")
     ap.add_argument("--json", help="also write the numbers to this file")
     args = ap.parse_args(argv)
+    if args.set:
+        if args.b or args.c or args.r or args.frames is not None:
+            ap.error("--set replaces --b, --c, --r and --frames")
+        try:
+            args.set = [(d, int(n)) for d, n in args.set]
+        except ValueError:
+            ap.error("FRAMES of --set must be an integer")
+    elif not (args.b and args.c and args.r):
+        ap.error("give --b, --c and --r, or --set once per source")
+    elif args.frames is None:
+        args.frames = REGISTERED_FRAMES
     try:
         return run(args)
     except (InputError, OSError, ValueError, KeyError) as e:

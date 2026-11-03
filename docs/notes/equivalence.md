@@ -138,6 +138,7 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`che
 - **Not an independent test:**
   - A5's criteria were chosen after M1-2's estimates on these same frames were known.
   - M1-4 repeats that comparison with the registered matching algorithm, on the only video with 1,000 frames.
+  - [A8](../../prereg/AMENDMENTS.md) registers a check on videos ②, ③ and ④, which A5's criteria were not chosen on ([below](#held-out-check-a8)).
 - **Per class, C is far from B for bus and stop sign:**
   - **Bus:** +14.65%, where R is −1.27%.
   - **Stop sign:** C +72.64% and R −93.40%. Stop sign flickers around the 0.25 threshold in every variant.
@@ -145,7 +146,21 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`che
 - **§11's gate for §12 is passed** under the criteria in force. What remains before `freeze-m1`:
   - calibration and the thermal check (M1-3);
   - the loop check of §3;
+  - the held-out check of A8;
   - the values of §14 not yet fixed.
+
+## Held-out check (A8)
+
+Registered in [AMENDMENTS A8](../../prereg/AMENDMENTS.md) before it runs. Not run yet.
+
+- **Inputs:** every frame of videos ②, ③ and ④: 752, 714 and 948 frames, 2,414 in all. B, C and R have not preprocessed or run inference on them before.
+- **Run:** `tools/equivalence_holdout.sh` on the board.
+  - It checks each video's SHA-256 and frame count.
+  - It runs `tools/equivalence_dump` on each video, as in M1-4.
+  - Then it runs `tools/equivalence_check.py --set` on the three videos pooled.
+- **Verdict:** A5's six conditions on the pool. Each video's own results are reported too.
+- **Whatever the result,** the comparison runs go ahead, and nothing is changed because of it. A failure goes into the report's summary, and every hypothesis verdict then carries the caveat that A5's equivalence was shown only on video ①.
+- **Registration:** Release `amend-A8`. The check starts after its `created_at`.
 
 ## Files
 
