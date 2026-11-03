@@ -25,8 +25,8 @@ case "$BITRATE" in
 esac
 out_w=${SIZE%x*}
 out_h=${SIZE#*x}
-if [ $((out_w * 9)) -ne $((out_h * 16)) ]; then
-    echo "SIZE $SIZE is not 16:9" >&2
+if [ $((out_w * 9)) -ne $((out_h * 16)) ] || [ $((out_h % 2)) -ne 0 ]; then
+    echo "SIZE $SIZE is not 16:9 with an even height (yuv420p)" >&2
     exit 2
 fi
 

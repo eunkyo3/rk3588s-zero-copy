@@ -324,7 +324,7 @@ Each entry has this form:
 ## A11 — 2026-11-03 — Exploratory M1.1 design: 4K input
 - Change: adds a design to the optional M1.1 designs of PROTOCOL §13. It is registered before `freeze-m1`, so before any comparison run. Like the others, it is not used for any verdict.
   - **Question:** B's work per frame grows with the decoded frame's pixels: it maps and resizes the frame on the CPU. C's CPU does not touch the pixels. M1's 1080p input cannot show whether C's advantage grows with the input's resolution; 4K input, with four times the pixels, can.
-  - **Inputs:** videos ①, ② and ④ ([docs/notes/preprocess.md](../docs/notes/preprocess.md#benchmark-videos)), re-encoded by `stream-server/prepare_videos.sh` with `SIZE=3840x2160 BITRATE=16M`. That is §3's encoding at four times the pixels and four times the bit rate: 3840×2160 H.264 High (level 5.1), 30 fps, no B-frames, GOP 30, 16 Mbps CBR, limited range.
+  - **Inputs:** videos ①, ② and ④ ([docs/notes/preprocess.md](../docs/notes/preprocess.md#benchmark-videos)), re-encoded by `stream-server/prepare_videos.sh` with `SIZE=3840x2160 BITRATE=16M`. That is §3's encoding at four times the pixels and four times the bit rate: 3840×2160 H.264 High, 30 fps, no B-frames, GOP 30, 16 Mbps CBR, limited range. ffprobe reports level 5.1 and progressive frames ([docs/notes/preprocess/videos_4k_ffprobe.txt](../docs/notes/preprocess/videos_4k_ffprobe.txt)).
 
     | Video | Frames | SHA-256 |
     |---|---|---|
@@ -341,34 +341,47 @@ Each entry has this form:
   - **Runs:** run kind `m1.1`, after `freeze-m1` and after the comparison runs of §12, in sessions of their own.
     - B and C at 1, 2, 4 and 8 channels, main condition (5 fps per channel), × 3 repetitions.
     - Blocks, order, cooldown gate and validity as in §9. The channel order is the shuffle of §9.1, with its seed.
-    - All four counts count as unsaturated (§6.2): 8 × 5 = 40 inferences per second, below 4661/30 ≈ 155.37, and the decode-only check below kept 8 channels in real time. So rule 3 of §9.3 applies to every run.
+    - **Unsaturated:** §6.2 is read with M1's `L` = 32, the only `L` there is, and that `L` was measured at 1080p. With it, all four counts are unsaturated: 8 × 5 = 40 inferences per second, below 4661/30 ≈ 155.37. So rule 3 of §9.3 applies to every run.
+      - That 8 channels decode in real time at 4K rests only on the decode-only check below.
+      - If B's or C's load makes the decoder drop frames, those runs are invalid. A point whose runs end invalid ×2 is reported as such. That is an accepted outcome of this design.
+    - **Loop check:** before the first 4K session, the loop check of §3 runs for each 4K video (run kind `check`, with the session tool). A video that fails it is reported. The runs go ahead, and rule 3 still applies to them.
     - The sessions make A10's checks, and check the 4K videos' SHA-256 against the table above.
   - **Reported:** the metrics of §7 for each point, B and C side by side. Next to them come M1's main-condition values at the same channel counts, which are all in M1's main set.
     - Each result is labelled exploratory. No hypothesis is tested.
-  - **Tensors, descriptive:** `tools/equivalence_dump` on the first 1,000 frames of ① at 4K (`file_source`), and `tools/equivalence_check.py` on them.
-    - Its numbers are reported: MAE, PSNR and box counts, B against C and R against C.
+  - **Tensors, descriptive:** after `freeze-m1`, run kind `m1.1`, stored under `results/m1.1/`.
+    - `tools/equivalence_dump` runs on the first 1,000 frames of ① at 4K (`file_source`), with its new run-kind argument set to `m1.1`, followed by `tools/equivalence_check.py`.
+    - Its numbers are reported: MAE, PSNR and box counts, C against B and R against B, as in A5.
     - Nothing is judged. Equivalence under A5 is not claimed at 4K.
 - Reason: the project owner chose to explore a 4K condition in a small design, labelled exploratory.
   - **Why 1, 2, 4 and 8 channels:** a decode-only functional check of the 4K set ([results/check/20261103T051010Z_4k_probe](../results/check/20261103T051010Z_4k_probe), `tools/decode_probe.sh`). It ran `--variant none` over RTSP once per count, with a 5 s warm-up and a 30 s window, at 27 °C, with the clocks fixed.
 
-    | Channels | 1–8 | 10 | 12 | 16 |
+    | Channels | 1, 2, 4, 6, 8 | 10 | 12 | 16 |
     |---|---|---|---|---|
     | Every channel at 30 fps, drift ≤ 1 s, no decoder drops | yes | yes | no | no |
-    | Largest drift (s) | 0.033 | 0 | 1.2 to 1.7 | 10.4 to 11.9 |
+    | Largest drift (s) | 0 to 0.033 | 0 | 1.2 to 1.7 | 10.4 to 11.9 |
     | Decoder drops per channel | 0 | 0 | 0 to 58 | 286 to 494 |
     | dma-buf memory (MiB) | 166 to 1,310 | 1,531 | 1,862 | 2,747 |
 
     - At 10 channels, every channel started the window behind and caught up, at up to 31.3 fps. So 10 is close to the decoder's limit, and 8 leaves room for the load that B and C add.
-    - Memory is not the limit: the decoder's dma-bufs took about 160 MiB per channel, and the DMA zone (below 4 GiB, 3.64 GiB) still had free pages at 16 channels.
-    - **Server warnings:** from 6 channels up, mediamtx logged "reader is too slow, discarding … frames" as each run started. These lines came before or early in the warm-up, never in a window. They are WAR lines, which A9's method records as warnings.
+    - Memory is not the limit. The decoder's dma-bufs took about 150 to 172 MiB per channel. The DMA zone (memory below 4 GiB) still had at least 88 MiB of free pages at every count, the least at 16 channels.
+    - **Server warnings:** from 6 channels up, mediamtx logged "reader is too slow, discarding … frames".
+      - At 6, 8 and 10 channels, these lines came before or early in the warm-up, never in a window.
+      - At 12 and 16 channels, they went on through the window, where the decoder fell behind.
+      - They are WAR lines, which A9's method records as warnings.
     - The check is not a measurement of `L` (§6.1): one run per count, short, without the cooldown gate.
     - Its memory samples got the header of the run they belong to, from the run's `summary.csv`, after the runs. The tool now writes it itself.
   - **Paths at 4K:** a functional check of B and C, so that a problem in their code would show before `freeze-m1`. A change after the freeze would invalidate comparison runs (§15).
-    - `tools/equivalence_dump` on 10 frames of ① at 4K ([results/equivalence/20261103T052617Z_4k_paths](../results/equivalence/20261103T052617Z_4k_paths)) wrote every frame, and every harness check held: equal outputs on cores 0, 1 and 2, and bound outputs equal to `rknn_outputs_get`. The band is 640×360.
+    - `tools/equivalence_dump` on 10 frames of ① at 4K wrote every frame, and every harness check held: equal outputs on cores 0, 1 and 2, and bound outputs equal to `rknn_outputs_get`. The band is 640×360.
+    - Its directory is [results/equivalence/20261103T052617Z_4k_paths](../results/equivalence/20261103T052617Z_4k_paths). This is the 4K path check, not an M1-4 or A8 run. It was moved there from `results/check/` because `equivalence_dump` wrote run kind `equivalence`. Its tensors are replaced by their SHA-256.
     - `bench_main` with B and with C, 1 channel, `file_source`, a 5 s window ([results/check/20261103T052617Z_4k_paths](../results/check/20261103T052617Z_4k_paths)): both exited normally, with no decoder or Q1 drops, and each processed all 25 sampled frames.
-    - Their CPU figures and tensors were not compared, and nothing in this design was changed after them.
+  - **Timeline:** the decode-only check ran from 05:10 to 05:16 UTC on 2026-11-03, and the path checks at 05:26. This entry was first written after them; its first commit is `84185a5`, at 05:38. No record of the design's parameters exists before that commit.
+    - The channel counts rest only on the decode-only check.
+    - The path checks' tensors were kept only as hashes and not compared. Their CPU figures are in the committed `summary.csv` files but were not examined.
   - **Tool changes:**
-    - `stream-server/prepare_videos.sh` gains `SIZE` and `BITRATE`. With the defaults, it gives ffmpeg the same arguments as before, compared on the stream PC with a stand-in for ffmpeg. The encodings cannot be compared byte for byte: two encodings with the same arguments on the stream PC gave different files.
-    - `tools/decode_probe.sh` and `stream-server/assignment_4k.txt` are new. The session tool gets the 4K set, as an option, before these runs; it is not part of the shared core.
+    - `stream-server/prepare_videos.sh` gains `SIZE` (16:9, even height) and `BITRATE`. With the defaults, it gives ffmpeg the same arguments as before, compared on the stream PC with a stand-in for ffmpeg.
+    - **Encodings are not reproducible byte for byte:** three encodings of ① at 1080p with the same arguments on the stream PC gave three different files (SHA-256 `e12b26cd…`, `98ea3c48…`, `e3dd8398…`). So the 4K files, like the 1080p ones, are identified by their SHA-256 and kept on the stream PC and the board. They are not regenerated.
+    - `tools/equivalence_dump` gains an optional run-kind argument: `equivalence` by default, or `m1.1`. Without it, the tool writes what it wrote before.
+    - `tools/decode_probe.sh` and `stream-server/assignment_4k.txt` are new.
+    - The session tool gets the 4K set, as an option, before these runs. It is not part of the shared core.
 - Affected data: none.
 - Release: none. The runs come after `freeze-m1`, whose Release is their reference time (§1).

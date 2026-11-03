@@ -12,6 +12,7 @@
 #   (env: SOURCE, default rtsp://10.88.0.1:8554/ch{n}; WARMUP, default 5; DURATION, default 30;
 #    GAP_S between runs, default 10; COOLING and AMBIENT_C as for tools/collect_env.sh)
 set -eu
+export LC_ALL=C
 
 SOURCE=${SOURCE:-rtsp://10.88.0.1:8554/ch\{n\}}
 WARMUP=${WARMUP:-5}
@@ -34,22 +35,23 @@ mkdir -p "$out"
 tools/set_perf_mode.sh >"$out/perf_mode.txt"
 tools/inventory.sh >"$out/inventory.txt"
 
+# One line per second; t_s is seconds since the sampler started. A value that cannot be read is
+# written as "na", so that a missing sample shows instead of ending the file.
 sample_memory() {
     echo "t_s,dmabuf_objects,dmabuf_bytes,dma_zone_free_pages,mem_available_kb"
-    t=0
+    t0=$(date +%s)
     while :; do
-        b=$(sed -n 's/^Total \([0-9]*\) objects, \([0-9]*\) bytes$/\1,\2/p' /sys/kernel/debug/dma_buf/bufinfo)
-        z=$(awk '/^Node 0, zone/ {zone = $4} zone == "DMA" && $1 == "pages" && $2 == "free" {print $3; exit}' /proc/zoneinfo)
-        m=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)
-        echo "$t,$b,$z,$m"
+        b=$(sed -n 's/^Total \([0-9]*\) objects, \([0-9]*\) bytes$/\1,\2/p' /sys/kernel/debug/dma_buf/bufinfo) || b=
+        z=$(awk '/^Node 0, zone/ {zone = $4} zone == "DMA" && $1 == "pages" && $2 == "free" {print $3; exit}' /proc/zoneinfo) || z=
+        m=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo) || m=
+        echo "$(($(date +%s) - t0)),${b:-na,na},${z:-na},${m:-na}"
         sleep 1
-        t=$((t + 1))
     done
 }
 
 for n in "$@"; do
     case "$n" in
-        '' | *[!0-9]* | 0) echo "decode_probe: bad channel count $n" >&2; exit 2 ;;
+        '' | *[!0-9]* | 0*) echo "decode_probe: bad channel count $n" >&2; exit 2 ;;
     esac
     tools/collect_env.sh >"$out/${n}ch.env.txt"
     sample_memory >"$out/${n}ch.mem.samples" &
