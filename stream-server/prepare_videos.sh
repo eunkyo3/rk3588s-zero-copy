@@ -5,12 +5,30 @@
 # SPS/PPS are repeated before every keyframe: over RTSP, h264_rkmpp gets them only in-band.
 # videoformat=component makes x264 write the VUI signal type, so the limited range is signalled
 # even when the source has no color tags.
-# Usage: stream-server/prepare_videos.sh <out_dir> <source>...   (env: FFMPEG, FFPROBE)
+# SIZE and BITRATE change the frame size and the CBR rate, for encodings other than M1's; the rest
+# stays the same.
+# Usage: stream-server/prepare_videos.sh <out_dir> <source>...   (env: FFMPEG, FFPROBE, SIZE, BITRATE)
 #   writes <out_dir>/<name>.mp4 and appends one line per video to <out_dir>/manifest.tsv
 set -eu
 
 FFMPEG=${FFMPEG:-ffmpeg}
 FFPROBE=${FFPROBE:-ffprobe}
+SIZE=${SIZE:-1920x1080}  # 16:9
+BITRATE=${BITRATE:-4M}
+case "$SIZE" in
+    *[!0-9x]* | *x*x* | [!1-9]* | *x | *x[!1-9]*) echo "SIZE must be <width>x<height>, not $SIZE" >&2; exit 2 ;;
+    *x*) ;;
+    *) echo "SIZE must be <width>x<height>, not $SIZE" >&2; exit 2 ;;
+esac
+case "$BITRATE" in
+    *[!0-9kM]* | [!1-9]* | *[kM]?*) echo "BITRATE must be a number with an optional k or M, not $BITRATE" >&2; exit 2 ;;
+esac
+out_w=${SIZE%x*}
+out_h=${SIZE#*x}
+if [ $((out_w * 9)) -ne $((out_h * 16)) ] || [ $((out_h % 2)) -ne 0 ]; then
+    echo "SIZE $SIZE is not 16:9 with an even height (yuv420p)" >&2
+    exit 2
+fi
 
 if [ $# -lt 2 ]; then
     echo "usage: $0 <out_dir> <source>..." >&2
@@ -64,14 +82,15 @@ for src in "$@"; do
     # $tags is unquoted on purpose: it holds option words without spaces.
     # shellcheck disable=SC2086
     "$FFMPEG" -hide_banner -loglevel error -y -i "$src" -an -sn -dn \
-        -vf "fps=30,scale=1920:1080:out_range=tv,setsar=1,format=yuv420p" \
+        -vf "fps=30,scale=$out_w:$out_h:out_range=tv,setsar=1,format=yuv420p" \
         -c:v libx264 -preset medium -profile:v high -bf 0 -g 30 -keyint_min 30 -sc_threshold 0 \
-        -b:v 4M -minrate 4M -maxrate 4M -bufsize 4M -x264-params nal-hrd=cbr:repeat-headers=1:videoformat=component \
+        -b:v "$BITRATE" -minrate "$BITRATE" -maxrate "$BITRATE" -bufsize "$BITRATE" \
+        -x264-params nal-hrd=cbr:repeat-headers=1:videoformat=component \
         -color_range tv $tags -movflags +faststart "$dst"
 
     # Check the result rather than trust the options.
     got=$(probe "$dst" codec_name),$(probe "$dst" width)x$(probe "$dst" height),$(probe "$dst" r_frame_rate),$(probe "$dst" has_b_frames),$(probe "$dst" color_range)
-    if [ "$got" != "h264,1920x1080,30/1,0,tv" ]; then
+    if [ "$got" != "h264,$SIZE,30/1,0,tv" ]; then
         echo "$dst: unexpected encoding $got" >&2
         exit 1
     fi

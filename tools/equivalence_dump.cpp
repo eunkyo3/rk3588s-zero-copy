@@ -4,6 +4,8 @@
 // A5. tools/equivalence_check.py decides.
 //
 // Usage: equivalence_dump <video.mp4> <model.rknn> <out_dir> [frames=1000] [freeze_commit=none]
+//                         [run_kind=equivalence]
+//   run_kind goes into the header: "m1.1" for the 4K tensors of AMENDMENTS A11
 //   <out_dir>/{c,b,r}.jsonl  a {"header": ...} line (PROTOCOL §1 fields, letterbox band, labels),
 //                            then one line per frame: {"frame", "pts", "detections"}, each detection
 //                            [class, score, x1, y1, x2, y2] in model input coordinates
@@ -100,11 +102,14 @@ int main(int argc, char** argv) {
     pin_current_thread({4, 5, 6, 7});
     cv::setNumThreads(1);  // PROTOCOL §8
     if (argc < 4)
-        die("usage: equivalence_dump <video.mp4> <model.rknn> <out_dir> [frames=1000] [freeze_commit=none]");
+        die("usage: equivalence_dump <video.mp4> <model.rknn> <out_dir> [frames=1000] [freeze_commit=none] "
+            "[run_kind=equivalence]");
     const std::string video = argv[1], model = argv[2], out = argv[3];
     const int max_frames = argc > 4 ? std::atoi(argv[4]) : 1000;
     const std::string freeze = argc > 5 ? argv[5] : "none";
+    const std::string run_kind = argc > 6 ? argv[6] : "equivalence";
     CHECK(max_frames >= 1, "frames must be at least 1");
+    CHECK(run_kind == "equivalence" || run_kind == "m1.1", "run_kind must be equivalence or m1.1");
     std::filesystem::create_directories(out);
     std::string args_json = "[";
     for (int i = 1; i < argc; i++)
@@ -116,7 +121,7 @@ int main(int argc, char** argv) {
         {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
         {"prereg_v1_commit", kPreregCommit},
         {"freeze_m1_commit", freeze},
-        {"run_kind", "equivalence"},
+        {"run_kind", run_kind},
         {"model_sha256", command_output("sha256sum '" + model + "' | cut -d' ' -f1")},
         {"decoder", std::string("h264_rkmpp, ffmpeg ") + av_version_info()},
         {"channels", "1"},

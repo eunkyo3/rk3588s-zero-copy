@@ -1,0 +1,56 @@
+os: Ubuntu 24.04.4 LTS
+kernel: 6.1.141 #16 SMP Thu Dec  4 14:51:28 CST 2025
+rknpu_driver: v0.9.8
+rga_driver: RGA multicore Device Driver: v1.3.10
+ffmpeg: ffmpeg version 8b4385e9 Copyright (c) 2000-2026 the FFmpeg developers (/opt/ffmpeg-rockchip/bin/ffmpeg)
+ffmpeg_built_with: gcc 13 (Ubuntu 13.3.0-6ubuntu2~24.04.1)
+ffmpeg_configuration: --prefix=/opt/ffmpeg-rockchip --enable-shared --disable-static --disable-doc --enable-version3 --enable-libdrm --enable-rkmpp --enable-rkrga --extra-ldflags='-Wl,-rpath,/opt/ffmpeg-rockchip/lib'
+h264_rkmpp_default_deint: true
+h264_rkmpp_default_afbc: off
+h264_rkmpp_default_fast_parse: true
+h264_rkmpp_default_buf_mode: half
+librknnrt: 2.3.2 (429f97ae6b@2025-04-09T09:09:27)
+librga: 1.10.3_[2]
+rknn_header rknn_api.h: c48e11a6f41b451a5fd1e4ad774ea60252d3d94f78bee9b21ea3d21b21deba9a
+rknn_header rknn_custom_op.h: af5983da0ca244ca31dc3162aa683322b0285531196c7a770f29cd2e3b8ccaa6
+rknn_header rknn_matmul_api.h: aaadd9a7118de30a06b222996b6731db77095d00f5931a7a98c83a67f14a4d42
+compiler: c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+linker: GNU ld (GNU Binutils for Ubuntu) 2.42
+cmake: cmake version 3.28.3
+make: GNU Make 4.3
+cmake_build_type: Release
+cxx_flags: -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls -pthread
+cxx_includes: -I/home/pi/rk3588s-zero-copy/src -I/opt/rknpu2/include -isystem /opt/ffmpeg-rockchip/include -isystem /usr/include/rga -isystem /usr/include/libdrm -isystem /usr/include/opencv4
+link_bench_main: /usr/bin/c++ -O3 -DNDEBUG -pthread CMakeFiles/bench_main.dir/src/app/bench_main.cpp.o -o bench_main  -Wl,-rpath,/lib:/opt/ffmpeg-rockchip/lib libcore.a /opt/ffmpeg-rockchip/lib/libavformat.so /opt/ffmpeg-rockchip/lib/libavcodec.so /opt/ffmpeg-rockchip/lib/libavutil.so /usr/lib/aarch64-linux-gnu/librga.so /usr/lib/aarch64-linux-gnu/libdrm.so /usr/lib/aarch64-linux-gnu/libopencv_imgcodecs.so.4.6.0 /usr/lib/aarch64-linux-gnu/libopencv_imgproc.so.4.6.0 /usr/lib/aarch64-linux-gnu/libopencv_core.so.4.6.0 /usr/lib/librknnrt.so -lpthread
+model: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee models/yolov8n_i8.rknn
+lib /opt/ffmpeg-rockchip/lib/libavcodec.so.61.19.101: 665ff2608faa3b289696ad87b568f5a37b35a60ebdaf72485ed0463e537adc94 (no package)
+lib /opt/ffmpeg-rockchip/lib/libavformat.so.61.7.103: f6e077abbfa7945c24e8fb13442e28a9f35647af6f55e11e4a22c203c852c2d8 (no package)
+lib /opt/ffmpeg-rockchip/lib/libavutil.so.59.39.100: 3b176672c82a5c51369a68fe5adf7b9ef434060078b7d9ff2320d7bec0cb713a (no package)
+lib /opt/ffmpeg-rockchip/lib/libswresample.so.5.3.100: 31d5d877337fd7bfa709ce93af2d5e5d11b204278d05d590d4f323d798c47722 (no package)
+lib /usr/lib/aarch64-linux-gnu/blas/libblas.so.3.12.0: 665a55ae42396049d8bca7db347d54ad07c068403da6029bc6776afda7e19368 (libblas3 3.12.0-3build1.1)
+lib /usr/lib/aarch64-linux-gnu/lapack/liblapack.so.3.12.0: dd0411811064e3e6663223d0289feee8b39c543a7e93849c1ea538988e783fc1 (liblapack3 3.12.0-3build1.1)
+lib /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1: 390027e5f45f236bd1838bc54bf464c5ff01d260ab9f8b415ea8276641bce505 (libc6 2.39-0ubuntu8.9)
+lib /usr/lib/aarch64-linux-gnu/libGLX.so.0.0.0: 3c0628679c6db1dc2fd68597e7101256474b91bbc540e7d7155a7849cfe494d4 (libglx0 1.7.0-1build1)
+lib /usr/lib/aarch64-linux-gnu/libGLdispatch.so.0.0.0: e36407bd007c5562f469d971b2ca728b52a5ba7bc8e31da4b504dae7331a95fc (libglvnd0 1.7.0-1build1)
+lib /usr/lib/aarch64-linux-gnu/libX11.so.6.4.0: 8e4b164809fe69ddfa317340c23cddc7b66963413ba2b224bec5da79496c0c12 (libx11-6 2:1.8.7-1build1)
+lib /usr/lib/aarch64-linux-gnu/libXau.so.6.0.0: 6fff1a9d4b5bc4d91df752b12600f8aedcd8ac33ea01a48295326675243d68c0 (libxau6 1:1.0.9-1build6)
+lib /usr/lib/aarch64-linux-gnu/libXdmcp.so.6.0.0: 84b6623297efd8eb43f98af678acbb68ca31de7617dab042a1dcc7c6feb8a2ea (libxdmcp6 1:1.1.3-0ubuntu6)
+lib /usr/lib/aarch64-linux-gnu/libbsd.so.0.12.1: 6c5348ee0e1777f13e148b7492fa311b6f65adb0dc21a001a67ebc18948e6b3e (libbsd0 0.12.1-1build1.1)
+lib /usr/lib/aarch64-linux-gnu/libc.so.6: 0f1905dc27dbc6715875c70527bc8da846a10084c9c483e9d8ff76dce8d69d0e (libc6 2.39-0ubuntu8.9)
+lib /usr/lib/aarch64-linux-gnu/libdl.so.2: 1c16b2692a155191c97d7fdc5ce937d37c242435f05745046a794a9832b16af4 (libc6 2.39-0ubuntu8.9)
+lib /usr/lib/aarch64-linux-gnu/libdrm.so.2.125.0: efa8992c21c657acb37e3fa63653161b53a9d73a0828851c9b725fa5e35cadf3 (libdrm2 2.4.125-1ubuntu0.1~24.04.2)
+lib /usr/lib/aarch64-linux-gnu/libgcc_s.so.1: f2d3ad2bf0b61f6bc944cc37d7b6ab7f88d2582b41ff989ca164803f56cc5f20 (libgcc-s1 14.2.0-4ubuntu2~24.04.1)
+lib /usr/lib/aarch64-linux-gnu/libgfortran.so.5.0.0: 91ee38590e45e4702ee8d275c13e556384cf3ba3b1ac0a163921c5dd036a462a (libgfortran5 14.2.0-4ubuntu2~24.04.1)
+lib /usr/lib/aarch64-linux-gnu/liblzma.so.5.4.5: 47ea0f43683ef829cda43bfe1862c1b06f085fbd813bb58d2d142477f5380139 (liblzma5 5.6.1+really5.4.5-1ubuntu0.3)
+lib /usr/lib/aarch64-linux-gnu/libm.so.6: 5e0391562de36de323fb9cb0f2c1b6bd6d034c840b1dac018499f5fe4ded1b4a (libc6 2.39-0ubuntu8.9)
+lib /usr/lib/aarch64-linux-gnu/libmd.so.0.1.0: 30d117046ce9405745e0d0d4722cff121f532913180bbb9425b38d076319ac08 (libmd0 1.1.0-2build1.1)
+lib /usr/lib/aarch64-linux-gnu/libopencv_core.so.4.6.0: 270377fc59116c2045fae2891c03a5abdeabb5c58982afd7183bc715cdeca6b3 (libopencv-core406t64 4.6.0+dfsg-13.1ubuntu1)
+lib /usr/lib/aarch64-linux-gnu/libopencv_imgproc.so.4.6.0: 9f2b345b4b666bab4ce3d6db44fd5ef312a49f98d9233720f501460e64d9ebef (libopencv-imgproc406t64 4.6.0+dfsg-13.1ubuntu1)
+lib /usr/lib/aarch64-linux-gnu/libpthread.so.0: 6f1ab9e7d7de142dc5e2feaf6d19faceff0a0f40d5e225c922899f5362b8c353 (libc6 2.39-0ubuntu8.9)
+lib /usr/lib/aarch64-linux-gnu/librga.so.2.1.0: 8d19fcf0c42b56ea10101bb08e85d717d632b35b3d61cab346bd2cefac27d5c0 (librga2 2.2.0-1)
+lib /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.0: 3cd88c2ba997bc38e4afa693c496b46ca388bf0e7c0870fd856e2587073da203 (librockchip-mpp1 20251211-1)
+lib /usr/lib/aarch64-linux-gnu/libstdc++.so.6.0.33: 6e3112d35cfc86db7ee85b27e1746f67408e2837ff8628b46386c3eabd5682a4 (libstdc++6 14.2.0-4ubuntu2~24.04.1)
+lib /usr/lib/aarch64-linux-gnu/libtbb.so.12.11: 9605535aaa0a366282a5fca6af311509837ec36864615568f56b13a368b681a6 (libtbb12 2021.11.0-2ubuntu2)
+lib /usr/lib/aarch64-linux-gnu/libxcb.so.1.1.0: cc570b1aff9e2ffe32c1add5aa23cb65b041a3615810566bb32efcc0c3f83f28 (libxcb1 1.15-1ubuntu2)
+lib /usr/lib/aarch64-linux-gnu/libz.so.1.3: 170380b4e7ab28ec86eb090b48df90f84089392cb72fecd5067e5b7a4dc5239f (zlib1g 1:1.3.dfsg-3.1ubuntu2.1)
+lib /usr/lib/librknnrt.so: d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8 (no package)

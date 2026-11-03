@@ -18,6 +18,8 @@ stream-server/prepare_videos.sh <out_dir> <source>...
 
 Re-encodes each 16:9 source to the benchmark encoding: 1920×1080 H.264 High, 30 fps, no B-frames, GOP 30, 4 Mbps CBR, limited range, no audio. SPS and PPS are repeated before every keyframe (`repeat-headers=1`). Over RTSP, the board's `h264_rkmpp` decoder only gets them in-band; without them it returns no frames at all. It checks the result and appends a line to `<out_dir>/manifest.tsv`. The line records the output and source SHA-256 and the source's size, frame rate, pixel format, color matrix, primaries, transfer and range. The color matrix is kept as it is (PROTOCOL §8).
 
+`SIZE` and `BITRATE` (defaults `1920x1080` and `4M`) change the frame size, which must be 16:9, and the CBR rate, for encodings other than M1's. Everything else stays the same. With the defaults, the script gives ffmpeg the same arguments as before these variables existed.
+
 The benchmark videos, with their sources, licenses and SHA-256, are listed in [docs/notes/preprocess.md](../docs/notes/preprocess.md#benchmark-videos).
 
 ## Running
