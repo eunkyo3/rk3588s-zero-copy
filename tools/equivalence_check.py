@@ -26,10 +26,11 @@ post-processing returned, over all frames and classes.
 The registered input is 1,000 frames and a 640x360 band (§11); other inputs are checked the same
 way, and the report says that they are not the registered input.
 
-Pooled (the held-out check of AMENDMENTS A8): with --set DIR FRAMES once per source, DIR holding
-b.jsonl, c.jsonl and r.jsonl from one tools/equivalence_dump run, the frames of all sources are
-taken together in the order given, and the criteria apply to that pool. Each source's own results
-are reported as well; they do not set the exit code.
+Pooled (the held-out check of AMENDMENTS A8): with --set DIR FRAMES once per source, two or more,
+DIR holding b.jsonl, c.jsonl and r.jsonl from one tools/equivalence_dump run, the frames of all
+sources are taken together in the order given, and the criteria apply to that pool. Each source's own
+results are reported as well; they do not set the exit code. The JSON then has a list of headers, one
+per source, and a "sources" list.
 
 Exit code: 0 if the criteria in force hold, 1 if they do not, 2 if the inputs are inconsistent or the
 check could not run.
@@ -314,11 +315,17 @@ def check_inputs(headers, frames, expected):
 
 
 def check_sets(headers):
-    """Sources pooled together share the model, the code and the geometry, and differ in source."""
-    for key in ("model_sha256", "code_commit", "amendment", "model_w", "model_h", "band", "labels"):
+    """Sources pooled together share the model, decoder, code, registration, preprocessing and geometry,
+    and differ in source."""
+    for key in ("model_sha256", "decoder", "code_commit", "amendment", "prereg_v1_commit", "freeze_m1_commit",
+                "model_w", "model_h", "band", "labels"):
         values = {json.dumps(h["B"].get(key)) for h in headers}
         if len(values) != 1:
             raise InputError(f"header field {key} differs between the sources: {sorted(values)}")
+    for k in ("B", "C", "R"):
+        values = {json.dumps(h[k].get("preprocessing")) for h in headers}
+        if len(values) != 1:
+            raise InputError(f"{k}'s preprocessing differs between the sources: {sorted(values)}")
     sources = [h["B"].get("source") for h in headers]
     if len(set(sources)) != len(sources):
         raise InputError(f"a source is given twice: {sources}")
@@ -510,6 +517,8 @@ def main(argv=None):
     if args.set:
         if args.b or args.c or args.r or args.frames is not None:
             ap.error("--set replaces --b, --c, --r and --frames")
+        if len(args.set) < 2:
+            ap.error("--set pools sources: give it at least twice (one source: --b, --c, --r)")
         try:
             args.set = [(d, int(n)) for d, n in args.set]
         except ValueError:

@@ -23,11 +23,15 @@ fail() {
     exit 3
 }
 
+case $OUT in
+*[[:space:]*?[]*) fail "out_dir must not contain spaces or glob characters: $OUT" ;;
+esac
 [ ! -e "$OUT" ] || fail "$OUT exists"
 # Check every input before the first dump.
 set -- $VIDEOS
 while [ $# -ge 3 ]; do
     video=$MEDIA/$1.mp4
+    [ -f "$video" ] || fail "$video: not found"
     echo "$3  $video" | sha256sum -c --status - || fail "$video: SHA-256 is not $3"
     n=$("$FFPROBE" -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets \
         -of csv=p=0 "$video" 2>/dev/null) || fail "$FFPROBE failed on $video"
@@ -53,13 +57,14 @@ while [ $# -ge 3 ]; do
     sets="$sets --set $dir $2"
     shift 3
 done
-tools/collect_env.sh >"$OUT/env_end.txt" || fail "collect_env.sh failed at the end"
 status=0
-# $sets is split on purpose: --set DIR FRAMES per video; the paths have no spaces.
+# $sets is split on purpose: --set DIR FRAMES per video; out_dir has no spaces or glob characters.
 python3 tools/equivalence_check.py $sets --json "$OUT/check.json" >"$OUT/check.txt" 2>&1 || status=$?
 cat "$OUT/check.txt"
 case $status in
 0 | 1 | 2) ;;
 *) status=2 ;; # python3 missing, or a signal: the check did not run
 esac
+# After the check, so that a failure here cannot keep the check from running.
+tools/collect_env.sh >"$OUT/env_end.txt" || echo "equivalence_holdout.sh: collect_env.sh failed at the end" >&2
 exit $status

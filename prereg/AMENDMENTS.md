@@ -178,12 +178,17 @@ Each entry has this form:
     | ③ `pexels_29969146` | 714 | `592b6847e2e63e07393af6f4a04b691be438c23eba2c73f79b021dca877c2772` |
     | ④ `pixabay_180386` | 948 | `2538f54d36e0d763ec3e13f9e606bf01e2d142fff82181eb156f792576b0555b` |
 
-    According to the repository's records, B, C and R have not preprocessed or run inference on these videos. The only runs on them decoded only (`--variant none`: the RTSP check of 2026-11-02 and the M1-3 runs of `L` and the loop check).
+    According to the repository's records, B, C and R have not preprocessed or run inference on these videos before this entry. The only earlier run on them is the RTSP check of 2026-11-02, which decoded only (`--variant none`).
+    The M1-3 sessions running while this entry is written use them too. The `L` search and the loop check decode only. The thermal check runs B alone: it records B's box count per frame, and no tensors. Nothing compares those runs with C or R.
   - **Procedure:** `tools/equivalence_holdout.sh` on the board.
     - It first checks each video's SHA-256 and frame count against the table, and stops if one differs.
     - For each video, `tools/equivalence_dump` runs C, B and R on every frame, as in M1-4: the same decoded frame for all three, NPU core 0, with the harness checks of M1-4.
     - Then `tools/equivalence_check.py --set` pools the three videos, in the order ②, ③, ④.
-    - The B, C and R code paths, the model, post-processing, `tools/equivalence_dump` and the check are those of the commit that adds this entry.
+    - **Code:** a build that is not `-dirty`, whose latest amendment is A8, with no change under `src/`, `tools/`, `models/` or `CMakeLists.txt` since the merge of the pull request that adds this entry. So the check runs before any later amendment is merged.
+  - **Which run decides:**
+    - Every run is kept and reported. The first run whose check completes (exit 0 or 1) decides.
+    - A run that stops earlier (exit 2 or 3, for example when a harness check fails) decides nothing. Its cause is recorded, and the check is run again.
+    - If B's, C's or R's code changes before `freeze-m1`, M1-4 is redone (§15), and so is this check. The report then gives both results.
   - **Verdict:** A5's six conditions, unchanged, on the 2,414 pooled frames:
     - the border check of B and C;
     - C's MAE at most R's, and C's minimum per-frame PSNR at least R's;
@@ -191,10 +196,10 @@ Each entry has this form:
     - (c) C's total box count within 2% of B's.
   - **Reported, not verdicts:** each video's own results under A5, the registered criteria of §11.1 and §11.2 on the pool, and the box counts per class.
   - **What follows from the result:**
-    - The result is reported whatever it is. A pass is reported as A5's equivalence holding on videos its criteria were not chosen on.
+    - The result is reported whatever it is. A pass is reported as A5's equivalence holding on videos its criteria were not chosen on, together with any video that fails on its own.
     - A failure goes into the report's summary. Every hypothesis verdict then carries this caveat: B and C were shown equivalent under A5 only on video ①, the video A5's criteria were chosen on.
     - Either way, the comparison runs of §12 go ahead. §11.3 does not apply, because M1-4's verdict under A5, on its own input, stands.
-    - No criterion, setting or implementation changes because of this check's result. A change made later for another reason needs its own amendment, and the report states both.
+    - No criterion, setting or implementation changes because of this check's result. A change made later for another reason needs its own amendment.
   - **Registration:** although this entry comes before `freeze-m1`, it gets a Release, `amend-A8`, created after the pull request that adds it is merged. Its `created_at` is the reference time (§1).
     - The check's results name A8 as the latest amendment, so `tools/check_prereg_order.py` checks that they start after that time.
     - The check runs before `freeze-m1`.

@@ -153,14 +153,15 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`che
 
 Registered in [AMENDMENTS A8](../../prereg/AMENDMENTS.md) before it runs. Not run yet.
 
-- **Inputs:** every frame of videos ②, ③ and ④: 752, 714 and 948 frames, 2,414 in all. B, C and R have not preprocessed or run inference on them before.
+- **Inputs:** every frame of videos ②, ③ and ④: 752, 714 and 948 frames, 2,414 in all. Before A8, B, C and R had not preprocessed or run inference on them.
 - **Run:** `tools/equivalence_holdout.sh` on the board.
   - It checks each video's SHA-256 and frame count.
   - It runs `tools/equivalence_dump` on each video, as in M1-4.
   - Then it runs `tools/equivalence_check.py --set` on the three videos pooled.
 - **Verdict:** A5's six conditions on the pool. Each video's own results are reported too.
 - **Whatever the result,** the comparison runs go ahead, and nothing is changed because of it. A failure goes into the report's summary, and every hypothesis verdict then carries the caveat that A5's equivalence was shown only on video ①.
-- **Registration:** Release `amend-A8`. The check starts after its `created_at`.
+- **Registration:** Release `amend-A8`. The check starts after its `created_at`, on a build whose latest amendment is A8.
+- **Files:** `env.txt`, `env_end.txt`, `check.txt` and `check.json` at the top, and per video a directory with the files of an M1-4 run (below).
 
 ## Files
 
