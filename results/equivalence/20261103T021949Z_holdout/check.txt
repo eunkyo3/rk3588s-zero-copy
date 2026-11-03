@@ -1,0 +1,54 @@
+inputs: 2414 frames pooled over 3 sources (not the registered input: 1000 frames, a 640x360 band)
+  /home/pi/media/bench/pexels_29130409.mp4: 752 frames
+  /home/pi/media/bench/pexels_29969146.mp4: 714 frames
+  /home/pi/media/bench/pixabay_180386.mp4: 948 frames
+  model 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee, code 07fe535eefff5d13b77c0ac38ee4e03aa257cac7, amendment A8
+  B: INTER_AREA, luma box moved by one pixel at 1/3 scale; C: RGA3, im_opt_t.interp 0; R: INTER_LINEAR
+tensor level, band 640x360 at (0, 140):
+  C vs B: MAE 2.7360, min PSNR 30.24 dB (frame 84 of /home/pi/media/bench/pexels_29969146.mp4), median PSNR 32.70 dB, mean difference RGB -0.665, -0.642, -0.529
+  R vs B: MAE 5.8061, min PSNR 22.60 dB (frame 91 of /home/pi/media/bench/pexels_29969146.mp4), median PSNR 25.44 dB, mean difference RGB -0.060, -0.047, -0.020
+  border 114: B yes, C yes, R yes
+detection level, Hungarian per class, pairs at IoU >= 0.5:
+  C vs B: 21669 pairs; IoU >= 0.95 74.34%, |dconf| <= 0.02 55.08%, both 44.58%; min IoU 0.504, max |dconf| 0.467; frames agreeing 1365/2414 (56.55%)
+  R vs B: 20604 pairs; IoU >= 0.95 52.94%, |dconf| <= 0.02 40.10%, both 25.78%; min IoU 0.500, max |dconf| 0.484; frames agreeing 792/2414 (32.81%)
+  IoU of matched pairs:        C vs B    R vs B
+    [0.50, 0.80)       347    1.60%     948    4.60%
+    [0.80, 0.90)      1350    6.23%    3024   14.68%
+    [0.90, 0.95)      3864   17.83%    5725   27.79%
+    [0.95, 0.98)      8689   40.10%    7519   36.49%
+    [0.98, 0.99)      4897   22.60%    2535   12.30%
+    [0.99, 1.00]      2522   11.64%     853    4.14%
+  |dconf| of matched pairs:        C vs B    R vs B
+    0                 1725    7.96%    1093    5.30%
+    (0, 0.01]         5532   25.53%    3718   18.05%
+    (0.01, 0.02]      4679   21.59%    3452   16.75%
+    (0.02, 0.05]      6123   28.26%    5472   26.56%
+    (0.05, 0.10]      2883   13.30%    4212   20.44%
+    (0.10, 0.20]       679    3.13%    2253   10.93%
+    > 0.20              48    0.22%     404    1.96%
+boxes, every box post-processing returned (classes with at least 100 B boxes):
+  car            B  10116  C  10093 (  -0.23%)  R   9982 (  -1.32%)
+  person         B   7053  C   7032 (  -0.30%)  R   7006 (  -0.67%)
+  traffic light  B   1335  C   1401 (  +4.94%)  R   1371 (  +2.70%)
+  bus            B   1235  C   1244 (  +0.73%)  R   1249 (  +1.13%)
+  potted plant   B    953  C    953 (  +0.00%)  R    809 ( -15.11%)
+  clock          B    948  C    948 (  +0.00%)  R    943 (  -0.53%)
+  truck          B    656  C    660 (  +0.61%)  R    715 (  +8.99%)
+  backpack       B    270  C    275 (  +1.85%)  R    265 (  -1.85%)
+  handbag        B    186  C    187 (  +0.54%)  R    164 ( -11.83%)
+  all classes    B  22856  C  22891 (  +0.15%)  R  22583 (  -1.19%)
+registered criteria (PROTOCOL §11.1, §11.2), reported:
+  tensor: MAE 2.7360 <= 2 FAIL, min PSNR 30.24 dB >= 35 FAIL, border pass: FAIL
+  detection: all 21669 pairs within both thresholds (9659 are) FAIL, frames agreeing 56.55% >= 99% FAIL: FAIL
+criteria in force (AMENDMENTS A5), which set the exit code:
+  border 114 in every B and C tensor: pass
+  tensor MAE, C 2.7360 <= R 5.8061: pass
+  tensor min PSNR, C 30.24 dB >= R 22.60 dB: pass
+  (a) pairs within both thresholds, C 44.58% >= R 25.78%: pass
+  (b) frames agreeing, C 56.55% >= R 32.81%: pass
+  (c) total boxes, |22891 - 22856| / 22856 = 0.15% <= 2%: pass
+per source, reported (the verdict is on the pool):
+  /home/pi/media/bench/pexels_29130409.mp4, 752 frames: MAE C 2.8268 / R 5.9535; min PSNR C 33.65 / R 26.87 dB; (a) C 45.74% / R 26.31%; (b) C 47.47% / R 24.20%; (c) +0.36%; border yes: PASS
+  /home/pi/media/bench/pexels_29969146.mp4, 714 frames: MAE C 3.0265 / R 6.5890; min PSNR C 30.24 / R 22.60 dB; (a) C 48.49% / R 30.08%; (b) C 39.64% / R 18.35%; (c) +0.07%; border yes: PASS
+  /home/pi/media/bench/pixabay_180386.mp4, 948 frames: MAE C 2.4451 / R 5.0996; min PSNR C 32.17 / R 24.79 dB; (a) C 25.92% / R 7.11%; (b) C 76.48% / R 50.53%; (c) -0.41%; border yes: PASS
+verdict (A5): PASS, pooled over 3 sources, not on the registered input

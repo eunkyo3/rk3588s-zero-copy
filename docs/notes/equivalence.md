@@ -138,7 +138,7 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`che
 - **Not an independent test:**
   - A5's criteria were chosen after M1-2's estimates on these same frames were known.
   - M1-4 repeats that comparison with the registered matching algorithm, on the only video with 1,000 frames.
-  - [A8](../../prereg/AMENDMENTS.md) registers a check on videos ②, ③ and ④, which A5's criteria were not chosen on ([below](#held-out-check-a8)).
+  - [A8](../../prereg/AMENDMENTS.md) registers a check on videos ②, ③ and ④, which A5's criteria were not chosen on. It passed ([below](#held-out-check-a8)).
 - **Per class, C is far from B for bus and stop sign:**
   - **Bus:** +14.65%, where R is −1.27%.
   - **Stop sign:** C +72.64% and R −93.40%. Stop sign flickers around the 0.25 threshold in every variant.
@@ -146,12 +146,12 @@ Boxes per class, for the 8 classes with at least 100 boxes in B, against B (`che
 - **§11's gate for §12 is passed** under the criteria in force. What remains before `freeze-m1`:
   - calibration and the thermal check (M1-3);
   - the loop check of §3;
-  - the held-out check of A8;
+  - the held-out check of A8, done since (below);
   - the values of §14 not yet fixed.
 
 ## Held-out check (A8)
 
-Registered in [AMENDMENTS A8](../../prereg/AMENDMENTS.md) before it runs. Not run yet.
+Registered in [AMENDMENTS A8](../../prereg/AMENDMENTS.md) before it ran. **Under A5, B and C are equivalent on the held-out videos too:** all six conditions pass on the pool, and on each video.
 
 - **Inputs:** every frame of videos ②, ③ and ④: 752, 714 and 948 frames, 2,414 in all. Before A8, B, C and R had not preprocessed or run inference on them.
 - **Run:** `tools/equivalence_holdout.sh` on the board.
@@ -163,12 +163,45 @@ Registered in [AMENDMENTS A8](../../prereg/AMENDMENTS.md) before it runs. Not ru
 - **Registration:** Release `amend-A8`. The check starts after its `created_at`, on a build whose latest amendment is A8.
 - **Files:** `env.txt`, `env_end.txt`, `check.txt` and `check.json` at the top, and per video a directory with the files of an M1-4 run (below).
 
+### Results
+
+- **Run:** on the board, 2026-11-03T02:19:49Z, code `07fe535` (the merge of PR #12), amendment A8. That is after Release `amend-A8`, whose `created_at` is 01:38:47Z.
+  - The harness checks held for C, B and R on every video.
+  - Before it, the dump's end-of-file path, which M1-4 never reached, was tried on all 1,186 frames of video ①: exit 0. That output was not kept.
+- **Output:** [results/equivalence/20261103T021949Z_holdout/](../../results/equivalence/20261103T021949Z_holdout/). The check's output is [check.txt](../../results/equivalence/20261103T021949Z_holdout/check.txt).
+
+On the pool of 2,414 frames:
+
+| | C vs B | R vs B | A5 |
+|---|---|---|---|
+| Tensor MAE | 2.736 | 5.806 | pass |
+| Minimum PSNR | 30.24 dB | 22.60 dB | pass |
+| (a) Pairs within both thresholds | 44.58% (9,659 of 21,669) | 25.78% (5,312 of 20,604) | pass |
+| (b) Frames agreeing | 56.55% | 32.81% | pass |
+| (c) All boxes, against B | +0.15% | −1.19% | pass (≤ 2%) |
+| Border 114, B and C | yes | | pass |
+
+Each video on its own, reported:
+
+| Video | Frames | MAE, C / R | Minimum PSNR, C / R | (a), C / R | (b), C / R | (c) | A5 |
+|---|---|---|---|---|---|---|---|
+| ② | 752 | 2.827 / 5.954 | 33.65 / 26.87 dB | 45.74% / 26.31% | 47.47% / 24.20% | +0.36% | pass |
+| ③ | 714 | 3.027 / 6.589 | 30.24 / 22.60 dB | 48.49% / 30.08% | 39.64% / 18.35% | +0.07% | pass |
+| ④ | 948 | 2.445 / 5.100 | 32.17 / 24.79 dB | 25.92% / 7.11% | 76.48% / 50.53% | −0.41% | pass |
+
+- **Verdict:** under A5, B and C are equivalent on the held-out videos. All six conditions pass on the pool, and each video passes on its own too. As A8 fixed in advance, no caveat goes on the hypothesis verdicts.
+- **The registered criteria fail,** as on video ①: MAE 2.74 > 2; minimum PSNR 30.24 dB < 35 dB; 9,659 of 21,669 pairs within both thresholds, where all are required; 56.55% of frames agreeing, where 99% are required.
+- **Against video ①:**
+  - C's MAE is 2.74 here and 2.41 there; R's is 5.81 and 4.54. C stays closer to B than R does, by a wider margin: its MAE is 47% of R's here and 53% there.
+  - Per class, among classes with at least 100 B boxes, C's largest deviation is traffic light, +4.94% (R +2.70%). Bus, +14.65% on video ①, is +0.73% here. R deviates more for potted plant (−15.11%) and handbag (−11.83%).
+- **Tensors:** 2,414 per variant, about 2.97 GB each. Only their SHA-256 hashes are kept (`tensors.sha256` in each video's directory). M1-4's three runs gave the same bytes.
+
 ## Files
 
 | File | Content |
 |---|---|
 | `b.jsonl`, `c.jsonl`, `r.jsonl` | A header line with the PROTOCOL §1 fields, then each frame's index, pts and detections `[class, score, x1, y1, x2, y2]` |
-| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each). The deciding run's tensors are in the release [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z), compressed with xz; the other two runs' were identical and are not kept. |
+| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each; in the held-out check, each video's frame count × 640 × 640 × 3). The deciding run's tensors are in the release [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z), compressed with xz; the other two runs' were identical and are not kept. |
 | `env.txt` | `collect_env.sh` before the run |
 | `env.json` | Arguments, library versions, each backend's description, the harness checks |
 | `dump.txt`, `dump.log` | The dump's output and its stderr |
