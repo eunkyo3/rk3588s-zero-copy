@@ -9,6 +9,12 @@ Subcommands:
   thermal      the thermal check of §12: B at the largest auxiliary count (5, A7) and at the largest
                main count (L), 140 s each. It passes when no clock sample falls below its fixed value
                and every temperature stays below its zone's trip_point_0_temp.
+  sweep        a sweep of §12 (M1-6), run kind comparison or reference, with the method of
+               docs/notes/comparison.md: main (B and C at the main set), aux (B and C at the
+               auxiliary set) or reference (A at the A set). Channel counts in the order of §9.1's
+               seeded shuffle; per count, 3 repetitions, B->C, C->B, B->C. A sweep spans as many
+               sessions as it needs: each session reads the earlier sessions' runs.tsv of its sweep,
+               first redoes the repetitions they left incomplete (§9.1, §9.3), then goes on.
 
 Each session:
   - first records the board's software, build and model (tools/inventory.sh), and stops if they differ
@@ -20,7 +26,8 @@ Each session:
     under systemd-inhibit so the PC does not sleep, and stops it at the end, keeping its logs; records
     the PC's stream-server commit, the hashes of its configuration and the clock offset to the PC;
   - idles first for the soc-thermal baseline, then puts every run behind the cooldown gate (§9.2), and
-    stops if 30 minutes pass without a run (§2);
+    stops if 30 minutes pass without a run (§2); a sweep also takes the idle baseline of system CPU
+    (§7.2) over the idle period's last 120 s;
   - records the environment before every run (§9.1), and the server's log lines and publisher output
     with every run (§3);
   - judges every run by §9.3 rules 1 to 4 where they apply, and repeats an invalid run once.
@@ -31,6 +38,8 @@ Which rules apply:
   - loop-check runs: rules 1, 2 and 4. Zero decoder drops is the check's criterion, not rule 3.
   - thermal runs: rules 2, 3 (both runs are at unsaturated conditions when L <= 31) and 4. Rule 1 is
     the check's own criterion, so it does not make a thermal run invalid.
+  - sweep runs: rules 1, 2 and 4, and rule 3 at unsaturated conditions (§6.2 with L = 32, A9): every
+    count but 32 at the main condition, every auxiliary and every A count.
 External failures (§9.3, last paragraph): an input that ends early, a server that is down before or
 after a run, or a log that cannot be read make the run invalid with the reason given; a log that cannot
 be read, a server that is
@@ -52,8 +61,11 @@ from the login session (setsid nohup):
   COOLING=<text> AMBIENT_C=<°C> python3 tools/stream_session.py limit [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py thermal --limit L [--out DIR]
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference}
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
---gate-s, and for limit --start and --cap.
+--gate-s, for limit --start and --cap, and for sweep --counts. A sweep with any of them is a smoke test:
+its runs are of kind check, it goes to results/check/<UTC>_<sweep>_smoke, and it neither reads nor
+counts toward the sweep's sessions.
 Writes <out>/runs.tsv, one directory per run with the server's log lines, server/ (the whole server
 log), result.csv; prints progress. Exit code 0 when the session completed (whatever it found), 1 when
 it stopped early, 2 for bad arguments.
@@ -65,6 +77,7 @@ import difflib
 import hashlib
 import math
 import os
+import random
 import re
 import select
 import signal
@@ -95,6 +108,16 @@ PROTOCOL = {"idle_s": 600, "warmup": 20, "duration": 120, "gate_s": 60, "start":
 DOMAINS = ["policy0_khz", "policy4_khz", "policy6_khz", "dmc_hz", "npu_hz"]
 GATE_MC, SESSION_END_S = 3000, 30 * 60 - 60  # a minute's margin for collect_env and setup
 MAX_PC_AHEAD_S, MAX_PC_BEHIND_S = 0.1, 0.005
+PREREG_V1_COMMIT = "87fe874b4f196dafd48f6a175b2d7604625aedba"  # docs/notes/env.md
+FREEZE_M1_COMMIT = "2eec964d27545e081a44bc5ead01bbfcd2905a54"  # docs/notes/env.md; every run carries it
+LIMIT = 32  # L (A9)
+SEED, REPETITIONS = 20261030, 3  # §9.1, §8
+SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, results/<kind>/<UTC>_<sweep>
+    "main": ((1, 2, 4, 8, 12, 16, 32), "main", ("B", "C"), "comparison"),
+    "aux": ((1, 2, 3, 4, 5), "aux", ("B", "C"), "comparison"),
+    "reference": ((1, 2), "main", ("A",), "reference"),
+}
+IDLE_BASELINE_S = 120  # §7.2
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
 
@@ -260,6 +283,94 @@ def trip_samples(samples, trips):
     return sum(1 for s in samples for zone, trip in trips.items() if int(s[f"temp_mc_{zone}"]) >= trip)
 
 
+def channel_order(counts):
+    """§9.1: the sorted counts, shuffled by a fresh random.Random(20261030)."""
+    order = sorted(counts)
+    random.Random(SEED).shuffle(order)
+    return order
+
+
+def variant_order(variants, repetition):
+    """§9.1: B->C in repetitions 1 and 3, C->B in repetition 2."""
+    return tuple(variants) if repetition % 2 else tuple(reversed(variants))
+
+
+def sweep_plan(sweep, counts=None):
+    """[(channels, repetition, variants in run order)] of a sweep, in run order."""
+    all_counts, _, variants, _ = SWEEPS[sweep]
+    return [(c, r, variant_order(variants, r)) for c in channel_order(counts or all_counts)
+            for r in range(1, REPETITIONS + 1)]
+
+
+def sweep_state(records, variants):
+    """Which repetitions earlier sessions completed, and what the others need (§9.1, §9.3).
+
+    records: the attempts of the sweep's earlier sessions, in order, as dicts with session, name,
+    channels, repetition, variant, attempt (1, or 2 for the repeat of an invalid run) and valid.
+    A run is final when it is valid or its repeat is invalid too (invalid x2). A repetition is complete
+    when all its runs are final within one session. An incomplete one is redone at the start of the
+    next session, all of its runs: a run whose last attempt was an invalid first one continues with its
+    repeat (attempt 2); every other run starts again at attempt 1. Its earlier runs are kept, and are
+    replaced. Returns (complete, pending): complete is a set of (channels, repetition); pending maps
+    (channels, repetition) to ({variant: first attempt}, [names of the runs it replaces]).
+    """
+    by_rep = {}
+    for r in records:
+        by_rep.setdefault((r["channels"], r["repetition"]), []).append(r)
+    complete, pending = set(), {}
+    for key, recs in by_rep.items():
+        sessions = list(dict.fromkeys(r["session"] for r in recs))
+        if any(all(any(r["variant"] == v and (r["valid"] or r["attempt"] == 2)
+                       for r in recs if r["session"] == s) for v in variants) for s in sessions):
+            complete.add(key)
+            continue
+        last = [r for r in recs if r["session"] == sessions[-1]]
+        first = {}
+        for v in variants:
+            mine = [r for r in last if r["variant"] == v]
+            first[v] = 2 if mine and not mine[-1]["valid"] and mine[-1]["attempt"] == 1 else 1
+        pending[key] = (first, [f"{r['session']}/{r['name']}" for r in recs])
+    return complete, pending
+
+
+def load_records(session_dirs, sweep):
+    """The attempts of a sweep's sessions, in order, from their runs.tsv (see sweep_state)."""
+    out = []
+    for d in session_dirs:
+        path = Path(d) / "runs.tsv"
+        if not path.exists():
+            continue
+        with open(path, encoding="utf-8") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                if row["phase"] == sweep:
+                    out.append({"session": Path(d).name, "name": row["name"], "channels": int(row["channels"]),
+                                "repetition": int(row["repetition"]), "variant": row["variant"],
+                                "attempt": int(row["attempt"]), "valid": row["valid"] == "1"})
+    return out
+
+
+def proc_stat_nonidle(text):
+    """{cpu: non-idle time in ticks} from /proc/stat: user + nice + system + irq + softirq + steal,
+    as bench_main counts it (§7.2)."""
+    out = {}
+    for line in text.splitlines():
+        f = line.split()
+        if f and f[0].startswith("cpu") and f[0] != "cpu":
+            v = [int(x) for x in f[1:9]]
+            out[int(f[0][3:])] = v[0] + v[1] + v[2] + v[5] + v[6] + v[7]
+    return out
+
+
+def idle_rows(before, after, tick_s):
+    """§7.2's idle baseline as rows named like bench_main's summary: per CPU, per cluster and total."""
+    d = {c: (after[c] - before[c]) * tick_s for c in sorted(after) if c in before}
+    rows = [(f"system_cpu{c}_s", f"{v:.3f}") for c, v in d.items()]
+    for name, cpus in (("0-3", range(0, 4)), ("4-5", range(4, 6)), ("6-7", range(6, 8))):
+        rows.append((f"system_cpu{name}_s", f"{sum(d.get(c, 0.0) for c in cpus):.3f}"))
+    rows.append(("system_cpu_total_s", f"{sum(d.values()):.3f}"))
+    return rows
+
+
 def loops_in_window(duration_s, warmup, window):
     """Loop points of a video of duration_s that fall inside the window."""
     return math.floor((warmup + window) / duration_s) - math.floor(warmup / duration_s)
@@ -323,7 +434,8 @@ class Session:
         self.run_header = None  # the first run's header, for result.csv
         self.runs = open(self.out / "runs.tsv", "w", encoding="utf-8")
         self.runs.write("seq\tname\tphase\tvariant\tchannels\tcondition\trepetition\tattempt\texit\tvalid\t"
-                        "passed\treasons\twarnings\ttrip_samples\tgate_soc_mc\tclock_offset_ms\tstart_utc\tend_utc\n")
+                        "passed\treasons\twarnings\ttrip_samples\tgate_soc_mc\tclock_offset_ms\tstart_utc\tend_utc\t"
+                        "replaces\n")
         self.runs.flush()
 
     def say(self, msg):
@@ -442,10 +554,14 @@ class Session:
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
+        from_s = max(0, a.idle_s - IDLE_BASELINE_S)  # §7.2's idle baseline: the idle period's last 120 s
         for i in range(a.idle_s):
+            if i == from_s:
+                self.idle = [dt.datetime.now(dt.timezone.utc), time.monotonic(), Path("/proc/stat").read_text()]
             time.sleep(1)
             if i >= a.idle_s - 60:
                 temps.append(self.soc())
+        self.idle += [time.monotonic(), Path("/proc/stat").read_text()]
         self.baseline = sum(temps) // len(temps)
         (self.out / "baseline.txt").write_text(f"idle_s: {a.idle_s}\nsoc_thermal_baseline_mc: {self.baseline}\n")
         self.say(f"soc-thermal baseline {self.baseline} m°C")
@@ -563,7 +679,8 @@ class Session:
         run_dir = self.out / name
         cmd = ["./build/bench_main", "--variant", variant, "--channels", str(channels), "--source", source,
                "--condition", condition, "--warmup", str(a.warmup), "--duration", str(a.duration),
-               "--run-kind", run_kind, "--repetition", str(repetition), "--out", str(run_dir)]
+               "--run-kind", run_kind, "--repetition", str(repetition), "--freeze-commit", FREEZE_M1_COMMIT,
+               "--out", str(run_dir)]
         start = dt.datetime.now(dt.timezone.utc)
         self.say(f"{name}: {variant}, {channels} ch, {condition}")
         try:
@@ -633,7 +750,8 @@ class Session:
             o.trip_samples = trip_samples(samples, self.trips)
             if phase != "thermal":  # rule 1; for the thermal check it is the criterion
                 o.reasons += [f"clock below fixed: {d}" for d in clocks_below(summary, self.fixed)]
-            if phase == "thermal" and unsaturated(channels, condition, a.limit):  # rule 3
+            limit = a.limit if phase == "thermal" else LIMIT
+            if phase in ("thermal",) + tuple(SWEEPS) and unsaturated(channels, condition, limit):  # rule 3
                 drops = sum(int(r["decoder_drops"]) for r in ch_rows)
                 if drops:
                     o.reasons.append(f"{drops} decoder drops at an unsaturated condition (rule 3)")
@@ -646,12 +764,16 @@ class Session:
                 o.reasons += events  # rule 4
                 o.warnings += warnings
 
-    def run(self, phase, variant, channels, condition, run_kind, repetition=1, source=None):
-        """A run, repeated once if invalid (§9.3). Returns (valid, run directory of the last attempt)."""
+    def run(self, phase, variant, channels, condition, run_kind, repetition=1, source=None, first_attempt=1,
+            replaces=""):
+        """A run, repeated once if invalid (§9.3); first_attempt 2 when it is already the repeat of an
+        earlier session's invalid run. Returns (valid, run directory of the last attempt)."""
         source = source or f"rtsp://{SERVER}:{RTSP_PORT}/ch{{n}}"
         self.seq += 1
         base = f"{self.seq:02d}_{phase}_{variant}_{channels}ch"
-        for attempt in (1, 2):
+        if phase in SWEEPS:
+            base += f"_r{repetition}"
+        for attempt in range(first_attempt, 3):
             name = base if attempt == 1 else base + "_repeat"
             o, run_dir, temp, start, end = self.attempt(name, phase, variant, channels, condition, run_kind,
                                                         repetition, source)
@@ -662,7 +784,7 @@ class Session:
             self.runs.write("\t".join(map(str, [
                 self.seq, name, phase, variant, channels, condition, repetition, attempt, o.code, int(valid), passed,
                 "; ".join(o.reasons), "; ".join(o.warnings), o.trip_samples, temp, o.offset_ms,
-                f"{start:%Y-%m-%dT%H:%M:%SZ}", f"{end:%Y-%m-%dT%H:%M:%SZ}"])) + "\n")
+                f"{start:%Y-%m-%dT%H:%M:%SZ}", f"{end:%Y-%m-%dT%H:%M:%SZ}", replaces])) + "\n")
             self.runs.flush()
             self.say(f"{name}: " + ("valid" if valid else "invalid: " + "; ".join(o.reasons))
                      + (f", passed {passed}" if passed else ""))
@@ -677,6 +799,8 @@ class Session:
     def write_result(self, rows, run_kind):
         a = self.args
         off = [f"{k} {getattr(a, k)} (protocol {v})" for k, v in PROTOCOL.items() if getattr(a, k) != v]
+        if getattr(a, "counts", None):
+            off.append(f"counts {' '.join(map(str, a.counts))} (protocol: all of the sweep)")
         with open(self.out / "runs.tsv", encoding="utf-8") as f:
             starts = [r["start_utc"] for r in csv.DictReader(f, delimiter="\t")]
         h = self.run_header or {}
@@ -709,6 +833,57 @@ def cmd_limit(s):
             ("unsaturated_main_max_channels", min(limit, budget_main)),
             ("unsaturated_aux_max_channels", min(limit, math.floor(P_CAP_BUDGET / FPS["aux"])))]
     s.write_result(rows, "calibration")
+
+
+def sweep_sessions(sweep, current):
+    """The sweep's earlier protocol sessions: results/<kind>/<UTC>_<sweep>, by name (UTC), not current."""
+    kind = SWEEPS[sweep][3]
+    return sorted(d for d in Path("results", kind).glob(f"*_{sweep}")
+                  if d.is_dir() and d.resolve() != Path(current).resolve())
+
+
+def write_idle_baseline(s, run_kind):
+    """§7.2: system CPU over the idle period's last 120 s, with a results header (§1.4)."""
+    start, t0, stat0, t1, stat1 = s.idle
+    rows = [("window_s", f"{t1 - t0:.1f}")] + idle_rows(proc_stat_nonidle(stat0), proc_stat_nonidle(stat1),
+                                                       1.0 / os.sysconf("SC_CLK_TCK"))
+    amendments = re.findall(r"^## (A\d+) ", Path("prereg/AMENDMENTS.md").read_text(encoding="utf-8"), re.M)
+    ntp = subprocess.run(["timedatectl", "show", "-p", "NTPSynchronized", "--value"], capture_output=True,
+                         text=True).stdout.strip()
+    header = {"start_time_utc": f"{start:%Y-%m-%dT%H:%M:%SZ}", "ntp_synchronized": ntp,
+              "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, "run_kind": run_kind,
+              "measurement": "idle baseline of system CPU (PROTOCOL §7.2), not a run", "code_commit": s.code_commit,
+              "amendment": amendments[-1] if amendments else "none"}
+    text = "".join(f"# {k}: {v}\n" for k, v in header.items())
+    text += "key,value\n" + "".join(f"{k},{v}\n" for k, v in rows)
+    (s.out / "idle_baseline.csv").write_text(text, encoding="utf-8")
+
+
+def cmd_sweep(s):
+    a = s.args
+    _, condition, variants, run_kind = SWEEPS[a.sweep]
+    write_idle_baseline(s, s.run_kind)
+    earlier = [] if s.smoke else sweep_sessions(a.sweep, s.out)
+    complete, pending = sweep_state(load_records(earlier, a.sweep), variants)
+    plan = sweep_plan(a.sweep, a.counts)
+    todo = [p for p in plan if (p[0], p[1]) in pending] + \
+           [p for p in plan if (p[0], p[1]) not in pending and (p[0], p[1]) not in complete]
+    s.say(f"{a.sweep}: {len(complete)} of {len(plan)} repetitions complete in earlier sessions, "
+          f"{len(pending)} to redo, {len(todo)} to run")
+    done_here = []
+    for channels, repetition, order in todo:
+        first, replaced = pending.get((channels, repetition), ({}, []))
+        for variant in order:
+            s.run(a.sweep, variant, channels, condition, s.run_kind, repetition,
+                  first_attempt=first.get(variant, 1), replaces=" ".join(replaced))
+        done_here.append(f"{channels}ch_r{repetition}")
+    s.runs.flush()
+    complete, pending = sweep_state(load_records(earlier + [s.out], a.sweep), variants)
+    left = [f"{c}ch_r{r}" for c, r, _ in plan if (c, r) not in complete]
+    s.write_result([("sweep", a.sweep), ("channel_order", " ".join(map(str, channel_order(a.counts or SWEEPS[a.sweep][0])))),
+                    ("earlier_sessions", " ".join(d.name for d in earlier) or "none"),
+                    ("repetitions_run_here", " ".join(done_here) or "none"),
+                    ("repetitions_left", " ".join(left) or "none")], s.run_kind)
 
 
 def loop_channels():
@@ -761,7 +936,8 @@ def cmd_thermal(s):
 
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("command", choices=["limit", "loop-check", "thermal"])
+    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep"])
+    ap.add_argument("sweep", nargs="?", choices=list(SWEEPS), help="sweep: which one")
     ap.add_argument("--out")
     ap.add_argument("--limit", type=int, help="thermal: L, which gives the largest main count")
     ap.add_argument("--idle-s", type=int, default=PROTOCOL["idle_s"])
@@ -770,16 +946,29 @@ def main(argv):
     ap.add_argument("--gate-s", type=int, default=PROTOCOL["gate_s"])
     ap.add_argument("--start", type=int, default=PROTOCOL["start"])
     ap.add_argument("--cap", type=int, default=PROTOCOL["cap"])
+    ap.add_argument("--counts", type=int, nargs="+", help="sweep, smoke tests only: these counts of the sweep")
     args = ap.parse_args(argv)
+    if (args.command == "sweep") != (args.sweep is not None):
+        ap.error("sweep needs main, aux or reference; the other commands take none")
+    if args.counts and (args.command != "sweep" or not set(args.counts) <= set(SWEEPS[args.sweep][0])):
+        ap.error("--counts is for sweep, with counts of that sweep")
     if args.command == "thermal" and not (args.limit and 1 <= args.limit <= 32):
         ap.error("thermal needs --limit L (1..32)")
     if args.idle_s < 60:
         ap.error("--idle-s must be at least 60")
     if not 1 <= args.start <= args.cap <= 32:
         ap.error("need 1 <= --start <= --cap <= 32 (the assignment has 32 channels)")
-    kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal"}[args.command]
-    args.out = args.out or f"results/{'check' if kind == 'loop' else 'calibration'}/" \
-                           f"{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%SZ}_{kind}"
+    now = f"{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%SZ}"
+    smoke = any(getattr(args, k) != v for k, v in PROTOCOL.items()) or bool(args.counts)
+    if args.command == "sweep":
+        run_kind = "check" if smoke else SWEEPS[args.sweep][3]
+        if args.out and not smoke and Path(args.out).parent != Path("results", run_kind):
+            ap.error(f"a sweep's sessions go to results/{run_kind}/<UTC>_{args.sweep}, where the next one finds them")
+        args.out = args.out or f"results/{run_kind}/{now}_{args.sweep}" + ("_smoke" if smoke else "")
+    else:
+        kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal"}[args.command]
+        run_kind = "check" if kind == "loop" else "calibration"
+        args.out = args.out or f"results/{run_kind}/{now}_{kind}"
 
     def on_signal(signum, _frame):
         raise Interrupted(f"signal {signal.Signals(signum).name}")
@@ -788,6 +977,7 @@ def main(argv):
     signal.signal(signal.SIGHUP, on_signal)
     try:
         s = Session(args)
+        s.smoke, s.run_kind = smoke, run_kind
         if args.command == "loop-check":
             s.loops = loop_channels()  # before the idle period, so a bad input fails at once
     except Stop as e:
@@ -795,7 +985,7 @@ def main(argv):
         return 2
     try:
         s.start()
-        {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal}[args.command](s)
+        {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal, "sweep": cmd_sweep}[args.command](s)
         status = 0
     except Stop as e:
         s.say(f"stopped: {e}")

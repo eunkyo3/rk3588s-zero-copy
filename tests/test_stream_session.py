@@ -264,6 +264,97 @@ class Inventory(unittest.TestCase):
         self.assertIn("cannot hash", ss.pc_binary_problems(out.splitlines(True)[0])[0])
 
 
+def rec(session, name, channels, repetition, variant, attempt, valid):
+    return {"session": session, "name": name, "channels": channels, "repetition": repetition,
+            "variant": variant, "attempt": attempt, "valid": valid}
+
+
+class Sweeps(unittest.TestCase):
+    """The order of §9.1 and the session rules of §9.1 and §9.3 for the sweeps of §12."""
+
+    def test_channel_orders(self):
+        self.assertEqual(ss.channel_order(ss.SWEEPS["main"][0]), [8, 1, 16, 4, 32, 2, 12])
+        self.assertEqual(ss.channel_order(ss.SWEEPS["aux"][0]), [1, 4, 3, 2, 5])
+        self.assertEqual(ss.channel_order(ss.SWEEPS["reference"][0]), [2, 1])
+
+    def test_variant_order(self):
+        self.assertEqual([ss.variant_order(("B", "C"), r) for r in (1, 2, 3)], [("B", "C"), ("C", "B"), ("B", "C")])
+        self.assertEqual(ss.variant_order(("A",), 2), ("A",))
+
+    def test_plan(self):
+        plan = ss.sweep_plan("main")
+        self.assertEqual(len(plan), 21)
+        self.assertEqual(plan[:4], [(8, 1, ("B", "C")), (8, 2, ("C", "B")), (8, 3, ("B", "C")), (1, 1, ("B", "C"))])
+        self.assertEqual(ss.sweep_plan("reference"), [(2, 1, ("A",)), (2, 2, ("A",)), (2, 3, ("A",)),
+                                                      (1, 1, ("A",)), (1, 2, ("A",)), (1, 3, ("A",))])
+
+    def test_complete_in_one_session(self):
+        complete, pending = ss.sweep_state([rec("s1", "01", 8, 1, "B", 1, True), rec("s1", "02", 8, 1, "C", 1, True)],
+                                           ("B", "C"))
+        self.assertEqual((complete, pending), ({(8, 1)}, {}))
+
+    def test_invalid_x2_is_final(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, False), rec("s1", "01r", 8, 1, "B", 2, False),
+                   rec("s1", "02", 8, 1, "C", 1, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C")), ({(8, 1)}, {}))
+
+    def test_session_ended_between_the_runs(self):
+        complete, pending = ss.sweep_state([rec("s1", "05", 8, 2, "C", 1, True)], ("B", "C"))
+        self.assertEqual(complete, set())
+        self.assertEqual(pending, {(8, 2): ({"B": 1, "C": 1}, ["s1/05"])})
+
+    def test_session_ended_before_a_repeat(self):
+        # The invalid run's next attempt is its repeat; the other run starts again.
+        records = [rec("s1", "01", 8, 1, "B", 1, True), rec("s1", "02", 8, 1, "C", 1, False)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1], {(8, 1): ({"B": 1, "C": 2}, ["s1/01", "s1/02"])})
+
+    def test_a_finished_run_of_an_incomplete_repetition_starts_again(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, False), rec("s1", "01r", 8, 1, "B", 2, False)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 1})
+
+    def test_completed_in_the_next_session(self):
+        records = [rec("s1", "02", 8, 1, "C", 1, False),
+                   rec("s2", "01", 8, 1, "B", 1, True), rec("s2", "02r", 8, 1, "C", 2, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C")), ({(8, 1)}, {}))
+
+    def test_the_last_session_decides_what_is_pending(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, True),
+                   rec("s2", "01", 8, 1, "B", 1, True), rec("s2", "02", 8, 1, "C", 1, False)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1],
+                         {(8, 1): ({"B": 1, "C": 2}, ["s1/01", "s2/01", "s2/02"])})
+
+    def test_runs_split_over_sessions_do_not_complete_a_repetition(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, True), rec("s2", "02", 8, 1, "C", 1, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 1})
+
+    def test_load_records(self):
+        with tempfile.TemporaryDirectory() as d:
+            session = Path(d) / "20261104T000000Z_main"
+            session.mkdir()
+            cols = ["seq", "name", "phase", "variant", "channels", "condition", "repetition", "attempt", "exit",
+                    "valid", "passed", "reasons", "warnings", "trip_samples", "gate_soc_mc", "clock_offset_ms",
+                    "start_utc", "end_utc", "replaces"]
+            row = dict.fromkeys(cols, "")
+            row.update(seq="1", name="01_main_B_8ch_r1", phase="main", variant="B", channels="8", repetition="1",
+                       attempt="1", valid="1")
+            other = dict(row, phase="thermal")
+            (session / "runs.tsv").write_text("\t".join(cols) + "\n" + "\t".join(row[c] for c in cols) + "\n"
+                                              + "\t".join(other[c] for c in cols) + "\n", encoding="utf-8")
+            self.assertEqual(ss.load_records([session, Path(d) / "missing"], "main"),
+                             [rec("20261104T000000Z_main", "01_main_B_8ch_r1", 8, 1, "B", 1, True)])
+
+    def test_idle_baseline(self):
+        before = "cpu  1 1 1 1 1 1 1 1 0 0\ncpu0 10 0 5 100 7 1 1 0 0 0\ncpu4 0 0 0 0 0 0 0 0 0 0\nintr 5\n"
+        after = "cpu  9 9 9 9 9 9 9 9 0 0\ncpu0 20 2 5 300 9 2 1 1 0 0\ncpu4 100 0 0 0 0 0 0 0 0 0\n"
+        b, a = ss.proc_stat_nonidle(before), ss.proc_stat_nonidle(after)
+        self.assertEqual((b, a), ({0: 17, 4: 0}, {0: 31, 4: 100}))  # iowait and idle are not counted
+        rows = dict(ss.idle_rows(b, a, 0.01))
+        self.assertEqual((rows["system_cpu0_s"], rows["system_cpu4_s"]), ("0.140", "1.000"))
+        self.assertEqual((rows["system_cpu0-3_s"], rows["system_cpu4-5_s"], rows["system_cpu6-7_s"]),
+                         ("0.140", "1.000", "0.000"))
+        self.assertEqual(rows["system_cpu_total_s"], "1.140")
+
+
 class OperatorStop(unittest.TestCase):
     """A signal (Interrupted) during a run stops the session; the run is recorded, not repeated."""
 
