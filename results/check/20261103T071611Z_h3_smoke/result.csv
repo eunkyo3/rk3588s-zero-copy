@@ -1,0 +1,19 @@
+# start_time_utc: 2026-11-03T07:17:23Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: 7f10b9c2f6f0835ec81fa8b1d4711c66c6a0fb1a
+# amendment: A11
+# session: 20261103T071611Z_h3_smoke
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 27 (reported at 05:10 UTC)
+key,value
+n_B,2
+n_C,2
+limit,2
+earlier_sessions,none
+invalid_x2_runs,none
+protocol_settings,no: idle_s 60 (protocol 600); warmup 2 (protocol 20); duration 5 (protocol 120); gate_s 5 (protocol 60); start 1 (protocol 8); cap 2 (protocol 32)

@@ -1,0 +1,26 @@
+2026-11-03T07:16:16Z starting the stream server
+2026-11-03T07:16:22Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261103T071618Z-53935, clock offset 0.3 ms
+2026-11-03T07:16:22Z idle for 60 s
+2026-11-03T07:17:22Z soc-thermal baseline 41091 m°C
+2026-11-03T07:17:22Z h3: 0 earlier sessions; next ('B', 'h3_search', 1, 1)
+2026-11-03T07:17:23Z 01_h3_search_B_1ch: B, 1 ch, main
+2026-11-03T07:17:32Z 01_h3_search_B_1ch: valid, passed 1
+2026-11-03T07:17:38Z 02_h3_search_C_1ch: C, 1 ch, main
+2026-11-03T07:17:48Z 02_h3_search_C_1ch: valid, passed 1
+2026-11-03T07:17:54Z 03_h3_search_C_2ch: C, 2 ch, main
+2026-11-03T07:18:03Z 03_h3_search_C_2ch: valid, passed 1
+2026-11-03T07:18:09Z 04_h3_search_B_2ch: B, 2 ch, main
+2026-11-03T07:18:19Z 04_h3_search_B_2ch: valid, passed 1
+2026-11-03T07:18:25Z 05_h3_confirm_B_2ch_r1: B, 2 ch, main
+2026-11-03T07:18:34Z 05_h3_confirm_B_2ch_r1: valid, passed 1
+2026-11-03T07:18:40Z 06_h3_confirm_C_2ch_r1: C, 2 ch, main
+2026-11-03T07:18:50Z 06_h3_confirm_C_2ch_r1: valid, passed 1
+2026-11-03T07:18:55Z 07_h3_confirm_C_2ch_r2: C, 2 ch, main
+2026-11-03T07:19:05Z 07_h3_confirm_C_2ch_r2: valid, passed 1
+2026-11-03T07:19:10Z 08_h3_confirm_B_2ch_r2: B, 2 ch, main
+2026-11-03T07:19:19Z 08_h3_confirm_B_2ch_r2: valid, passed 1
+2026-11-03T07:19:25Z 09_h3_confirm_B_2ch_r3: B, 2 ch, main
+2026-11-03T07:19:35Z 09_h3_confirm_B_2ch_r3: valid, passed 1
+2026-11-03T07:19:41Z 10_h3_confirm_C_2ch_r3: C, 2 ch, main
+2026-11-03T07:19:51Z 10_h3_confirm_C_2ch_r3: valid, passed 1
+2026-11-03T07:19:51Z stopping the stream server

@@ -6,6 +6,7 @@ Usage: python3 tests/test_stream_session.py
 import datetime as dt
 import hashlib
 import io
+import os
 import sys
 import tempfile
 import types
@@ -264,6 +265,318 @@ class Inventory(unittest.TestCase):
         self.assertIn("cannot hash", ss.pc_binary_problems(out.splitlines(True)[0])[0])
 
 
+def rec(session, name, channels, repetition, variant, attempt, valid):
+    return {"session": session, "name": name, "channels": channels, "repetition": repetition,
+            "variant": variant, "attempt": attempt, "valid": valid}
+
+
+class Sweeps(unittest.TestCase):
+    """The order of §9.1 and the session rules of §9.1 and §9.3 for the sweeps of §12."""
+
+    def test_channel_orders(self):
+        self.assertEqual(ss.channel_order(ss.SWEEPS["main"][0]), [8, 1, 16, 4, 32, 2, 12])
+        self.assertEqual(ss.channel_order(ss.SWEEPS["aux"][0]), [1, 4, 3, 2, 5])
+        self.assertEqual(ss.channel_order(ss.SWEEPS["reference"][0]), [2, 1])
+
+    def test_variant_order(self):
+        self.assertEqual([ss.variant_order(("B", "C"), r) for r in (1, 2, 3)], [("B", "C"), ("C", "B"), ("B", "C")])
+        self.assertEqual(ss.variant_order(("A",), 2), ("A",))
+
+    def test_plan(self):
+        plan = ss.sweep_plan("main")
+        self.assertEqual(len(plan), 21)
+        self.assertEqual(plan[:4], [(8, 1, ("B", "C")), (8, 2, ("C", "B")), (8, 3, ("B", "C")), (1, 1, ("B", "C"))])
+        self.assertEqual(ss.sweep_plan("reference"), [(2, 1, ("A",)), (2, 2, ("A",)), (2, 3, ("A",)),
+                                                      (1, 1, ("A",)), (1, 2, ("A",)), (1, 3, ("A",))])
+
+    def test_complete_in_one_session(self):
+        complete, pending = ss.sweep_state([rec("s1", "01", 8, 1, "B", 1, True), rec("s1", "02", 8, 1, "C", 1, True)],
+                                           ("B", "C"))
+        self.assertEqual((complete, pending), ({(8, 1)}, {}))
+
+    def test_invalid_x2_is_final(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, False), rec("s1", "01r", 8, 1, "B", 2, False),
+                   rec("s1", "02", 8, 1, "C", 1, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C")), ({(8, 1)}, {}))
+
+    def test_session_ended_between_the_runs(self):
+        complete, pending = ss.sweep_state([rec("s1", "05", 8, 2, "C", 1, True)], ("B", "C"))
+        self.assertEqual(complete, set())
+        self.assertEqual(pending, {(8, 2): ({"B": 1, "C": 1}, ["s1/05"])})
+
+    def test_session_ended_before_a_repeat(self):
+        # The invalid run's next attempt is its repeat; the other run starts again.
+        records = [rec("s1", "01", 8, 1, "B", 1, True), rec("s1", "02", 8, 1, "C", 1, False)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1], {(8, 1): ({"B": 1, "C": 2}, ["s1/01", "s1/02"])})
+
+    def test_a_finished_run_of_an_incomplete_repetition_starts_again(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, False), rec("s1", "01r", 8, 1, "B", 2, False)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 1})
+
+    def test_completed_in_the_next_session(self):
+        records = [rec("s1", "02", 8, 1, "C", 1, False),
+                   rec("s2", "01", 8, 1, "B", 1, True), rec("s2", "02r", 8, 1, "C", 2, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C")), ({(8, 1)}, {}))
+
+    def test_the_last_session_decides_what_is_pending(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, True),
+                   rec("s2", "01", 8, 1, "B", 1, True), rec("s2", "02", 8, 1, "C", 1, False)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1],
+                         {(8, 1): ({"B": 1, "C": 2}, ["s1/01", "s2/01", "s2/02"])})
+
+    def test_runs_split_over_sessions_do_not_complete_a_repetition(self):
+        records = [rec("s1", "01", 8, 1, "B", 1, True), rec("s2", "02", 8, 1, "C", 1, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 1})
+
+    def test_load_records(self):
+        with tempfile.TemporaryDirectory() as d:
+            session = Path(d) / "20261104T000000Z_main"
+            session.mkdir()
+            cols = ["seq", "name", "phase", "variant", "channels", "condition", "repetition", "attempt", "exit",
+                    "valid", "passed", "reasons", "warnings", "trip_samples", "gate_soc_mc", "clock_offset_ms",
+                    "start_utc", "end_utc", "replaces"]
+            row = dict.fromkeys(cols, "")
+            row.update(seq="1", name="01_main_B_8ch_r1", phase="main", variant="B", channels="8", repetition="1",
+                       attempt="1", valid="1")
+            other = dict(row, phase="thermal")
+            (session / "runs.tsv").write_text("\t".join(cols) + "\n" + "\t".join(row[c] for c in cols) + "\n"
+                                              + "\t".join(other[c] for c in cols) + "\n", encoding="utf-8")
+            self.assertEqual(ss.load_records([session, Path(d) / "missing"], ("main",)),
+                             [dict(rec("20261104T000000Z_main", "01_main_B_8ch_r1", 8, 1, "B", 1, True),
+                                   phase="main", passed=False, lost=False)])
+
+    def test_the_last_attempt_counts_across_sessions(self):
+        # C's first attempt failed in s1; s2 redid B and ended before C: C's next attempt is its repeat.
+        records = [rec("s1", "01", 8, 1, "B", 1, True), rec("s1", "02", 8, 1, "C", 1, False),
+                   rec("s2", "01", 8, 1, "B", 1, True)]
+        self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 2})
+
+    def test_an_attempt_the_session_died_in(self):
+        cols = ["seq", "name", "phase", "variant", "channels", "condition", "repetition", "attempt", "exit",
+                "valid", "passed", "reasons", "warnings", "trip_samples", "gate_soc_mc", "clock_offset_ms",
+                "start_utc", "end_utc", "replaces"]
+        started_cols = ["seq", "name", "phase", "variant", "channels", "condition", "repetition", "attempt",
+                        "start_utc"]
+        with tempfile.TemporaryDirectory() as d:
+            session = Path(d) / "20261104T000000Z_main"
+            session.mkdir()
+            done = dict.fromkeys(cols, "")
+            done.update(seq="1", name="01_main_B_8ch_r1", phase="main", variant="B", channels="8",
+                        repetition="1", attempt="1", valid="1")
+            (session / "runs.tsv").write_text("\t".join(cols) + "\n" + "\t".join(done[c] for c in cols) + "\n",
+                                              encoding="utf-8")
+            started = [dict(done, attempt="1"), dict(done, seq="2", name="02_main_C_8ch_r1", variant="C")]
+            (session / "started.tsv").write_text(
+                "\t".join(started_cols) + "\n" + "".join("\t".join(r[c] for c in started_cols) + "\n" for r in started),
+                encoding="utf-8")
+            records = ss.load_records([session], ("main",))
+            self.assertEqual([(r["name"], r["valid"], r["lost"]) for r in records],
+                             [("01_main_B_8ch_r1", True, False), ("02_main_C_8ch_r1", False, True)])
+            # The lost attempt is C's invalid first one: the next session repeats it, after B again.
+            self.assertEqual(ss.sweep_state(records, ("B", "C"))[1][(8, 1)][0], {"B": 1, "C": 2})
+
+    def test_sessions_by_name_and_order(self):
+        here = os.getcwd()
+        with tempfile.TemporaryDirectory() as d:
+            os.chdir(d)
+            try:
+                for name in ("comparison/20261104T000000Z_main", "comparison/20261104T010000Z_main_smoke",
+                             "comparison/20261104T020000Z_aux", "comparison/x_main", "check/20261104T030000Z_main"):
+                    Path("results", name).mkdir(parents=True)
+                self.assertEqual([p.name for p in ss.sweep_sessions("main")], ["20261104T000000Z_main"])
+                self.assertEqual(ss.sweep_sessions("main", "results/comparison/20261104T000000Z_main"), [])
+                self.assertEqual(ss.progress("main"), "started")  # a session without runs completes nothing
+                self.assertEqual(ss.progress("reference"), "new")
+                self.assertIsNone(ss.order_problem("main"))
+                self.assertIn("main comes before aux", ss.order_problem("aux"))
+                self.assertIn("main comes before h3", ss.order_problem("h3"))
+                self.assertEqual(ss.redo_pending(), [])
+                cols = ["seq", "name", "phase", "variant", "channels", "repetition", "attempt", "valid", "passed"]
+                Path("results/comparison/20261104T000000Z_main/runs.tsv").write_text(
+                    "\t".join(cols) + "\n" + "\t".join(["1", "01_main_B_8ch_r1", "main", "B", "8", "1", "1", "1", ""])
+                    + "\n", encoding="utf-8")
+                self.assertEqual(ss.redo_pending(), ["main"])  # B ran, C did not: the next session redoes both
+            finally:
+                os.chdir(here)
+
+    def test_a_repeat_started_in_an_earlier_session(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            s = OperatorStop.session(None, d)
+            o = ss.Outcome()
+            o.reasons, o.code = ["bench exit -11"], -11
+            s.attempt = lambda *a: (o, d / "x", 40000, dt.datetime.now(UTC), dt.datetime.now(UTC))
+            with redirect_stdout(io.StringIO()):
+                valid, _ = s.run("main", "C", 8, "main", "comparison", 1, first_attempt=2, replaces="s1/02")
+            s.runs.close()
+            s.started.close()
+            s.log.close()
+            rows = [r.split("\t") for r in (d / "runs.tsv").read_text(encoding="utf-8").splitlines()]
+            self.assertFalse(valid)
+            self.assertEqual(len(rows), 1)  # only the repeat, which makes it invalid x2
+            self.assertEqual((rows[0][1], rows[0][7], rows[0][9], rows[0][18]), ("01_main_C_8ch_r1_repeat", "2", "0", "s1/02"))
+            self.assertEqual(s.invalid_x2, ["01_main_C_8ch_r1"])
+
+    def test_idle_baseline(self):
+        before = "cpu  1 1 1 1 1 1 1 1 0 0\ncpu0 10 0 5 100 7 1 1 0 0 0\ncpu4 0 0 0 0 0 0 0 0 0 0\nintr 5\n"
+        after = "cpu  9 9 9 9 9 9 9 9 0 0\ncpu0 20 2 5 300 9 2 1 1 0 0\ncpu4 100 0 0 0 0 0 0 0 0 0\n"
+        b, a = ss.proc_stat_nonidle(before), ss.proc_stat_nonidle(after)
+        self.assertEqual((b, a), ({0: 17, 4: 0}, {0: 31, 4: 100}))  # iowait and idle are not counted
+        rows = dict(ss.idle_rows(b, a, 0.01))
+        self.assertEqual((rows["system_cpu0_s"], rows["system_cpu4_s"]), ("0.140", "1.000"))
+        self.assertEqual((rows["system_cpu0-3_s"], rows["system_cpu4-5_s"], rows["system_cpu6-7_s"]),
+                         ("0.140", "1.000", "0.000"))
+        self.assertEqual(rows["system_cpu_total_s"], "1.140")
+
+
+def drive(limit_b, limit_c, limit=32, start=8, noisy=None):
+    """Runs h3_schedule against variants that sustain up to their limit; noisy maps (variant, phase,
+    channels, repetition) to an outcome that overrides it. Returns (runs, n)."""
+    gen, runs = ss.h3_schedule(limit, start), []
+    run = next(gen)
+    try:
+        while True:
+            runs.append(run)
+            ok = (noisy or {}).get(run[:4], run[2] <= {"B": limit_b, "C": limit_c}[run[0]])
+            run = gen.send(ok)
+    except StopIteration as e:
+        return runs, e.value
+
+
+def trials_of(runs, outcomes, session="s1"):
+    """Trials of one session, all final, as h3_trials would give them."""
+    return [{"session": session, "names": [f"{session}/{k:02d}"], "variant": r[0], "phase": r[1],
+             "channels": r[2], "repetition": r[3], "final": True, "sustained": o}
+            for k, (r, o) in enumerate(zip(runs, outcomes), 1)]
+
+
+class H3(unittest.TestCase):
+    """§10: the search, the confirmation and their order, and resuming them across sessions."""
+
+    def test_sustained(self):
+        row = {"inference_fps": "4.750", "drift_max_s": "1.000", "decoder_drops": "0"}
+        self.assertTrue(ss.sustained([row, row]))
+        self.assertFalse(ss.sustained([row, dict(row, inference_fps="4.749")]))
+        self.assertFalse(ss.sustained([dict(row, drift_max_s="1.001")]))
+        self.assertFalse(ss.sustained([dict(row, decoder_drops="1")]))
+        self.assertFalse(ss.sustained([]))
+
+    def test_search_alternates_and_confirms(self):
+        runs, n = drive(limit_b=9, limit_c=11)
+        self.assertEqual(n, {"B": 9, "C": 11})
+        search = [r[:3] for r in runs if r[1] == "h3_search"]
+        self.assertEqual(search, [("B", "h3_search", 8), ("C", "h3_search", 8), ("C", "h3_search", 9),
+                                  ("B", "h3_search", 9), ("B", "h3_search", 10), ("C", "h3_search", 10),
+                                  ("C", "h3_search", 11), ("C", "h3_search", 12)])
+        confirm = [(r[0], r[2], r[3], r[4]) for r in runs if r[1] == "h3_confirm"]
+        # Counts ascending; B needs 9 and 10, C needs 11 and 12: no count is shared.
+        self.assertEqual([c[:2] for c in confirm], [("B", 9)] * 3 + [("B", 10)] * 3 + [("C", 11)] * 3 + [("C", 12)] * 3)
+        self.assertTrue(all(c[3] is None for c in confirm))
+
+    def test_shared_counts_are_interleaved(self):
+        runs, n = drive(limit_b=10, limit_c=10)
+        confirm = [(r[0], r[2], r[3], r[4]) for r in runs if r[1] == "h3_confirm"]
+        self.assertEqual(confirm[:6], [("B", 10, 1, (10, 1)), ("C", 10, 1, (10, 1)), ("C", 10, 2, (10, 2)),
+                                       ("B", 10, 2, (10, 2)), ("B", 10, 3, (10, 3)), ("C", 10, 3, (10, 3))])
+        self.assertEqual([c[1] for c in confirm[6:]], [11] * 6)
+        self.assertEqual(n, {"B": 10, "C": 10})
+
+    def test_down_from_the_start_and_zero(self):
+        runs, n = drive(limit_b=5, limit_c=0)
+        self.assertEqual([r[2] for r in runs if r[1] == "h3_search" and r[0] == "B"], [8, 7, 6, 5])
+        self.assertEqual([r[2] for r in runs if r[1] == "h3_search" and r[0] == "C"], list(range(8, 0, -1)))
+        self.assertEqual(n, {"B": 5, "C": 0})
+        self.assertFalse(any(r[1] == "h3_confirm" and r[0] == "C" and r[2] == 0 for r in runs))
+
+    def test_cap(self):
+        runs, n = drive(limit_b=32, limit_c=32)
+        self.assertEqual(max(r[2] for r in runs), 32)  # no run above L
+        self.assertEqual(n, {"B": 32, "C": 32})
+
+    def test_confirmation_goes_up_and_down(self):
+        # C's search stops at 10, but 2 of 3 runs at 11 sustain: n goes up to 11, then 12 is checked.
+        up = {("C", "h3_search", 11, 1): False}
+        runs, n = drive(limit_b=6, limit_c=11, noisy=up)
+        self.assertEqual(n["C"], 11)
+        # B's search reaches 7, but 2 of 3 runs at 7 fail: n goes down to 6, keeping the runs at 7.
+        down = {("B", "h3_confirm", 7, 1): False, ("B", "h3_confirm", 7, 2): False}
+        runs, n = drive(limit_b=7, limit_c=12, noisy=down)
+        self.assertEqual(n["B"], 6)
+        b7 = [r for r in runs if r[0] == "B" and r[1] == "h3_confirm" and r[2] == 7]
+        self.assertEqual(len(b7), 3)  # not run again as the new n + 1
+
+    def test_replay_continues_where_the_records_end(self):
+        runs, n = drive(limit_b=9, limit_c=11)
+        outcomes = [r[2] <= {"B": 9, "C": 11}[r[0]] for r in runs]
+        for cut in (0, 1, 5, len(runs) - 1):
+            _, nxt, done, continued, replaced = ss.h3_replay(trials_of(runs[:cut], outcomes[:cut]))
+            self.assertEqual((nxt, done, continued, replaced), (runs[cut], None, {}, {}))
+        _, nxt, done, _, _ = ss.h3_replay(trials_of(runs, outcomes))
+        self.assertEqual((nxt, done), (None, n))
+
+    def test_replay_rejects_records_out_of_order(self):
+        runs, _ = drive(limit_b=9, limit_c=11)
+        swapped = [runs[1], runs[0]] + runs[2:4]
+        with self.assertRaises(ss.Stop):
+            ss.h3_replay(trials_of(swapped, [True] * 4))
+
+    def test_replay_an_unfinished_repeat(self):
+        runs, _ = drive(limit_b=9, limit_c=11)
+        trials = trials_of(runs[:3], [True] * 3)
+        trials[2]["final"] = False  # invalid first attempt, then the session ended
+        _, nxt, _, continued, replaced = ss.h3_replay(trials)
+        self.assertEqual(nxt, runs[2])
+        self.assertEqual(continued, {runs[2][:4]: 2})
+        self.assertEqual(replaced, {runs[2][:4]: ["s1/03"]})
+
+    def test_replay_a_split_pair(self):
+        runs, _ = drive(limit_b=10, limit_c=10)
+        first = next(k for k, r in enumerate(runs) if r[4] is not None)
+        outcomes = [r[2] <= 10 for r in runs]
+        # The session ended after the pair's first run: it is redone with its partner.
+        trials = trials_of(runs[:first + 1], outcomes[:first + 1])
+        _, nxt, _, continued, replaced = ss.h3_replay(trials)
+        self.assertEqual((nxt, continued), (runs[first], {}))
+        self.assertEqual(replaced, {runs[first][:4]: [f"s1/{first + 1:02d}"]})
+        # The partner's first attempt was invalid: the first run is redone, the partner continues.
+        trials = trials_of(runs[:first + 2], outcomes[:first + 2])
+        trials[-1]["final"] = False
+        _, nxt, _, continued, replaced = ss.h3_replay(trials)
+        self.assertEqual(nxt, runs[first])
+        self.assertEqual(continued, {runs[first + 1][:4]: 2})
+        # The same pair, finished in the next session, counts.
+        later = trials_of(runs[first:first + 2], outcomes[first:first + 2], session="s2")
+        later[1]["names"] = ["s2/02_repeat"]
+        _, nxt, _, continued, _ = ss.h3_replay(trials + later)
+        self.assertEqual((nxt, continued), (runs[first + 2], {}))
+
+    def test_a_redone_run_leaves_nothing_pending(self):
+        runs, n = drive(limit_b=10, limit_c=10)
+        outcomes = [r[2] <= 10 for r in runs]
+        # s1 ends on an invalid first attempt of run 3; s2 repeats it and finishes H3.
+        s1 = trials_of(runs[:3], outcomes[:3])
+        s1[-1]["final"] = False
+        s2 = trials_of(runs[2:], outcomes[2:], session="s2")
+        _, nxt, done, continued, replaced = ss.h3_replay(s1 + s2)
+        self.assertEqual((nxt, done, continued, replaced), (None, n, {}, {}))
+        # A split pair, redone in full in the next session, leaves nothing either.
+        first = next(k for k, r in enumerate(runs) if r[4] is not None)
+        s1 = trials_of(runs[:first + 1], outcomes[:first + 1])
+        s2 = trials_of(runs[first:], outcomes[first:], session="s2")
+        _, nxt, done, continued, replaced = ss.h3_replay(s1 + s2)
+        self.assertEqual((nxt, done, continued, replaced), (None, n, {}, {}))
+
+    def test_trials_from_records(self):
+        records = [dict(rec("s1", "01", 8, 1, "B", 1, False), phase="h3_search", passed=False),
+                   dict(rec("s1", "01_repeat", 8, 1, "B", 2, True), phase="h3_search", passed=True),
+                   dict(rec("s1", "02", 8, 1, "C", 1, False), phase="h3_search", passed=False),
+                   dict(rec("s2", "01_repeat", 8, 1, "C", 2, False), phase="h3_search", passed=False)]
+        trials = ss.h3_trials(records)
+        self.assertEqual([(t["names"], t["final"], t["sustained"]) for t in trials],
+                         [(["s1/01", "s1/01_repeat"], True, True), (["s1/02"], False, False),
+                          (["s2/01_repeat"], True, False)])
+
+
 class OperatorStop(unittest.TestCase):
     """A signal (Interrupted) during a run stops the session; the run is recorded, not repeated."""
 
@@ -273,6 +586,7 @@ class OperatorStop(unittest.TestCase):
         s.out, s.seq, s.invalid_x2, s.server_dir, s.run_header = d, 0, [], "/logs", None
         s.log = open(d / "session.log", "w", encoding="utf-8")
         s.runs = open(d / "runs.tsv", "w", encoding="utf-8")
+        s.started = open(d / "started.tsv", "w", encoding="utf-8")
         s.gate = lambda: 40000
         s.server_alive = lambda: True
         s.console_size = lambda: 0
@@ -283,6 +597,7 @@ class OperatorStop(unittest.TestCase):
         with redirect_stdout(io.StringIO()), self.assertRaises(ss.Stop) as cm:
             s.run("search", "none", 8, "main", "calibration")
         s.runs.close()
+        s.started.close()
         s.log.close()
         return cm.exception, (d / "runs.tsv").read_text(encoding="utf-8").splitlines()
 
@@ -302,6 +617,9 @@ class OperatorStop(unittest.TestCase):
             self.assertEqual(len(rows), 1)  # recorded once, not repeated
             self.assertIn("stopped by the operator (signal SIGTERM)", rows[0])
             self.assertEqual(rows[0].split("\t")[9], "0")  # not valid, so never counted as a pass
+            # The bench had started, so started.tsv has the attempt.
+            started = (d / "started.tsv").read_text(encoding="utf-8").splitlines()
+            self.assertEqual([r.split("\t")[1] for r in started], ["01_search_none_8ch"])
 
     def test_while_judging(self):
         with tempfile.TemporaryDirectory() as t:
@@ -332,6 +650,8 @@ class OperatorStop(unittest.TestCase):
             error, rows = self.run_and_read(s, d)
             self.assertIsInstance(error, ss.Interrupted)
             self.assertEqual(rows, [])
+            # Nothing in started.tsv either: the next session starts the run afresh, not as a repeat.
+            self.assertEqual((d / "started.tsv").read_text(encoding="utf-8"), "")
 
 
 if __name__ == "__main__":
