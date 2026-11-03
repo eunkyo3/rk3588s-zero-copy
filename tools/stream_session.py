@@ -595,7 +595,10 @@ def video_problems(assignment_tsv, expected):
             problems.append(f"{f[0]} serves {name}, which is not in the set")
         elif f[2] != expected[name]:
             problems.append(f"{f[0]} serves {name} with SHA-256 {f[2]}, the set has {expected[name]}")
-    return problems if assignment_tsv.strip() else ["the server's assignment.tsv is empty"]
+    if not assignment_tsv.strip():
+        return ["the server's assignment.tsv is empty"]
+    served = {Path(line.split("\t")[1]).name for line in assignment_tsv.splitlines() if line.count("\t") == 2}
+    return problems + [f"no channel serves {name}" for name in sorted(set(expected) - served)]
 
 
 def keyed(text):

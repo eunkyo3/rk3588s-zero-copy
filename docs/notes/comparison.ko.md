@@ -86,7 +86,7 @@
 ### M1.1: 4K 설계(A11)
 
 - **실행:** `sweep 4k`, 실행 종류 `m1.1`, `results/m1.1/<UTC>_4k/`에 남는다. B와 C, 1·2·4·8채널, 본편 조건, 반복 3회
-  - 채널 순서는 §9.1의 방법을 새 생성기로 적용한 것이다. 1, 8, 4, 2
+  - 채널 순서는 §9.1의 방법을 새 생성기로 적용한 것이다: 1, 8, 4, 2
   - 블록, 변형 순서, 냉각 대기 관문, 유효성, 세션, 이어서 하기는 위 스윕과 같다.
   - 규칙 3은 모든 실행에 적용한다(A11).
 - **영상 세트:** [stream-server/assignment_4k.txt](../../stream-server/assignment_4k.txt). 송출 PC의 `media/bench4k`에서 송출한다.
@@ -95,9 +95,11 @@
 - **순서:** §12의 모든 스윕 뒤다. 위의 순서가 이미 그렇게 정한다("4k"가 마지막).
   - 먼저 4K 반복 재생 검사를 한다. `loop-check --set 4k`이고, `results/check/<UTC>_loop_4k/`에 남는다.
   - 도구는 그런 검사가 프로토콜 설정으로 완료된 뒤에만 4K 세션을 시작한다. 영상이 통과했는지는 여기서 따지지 않는다. A11은 통과하지 못한 영상을 보고하고 그대로 진행한다.
-- **텐서**(A11)는 `freeze-m1` 뒤에 보드에서 손으로 돌린다.
-  - `tools/equivalence_dump ~/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 커밋> m1.1`
+- **텐서**(A11)는 `freeze-m1` 뒤에 보드에서 root로, 저장소에서 손으로 돌린다.
+  - `echo "dc02ec11ee5774588b90233e5e364bac37f2b4e8e0be771fd023e06539a59a8e  /home/pi/media/bench4k/pexels_36330861.mp4" | sha256sum -c`. A11에 적힌 ① 4K의 해시다.
+  - `./build/equivalence_dump /home/pi/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 커밋> m1.1`
   - 이어서 그 디렉터리에 `tools/equivalence_check.py`를 돌린다. 수치를 보고하고, 아무것도 판정하지 않는다.
+- **리포트:** 4K 결과를 정리하기 전에 `tools/m1_report.py`에 4K 절을 더한다. §7의 지표를 B와 C 나란히, 같은 채널 수의 M1 본편 조건 값을 옆에 두고, 탐색용이라고 표시한다(A11).
 
 ### 시간
 

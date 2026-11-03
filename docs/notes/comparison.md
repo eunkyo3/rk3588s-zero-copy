@@ -86,7 +86,7 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 ### M1.1: the 4K design (A11)
 
 - **Runs:** `sweep 4k`, run kind `m1.1`, in `results/m1.1/<UTC>_4k/`. B and C at 1, 2, 4 and 8 channels, main condition, × 3 repetitions.
-  - The channel order is §9.1's procedure with a fresh generator: 8 comes second, giving 1, 8, 4, 2.
+  - The channel order is §9.1's procedure with a fresh generator: 1, 8, 4, 2.
   - Blocks, variant order, gate, validity, sessions and resuming are those of the sweeps above.
   - Rule 3 applies to every run (A11).
 - **Video set:** [stream-server/assignment_4k.txt](../../stream-server/assignment_4k.txt), served from `media/bench4k` on the stream PC.
@@ -95,9 +95,11 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 - **Order:** after every sweep of §12, as the order above already says ("4k" last).
   - First comes the 4K loop check: `loop-check --set 4k`, in `results/check/<UTC>_loop_4k/`.
   - The tool starts a 4K session only once such a check has completed with the protocol's settings. Whether its videos passed does not matter here: A11 reports a failing video and goes ahead.
-- **Tensors** (A11), after `freeze-m1`, by hand on the board:
-  - `tools/equivalence_dump ~/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 commit> m1.1`;
+- **Tensors** (A11), after `freeze-m1`, by hand on the board, as root from the repository:
+  - `echo "dc02ec11ee5774588b90233e5e364bac37f2b4e8e0be771fd023e06539a59a8e  /home/pi/media/bench4k/pexels_36330861.mp4" | sha256sum -c`, A11's hash of ① at 4K;
+  - `./build/equivalence_dump /home/pi/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 commit> m1.1`;
   - then `tools/equivalence_check.py` on its directory. Its numbers are reported, and nothing is judged.
+- **Report:** `tools/m1_report.py` gets a 4K section before the 4K results are written up: §7's metrics, B and C side by side, M1's main-condition values at the same counts next to them, labelled exploratory (A11).
 
 ### Time
 

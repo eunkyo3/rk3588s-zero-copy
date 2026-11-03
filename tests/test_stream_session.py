@@ -429,6 +429,8 @@ class Sweeps(unittest.TestCase):
         self.assertIn("pixabay_180386.mp4 with SHA-256", ss.video_problems(wrong, expected)[0])
         self.assertIn("not in the set", ss.video_problems("ch1\tx/pexels_29969146.mp4\tab\n", expected)[0])
         self.assertEqual(ss.video_problems("", expected), ["the server's assignment.tsv is empty"])
+        two = "".join(line + "\n" for line in served.splitlines()[:2])
+        self.assertEqual(ss.video_problems(two, expected), ["no channel serves pixabay_180386.mp4"])
 
     def test_the_4k_loop_check_must_have_protocol_settings(self):
         here = os.getcwd()
