@@ -189,6 +189,7 @@ Each entry has this form:
     - Every run is kept and reported. The first run whose check completes (exit 0 or 1) decides.
     - A run that stops earlier (exit 2 or 3, for example when a harness check fails) decides nothing. Its cause is recorded, and the check is run again.
     - If B's, C's or R's code changes before `freeze-m1`, M1-4 is redone (§15), and so is this check. The report then gives both results.
+    - A rerun that needs changed code, after a stopped run or a change of B, C or R, runs on that code and names its amendment. The Code rule above applies to the first run only.
   - **Verdict:** A5's six conditions, unchanged, on the 2,414 pooled frames:
     - the border check of B and C;
     - C's MAE at most R's, and C's minimum per-frame PSNR at least R's;
