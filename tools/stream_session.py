@@ -11,10 +11,12 @@ Subcommands:
                and every temperature stays below its zone's trip_point_0_temp.
 
 Each session:
-  - first records the software, model and build (tools/inventory.sh), and stops if they differ from
-    docs/notes/inventory_m1.txt (AMENDMENTS A10);
+  - first records the board's software, build and model (tools/inventory.sh), and stops if they differ
+    from docs/notes/inventory_m1.txt, writing inventory.diff, or if that file is not the one AMENDMENTS
+    A10 fixes;
   - fixes the clocks (tools/set_perf_mode.sh) and records the environment (tools/collect_env.sh);
-  - starts stream-server/publish.sh on the stream PC with the M1 assignment, with its log in UTC and
+  - checks the SHA-256 of the stream PC's mediamtx and ffmpeg against A10, then starts
+    stream-server/publish.sh there with the M1 assignment, with its log in UTC and
     under systemd-inhibit so the PC does not sleep, and stops it at the end, keeping its logs; records
     the PC's stream-server commit, the hashes of its configuration and the clock offset to the PC;
   - idles first for the soc-thermal baseline, then puts every run behind the cooldown gate (§9.2), and
@@ -59,6 +61,8 @@ it stopped early, 2 for bad arguments.
 import argparse
 import csv
 import datetime as dt
+import difflib
+import hashlib
 import math
 import os
 import re
@@ -75,7 +79,12 @@ SSH = ["ssh", "-i", "/home/pi/.ssh/bench_stream", "-o", "UserKnownHostsFile=/hom
        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", f"eunkyo@{SERVER}"]
 PC_REPO, PC_VIDEOS = "rk3588s-zero-copy", "media/bench"  # relative to the PC user's home
 ASSIGNMENT = "stream-server/assignment_m1.txt"
-INVENTORY = "docs/notes/inventory_m1.txt"  # the software, model and build that freeze-m1 freezes (A10)
+INVENTORY = "docs/notes/inventory_m1.txt"  # the board's software, build and model that freeze-m1 freezes (A10)
+INVENTORY_SHA256 = "f6e5a78a15e5fecbae5ab5c132d866dcddd8eaec9562c48d6413d83f97f934dd"  # of INVENTORY as A10 fixes it
+PC_BINARIES = {  # the stream PC's, as A10 fixes them: name -> SHA-256
+    "mediamtx": "0ffb7f18210d08ee38cb16668c4f3a2c96622e69d401119c0026d078a2b89523",
+    "ffmpeg": "e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99",
+}
 MANIFEST = "/home/pi/media/bench/manifest.tsv"
 LIMIT_START, LIMIT_CAP = 8, 32  # §6.1
 MAIN_SET = (1, 2, 4, 8, 12, 16)  # §6.1
@@ -258,6 +267,23 @@ def loops_in_window(duration_s, warmup, window):
 
 # ---------------------------------------------------------------- the session
 
+def inventory_diff(now, reference):
+    """None if the inventory equals the reference, else a unified diff from the reference to it."""
+    if now == reference:
+        return None
+    return "".join(difflib.unified_diff(reference.splitlines(True), now.splitlines(True),
+                                        INVENTORY, "inventory.txt"))
+
+
+def pc_binary_problems(sha256sum_output):
+    """The problems with sha256sum's output for the PC's binaries, in the order of PC_BINARIES."""
+    hashes = [line.split()[0] for line in sha256sum_output.splitlines() if line.strip()]
+    if len(hashes) != len(PC_BINARIES):
+        return ["cannot hash the stream PC's binaries: " + sha256sum_output.strip()[-200:]]
+    return [f"the stream PC's {name} has SHA-256 {got}, A10 fixes {want}"
+            for (name, want), got in zip(PC_BINARIES.items(), hashes) if got != want]
+
+
 def keyed(text):
     return {k: v for k, _, v in (line.partition(": ") for line in text.splitlines()) if v}
 
@@ -283,6 +309,8 @@ class Session:
         for f in ("build/bench_main", "build/CMakeCache.txt", ASSIGNMENT, MANIFEST, INVENTORY):
             if not Path(f).exists():
                 raise Stop(f"no {f}")
+        if hashlib.sha256(Path(INVENTORY).read_bytes()).hexdigest() != INVENTORY_SHA256:
+            raise Stop(f"{INVENTORY} is not the file A10 fixes (SHA-256 {INVENTORY_SHA256})")
         self.out.mkdir(parents=True, exist_ok=True)
         self.log = open(self.out / "session.log", "a", encoding="utf-8")
         self.seq = 0
@@ -307,11 +335,15 @@ class Session:
         self.log.write(line + "\n")
         self.log.flush()
 
-    def sh(self, cmd, out_file, timeout=120):
-        """Runs cmd with its output in out_file."""
+    def sh(self, cmd, out_file, timeout=120, err_file=None):
+        """Runs cmd with its output in out_file, and its error output there too or in err_file."""
         try:
             with open(out_file, "w", encoding="utf-8") as f:
-                return subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, text=True, timeout=timeout).returncode
+                if err_file is None:
+                    return subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, text=True,
+                                          timeout=timeout).returncode
+                with open(err_file, "w", encoding="utf-8") as e:
+                    return subprocess.run(cmd, stdout=f, stderr=e, text=True, timeout=timeout).returncode
         except (OSError, subprocess.TimeoutExpired) as e:
             raise Stop(f"{cmd[0]}: {e}") from None
 
@@ -389,10 +421,12 @@ class Session:
 
     def start(self):
         a = self.args
-        if self.sh(["tools/inventory.sh"], self.out / "inventory.txt") != 0:
-            raise Stop("inventory.sh failed: " + (self.out / "inventory.txt").read_text())
-        if (self.out / "inventory.txt").read_text() != Path(INVENTORY).read_text():
-            raise Stop(f"the software, model or build differs from {INVENTORY} (A10): compare inventory.txt")
+        if self.sh(["tools/inventory.sh"], self.out / "inventory.txt", err_file=self.out / "inventory.err") != 0:
+            raise Stop("inventory.sh failed: see inventory.err")
+        diff = inventory_diff((self.out / "inventory.txt").read_text(), Path(INVENTORY).read_text())
+        if diff:
+            (self.out / "inventory.diff").write_text(diff)
+            raise Stop(f"the board's software, build or model differs from {INVENTORY} (A10): see inventory.diff")
         if self.sh(["tools/set_perf_mode.sh"], self.out / "perf_mode.txt") != 0:
             raise Stop("set_perf_mode.sh failed: " + (self.out / "perf_mode.txt").read_text())
         self.fixed = {k: int(v) for k, v in keyed((self.out / "perf_mode.txt").read_text()).items()}
@@ -422,6 +456,11 @@ class Session:
         pid = f"~/{PC_REPO}/stream-server/mediamtx.pid"
         if self.pc(f"test -f {pid} && kill -0 \"$(cat {pid})\" 2>/dev/null && echo running || true").strip():
             raise Stop("a stream server is already running on the PC; stop it first")
+        # publish.sh runs the ffmpeg on the PATH of these SSH commands.
+        binaries = self.pc(f"sha256sum ~/{PC_REPO}/stream-server/mediamtx \"$(command -v ffmpeg)\"")
+        problems = pc_binary_problems(binaries)
+        if problems:
+            raise Stop("; ".join(problems))
         self.pc(f"cat > ~/{PC_REPO}/stream-server/session_assignment.txt",
                 stdin=Path(ASSIGNMENT).read_text(encoding="utf-8"), tries=1)
         # setsid makes the launcher the leader of its own process group, so end() can stop everything
@@ -457,6 +496,7 @@ class Session:
             "pc_sha256": " ".join(self.pc(f"cd ~/{PC_REPO}/stream-server && sha256sum mediamtx.yml publish.sh "
                                           f"mediamtx").split()),
             "pc_versions": " | ".join(self.pc(f"cat {self.server_dir}/versions.txt").splitlines()),
+            "pc_binaries_sha256": " ".join(binaries.split()),
         }
         (self.out / "server.txt").write_text("".join(f"{k}: {v}\n" for k, v in info.items()))
         problem = clock_problem(offset)

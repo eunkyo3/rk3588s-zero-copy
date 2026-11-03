@@ -101,9 +101,10 @@ See [models/README.md](../../models/README.md): YOLOv8n from rknn_model_zoo v2.3
 
 ## Software frozen at `freeze-m1`
 
-[inventory_m1.txt](inventory_m1.txt) records the drivers, the ffmpeg build and `h264_rkmpp`'s options, the RKNN headers, the compiler and build flags, the model, and the SHA-256 of every shared library `bench_main` loads, with its package ([AMENDMENTS A10](../../prereg/AMENDMENTS.md)).
+[inventory_m1.txt](inventory_m1.txt) records the board's drivers and boot firmware, the ffmpeg build and the defaults of `h264_rkmpp`'s options, the RKNN headers, the compiler, build tools and flags, the model, and the SHA-256 of every shared library the dynamic linker resolves for `bench_main` (`ldd`), and of `libtbbmalloc`, which libtbb opens at run time, each with its package ([AMENDMENTS A10](../../prereg/AMENDMENTS.md)).
 
-- `tools/inventory.sh` writes it on the board. `tools/stream_session.py` runs the tool at the start of every session and stops if the output differs.
+- `tools/inventory.sh` writes it on the board. `tools/stream_session.py` runs the tool at the start of every session and stops if the output differs, or if the file is not the one A10 fixes.
+- Before it starts the stream server, the session also checks the SHA-256 of the PC's mediamtx and ffmpeg.
 - To check by hand, from the repository on the board: `tools/inventory.sh docs/notes/inventory_m1.txt`.
 
 ## Thermal observation

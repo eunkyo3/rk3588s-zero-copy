@@ -4,6 +4,7 @@
 Usage: python3 tests/test_stream_session.py
 """
 import datetime as dt
+import hashlib
 import io
 import sys
 import tempfile
@@ -237,6 +238,30 @@ class ClockProblem(unittest.TestCase):
         self.assertIsNone(ss.clock_problem(0.1))
         self.assertIsNotNone(ss.clock_problem(-0.006))  # the bench's disconnect could move into the window
         self.assertIsNotNone(ss.clock_problem(0.101))
+
+
+class Inventory(unittest.TestCase):
+    """The checks of A10: the board's inventory against the reference, and the stream PC's binaries."""
+
+    def test_reference_is_the_one_the_session_expects(self):
+        reference = Path(__file__).resolve().parent.parent / ss.INVENTORY
+        self.assertEqual(hashlib.sha256(reference.read_bytes()).hexdigest(), ss.INVENTORY_SHA256)
+
+    def test_same_inventory(self):
+        self.assertIsNone(ss.inventory_diff("os: x\nlib a: 1\n", "os: x\nlib a: 1\n"))
+
+    def test_different_inventory(self):
+        diff = ss.inventory_diff("os: x\nlib a: 2\n", "os: x\nlib a: 1\n")
+        self.assertIn("-lib a: 1\n", diff)
+        self.assertIn("+lib a: 2\n", diff)
+
+    def test_pc_binaries(self):
+        out = "".join(f"{h}  /home/u/{name}\n" for name, h in ss.PC_BINARIES.items())
+        self.assertEqual(ss.pc_binary_problems(out), [])
+        changed = out.replace(ss.PC_BINARIES["ffmpeg"], "0" * 64)
+        self.assertEqual(len(ss.pc_binary_problems(changed)), 1)
+        self.assertIn("ffmpeg", ss.pc_binary_problems(changed)[0])
+        self.assertIn("cannot hash", ss.pc_binary_problems(out.splitlines(True)[0])[0])
 
 
 class OperatorStop(unittest.TestCase):
