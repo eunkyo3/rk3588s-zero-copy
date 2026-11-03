@@ -347,8 +347,9 @@ def report(c):
     flags = []
     for sweep, points in c["data"].items():
         variants = ss.SWEEPS[sweep][2]
-        lines += [f"## Sweep: {sweep}", "", "| Channels | Metric | " + " | ".join(f"{v}: mean ± sd (n)" for v in variants)
-                  + " |", "|---|---|" + "---|" * len(variants)]
+        heads = [f"{v}{' (A6 label)' if v == 'C' else ''}: mean ± sd (n)" for v in variants]
+        lines += [f"## Sweep: {sweep}", "", "| Channels | Metric | " + " | ".join(heads) + " |",
+                  "|---|---|" + "---|" * len(variants)]
         for ch in sorted(points):
             for key, label in METRICS:
                 cells = []
@@ -365,7 +366,8 @@ def report(c):
     lines += [f"- {what}: " + "; ".join(f"{name}: {why or 'no reason recorded'}" for name, why in attempts)
               for what, attempts in c["invalid_x2"]] or ["None."]
     lines += ["", "## Attempts that do not count", "",
-              "Repeated invalid attempts, runs that a later session redid, and attempts cut short (§9.1, §9.3)."]
+              "Repeated invalid attempts, runs that a later session redid, and attempts cut short (§9.1, §9.3). "
+              "Until a sweep is complete, the runs of its repetitions still in progress are listed here too."]
     lines += [f"- {sweep}: {name}: {'valid' if valid else 'invalid'}" + (f": {why}" if why else "")
               for sweep, name, valid, why in c["others"]] or ["None."]
     lines += ["", "## Warnings: samples at a trip point", ""]
