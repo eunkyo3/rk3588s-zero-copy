@@ -1,0 +1,67 @@
+# start_time_utc: 2026-11-03T05:15:49Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: none
+# channels: 16
+# condition: main
+# repetition: 1
+# code_commit: 808298515fe79ff02878d80360cb1795f39fa69f
+# amendment: A10
+# warmup_s: 5
+# duration_s: 30
+# source: rtsp://10.88.0.1:8554/ch{n}
+tid,comm,affinity,cpu_s_in_window
+42718,dec-10,"4-7",0.550
+42713,dec-5,"4-7",0.540
+42722,dec-14,"4-7",0.530
+42716,dec-8,"4-7",0.530
+42723,dec-15,"4-7",0.520
+42717,dec-9,"4-7",0.520
+42719,dec-11,"4-7",0.520
+42712,dec-4,"4-7",0.520
+42714,dec-6,"4-7",0.510
+42721,dec-13,"4-7",0.510
+42710,dec-2,"4-7",0.510
+42709,dec-1,"4-7",0.510
+42720,dec-12,"4-7",0.500
+42715,dec-7,"4-7",0.500
+42724,dec-16,"4-7",0.490
+42711,dec-3,"4-7",0.480
+42767,mpp_dec_parser,"4-7",0.100
+42761,mpp_dec_parser,"4-7",0.090
+42757,mpp_dec_parser,"4-7",0.090
+42751,mpp_dec_parser,"4-7",0.090
+42739,mpp_dec_parser,"4-7",0.090
+42737,mpp_dec_parser,"4-7",0.090
+42735,mpp_dec_parser,"4-7",0.090
+42733,mpp_dec_parser,"4-7",0.090
+42731,mpp_dec_parser,"4-7",0.090
+42775,mpp_dec_parser,"4-7",0.090
+42769,mpp_dec_parser,"4-7",0.090
+42759,mpp_dec_parser,"4-7",0.090
+42755,mpp_dec_parser,"4-7",0.090
+42749,mpp_dec_parser,"4-7",0.090
+42753,mpp_dec_parser,"4-7",0.080
+42729,mpp_dec_parser,"4-7",0.080
+42777,metrics,"0",0.030
+42776,mpp_dec_hal,"4-7",0.010
+42770,mpp_dec_hal,"4-7",0.010
+42768,mpp_dec_hal,"4-7",0.010
+42762,mpp_dec_hal,"4-7",0.010
+42760,mpp_dec_hal,"4-7",0.010
+42758,mpp_dec_hal,"4-7",0.010
+42756,mpp_dec_hal,"4-7",0.010
+42754,mpp_dec_hal,"4-7",0.010
+42752,mpp_dec_hal,"4-7",0.010
+42750,mpp_dec_hal,"4-7",0.010
+42740,mpp_dec_hal,"4-7",0.010
+42738,mpp_dec_hal,"4-7",0.010
+42736,mpp_dec_hal,"4-7",0.010
+42734,mpp_dec_hal,"4-7",0.010
+42732,mpp_dec_hal,"4-7",0.010
+42730,mpp_dec_hal,"4-7",0.010
+42699,bench_main,"4-7",0.000

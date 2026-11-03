@@ -52,13 +52,16 @@ for n in "$@"; do
         '' | *[!0-9]* | 0) echo "decode_probe: bad channel count $n" >&2; exit 2 ;;
     esac
     tools/collect_env.sh >"$out/${n}ch.env.txt"
-    sample_memory >"$out/${n}ch.mem.csv" &
+    sample_memory >"$out/${n}ch.mem.samples" &
     sampler=$!
     status=0
     build/bench_main --variant none --channels "$n" --source "$SOURCE" --warmup "$WARMUP" \
         --duration "$DURATION" --out "$out/${n}ch" >"$out/${n}ch.log" 2>&1 || status=$?
     kill "$sampler"
     wait "$sampler" 2>/dev/null || true
+    # The samples belong to this run, so they get its header (PROTOCOL §1.4), from its summary.csv.
+    { grep '^#' "$out/${n}ch/summary.csv" || true; cat "$out/${n}ch.mem.samples"; } >"$out/${n}ch.mem.csv"
+    rm "$out/${n}ch.mem.samples"
     echo "${n} channels: exit $status"
     if [ "$status" -ne 0 ]; then
         exit 1
