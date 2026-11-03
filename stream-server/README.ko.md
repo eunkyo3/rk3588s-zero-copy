@@ -18,6 +18,8 @@ stream-server/prepare_videos.sh <out_dir> <source>...
 
 16:9 원본을 벤치마크 인코딩으로 재인코딩한다: 1920×1080 H.264 High, 30 fps, B프레임 없음, GOP 30, 4 Mbps CBR, 제한 범위, 오디오 없음. SPS와 PPS를 키프레임마다 반복한다(`repeat-headers=1`). RTSP로 받을 때 보드의 `h264_rkmpp` 디코더는 이 정보를 스트림 안에서만 얻으며, 없으면 프레임을 하나도 내놓지 않는다. 결과를 검사하고 `<out_dir>/manifest.tsv`에 한 줄을 추가한다. 이 줄에는 출력과 원본의 SHA-256, 원본의 크기, 프레임 레이트, 픽셀 포맷, 색 행렬, 원색, 전달 특성, 범위가 기록된다. 색 행렬은 바꾸지 않는다(PROTOCOL §8).
 
+`SIZE`와 `BITRATE`(기본값 `1920x1080`, `4M`)는 M1이 아닌 인코딩을 위해 프레임 크기(16:9여야 함)와 CBR 비트레이트를 바꾼다. 나머지는 그대로다. 기본값에서는 이 변수들이 생기기 전과 같은 인자를 ffmpeg에 넘긴다.
+
 벤치마크 영상의 출처, 라이선스, SHA-256은 [docs/notes/preprocess.ko.md](../docs/notes/preprocess.ko.md#벤치마크-영상)에 있다.
 
 ## 실행
