@@ -201,7 +201,7 @@ Each video on its own, reported:
 | File | Content |
 |---|---|
 | `b.jsonl`, `c.jsonl`, `r.jsonl` | A header line with the PROTOCOL §1 fields, then each frame's index, pts and detections `[class, score, x1, y1, x2, y2]` |
-| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each). The deciding run's tensors are in the release [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z), compressed with xz; the other two runs' were identical and are not kept. |
+| `tensors.sha256` | Hashes of `b.u8`, `c.u8`, `r.u8` (1,000 × 640 × 640 × 3 bytes each; in the held-out check, each video's frame count × 640 × 640 × 3). The deciding run's tensors are in the release [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z), compressed with xz; the other two runs' were identical and are not kept. |
 | `env.txt` | `collect_env.sh` before the run |
 | `env.json` | Arguments, library versions, each backend's description, the harness checks |
 | `dump.txt`, `dump.log` | The dump's output and its stderr |

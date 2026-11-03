@@ -205,7 +205,7 @@ B, C, R의 모든 텐서에서 테두리 원소가 전부 114다.
 | 파일 | 내용 |
 |---|---|
 | `b.jsonl`, `c.jsonl`, `r.jsonl` | PROTOCOL §1 항목을 담은 머리 줄, 이어서 프레임마다 번호, pts, 검출 `[class, score, x1, y1, x2, y2]` |
-| `tensors.sha256` | `b.u8`, `c.u8`, `r.u8`(각 1,000 × 640 × 640 × 3바이트)의 해시. 판정 실행의 텐서는 릴리스 [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z)에 xz로 압축해 두었다. 나머지 두 실행의 텐서는 같은 내용이라 보관하지 않는다. |
+| `tensors.sha256` | `b.u8`, `c.u8`, `r.u8`(각 1,000 × 640 × 640 × 3바이트. 홀드아웃 검사에서는 영상별 프레임 수 × 640 × 640 × 3)의 해시. 판정 실행의 텐서는 릴리스 [data-equivalence-20261102T011123Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-equivalence-20261102T011123Z)에 xz로 압축해 두었다. 나머지 두 실행의 텐서는 같은 내용이라 보관하지 않는다. |
 | `env.txt` | 실행 전 `collect_env.sh` 출력 |
 | `env.json` | 인자, 라이브러리 버전, 백엔드별 설명, 하네스 검사 |
 | `dump.txt`, `dump.log` | 덤프의 출력과 stderr |
