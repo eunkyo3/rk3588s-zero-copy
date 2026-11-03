@@ -1,0 +1,50 @@
+2026/11/03 04:01:44 INF [RTSP] [conn 10.88.0.2:46598] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 10.88.0.2:46650] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 10.88.0.2:46594] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 10.88.0.2:46596] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 10.88.0.2:46600] opened
+2026/11/03 04:01:44 INF [path ch3] runOnDemand command started
+2026/11/03 04:01:44 INF [path ch4] runOnDemand command started
+2026/11/03 04:01:44 INF [path ch2] runOnDemand command started
+2026/11/03 04:01:44 INF [path ch1] runOnDemand command started
+2026/11/03 04:01:44 INF [path ch5] runOnDemand command started
+2026/11/03 04:01:44 INF [RTSP] [conn 127.0.0.1:55016] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 127.0.0.1:55026] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 127.0.0.1:55042] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 127.0.0.1:55052] opened
+2026/11/03 04:01:44 INF [RTSP] [conn 127.0.0.1:55068] opened
+2026/11/03 04:01:44 INF [RTSP] [session 371cbdae] created by 127.0.0.1:55016
+2026/11/03 04:01:44 INF [path ch4] stream is available and online, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 371cbdae] is publishing to path 'ch4'
+2026/11/03 04:01:44 INF [RTSP] [session 1a109473] created by 10.88.0.2:46600
+2026/11/03 04:01:44 INF [RTSP] [session 1a109473] is reading from path 'ch4', with TCP, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 1f1237a6] created by 127.0.0.1:55026
+2026/11/03 04:01:44 INF [path ch3] stream is available and online, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 1f1237a6] is publishing to path 'ch3'
+2026/11/03 04:01:44 INF [RTSP] [session 102bbfa6] created by 10.88.0.2:46598
+2026/11/03 04:01:44 INF [RTSP] [session 102bbfa6] is reading from path 'ch3', with TCP, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 9636eead] created by 127.0.0.1:55042
+2026/11/03 04:01:44 INF [RTSP] [session 8b8f26fd] created by 127.0.0.1:55052
+2026/11/03 04:01:44 INF [path ch2] stream is available and online, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 8b8f26fd] is publishing to path 'ch2'
+2026/11/03 04:01:44 INF [path ch1] stream is available and online, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 9636eead] is publishing to path 'ch1'
+2026/11/03 04:01:44 INF [RTSP] [session 035e615c] created by 127.0.0.1:55068
+2026/11/03 04:01:44 INF [RTSP] [session 1293631f] created by 10.88.0.2:46594
+2026/11/03 04:01:44 INF [RTSP] [session 8ba5ce26] created by 10.88.0.2:46596
+2026/11/03 04:01:44 INF [RTSP] [session 8ba5ce26] is reading from path 'ch1', with TCP, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 1293631f] is reading from path 'ch2', with TCP, 1 track (H264)
+2026/11/03 04:01:44 INF [path ch5] stream is available and online, 1 track (H264)
+2026/11/03 04:01:44 INF [RTSP] [session 035e615c] is publishing to path 'ch5'
+2026/11/03 04:01:44 INF [RTSP] [session 30de513c] created by 10.88.0.2:46650
+2026/11/03 04:01:44 INF [RTSP] [session 30de513c] is reading from path 'ch5', with TCP, 1 track (H264)
+2026/11/03 04:04:05 INF [RTSP] [conn 10.88.0.2:46596] closed: read tcp 10.88.0.1:8554->10.88.0.2:46596: read: connection reset by peer
+2026/11/03 04:04:05 INF [RTSP] [session 8ba5ce26] destroyed: not in use
+2026/11/03 04:04:05 INF [RTSP] [conn 10.88.0.2:46594] closed: read tcp 10.88.0.1:8554->10.88.0.2:46594: read: connection reset by peer
+2026/11/03 04:04:05 INF [RTSP] [session 1293631f] destroyed: not in use
+2026/11/03 04:04:05 INF [RTSP] [conn 10.88.0.2:46598] closed: read tcp 10.88.0.1:8554->10.88.0.2:46598: read: connection reset by peer
+2026/11/03 04:04:05 INF [RTSP] [session 102bbfa6] destroyed: not in use
+2026/11/03 04:04:05 INF [RTSP] [conn 10.88.0.2:46600] closed: read tcp 10.88.0.1:8554->10.88.0.2:46600: read: connection reset by peer
+2026/11/03 04:04:05 INF [RTSP] [session 1a109473] destroyed: not in use
+2026/11/03 04:04:05 INF [RTSP] [conn 10.88.0.2:46650] closed: read tcp 10.88.0.1:8554->10.88.0.2:46650: read: connection reset by peer
+2026/11/03 04:04:05 INF [RTSP] [session 30de513c] destroyed: not in use

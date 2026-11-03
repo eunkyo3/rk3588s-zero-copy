@@ -124,7 +124,11 @@ The board is reached over Wi-Fi (`wlan0`) for administration. The RTSP streams (
 - **Check:** `bench_main --variant none` read 4 channels (videos ① to ④) from `rtsp://10.88.0.1:8554/ch{n}`, with a 3 s warm-up and a 10 s window: a functional check, not a calibration run ([results/check/20261102T083613Z_none_4ch_rtsp](../../results/check/20261102T083613Z_none_4ch_rtsp), with the server's log).
   - Every channel decoded at 30.000 fps, with 0 s drift and no decoder drops.
   - The server log had no errors or warnings.
-- The PC's log times are local time (KST, UTC+9), and both machines are synchronized by NTP.
+- The PC's log times are local time (KST, UTC+9); `tools/stream_session.py` starts the server with `TZ=UTC`.
+- **Time:** the PC takes its time with chrony from public servers in Korea (stratum 2).
+  - Since 2026-11-03 02:19 UTC, the board takes its time from the PC over the wired link: `/etc/systemd/timesyncd.conf.d/50-bench.conf` sets `NTP=10.88.0.1`, `FallbackNTP=ntp.ubuntu.com`, and, since 04:10 UTC, `PollIntervalMaxSec=64`.
+  - On the PC, `/etc/chrony.conf` has `allow 10.88.0.2/32`, and the firewall accepts NTP from `10.88.0.2` only.
+  - Before, the board used `ntp.ubuntu.com` over Wi-Fi, and the PC's clock minus the board's wandered from +8 ms (PC ahead) to beyond −5 ms. On the PC's time, the sessions recorded 0 to −3 ms; after the poll change, `timesyncd` reported −0.14 ms, read by hand and not recorded ([AMENDMENTS A9](../../prereg/AMENDMENTS.md)).
 
 ## Open items
 

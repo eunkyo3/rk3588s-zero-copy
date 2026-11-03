@@ -1,0 +1,25 @@
+2026-11-03T02:25:22Z starting the stream server
+2026-11-03T02:25:27Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261103T022523Z-38352, clock offset -0 ms
+2026-11-03T02:25:27Z idle for 600 s
+2026-11-03T02:35:27Z soc-thermal baseline 37061 m°C
+2026-11-03T02:35:28Z 01_loop_none_1ch: none, 1 ch, main
+2026-11-03T02:37:50Z 01_loop_none_1ch: invalid: bench exit -11
+2026-11-03T02:38:51Z 01_loop_none_1ch_repeat: none, 1 ch, main
+2026-11-03T02:41:14Z 01_loop_none_1ch_repeat: invalid: bench exit -11
+2026-11-03T02:41:14Z 01_loop_none_1ch: invalid x2
+2026-11-03T02:42:15Z 02_loop_none_1ch: none, 1 ch, main
+2026-11-03T02:44:37Z 02_loop_none_1ch: invalid: bench exit -11
+2026-11-03T02:45:38Z 02_loop_none_1ch_repeat: none, 1 ch, main
+2026-11-03T02:48:01Z 02_loop_none_1ch_repeat: invalid: bench exit -11
+2026-11-03T02:48:01Z 02_loop_none_1ch: invalid x2
+2026-11-03T02:49:00Z 03_loop_none_1ch: none, 1 ch, main
+2026-11-03T02:51:23Z 03_loop_none_1ch: invalid: bench exit -11
+2026-11-03T02:52:23Z 03_loop_none_1ch_repeat: none, 1 ch, main
+2026-11-03T02:54:46Z 03_loop_none_1ch_repeat: invalid: bench exit -11
+2026-11-03T02:54:46Z 03_loop_none_1ch: invalid x2
+2026-11-03T02:55:46Z 04_loop_none_1ch: none, 1 ch, main
+2026-11-03T02:58:08Z 04_loop_none_1ch: invalid: bench exit -11
+2026-11-03T02:59:08Z 04_loop_none_1ch_repeat: none, 1 ch, main
+2026-11-03T03:01:30Z 04_loop_none_1ch_repeat: invalid: bench exit -11
+2026-11-03T03:01:30Z 04_loop_none_1ch: invalid x2
+2026-11-03T03:01:30Z stopping the stream server

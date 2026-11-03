@@ -1,0 +1,73 @@
+mpp[26378]: mpp_platform: client 18 driver is not ready!
+bench: none, 1 channels, warm-up 20 s, window 120 s -> results/check/20261103T015110Z_loop/02_loop_none_1ch
+mpp[26378]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[26378]: h264d_sei: seq_parameter_set_id 0 may be invalid
+window_s: 120
+warmup_start_utc: 2026-11-03T02:04:42.311Z
+window_start_utc: 2026-11-03T02:05:02.311Z
+window_end_utc: 2026-11-03T02:07:02.311Z
+process_cpu_s: 0.980
+process_cpu_a76_s: 0.900
+process_cpu_a55_s: 0.090
+process_cpu_unattributed_s: -0.010
+system_cpu0_s: 0.540
+system_cpu1_s: 0.090
+system_cpu2_s: 0.100
+system_cpu3_s: 0.210
+system_cpu4_s: 0.150
+system_cpu5_s: 0.100
+system_cpu6_s: 0.130
+system_cpu7_s: 0.030
+system_cpu0-3_s: 0.940
+system_cpu4-5_s: 0.250
+system_cpu6-7_s: 0.160
+system_cpu_total_s: 1.350
+decode_fps_min: 30.000
+decode_fps_max: 30.000
+drift_max_s: 0.000
+decoder_drops: 0
+input_ended_early: 0
+sampled_in_window: 600
+q1_drops_in_window: 0
+drop_rate: 0.00000
+processed_in_window: 0
+rss_window_start_kb: 21884
+rss_window_end_kb: 21884
+rss_window_max_kb: 21884
+rss_growth_pct: 0.00
+freq_min_policy0_khz: 1800000
+freq_max_policy0_khz: 1800000
+freq_min_policy4_khz: 2208000
+freq_max_policy4_khz: 2208000
+freq_min_policy6_khz: 2208000
+freq_max_policy6_khz: 2208000
+freq_min_dmc_hz: 2112000000
+freq_max_dmc_hz: 2112000000
+freq_min_npu_hz: 1000000000
+freq_max_npu_hz: 1000000000
+temp_max_mc: 37923
+results: results/check/20261103T015110Z_loop/02_loop_none_1ch

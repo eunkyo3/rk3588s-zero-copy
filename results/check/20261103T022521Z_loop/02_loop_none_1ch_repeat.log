@@ -1,0 +1,32 @@
+mpp[29460]: mpp_platform: client 18 driver is not ready!
+bench: none, 1 channels, warm-up 20 s, window 120 s -> results/check/20261103T022521Z_loop/02_loop_none_1ch_repeat
+mpp[29460]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[29460]: h264d_sei: seq_parameter_set_id 0 may be invalid

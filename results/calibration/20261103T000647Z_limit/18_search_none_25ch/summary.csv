@@ -1,0 +1,61 @@
+# start_time_utc: 2026-11-03T01:14:24Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# run_kind: calibration
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: none
+# channels: 25
+# condition: main
+# repetition: 1
+# code_commit: 9553f709c18810746ef5066a38793b30f090884e
+# amendment: A7
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+key,value
+window_s,120
+warmup_start_utc,2026-11-03T01:14:26.422Z
+window_start_utc,2026-11-03T01:14:46.422Z
+window_end_utc,2026-11-03T01:16:46.422Z
+process_cpu_s,32.650
+process_cpu_a76_s,32.520
+process_cpu_a55_s,0.110
+process_cpu_unattributed_s,0.020
+system_cpu0_s,4.640
+system_cpu1_s,10.860
+system_cpu2_s,2.310
+system_cpu3_s,2.400
+system_cpu4_s,18.120
+system_cpu5_s,11.680
+system_cpu6_s,15.090
+system_cpu7_s,16.560
+system_cpu0-3_s,20.210
+system_cpu4-5_s,29.800
+system_cpu6-7_s,31.650
+system_cpu_total_s,81.660
+decode_fps_min,30.000
+decode_fps_max,30.000
+drift_max_s,0.033
+decoder_drops,0
+input_ended_early,0
+sampled_in_window,15000
+q1_drops_in_window,0
+drop_rate,0.00000
+processed_in_window,0
+rss_window_start_kb,119420
+rss_window_end_kb,119680
+rss_window_max_kb,119680
+rss_growth_pct,0.22
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,45307

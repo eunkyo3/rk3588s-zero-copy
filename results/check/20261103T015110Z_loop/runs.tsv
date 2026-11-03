@@ -1,0 +1,4 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc
+1	01_loop_none_1ch	loop	none	1	main	1	1	0	1				0	36076	-1	2026-11-03T02:01:17Z	2026-11-03T02:03:38Z
+2	02_loop_none_1ch	loop	none	1	main	1	1	0	1				0	36076	-3	2026-11-03T02:04:40Z	2026-11-03T02:07:02Z
+3	03_loop_none_1ch	loop	none	1	main	1	1	0	0		the PC's clock is -5 ms off the board's (allowed -5 to +100 ms) (external failure)		0	36076	-5	2026-11-03T02:08:04Z	2026-11-03T02:10:25Z

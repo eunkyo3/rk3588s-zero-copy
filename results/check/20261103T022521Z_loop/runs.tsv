@@ -1,0 +1,9 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc
+1	01_loop_none_1ch	loop	none	1	main	1	1	-11	0		bench exit -11			37000	-1	2026-11-03T02:35:28Z	2026-11-03T02:37:50Z
+1	01_loop_none_1ch_repeat	loop	none	1	main	1	2	-11	0		bench exit -11			37923	-1	2026-11-03T02:38:51Z	2026-11-03T02:41:13Z
+2	02_loop_none_1ch	loop	none	1	main	1	1	-11	0		bench exit -11			37000	-1	2026-11-03T02:42:15Z	2026-11-03T02:44:36Z
+2	02_loop_none_1ch_repeat	loop	none	1	main	1	2	-11	0		bench exit -11			37923	-2	2026-11-03T02:45:38Z	2026-11-03T02:48:00Z
+3	03_loop_none_1ch	loop	none	1	main	1	1	-11	0		bench exit -11			37923	-3	2026-11-03T02:49:00Z	2026-11-03T02:51:22Z
+3	03_loop_none_1ch_repeat	loop	none	1	main	1	2	-11	0		bench exit -11			37923	-2	2026-11-03T02:52:23Z	2026-11-03T02:54:45Z
+4	04_loop_none_1ch	loop	none	1	main	1	1	-11	0		bench exit -11			37923	-2	2026-11-03T02:55:46Z	2026-11-03T02:58:07Z
+4	04_loop_none_1ch_repeat	loop	none	1	main	1	2	-11	0		bench exit -11			37923	-2	2026-11-03T02:59:08Z	2026-11-03T03:01:30Z

@@ -1,0 +1,88 @@
+# start_time_utc: 2026-11-03T01:07:39Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# run_kind: calibration
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: none
+# channels: 23
+# condition: main
+# repetition: 1
+# code_commit: 9553f709c18810746ef5066a38793b30f090884e
+# amendment: A7
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+tid,comm,affinity,cpu_s_in_window
+22543,dec-14,"4-7",0.950
+22530,dec-1,"4-7",0.920
+22549,dec-20,"4-7",0.910
+22532,dec-3,"4-7",0.890
+22550,dec-21,"4-7",0.860
+22548,dec-19,"4-7",0.850
+22536,dec-7,"4-7",0.850
+22542,dec-13,"4-7",0.850
+22538,dec-9,"4-7",0.850
+22547,dec-18,"4-7",0.840
+22551,dec-22,"4-7",0.830
+22537,dec-8,"4-7",0.830
+22533,dec-4,"4-7",0.830
+22541,dec-12,"4-7",0.820
+22540,dec-11,"4-7",0.820
+22531,dec-2,"4-7",0.820
+22545,dec-16,"4-7",0.820
+22552,dec-23,"4-7",0.800
+22534,dec-5,"4-7",0.800
+22539,dec-10,"4-7",0.790
+22535,dec-6,"4-7",0.790
+22546,dec-17,"4-7",0.740
+22544,dec-15,"4-7",0.730
+22565,mpp_dec_parser,"4-7",0.520
+22557,mpp_dec_parser,"4-7",0.500
+22569,mpp_dec_parser,"4-7",0.490
+22563,mpp_dec_parser,"4-7",0.490
+22591,mpp_dec_parser,"4-7",0.460
+22567,mpp_dec_parser,"4-7",0.440
+22555,mpp_dec_parser,"4-7",0.440
+22587,mpp_dec_parser,"4-7",0.430
+22581,mpp_dec_parser,"4-7",0.430
+22575,mpp_dec_parser,"4-7",0.430
+22593,mpp_dec_parser,"4-7",0.420
+22585,mpp_dec_parser,"4-7",0.420
+22583,mpp_dec_parser,"4-7",0.420
+22571,mpp_dec_parser,"4-7",0.420
+22553,mpp_dec_parser,"4-7",0.420
+22579,mpp_dec_parser,"4-7",0.410
+22577,mpp_dec_parser,"4-7",0.410
+22597,mpp_dec_parser,"4-7",0.400
+22595,mpp_dec_parser,"4-7",0.400
+22559,mpp_dec_parser,"4-7",0.390
+22589,mpp_dec_parser,"4-7",0.380
+22561,mpp_dec_parser,"4-7",0.360
+22573,mpp_dec_parser,"4-7",0.340
+22564,mpp_dec_hal,"4-7",0.120
+22599,metrics,"0",0.110
+22590,mpp_dec_hal,"4-7",0.110
+22586,mpp_dec_hal,"4-7",0.110
+22570,mpp_dec_hal,"4-7",0.110
+22566,mpp_dec_hal,"4-7",0.110
+22584,mpp_dec_hal,"4-7",0.100
+22568,mpp_dec_hal,"4-7",0.100
+22558,mpp_dec_hal,"4-7",0.100
+22594,mpp_dec_hal,"4-7",0.090
+22580,mpp_dec_hal,"4-7",0.090
+22562,mpp_dec_hal,"4-7",0.090
+22556,mpp_dec_hal,"4-7",0.090
+22576,mpp_dec_hal,"4-7",0.090
+22592,mpp_dec_hal,"4-7",0.080
+22582,mpp_dec_hal,"4-7",0.080
+22578,mpp_dec_hal,"4-7",0.080
+22574,mpp_dec_hal,"4-7",0.080
+22560,mpp_dec_hal,"4-7",0.080
+22554,mpp_dec_hal,"4-7",0.080
+22598,mpp_dec_hal,"4-7",0.070
+22596,mpp_dec_hal,"4-7",0.070
+22588,mpp_dec_hal,"4-7",0.070
+22572,mpp_dec_hal,"4-7",0.070
+22524,bench_main,"4-7",0.000

@@ -1,0 +1,32 @@
+# start_time_utc: 2026-11-03T02:35:28Z
+# ntp_synchronized: 
+# prereg_v1_commit: 
+# freeze_m1_commit: 
+# run_kind: check
+# model_sha256: 
+# decoder: 
+# code_commit: fa660d8faf7456137af19d9f141cf88cabe7058a
+# amendment: 
+# session: 20261103T022521Z_loop
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 25
+key,value
+pexels_36330861.mp4_channel,ch1
+pexels_36330861.mp4_loop_points_in_window,3
+pexels_36330861.mp4_decoder_drops,invalid_x2
+pexels_36330861.mp4_passed,0
+pexels_29130409.mp4_channel,ch2
+pexels_29130409.mp4_loop_points_in_window,5
+pexels_29130409.mp4_decoder_drops,invalid_x2
+pexels_29130409.mp4_passed,0
+pexels_29969146.mp4_channel,ch3
+pexels_29969146.mp4_loop_points_in_window,5
+pexels_29969146.mp4_decoder_drops,invalid_x2
+pexels_29969146.mp4_passed,0
+pixabay_180386.mp4_channel,ch4
+pixabay_180386.mp4_loop_points_in_window,4
+pixabay_180386.mp4_decoder_drops,invalid_x2
+pixabay_180386.mp4_passed,0
+passed,0
+invalid_x2_runs,01_loop_none_1ch 02_loop_none_1ch 03_loop_none_1ch 04_loop_none_1ch
+protocol_settings,yes

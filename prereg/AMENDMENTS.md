@@ -214,3 +214,41 @@ Each entry has this form:
     - `tools/equivalence_holdout.sh` is new.
 - Affected data: none. M1-4's results and verdict are unchanged.
 - Release: `amend-A8`.
+
+## A9 — 2026-11-03 — `L`, main set, unsaturated boundary, channel assignment, cooling
+- Change: fixes these values of PROTOCOL §14 (M1-3).
+  - **`L` = 32,** at the cap of §6.1: 32 channels, the size of the channel assignment. All 28 runs of the search and its confirmation passed: 8 to 32 channels, then 3 more at 32 (§10).
+  - **Main set** (§6.1): {1, 2, 4, 8, 12, 16, 32}.
+  - **Unsaturated boundary** (§6.2, with A7): at most 31 channels at the main condition and 5 at the auxiliary one. In the main set, only 32 is saturated: 32 × 5 = 160 > 4661/30 ≈ 155.37.
+  - **Channel-to-video assignment** (§3): [stream-server/assignment_m1.txt](../stream-server/assignment_m1.txt). Channel n plays video ((n − 1) mod 4) + 1: ch1 ①, ch2 ②, ch3 ③, ch4 ④, ch5 ①, and so on to ch32.
+  - **Cooling configuration** (§12): a heatsink and an always-on mini fan (unbranded, AliExpress), as in every M1-3 session. The thermal check passed with it at 26 °C ambient.
+  - **The loop check of §3** passed for all four videos.
+  - **How these sessions judge their runs:** `tools/stream_session.py`, fixed before the runs in [docs/notes/calibration.md](../docs/notes/calibration.md).
+    - Rule 4 of §9.3 is read from the stream server's log, whose times have one-second resolution. A line counts if its second lies between the warm-up start and the window end, both rounded down. In the window end's own second, the board's disconnect is exempt, because the bench disconnects right after the window.
+    - External failures (§9.3): an input that ends early, or an unreadable server log, makes the run invalid. A stream server that is down, an unreadable server log, or a PC clock more than 5 ms behind or 100 ms ahead of the board's also stops the session.
+    - In the thermal check, rule 1 is the check's criterion, not an invalidity. Every one-second sample counts, warm-up included.
+  - **Time:** from 2026-11-03 02:19 UTC, the board takes its time from the stream PC's chrony over the wired link, instead of from `ntp.ubuntu.com` over Wi-Fi. From 04:10 UTC it polls the PC no less often than every 64 s. Both machines stay NTP-synchronized.
+- Reason: the M1-3 sessions on 2026-11-03, each with 10 minutes idle, the cooldown gate and the environment before every run (§9.1, §9.2). Cooling as above.
+
+  | Session | Time (UTC) | Code, amendment | Ambient | Result |
+  |---|---|---|---|---|
+  | [`L`](../results/calibration/20261103T000647Z_limit) | 00:16–01:51 | `9553f70`, A7 | 24 °C | 28 runs valid and passing; drift ≤ 0.033 s; no decoder drops |
+  | [Loop check](../results/check/20261103T032849Z_loop) | 03:38–03:51 | `5c9bc80`, A8 | 25 °C in its header; the operator reported 26 °C at 03:50 | 4 runs valid; 3 to 5 loop points in each window, from each video's duration; no decoder drops |
+  | [Thermal check](../results/calibration/20261103T035136Z_thermal) | 04:01–04:08 | `5c9bc80`, A8 | 26 °C | 2 runs valid (rule 3 applies to the 5-channel run only; 32 channels is saturated); no clock sample below its fixed value; highest `soc-thermal` 67.5 °C (trip point 75 °C) at 32 channels |
+
+  - **Time:** the PC's clock minus the board's wandered from +8 ms (PC ahead) to beyond −5 ms. At 02:10 UTC it stopped the first loop check, after two valid runs, and the first thermal check before its first run.
+    - The sessions run with the board on the PC's time recorded offsets of 0 to −3 ms, inside the bounds.
+    - After the poll change at 04:10 UTC, `timesyncd` reported an offset of −0.14 ms, read by hand and not recorded. No session has run since.
+  - **Build defect:** two later sessions, a loop check from 02:25 and a thermal check from 03:01 UTC, had every run crash at its end (exit −11).
+    - `tools/deploy_board.sh` restored each file's original time. A build from `main` for the held-out check had rebuilt `pipeline.cpp` and `report.cpp` from `main`'s versions. The next deploy, from this branch, brought back its own versions of these files with older times, so make skipped them. The tools whose commit define changed, `bench_main` among them, were rebuilt against this branch's `RunResult`. Objects of two versions were linked together.
+    - Commit `5c9bc80` makes the copy take the time of extraction, so each deploy rebuilds every file it copies.
+    - The `L` session is not affected. Its 28 runs exited normally, and their `summary.csv` holds `warmup_start_utc` and `window_*_utc`, which only this branch's `pipeline.cpp` and `report.cpp` write, with times that match `runs.tsv`.
+    - The held-out check of A8 is not affected. `tools/equivalence_dump` uses none of `RunResult`, `run_pipeline` or the result writers, and the four `src/` files that differ between `main` and this branch change only these and a clock helper they use.
+    - The defect needs a deploy whose files are older than the objects of the build before it, made from other sources. No deploy log is kept for earlier builds. Their results carry checks of their own: M1-4's three runs gave the same bytes and its harness checks held, and every `P_cap` run passed its output checks (A7; `tools/calib_npu.cpp`).
+  - **Repeated checks:** the loop check and the thermal check each ran three times.
+    - The first loop check's two valid runs are not used: the check was redone in full in a new session.
+    - A session with invalid ×2 runs has no result. It is not a failure of §12, which would call for a cooling change. These calibration checks are redone before `freeze-m1` (§15).
+  - All four sessions that stopped or were invalid are kept and flagged ([docs/notes/calibration.md](../docs/notes/calibration.md#sessions-that-stopped-or-were-invalid)). None of their runs counts.
+  - PROTOCOL sets no bound on the ambient temperature. `P_cap` ran at 28 °C, these sessions at 24 to 26 °C.
+- Affected data: none. The `L` session ran before the time change, with offsets of +4 to +8 ms, inside the bounds. The held-out check of A8 reads local files and does not use the stream PC.
+- Release: none (before `freeze-m1`).
