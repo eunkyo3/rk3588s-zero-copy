@@ -157,6 +157,10 @@ perf는 바이트가 아니라 샘플을 센다. `tools/copy_sizes.sh`는 `__mem
 - **프레임 레이트:** ①과 ②는 23.98 fps에서 30 fps로 바꿨다. 다섯 프레임에 한 번꼴로 프레임이 반복된다. ④는 59.94 fps에서 30 fps로 바꿨다. 대략 두 프레임에 하나가 빠진다.
 - **영상 ④**는 사이트가 스크립트 다운로드를 막아서 직접 내려받았다.
 
+### 4K 세트(M1.1, 탐색용)
+
+영상 ①, ②, ④는 [AMENDMENTS A11](../../prereg/AMENDMENTS.ko.md)의 탐색용 설계를 위해 3840×2160, 16 Mbps(`SIZE=3840x2160 BITRATE=16M`)로도 준비했다([preprocess/videos_4k_manifest.tsv](preprocess/videos_4k_manifest.tsv)). 영상 ③은 원본이 2560×1440이라 뺐다. 프레임 수는 1080p와 같다.
+
 ## 도구
 
 | 도구 | 용도 |

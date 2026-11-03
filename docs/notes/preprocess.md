@@ -157,6 +157,10 @@ The project owner chose four candidates, and all four are prepared ([preprocess/
 - **Frame rate:** ① and ② are converted from 23.98 to 30 fps, which repeats about one frame in five. ④ is converted from 59.94 to 30 fps, which drops about every other frame.
 - **Video ④** was downloaded by hand, because the site refuses scripted downloads.
 
+### 4K set (M1.1, exploratory)
+
+Videos ①, ② and ④ are also prepared at 3840×2160 and 16 Mbps (`SIZE=3840x2160 BITRATE=16M`), for the exploratory design of [AMENDMENTS A11](../../prereg/AMENDMENTS.md) ([preprocess/videos_4k_manifest.tsv](preprocess/videos_4k_manifest.tsv)). Video ③ is left out, because its source is 2560×1440. The frame counts are the same as at 1080p.
+
 ## Tools
 
 | Tool | Purpose |
