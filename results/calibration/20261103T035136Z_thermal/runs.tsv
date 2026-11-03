@@ -1,0 +1,3 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc
+1	01_thermal_B_5ch	thermal	B	5	aux	1	1	0	1				0	37923	-2	2026-11-03T04:01:43Z	2026-11-03T04:04:05Z
+2	02_thermal_B_32ch	thermal	B	32	main	1	1	0	1				0	40692	-0	2026-11-03T04:05:28Z	2026-11-03T04:07:50Z

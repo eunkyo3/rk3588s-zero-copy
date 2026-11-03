@@ -1,0 +1,6 @@
+2026/11/03 02:10:36 INF MediaMTX v1.21.2, linux, amd64
+2026/11/03 02:10:36 INF configuration loaded from /home/eunkyo/rk3588s-zero-copy/stream-server/mediamtx.yml
+2026/11/03 02:10:36 INF [RTSP] started with listeners on :8554 (TCP/RTSP)
+2026/11/03 02:10:39 INF shutting down gracefully
+2026/11/03 02:10:39 INF [RTSP] closing
+2026/11/03 02:10:39 INF waiting for running hooks

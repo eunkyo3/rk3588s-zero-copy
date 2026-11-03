@@ -124,7 +124,11 @@ RGA3와 RGA2는 스케일링 샘플링이 달라서, C 경로는 RGA 작업을 R
 - **확인:** `bench_main --variant none`으로 `rtsp://10.88.0.1:8554/ch{n}`에서 4채널(영상 ①~④)을 워밍업 3초, 창 10초로 받았다. 캘리브레이션 실행이 아니라 기능 확인이다([results/check/20261102T083613Z_none_4ch_rtsp](../../results/check/20261102T083613Z_none_4ch_rtsp), 서버 로그 포함).
   - 모든 채널이 30.000 fps로 디코딩됐고, 수신 지연 0초, 디코더 드롭 0이었다.
   - 서버 로그에 오류와 경고가 없었다.
-- PC 로그의 시각은 현지 시각(KST, UTC+9)이고, 두 기기 모두 NTP로 동기화돼 있다.
+- PC 로그의 시각은 현지 시각(KST, UTC+9)이다. `tools/stream_session.py`는 서버를 `TZ=UTC`로 시작한다.
+- **시간:** PC는 chrony로 국내 공개 서버에 시간을 맞춘다(stratum 2).
+  - 2026-11-03 02:19 UTC부터 보드는 유선 링크로 PC 시간에 맞춘다. `/etc/systemd/timesyncd.conf.d/50-bench.conf`가 `NTP=10.88.0.1`, `FallbackNTP=ntp.ubuntu.com`을 정하고, 04:10 UTC부터는 `PollIntervalMaxSec=64`도 정한다.
+  - PC의 `/etc/chrony.conf`에는 `allow 10.88.0.2/32`가 있고, 방화벽은 `10.88.0.2`의 NTP만 받는다.
+  - 그전에는 보드가 Wi-Fi로 `ntp.ubuntu.com`에 맞췄고, PC와의 차이가 +8 ms에서 −5 ms 너머까지 흔들렸다. 지금은 ±0.5 ms 안에 머문다([AMENDMENTS A9](../../prereg/AMENDMENTS.ko.md)).
 
 ## 남은 항목
 

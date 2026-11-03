@@ -1,0 +1,18 @@
+# start_time_utc: 2026-11-03T03:11:44Z
+# ntp_synchronized: 
+# prereg_v1_commit: 
+# freeze_m1_commit: 
+# run_kind: calibration
+# model_sha256: 
+# decoder: 
+# code_commit: fa660d8faf7456137af19d9f141cf88cabe7058a
+# amendment: 
+# session: 20261103T030136Z_thermal
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 25
+key,value
+aux_5ch,invalid_x2
+main_32ch,invalid_x2
+passed,0
+invalid_x2_runs,01_thermal_B_5ch 02_thermal_B_32ch
+protocol_settings,yes

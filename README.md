@@ -45,11 +45,13 @@ flowchart LR
     end
     subgraph BOARD["NanoPi R6C, RK3588S"]
         BM["bench_main<br>one variant, N channels"]
+        SS["stream_session.py<br>M1-3 sessions"]
     end
     M -- "RTSP over TCP, ch1 to ch32<br>wired Ethernet" --> BM
+    SS -. "SSH: start and stop the server,<br>read its log" .-> M
 ```
 
-A separate PC serves the streams, so that serving them costs the board nothing. Channel `chN` loops one of four videos, and its publisher starts when the board connects, so every run starts each video from the beginning. The server's log is one of the validity checks of every run (PROTOCOL §9.3).
+A separate PC serves the streams, so that serving them costs the board nothing. Channel `chN` loops one of four videos ([stream-server/assignment_m1.txt](stream-server/assignment_m1.txt)), and its publisher starts when the board connects, so every run starts each video from the beginning. The server's log is one of the validity checks of every run (PROTOCOL §9.3).
 
 ### Pipeline
 
@@ -131,7 +133,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1-3, calibration. The fixed clocks, `P_cap` (194.2 inferences/s) and the H2 auxiliary point (5 channels) are fixed ([AMENDMENTS A7](prereg/AMENDMENTS.md), [docs/notes/calibration.md](docs/notes/calibration.md)). The wired stream server is set up ([docs/notes/env.md](docs/notes/env.md#network)). Next: the decode-only limit `L`, the loop check of §3 and the thermal check. Done before: M1-4, equivalence: B and C are equivalent under the criteria in force ([AMENDMENTS A5](prereg/AMENDMENTS.md)), and not under the registered criteria ([docs/notes/equivalence.md](docs/notes/equivalence.md)). C's input path makes no CPU pixel copy, but small copies inside the NPU runtime, the same in B, exceed the §11.4 perf threshold ([AMENDMENTS A6](prereg/AMENDMENTS.md)).
+**Current status:** M1-3, calibration, is done. The fixed clocks, `P_cap` (194.2 inferences/s) and the H2 auxiliary point (5 channels) are fixed ([AMENDMENTS A7](prereg/AMENDMENTS.md)). So are the decode-only limit `L` = 32 (the search's cap), the main set {1, 2, 4, 8, 12, 16, 32}, the channel assignment and the cooling: the loop check and the thermal check passed ([AMENDMENTS A9](prereg/AMENDMENTS.md), [docs/notes/calibration.md](docs/notes/calibration.md)). Next: the values of PROTOCOL §14 still open, then `freeze-m1`. Done before: M1-4, equivalence: B and C are equivalent under the criteria in force ([AMENDMENTS A5](prereg/AMENDMENTS.md)), and not under the registered criteria ([docs/notes/equivalence.md](docs/notes/equivalence.md)). C's input path makes no CPU pixel copy, but small copies inside the NPU runtime, the same in B, exceed the §11.4 perf threshold ([AMENDMENTS A6](prereg/AMENDMENTS.md)).
 
 The comparison results come with the report of `v0.1-m1`.
 

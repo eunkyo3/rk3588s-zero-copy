@@ -45,11 +45,13 @@ flowchart LR
     end
     subgraph BOARD["NanoPi R6C, RK3588S"]
         BM["bench_main<br>변형 하나, N채널"]
+        SS["stream_session.py<br>M1-3 세션"]
     end
     M -- "RTSP over TCP, ch1~ch32<br>유선 이더넷" --> BM
+    SS -. "SSH: 서버 시작·종료,<br>로그 읽기" .-> M
 ```
 
-스트림은 별도 PC가 송출한다. 그래서 송출 부담이 보드에 걸리지 않는다. 채널 `chN`은 영상 4개 중 하나를 반복 재생하고, 보드가 접속할 때 송출을 시작한다. 그래서 실행마다 각 영상이 처음부터 재생된다. 서버 로그는 모든 실행의 유효성 검사 항목 중 하나다(PROTOCOL §9.3).
+스트림은 별도 PC가 송출한다. 그래서 송출 부담이 보드에 걸리지 않는다. 채널 `chN`은 영상 4개 중 하나를 반복 재생하고([stream-server/assignment_m1.txt](stream-server/assignment_m1.txt)), 보드가 접속할 때 송출을 시작한다. 그래서 실행마다 각 영상이 처음부터 재생된다. 서버 로그는 모든 실행의 유효성 검사 항목 중 하나다(PROTOCOL §9.3).
 
 ### 파이프라인
 
@@ -131,7 +133,7 @@ flowchart TB
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1-3, 캘리브레이션. 고정 클럭, `P_cap`(초당 194.2회 추론), H2 보조 지점(5채널)을 확정했다([AMENDMENTS A7](prereg/AMENDMENTS.ko.md), [docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)). 유선 송출 서버를 구성했다([docs/notes/env.ko.md](docs/notes/env.ko.md#네트워크)). 다음: 디코딩 전용 상한 `L`, §3의 반복 재생 검사, 열 확인. 앞서 끝난 것: M1-4 동등성. B와 C는 현재 기준([AMENDMENTS A5](prereg/AMENDMENTS.ko.md))으로는 동등하고, 등록 기준으로는 동등하지 않다([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)). C의 입력 경로에는 CPU 픽셀 복사가 없지만, NPU 런타임 안의 작은 복사(B도 같음)가 §11.4 perf 기준을 넘는다([AMENDMENTS A6](prereg/AMENDMENTS.ko.md)).
+**현재 상태:** M1-3 캘리브레이션을 마쳤다. 고정 클럭, `P_cap`(초당 194.2회 추론), H2 보조 지점(5채널)을 확정했다([AMENDMENTS A7](prereg/AMENDMENTS.ko.md)). 디코딩 전용 상한 `L` = 32(탐색 상한), 본편 채널 집합 {1, 2, 4, 8, 12, 16, 32}, 채널 배정, 냉각 구성도 확정했다. 반복 재생 검사와 열 확인을 통과했다([AMENDMENTS A9](prereg/AMENDMENTS.ko.md), [docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)). 다음: 아직 정하지 않은 PROTOCOL §14의 값, 그다음 `freeze-m1`. 앞서 끝난 것: M1-4 동등성. B와 C는 현재 기준([AMENDMENTS A5](prereg/AMENDMENTS.ko.md))으로는 동등하고, 등록 기준으로는 동등하지 않다([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)). C의 입력 경로에는 CPU 픽셀 복사가 없지만, NPU 런타임 안의 작은 복사(B도 같음)가 §11.4 perf 기준을 넘는다([AMENDMENTS A6](prereg/AMENDMENTS.ko.md)).
 
 비교 결과는 `v0.1-m1` 리포트와 함께 공개한다.
 

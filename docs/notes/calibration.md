@@ -9,8 +9,9 @@ Hardware limits that set the channel counts of the comparison (PROTOCOL §6), th
 | Fixed clocks | fixed, [AMENDMENTS A7](../../prereg/AMENDMENTS.md) |
 | `P_cap`, H2 auxiliary point | fixed, A7 |
 | Raw NPU limit (1, 2, 3 cores) | measured, A7 (reference only) |
-| `L`, main set, unsaturated boundary | to do: needs the wired stream server, now set up ([env.md](env.md#network)) |
-| Thermal check, cooling configuration | to do |
+| `L`, main set, unsaturated boundary | fixed, [AMENDMENTS A9](../../prereg/AMENDMENTS.md): `L` = 32 |
+| Loop check (§3) | passed, A9 |
+| Thermal check, cooling configuration | passed; cooling fixed, A9 |
 
 ## Fixed clocks
 
@@ -133,6 +134,86 @@ Fixed before the runs. `tools/stream_session.py` runs each of the three as one s
   - An operator's stop (SIGTERM) stops the session; a run it cuts short is recorded with that reason and neither repeated nor counted.
   - A stopped `L` search is kept and flagged, and the search is run again from §10 step 1 in a new session.
 
+## L: results
+
+Session [results/calibration/20261103T000647Z_limit](../../results/calibration/20261103T000647Z_limit):
+- 2026-11-03, 00:16–01:51 UTC, code `9553f70`, amendment A7;
+- ambient 24 °C, cooling as for `P_cap`;
+- `soc-thermal` baseline 35.2 °C.
+
+All 28 runs were valid and passed: the search from 8 to 32 channels, then 3 confirmation runs at 32 (§10). **`L` = 32, at the cap:** the procedure goes no higher than 32 channels, the size of the channel assignment (§6.1). The decoder may sustain more.
+
+| Channels | Largest drift | Decoder drops | Process CPU in 120 s | Highest `soc-thermal` |
+|---|---|---|---|---|
+| 8 | 0 s | 0 | 9.6 s | 37.9 °C |
+| 16 | 0 s | 0 | 19.5 s | 41.6 °C |
+| 24 | 0 s | 0 | 32.4 s | 44.4 °C |
+| 32, 4 runs | ≤ 0.033 s | 0 | 41.8–44.0 s | 47.2 °C |
+
+- Drift never exceeded 0.033 s, one frame. No run had a rule 4 event or a warning. The PC's clock was 4 to 8 ms ahead of the board's.
+- Decoding costs about 1.35 s of CPU per channel in 120 s, 1.1% of a core, at the fixed clocks.
+
+### Derived values (§6.1, §6.2)
+
+- **Main set:** {1, 2, 4, 8, 12, 16, 32}.
+- **Unsaturated:** at most 31 channels at the main condition and 5 at the auxiliary one. In the main set only 32 is saturated: 32 × 5 = 160 inferences/s > 155.37.
+- **H3:** B and C are also searched up to 32 channels. If both sustain at least 31 (`L` − 1), H3's practical verdict is *indeterminate (ceiling reached)* (HYPOTHESES, H3).
+
+## Loop check: results
+
+Session [results/check/20261103T032849Z_loop](../../results/check/20261103T032849Z_loop):
+- 2026-11-03, 03:38–03:51 UTC, code `5c9bc80`, amendment A8;
+- ambient 25 °C in its header (the user reported 26 °C at 03:50);
+- `soc-thermal` baseline 37.8 °C.
+
+**Passed:** each video's 1-channel run is valid, crosses at least two loop points in its window, and has no decoder drops.
+
+| Video | Channel | Loop points in the window | Decoder drops |
+|---|---|---|---|
+| ① `pexels_36330861` | ch1 | 3 | 0 |
+| ② `pexels_29130409` | ch2 | 5 | 0 |
+| ③ `pexels_29969146` | ch3 | 5 | 0 |
+| ④ `pixabay_180386` | ch4 | 4 | 0 |
+
+## Thermal check: results
+
+Session [results/calibration/20261103T035136Z_thermal](../../results/calibration/20261103T035136Z_thermal):
+- 2026-11-03, 04:01–04:08 UTC, code `5c9bc80`, amendment A8;
+- ambient 26 °C, cooling: heatsink and an always-on mini fan (unbranded, AliExpress);
+- `soc-thermal` baseline 37.9 °C.
+
+**Passed:** both runs are valid, no clock sample fell below its fixed value, and every temperature stayed below its zone's trip point 0. This fixes the cooling configuration (§12, [AMENDMENTS A9](../../prereg/AMENDMENTS.md)).
+
+| Run | Highest `soc-thermal` (trip point 0: 75 °C) | Highest other zone (trip point 0: 115 °C) | Clocks |
+|---|---|---|---|
+| B, 5 channels, auxiliary | 58.2 °C | 60.1 °C, `bigcore1` | always at the fixed values |
+| B, 32 channels, main | 67.5 °C | 68.4 °C, `bigcore0` and `bigcore1` | always at the fixed values |
+
+- Every one-second sample counts, warm-up included: 140 per run.
+- At 32 channels, `soc-thermal` stayed 7.5 °C below its trip point.
+- B's throughput and latency in these runs are not analysed. They are calibration runs, not comparison runs (§12).
+
+## Sessions that stopped or were invalid
+
+They are kept under `results/` and flagged. None of their runs counts.
+
+| Session | What happened | Runs |
+|---|---|---|
+| [check/20261103T015110Z_loop](../../results/check/20261103T015110Z_loop) | Stopped: after its third run, the PC's clock was more than 5 ms behind the board's. | 2 valid, 1 invalid (external failure) |
+| [calibration/20261103T021032Z_thermal](../../results/calibration/20261103T021032Z_thermal) | Stopped at its start, for the same reason. | none |
+| [check/20261103T022521Z_loop](../../results/check/20261103T022521Z_loop) | Build defect: every bench run crashed at its end (exit −11). | 8 invalid: 4 invalid ×2 |
+| [calibration/20261103T030136Z_thermal](../../results/calibration/20261103T030136Z_thermal) | The same build defect. | 4 invalid: 2 invalid ×2 |
+
+- **Clock:**
+  - The board took its time from `ntp.ubuntu.com` over Wi-Fi (SNTP); the PC takes it from servers in Korea with chrony. Their offset wandered from +8 ms (PC ahead) to beyond −5 ms.
+  - The records say −5 ms because `tools/stream_session.py` rounded offsets to whole milliseconds; it now keeps 0.1 ms.
+  - Since 02:19 UTC the board takes its time from the PC over the wired link, and since 04:10 UTC it polls at least every 64 s ([env.md](env.md#network)). The offset stays within ±0.5 ms.
+- **Build defect:**
+  - `tools/deploy_board.sh` restored each file's original time. A deploy from `main` for the held-out check rebuilt `pipeline.cpp` and `report.cpp` from `main`'s versions.
+  - The next deploy, from this branch, brought back their own versions with older times, so make skipped them. Only `bench_main.cpp` was rebuilt, because its commit changed, and it was built against this branch's `RunResult`.
+  - Since commit `5c9bc80`, the copy takes the time of extraction, so each deploy rebuilds every file it copies.
+  - The `L` session (`9553f70`) and the held-out check (`07fe535`) are not affected. Every file that differed from the board's previous build was newer than its objects, and all their runs ended normally.
+
 ## Files
 
 | File | Content |
@@ -144,6 +225,10 @@ Fixed before the runs. `tools/stream_session.py` runs each of the three as one s
 | `runs.tsv` | every attempt: exit code, temperature at the gate, start and end time |
 | `<run>/summary.csv`, `samples.csv`, `env.json`, `<run>.log` | each run's result, one-second samples, threads and bindings, console output |
 | `calibration.csv`, `calibration.txt` | the medians and the derived values |
+| `result.csv`, `session.log` | a stream session's result and its console |
+| `server.txt`, `server/` | the stream server: clock offset, the PC's commit and file hashes, versions; its whole log and assignment |
+| `<run>/server.log`, `server_console.txt` | the server's log lines and publisher output for that run (rule 4) |
+| `<run>/thermal_check.txt` | the thermal check's verdict for that run |
 
 ## Tools
 
@@ -155,3 +240,4 @@ Fixed before the runs. `tools/stream_session.py` runs each of the three as one s
 | `tools/calib_npu.sh` | one session |
 | `tools/calib_summary.py` | medians and derived values ([tests](../../tests/test_calib_summary.py)) |
 | `tools/check_prereg_order.py` | the start-time checks of §1.5 ([tests](../../tests/test_check_prereg_order.py)) |
+| `tools/stream_session.py` | one session of `L`, the loop check or the thermal check, driving the stream PC ([tests](../../tests/test_stream_session.py)) |

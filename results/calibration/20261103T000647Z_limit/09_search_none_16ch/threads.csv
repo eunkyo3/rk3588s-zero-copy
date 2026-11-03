@@ -1,0 +1,67 @@
+# start_time_utc: 2026-11-03T00:43:58Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# run_kind: calibration
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: none
+# channels: 16
+# condition: main
+# repetition: 1
+# code_commit: 9553f709c18810746ef5066a38793b30f090884e
+# amendment: A7
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+tid,comm,affinity,cpu_s_in_window
+20967,dec-13,"4-7",0.820
+20959,dec-5,"4-7",0.810
+20963,dec-9,"4-7",0.800
+20956,dec-2,"4-7",0.780
+20955,dec-1,"4-7",0.770
+20964,dec-10,"4-7",0.760
+20961,dec-7,"4-7",0.760
+20970,dec-16,"4-7",0.750
+20969,dec-15,"4-7",0.750
+20962,dec-8,"4-7",0.740
+20958,dec-4,"4-7",0.740
+20968,dec-14,"4-7",0.740
+20957,dec-3,"4-7",0.740
+20960,dec-6,"4-7",0.720
+20966,dec-12,"4-7",0.700
+20965,dec-11,"4-7",0.700
+20983,mpp_dec_parser,"4-7",0.410
+20993,mpp_dec_parser,"4-7",0.400
+20981,mpp_dec_parser,"4-7",0.400
+20975,mpp_dec_parser,"4-7",0.400
+21001,mpp_dec_parser,"4-7",0.390
+20991,mpp_dec_parser,"4-7",0.390
+20977,mpp_dec_parser,"4-7",0.390
+20985,mpp_dec_parser,"4-7",0.380
+20995,mpp_dec_parser,"4-7",0.370
+20973,mpp_dec_parser,"4-7",0.370
+20997,mpp_dec_parser,"4-7",0.360
+20989,mpp_dec_parser,"4-7",0.360
+20979,mpp_dec_parser,"4-7",0.360
+20999,mpp_dec_parser,"4-7",0.350
+20987,mpp_dec_parser,"4-7",0.340
+20971,mpp_dec_parser,"4-7",0.340
+21003,metrics,"0",0.100
+20972,mpp_dec_hal,"4-7",0.090
+21002,mpp_dec_hal,"4-7",0.080
+21000,mpp_dec_hal,"4-7",0.080
+20998,mpp_dec_hal,"4-7",0.080
+20990,mpp_dec_hal,"4-7",0.080
+20988,mpp_dec_hal,"4-7",0.080
+20986,mpp_dec_hal,"4-7",0.080
+20984,mpp_dec_hal,"4-7",0.080
+20980,mpp_dec_hal,"4-7",0.080
+20976,mpp_dec_hal,"4-7",0.080
+20974,mpp_dec_hal,"4-7",0.080
+20996,mpp_dec_hal,"4-7",0.070
+20994,mpp_dec_hal,"4-7",0.070
+20992,mpp_dec_hal,"4-7",0.070
+20982,mpp_dec_hal,"4-7",0.070
+20978,mpp_dec_hal,"4-7",0.070
+20949,bench_main,"4-7",0.000

@@ -1,0 +1,61 @@
+2026-11-03T00:06:49Z starting the stream server
+2026-11-03T00:06:54Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261103T000650Z-26496, clock offset 4 ms
+2026-11-03T00:06:54Z idle for 600 s
+2026-11-03T00:16:54Z soc-thermal baseline 35153 m°C
+2026-11-03T00:16:55Z 01_search_none_8ch: none, 8 ch, main
+2026-11-03T00:19:17Z 01_search_none_8ch: valid, passed 1
+2026-11-03T00:20:18Z 02_search_none_9ch: none, 9 ch, main
+2026-11-03T00:22:41Z 02_search_none_9ch: valid, passed 1
+2026-11-03T00:23:41Z 03_search_none_10ch: none, 10 ch, main
+2026-11-03T00:26:03Z 03_search_none_10ch: valid, passed 1
+2026-11-03T00:27:04Z 04_search_none_11ch: none, 11 ch, main
+2026-11-03T00:29:27Z 04_search_none_11ch: valid, passed 1
+2026-11-03T00:30:27Z 05_search_none_12ch: none, 12 ch, main
+2026-11-03T00:32:50Z 05_search_none_12ch: valid, passed 1
+2026-11-03T00:33:49Z 06_search_none_13ch: none, 13 ch, main
+2026-11-03T00:36:12Z 06_search_none_13ch: valid, passed 1
+2026-11-03T00:37:12Z 07_search_none_14ch: none, 14 ch, main
+2026-11-03T00:39:35Z 07_search_none_14ch: valid, passed 1
+2026-11-03T00:40:36Z 08_search_none_15ch: none, 15 ch, main
+2026-11-03T00:42:58Z 08_search_none_15ch: valid, passed 1
+2026-11-03T00:43:58Z 09_search_none_16ch: none, 16 ch, main
+2026-11-03T00:46:21Z 09_search_none_16ch: valid, passed 1
+2026-11-03T00:47:21Z 10_search_none_17ch: none, 17 ch, main
+2026-11-03T00:49:44Z 10_search_none_17ch: valid, passed 1
+2026-11-03T00:50:44Z 11_search_none_18ch: none, 18 ch, main
+2026-11-03T00:53:06Z 11_search_none_18ch: valid, passed 1
+2026-11-03T00:54:07Z 12_search_none_19ch: none, 19 ch, main
+2026-11-03T00:56:30Z 12_search_none_19ch: valid, passed 1
+2026-11-03T00:57:30Z 13_search_none_20ch: none, 20 ch, main
+2026-11-03T00:59:53Z 13_search_none_20ch: valid, passed 1
+2026-11-03T01:00:53Z 14_search_none_21ch: none, 21 ch, main
+2026-11-03T01:03:16Z 14_search_none_21ch: valid, passed 1
+2026-11-03T01:04:16Z 15_search_none_22ch: none, 22 ch, main
+2026-11-03T01:06:39Z 15_search_none_22ch: valid, passed 1
+2026-11-03T01:07:39Z 16_search_none_23ch: none, 23 ch, main
+2026-11-03T01:10:02Z 16_search_none_23ch: valid, passed 1
+2026-11-03T01:11:02Z 17_search_none_24ch: none, 24 ch, main
+2026-11-03T01:13:24Z 17_search_none_24ch: valid, passed 1
+2026-11-03T01:14:24Z 18_search_none_25ch: none, 25 ch, main
+2026-11-03T01:16:47Z 18_search_none_25ch: valid, passed 1
+2026-11-03T01:17:47Z 19_search_none_26ch: none, 26 ch, main
+2026-11-03T01:20:10Z 19_search_none_26ch: valid, passed 1
+2026-11-03T01:21:10Z 20_search_none_27ch: none, 27 ch, main
+2026-11-03T01:23:33Z 20_search_none_27ch: valid, passed 1
+2026-11-03T01:24:33Z 21_search_none_28ch: none, 28 ch, main
+2026-11-03T01:26:56Z 21_search_none_28ch: valid, passed 1
+2026-11-03T01:27:57Z 22_search_none_29ch: none, 29 ch, main
+2026-11-03T01:30:20Z 22_search_none_29ch: valid, passed 1
+2026-11-03T01:31:20Z 23_search_none_30ch: none, 30 ch, main
+2026-11-03T01:33:43Z 23_search_none_30ch: valid, passed 1
+2026-11-03T01:34:44Z 24_search_none_31ch: none, 31 ch, main
+2026-11-03T01:37:07Z 24_search_none_31ch: valid, passed 1
+2026-11-03T01:38:11Z 25_search_none_32ch: none, 32 ch, main
+2026-11-03T01:40:34Z 25_search_none_32ch: valid, passed 1
+2026-11-03T01:41:39Z 26_confirm_none_32ch: none, 32 ch, main
+2026-11-03T01:44:03Z 26_confirm_none_32ch: valid, passed 1
+2026-11-03T01:45:06Z 27_confirm_none_32ch: none, 32 ch, main
+2026-11-03T01:47:29Z 27_confirm_none_32ch: valid, passed 1
+2026-11-03T01:48:40Z 28_confirm_none_32ch: none, 32 ch, main
+2026-11-03T01:51:04Z 28_confirm_none_32ch: valid, passed 1
+2026-11-03T01:51:04Z stopping the stream server
