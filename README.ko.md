@@ -155,7 +155,7 @@ flowchart TB
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1-6 비교 실행을 마쳤고, M1-7 보고서는 [docs/report/M1.ko.md](docs/report/M1.ko.md)에 있다. 그에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 작은 4K 탐색 설계([AMENDMENTS A11](prereg/AMENDMENTS.ko.md))는 그 뒤 2026-11-04에 돌았고, 그 정리는 M1.1과 함께 나온다.
+**현재 상태:** M1을 [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1)으로 공개했다. 보고서 [docs/report/M1.ko.md](docs/report/M1.ko.md)와 데모 영상이 함께 있다. 비교 실행에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 작은 4K 탐색 설계([AMENDMENTS A11](prereg/AMENDMENTS.ko.md))는 그 뒤 2026-11-04에 돌았다. 그 정리는 PROTOCOL §13의 다른 선택 설계와 함께 M1.1(`v0.1.1`)에서 나온다.
 
 ## 빌드와 실행
 
