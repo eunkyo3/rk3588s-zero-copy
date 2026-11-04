@@ -229,6 +229,33 @@ class EndToEnd(Cases, unittest.TestCase):
             self.assertEqual(code, 2, out)
             self.assertIn("model_sha256", out)
 
+    def test_m1_1_is_reported_not_judged(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            base = [[self.A] for _ in range(self.N)]
+            for k, v in (("B", 100), ("C", 101), ("R", 103)):
+                self.write(d, k, base, [v] * self.N, run_kind="m1.1")
+            code, out, summary = self.run_check(d, self.N)
+        self.assertEqual(code, 0, out)
+        self.assertIn("verdict (A5): PASS, not on the registered input; run kind m1.1, reported, not judged", out)
+        self.assertFalse(summary["registered_input"])
+        self.assertEqual(summary["headers"]["C"]["run_kind"], "m1.1")
+
+    def test_run_kinds_must_agree(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            base = [[self.A] for _ in range(self.N)]
+            self.write(d, "B", base, [100] * self.N, run_kind="m1.1")
+            self.write(d, "C", base, [101] * self.N)
+            self.write(d, "R", base, [103] * self.N)
+            code, out, _ = self.run_check(d, self.N)
+            self.assertEqual(code, 2, out)
+            self.assertIn("header field run_kind differs", out)
+            self.write(d, "B", base, [100] * self.N, run_kind="comparison")
+            code, out, _ = self.run_check(d, self.N)
+        self.assertEqual(code, 2, out)
+        self.assertIn("run kind comparison; expected B, equivalence or m1.1", out)
+
     def test_no_b_boxes_is_an_input_error(self):
         empty = [[] for _ in range(self.N)]
         code, out, _ = self.check(b=[[]] * self.N, c=empty, r=empty)
