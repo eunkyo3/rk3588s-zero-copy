@@ -225,7 +225,7 @@ def write_figures(root, out):
     """Every figure, from the protocol sessions under root/results, into out."""
     out.mkdir(parents=True, exist_ok=True)
     style()
-    c = rep.collect(root, with_4k=False)
+    c = rep.collect(root, with_m1_1=False)
     names = {"main": "main condition, 5 fps per channel", "aux": "auxiliary condition, 30 fps per channel"}
     for sweep, condition in names.items():
         small_multiples(c, sweep, CPU_PANELS, 3, f"CPU seconds in the {WINDOW_S} s window, {condition}",
