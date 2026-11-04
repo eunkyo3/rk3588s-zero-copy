@@ -1,0 +1,118 @@
+2026-11-03T12:02:16Z starting the stream server
+2026-11-03T12:02:21Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261103T120217Z-78051, clock offset 0.2 ms
+2026-11-03T12:02:21Z idle for 600 s
+2026-11-03T12:12:21Z soc-thermal baseline 35829 m°C
+2026-11-03T12:12:21Z h3: 0 earlier sessions; next ('B', 'h3_search', 8, 1)
+2026-11-03T12:12:22Z 01_h3_search_B_8ch: B, 8 ch, main
+2026-11-03T12:14:45Z 01_h3_search_B_8ch: valid, passed 1
+2026-11-03T12:15:46Z 02_h3_search_C_8ch: C, 8 ch, main
+2026-11-03T12:18:09Z 02_h3_search_C_8ch: valid, passed 1
+2026-11-03T12:19:08Z 03_h3_search_C_9ch: C, 9 ch, main
+2026-11-03T12:21:31Z 03_h3_search_C_9ch: valid, passed 1
+2026-11-03T12:22:33Z 04_h3_search_B_9ch: B, 9 ch, main
+2026-11-03T12:24:55Z 04_h3_search_B_9ch: valid, passed 1
+2026-11-03T12:25:56Z 05_h3_search_B_10ch: B, 10 ch, main
+2026-11-03T12:28:19Z 05_h3_search_B_10ch: valid, passed 1
+2026-11-03T12:29:19Z 06_h3_search_C_10ch: C, 10 ch, main
+2026-11-03T12:31:42Z 06_h3_search_C_10ch: valid, passed 1
+2026-11-03T12:32:42Z 07_h3_search_C_11ch: C, 11 ch, main
+2026-11-03T12:35:05Z 07_h3_search_C_11ch: valid, passed 1
+2026-11-03T12:36:06Z 08_h3_search_B_11ch: B, 11 ch, main
+2026-11-03T12:38:29Z 08_h3_search_B_11ch: valid, passed 1
+2026-11-03T12:39:29Z 09_h3_search_B_12ch: B, 12 ch, main
+2026-11-03T12:41:52Z 09_h3_search_B_12ch: valid, passed 1
+2026-11-03T12:42:54Z 10_h3_search_C_12ch: C, 12 ch, main
+2026-11-03T12:45:17Z 10_h3_search_C_12ch: valid, passed 1
+2026-11-03T12:46:18Z 11_h3_search_C_13ch: C, 13 ch, main
+2026-11-03T12:48:41Z 11_h3_search_C_13ch: valid, passed 1
+2026-11-03T12:49:41Z 12_h3_search_B_13ch: B, 13 ch, main
+2026-11-03T12:52:04Z 12_h3_search_B_13ch: valid, passed 1
+2026-11-03T12:53:11Z 13_h3_search_B_14ch: B, 14 ch, main
+2026-11-03T12:55:34Z 13_h3_search_B_14ch: valid, passed 1
+2026-11-03T12:56:37Z 14_h3_search_C_14ch: C, 14 ch, main
+2026-11-03T12:59:00Z 14_h3_search_C_14ch: valid, passed 1
+2026-11-03T13:00:00Z 15_h3_search_C_15ch: C, 15 ch, main
+2026-11-03T13:02:23Z 15_h3_search_C_15ch: valid, passed 1
+2026-11-03T13:03:24Z 16_h3_search_B_15ch: B, 15 ch, main
+2026-11-03T13:05:46Z 16_h3_search_B_15ch: valid, passed 1
+2026-11-03T13:07:00Z 17_h3_search_B_16ch: B, 16 ch, main
+2026-11-03T13:09:23Z 17_h3_search_B_16ch: valid, passed 1
+2026-11-03T13:10:41Z 18_h3_search_C_16ch: C, 16 ch, main
+2026-11-03T13:13:04Z 18_h3_search_C_16ch: valid, passed 1
+2026-11-03T13:14:05Z 19_h3_search_C_17ch: C, 17 ch, main
+2026-11-03T13:16:28Z 19_h3_search_C_17ch: valid, passed 1
+2026-11-03T13:17:38Z 20_h3_search_B_17ch: B, 17 ch, main
+2026-11-03T13:20:01Z 20_h3_search_B_17ch: valid, passed 1
+2026-11-03T13:21:19Z 21_h3_search_B_18ch: B, 18 ch, main
+2026-11-03T13:23:42Z 21_h3_search_B_18ch: valid, passed 1
+2026-11-03T13:25:04Z 22_h3_search_C_18ch: C, 18 ch, main
+2026-11-03T13:27:27Z 22_h3_search_C_18ch: valid, passed 1
+2026-11-03T13:28:36Z 23_h3_search_C_19ch: C, 19 ch, main
+2026-11-03T13:30:59Z 23_h3_search_C_19ch: valid, passed 1
+2026-11-03T13:32:10Z 24_h3_search_B_19ch: B, 19 ch, main
+2026-11-03T13:34:33Z 24_h3_search_B_19ch: valid, passed 1
+2026-11-03T13:35:56Z 25_h3_search_B_20ch: B, 20 ch, main
+2026-11-03T13:38:19Z 25_h3_search_B_20ch: valid, passed 1
+2026-11-03T13:39:50Z 26_h3_search_C_20ch: C, 20 ch, main
+2026-11-03T13:42:13Z 26_h3_search_C_20ch: valid, passed 1
+2026-11-03T13:43:30Z 27_h3_search_C_21ch: C, 21 ch, main
+2026-11-03T13:45:53Z 27_h3_search_C_21ch: valid, passed 1
+2026-11-03T13:47:14Z 28_h3_search_B_21ch: B, 21 ch, main
+2026-11-03T13:49:37Z 28_h3_search_B_21ch: valid, passed 1
+2026-11-03T13:51:06Z 29_h3_search_B_22ch: B, 22 ch, main
+2026-11-03T13:53:29Z 29_h3_search_B_22ch: valid, passed 1
+2026-11-03T13:55:02Z 30_h3_search_C_22ch: C, 22 ch, main
+2026-11-03T13:57:25Z 30_h3_search_C_22ch: valid, passed 1
+2026-11-03T13:58:50Z 31_h3_search_C_23ch: C, 23 ch, main
+2026-11-03T14:01:13Z 31_h3_search_C_23ch: valid, passed 1
+2026-11-03T14:02:42Z 32_h3_search_B_23ch: B, 23 ch, main
+2026-11-03T14:05:06Z 32_h3_search_B_23ch: valid, passed 1
+2026-11-03T14:06:46Z 33_h3_search_B_24ch: B, 24 ch, main
+2026-11-03T14:09:09Z 33_h3_search_B_24ch: valid, passed 1
+2026-11-03T14:10:50Z 34_h3_search_C_24ch: C, 24 ch, main
+2026-11-03T14:13:14Z 34_h3_search_C_24ch: valid, passed 1
+2026-11-03T14:14:36Z 35_h3_search_C_25ch: C, 25 ch, main
+2026-11-03T14:16:59Z 35_h3_search_C_25ch: valid, passed 1
+2026-11-03T14:18:27Z 36_h3_search_B_25ch: B, 25 ch, main
+2026-11-03T14:20:50Z 36_h3_search_B_25ch: valid, passed 1
+2026-11-03T14:22:30Z 37_h3_search_B_26ch: B, 26 ch, main
+2026-11-03T14:24:53Z 37_h3_search_B_26ch: valid, passed 1
+2026-11-03T14:26:31Z 38_h3_search_C_26ch: C, 26 ch, main
+2026-11-03T14:28:55Z 38_h3_search_C_26ch: valid, passed 1
+2026-11-03T14:30:32Z 39_h3_search_C_27ch: C, 27 ch, main
+2026-11-03T14:32:55Z 39_h3_search_C_27ch: valid, passed 1
+2026-11-03T14:34:21Z 40_h3_search_B_27ch: B, 27 ch, main
+2026-11-03T14:36:44Z 40_h3_search_B_27ch: valid, passed 1
+2026-11-03T14:38:29Z 41_h3_search_B_28ch: B, 28 ch, main
+2026-11-03T14:40:52Z 41_h3_search_B_28ch: valid, passed 1
+2026-11-03T14:42:39Z 42_h3_search_C_28ch: C, 28 ch, main
+2026-11-03T14:45:03Z 42_h3_search_C_28ch: valid, passed 1
+2026-11-03T14:46:35Z 43_h3_search_C_29ch: C, 29 ch, main
+2026-11-03T14:48:58Z 43_h3_search_C_29ch: valid, passed 1
+2026-11-03T14:50:33Z 44_h3_search_B_29ch: B, 29 ch, main
+2026-11-03T14:52:56Z 44_h3_search_B_29ch: valid, passed 1
+2026-11-03T14:54:42Z 45_h3_search_B_30ch: B, 30 ch, main
+2026-11-03T14:57:06Z 45_h3_search_B_30ch: valid, passed 1
+2026-11-03T14:59:02Z 46_h3_search_C_30ch: C, 30 ch, main
+2026-11-03T15:01:27Z 46_h3_search_C_30ch: valid, passed 1
+2026-11-03T15:03:00Z 47_h3_search_C_31ch: C, 31 ch, main
+2026-11-03T15:05:23Z 47_h3_search_C_31ch: valid, passed 1
+2026-11-03T15:07:01Z 48_h3_search_B_31ch: B, 31 ch, main
+2026-11-03T15:09:25Z 48_h3_search_B_31ch: valid, passed 1
+2026-11-03T15:11:17Z 49_h3_search_B_32ch: B, 32 ch, main
+2026-11-03T15:13:40Z 49_h3_search_B_32ch: valid, passed 1
+2026-11-03T15:15:35Z 50_h3_search_C_32ch: C, 32 ch, main
+2026-11-03T15:17:59Z 50_h3_search_C_32ch: valid, passed 1
+2026-11-03T15:19:41Z 51_h3_confirm_B_32ch_r1: B, 32 ch, main
+2026-11-03T15:22:04Z 51_h3_confirm_B_32ch_r1: valid, passed 1
+2026-11-03T15:23:55Z 52_h3_confirm_C_32ch_r1: C, 32 ch, main
+2026-11-03T15:26:19Z 52_h3_confirm_C_32ch_r1: valid, passed 1
+2026-11-03T15:28:09Z 53_h3_confirm_C_32ch_r2: C, 32 ch, main
+2026-11-03T15:30:32Z 53_h3_confirm_C_32ch_r2: valid, passed 1
+2026-11-03T15:32:05Z 54_h3_confirm_B_32ch_r2: B, 32 ch, main
+2026-11-03T15:34:28Z 54_h3_confirm_B_32ch_r2: valid, passed 1
+2026-11-03T15:36:16Z 55_h3_confirm_B_32ch_r3: B, 32 ch, main
+2026-11-03T15:38:40Z 55_h3_confirm_B_32ch_r3: valid, passed 1
+2026-11-03T15:40:37Z 56_h3_confirm_C_32ch_r3: C, 32 ch, main
+2026-11-03T15:43:00Z 56_h3_confirm_C_32ch_r3: valid, passed 1
+2026-11-03T15:43:00Z stopping the stream server

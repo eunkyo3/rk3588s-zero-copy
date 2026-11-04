@@ -1,0 +1,66 @@
+2026-11-03T10:11:14Z starting the stream server
+2026-11-03T10:11:20Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261103T101116Z-70013, clock offset -0.1 ms
+2026-11-03T10:11:20Z idle for 600 s
+2026-11-03T10:21:20Z soc-thermal baseline 36861 m°C
+2026-11-03T10:21:20Z aux: 0 of 15 repetitions complete in earlier sessions, 0 to redo, 15 to run
+2026-11-03T10:21:21Z 01_aux_B_1ch_r1: B, 1 ch, aux
+2026-11-03T10:23:43Z 01_aux_B_1ch_r1: valid
+2026-11-03T10:24:44Z 02_aux_C_1ch_r1: C, 1 ch, aux
+2026-11-03T10:27:07Z 02_aux_C_1ch_r1: valid
+2026-11-03T10:28:08Z 03_aux_C_1ch_r2: C, 1 ch, aux
+2026-11-03T10:30:31Z 03_aux_C_1ch_r2: valid
+2026-11-03T10:31:32Z 04_aux_B_1ch_r2: B, 1 ch, aux
+2026-11-03T10:33:54Z 04_aux_B_1ch_r2: valid
+2026-11-03T10:34:54Z 05_aux_B_1ch_r3: B, 1 ch, aux
+2026-11-03T10:37:17Z 05_aux_B_1ch_r3: valid
+2026-11-03T10:38:18Z 06_aux_C_1ch_r3: C, 1 ch, aux
+2026-11-03T10:40:41Z 06_aux_C_1ch_r3: valid
+2026-11-03T10:41:41Z 07_aux_B_4ch_r1: B, 4 ch, aux
+2026-11-03T10:44:04Z 07_aux_B_4ch_r1: valid
+2026-11-03T10:45:04Z 08_aux_C_4ch_r1: C, 4 ch, aux
+2026-11-03T10:47:27Z 08_aux_C_4ch_r1: valid
+2026-11-03T10:48:28Z 09_aux_C_4ch_r2: C, 4 ch, aux
+2026-11-03T10:50:51Z 09_aux_C_4ch_r2: valid
+2026-11-03T10:51:52Z 10_aux_B_4ch_r2: B, 4 ch, aux
+2026-11-03T10:54:15Z 10_aux_B_4ch_r2: valid
+2026-11-03T10:55:15Z 11_aux_B_4ch_r3: B, 4 ch, aux
+2026-11-03T10:57:38Z 11_aux_B_4ch_r3: valid
+2026-11-03T10:58:38Z 12_aux_C_4ch_r3: C, 4 ch, aux
+2026-11-03T11:01:01Z 12_aux_C_4ch_r3: valid
+2026-11-03T11:02:01Z 13_aux_B_3ch_r1: B, 3 ch, aux
+2026-11-03T11:04:24Z 13_aux_B_3ch_r1: valid
+2026-11-03T11:05:24Z 14_aux_C_3ch_r1: C, 3 ch, aux
+2026-11-03T11:07:47Z 14_aux_C_3ch_r1: valid
+2026-11-03T11:08:47Z 15_aux_C_3ch_r2: C, 3 ch, aux
+2026-11-03T11:11:10Z 15_aux_C_3ch_r2: valid
+2026-11-03T11:12:11Z 16_aux_B_3ch_r2: B, 3 ch, aux
+2026-11-03T11:14:34Z 16_aux_B_3ch_r2: valid
+2026-11-03T11:15:34Z 17_aux_B_3ch_r3: B, 3 ch, aux
+2026-11-03T11:17:56Z 17_aux_B_3ch_r3: valid
+2026-11-03T11:18:56Z 18_aux_C_3ch_r3: C, 3 ch, aux
+2026-11-03T11:21:19Z 18_aux_C_3ch_r3: valid
+2026-11-03T11:22:19Z 19_aux_B_2ch_r1: B, 2 ch, aux
+2026-11-03T11:24:42Z 19_aux_B_2ch_r1: valid
+2026-11-03T11:25:43Z 20_aux_C_2ch_r1: C, 2 ch, aux
+2026-11-03T11:28:06Z 20_aux_C_2ch_r1: valid
+2026-11-03T11:29:06Z 21_aux_C_2ch_r2: C, 2 ch, aux
+2026-11-03T11:31:29Z 21_aux_C_2ch_r2: valid
+2026-11-03T11:32:30Z 22_aux_B_2ch_r2: B, 2 ch, aux
+2026-11-03T11:34:52Z 22_aux_B_2ch_r2: valid
+2026-11-03T11:35:52Z 23_aux_B_2ch_r3: B, 2 ch, aux
+2026-11-03T11:38:15Z 23_aux_B_2ch_r3: valid
+2026-11-03T11:39:16Z 24_aux_C_2ch_r3: C, 2 ch, aux
+2026-11-03T11:41:39Z 24_aux_C_2ch_r3: valid
+2026-11-03T11:42:40Z 25_aux_B_5ch_r1: B, 5 ch, aux
+2026-11-03T11:45:02Z 25_aux_B_5ch_r1: valid
+2026-11-03T11:46:03Z 26_aux_C_5ch_r1: C, 5 ch, aux
+2026-11-03T11:48:27Z 26_aux_C_5ch_r1: valid
+2026-11-03T11:49:27Z 27_aux_C_5ch_r2: C, 5 ch, aux
+2026-11-03T11:51:50Z 27_aux_C_5ch_r2: valid
+2026-11-03T11:52:51Z 28_aux_B_5ch_r2: B, 5 ch, aux
+2026-11-03T11:55:14Z 28_aux_B_5ch_r2: valid
+2026-11-03T11:56:16Z 29_aux_B_5ch_r3: B, 5 ch, aux
+2026-11-03T11:58:39Z 29_aux_B_5ch_r3: valid
+2026-11-03T11:59:41Z 30_aux_C_5ch_r3: C, 5 ch, aux
+2026-11-03T12:02:04Z 30_aux_C_5ch_r3: valid
+2026-11-03T12:02:04Z stopping the stream server

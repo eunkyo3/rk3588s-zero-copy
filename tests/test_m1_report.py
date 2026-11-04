@@ -4,6 +4,7 @@ and the report.
 
 Usage: python3 tests/test_m1_report.py
 """
+import json
 import math
 import sys
 import tempfile
@@ -77,6 +78,11 @@ class Stats(unittest.TestCase):
         self.assertEqual(rep.stats([4.0])[:2], (1, 4.0))
         self.assertTrue(math.isnan(rep.stats([4.0])[2]))
         self.assertEqual(rep.stats([])[0], 0)
+
+    def test_rounded(self):
+        self.assertEqual(rep.rounded({"a": [1.23456, -0.0001, math.nan], "b": (2, True, "x")}),
+                         {"a": [1.235, 0.0, None], "b": [2, True, "x"]})
+        self.assertEqual(str(rep.rounded(-0.0001)), "0.0")
 
     def test_p99_is_numpys_linear_interpolation(self):
         values = [float(x) for x in range(1, 101)]  # (n - 1) * 0.99 = 98.01 -> 99 + 0.01
@@ -219,6 +225,65 @@ class Report(unittest.TestCase):
             self.assertIn("- main 1 ch B r1: 20261104T000000Z_main/07_main_B_1ch_r1: bench exit -11; "
                           "20261104T000000Z_main/07_main_B_1ch_r1_repeat: clock below fixed: dmc_hz", text)
             self.assertIn("- main: 20261104T000000Z_main/01_main_B_8ch_r1: 2 samples", text)
+            s = json.loads(json.dumps(rep.summary(c)))
+            self.assertEqual(s["verdicts"]["H1"]["saving"], 0.3)
+            self.assertEqual(s["points"]["main"]["8"]["C"]["process_cpu_s"], {"n": 3, "mean": 7.0, "sd": 2.646,
+                                                                              "cv": 0.378})
+            self.assertEqual(s["points"]["main"]["1"]["B"]["process_cpu_s"], {"n": 0, "mean": None, "sd": None,
+                                                                              "cv": None})
+            self.assertFalse(s["complete"])
+            self.assertEqual(s["m1.1_4k"]["sessions"], 0)
+            self.assertIn("## M1.1: 4K input (exploratory, A11)", text)
+            self.assertTrue(text.endswith("No 4K session yet.\n"))
+
+    def test_the_4k_section(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            main = session(root / "results" / "comparison", "20261104T000000Z_main",
+                           [("01_main_B_2ch_r1", "B", 2, 1, 1, "1", ""), ("02_main_C_2ch_r1", "C", 2, 1, 1, "1", "")])
+            idle_file(main)
+            fake_run(main / "01_main_B_2ch_r1", 3.0, [10.0] * 100)
+            fake_run(main / "02_main_C_2ch_r1", 1.5, [10.0] * 100)
+            rows = [("01_4k_B_2ch_r1", "B", 2, 1, 1, "1", ""), ("02_4k_C_2ch_r1", "C", 2, 1, 1, "1", ""),
+                    ("03_4k_C_2ch_r2", "C", 2, 2, 1, "1", ""), ("04_4k_B_2ch_r2", "B", 2, 2, 1, "0", "bench exit -11"),
+                    ("04_4k_B_2ch_r2_repeat", "B", 2, 2, 2, "0", "decoder drops")]
+            k4 = session(root / "results" / "m1.1", "20261104T050000Z_4k", rows,
+                         started=[("05_4k_B_4ch_r1", "B", 4, 1, 1)])
+            idle_file(k4)
+            (root / "results" / "m1.1" / "20261104T060000Z_4k_tensors").mkdir()  # not a session
+            for name, v, _, r, *_ in rows[:3]:
+                fake_run(k4 / name, {"B": 9.0, "C": 2.0 * r}[v], [10.0] * 100)
+            c = rep.collect(root)
+            self.assertFalse(any(m.startswith("4k") for m in c["missing"]))  # not part of M1's completeness
+            self.assertIn("4k 1 ch B r1", c["4k"]["missing"])
+            text = rep.report(c)
+            section = text[text.index("## M1.1: 4K input"):]
+            self.assertIn("| 2 | process CPU (s) | 9.000 ± – (1) | 3.000 ± 1.414 (2) | 3.000 ± – (1) | 1.500 ± – (1) |",
+                          section)
+            self.assertIn("- 4k 2 ch C: process CPU (s) CV 47.1%", section)  # in the 4K section's flags only
+            self.assertNotIn("4k 2 ch C", text[:text.index("## M1.1: 4K input")])
+            self.assertIn("### Invalid x2", section)
+            self.assertIn("- 4k 2 ch B r2: 20261104T050000Z_4k/04_4k_B_2ch_r2: bench exit -11; "
+                          "20261104T050000Z_4k/04_4k_B_2ch_r2_repeat: decoder drops", section)
+            self.assertIn("Not complete: 4k 1 ch B r1", section)
+            self.assertEqual(c["4k"]["sessions"], 1)
+            self.assertIn("Equivalence under A5 is not claimed at 4K.", section)
+            lost = "- 4k: 20261104T050000Z_4k/05_4k_B_4ch_r1: invalid: " + rep.LOST
+            self.assertIn(lost, section)
+            self.assertNotIn(lost, text[:text.index("## M1.1: 4K input")])  # not in M1's lists
+
+    def test_the_m1_check_does_not_read_the_4k_runs(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            k4 = session(root / "results" / "m1.1", "20261104T050000Z_4k", [("01_4k_B_1ch_r1", "B", 1, 1, 1, "1", ""),
+                                                                            ("02_4k_C_1ch_r1", "C", 1, 1, 1, "1", "")])
+            fake_run(k4 / "01_4k_B_1ch_r1", 9.0, [10.0] * 100)  # no idle baseline: the 4K part cannot be read
+            fake_run(k4 / "02_4k_C_1ch_r1", 2.0, [10.0] * 100)
+            c = rep.collect(root, with_4k=False)
+            self.assertNotIn("4k", c)
+            self.assertEqual(len(c["missing"]), 42 + 30 + 6 + 1)
+            with self.assertRaises(KeyError):
+                rep.collect(root)
 
 
 if __name__ == "__main__":
