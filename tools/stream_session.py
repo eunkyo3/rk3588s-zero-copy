@@ -779,8 +779,7 @@ class Session:
                       re.finditer(r"^thermal_(\S+): temp_mc=-?\d+ trip0_mc=(\d+)", env, re.M)}
         if "soc-thermal" not in self.trips:
             raise Stop("env.txt has no trip point for soc-thermal")
-        commit = re.search(r"^CODE_COMMIT:STRING=(.*)$", Path("build/CMakeCache.txt").read_text(), re.M)
-        self.code_commit = commit.group(1) if commit else "unknown"
+        self.code_commit = build_commit()
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
@@ -1130,15 +1129,23 @@ def loop_check_done(video_set):
     return False
 
 
-def bdirect_check_done():
-    """Whether tools/bdirect_check has passed with the code of A12 or later (A12): results/check/
-    <UTC>_bdirect_check whose check.csv says passed 1, built with amendment A12 or a later one."""
+def build_commit():
+    """The commit build/ was built from (tools/deploy_board.sh sets CODE_COMMIT), or "unknown"."""
+    cache = Path("build/CMakeCache.txt")
+    commit = re.search(r"^CODE_COMMIT:STRING=(.*)$", cache.read_text(), re.M) if cache.exists() else None
+    return commit.group(1) if commit else "unknown"
+
+
+def bdirect_check_done(commit):
+    """Whether tools/bdirect_check has passed with the binary of the runs (A12): results/check/
+    <UTC>_bdirect_check whose check.csv says passed 1, built from commit with amendment A12 or later."""
     for d in Path("results", "check").glob("*_bdirect_check"):
         check = d / "check.csv"
         if re.fullmatch(SESSION_NAME + "bdirect_check", d.name) and check.exists():
             header, rows = read_csv(check)
             amendment = re.fullmatch(r"A(\d+)", header.get("amendment", ""))
-            if amendment and int(amendment[1]) >= 12 and {r["key"]: r["value"] for r in rows}.get("passed") == "1":
+            if (amendment and int(amendment[1]) >= 12 and header.get("code_commit") == commit
+                    and {r["key"]: r["value"] for r in rows}.get("passed") == "1"):
                 return True
     return False
 
@@ -1150,8 +1157,9 @@ def order_problem(name):
             return f"{earlier} comes before {name} and is not complete"
     if name == "4k" and not loop_check_done("4k"):
         return "the loop check of the 4K set (loop-check --set 4k) comes before the first 4K session (A11)"
-    if name.startswith("bdirect_") and not bdirect_check_done():
-        return "a passed tools/bdirect_check, in results/check/<UTC>_bdirect_check, comes before B-direct (A12)"
+    if name.startswith("bdirect_") and not bdirect_check_done(build_commit()):
+        return ("a passed tools/bdirect_check of this build, in results/check/<UTC>_bdirect_check, comes before "
+                "B-direct (A12)")
     if progress(name) == "complete":
         return f"{name} is complete"
     return None

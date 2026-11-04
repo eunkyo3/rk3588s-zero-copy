@@ -5,7 +5,7 @@
 // stand in for prepare's. On every 100th frame and the last, B-direct's bound outputs must also equal
 // rknn_outputs_get on its tensor, and contexts 1 and 2 must give context 0's outputs.
 //
-// Usage: bdirect_check <video.mp4> <model.rknn> <out_dir> [frames=100]
+// Usage: bdirect_check <video.mp4> <model.rknn> <out_dir> [frames=100] [freeze_commit=none]
 //   <out_dir>/check.csv  "# key: value" header lines (PROTOCOL §1.4, run kind check), then key,value
 //                        rows: the counts and passed (1 or 0)
 // Prints the counts and B-direct's description. Exit code 0 when passed.
@@ -52,15 +52,17 @@ int main(int argc, char** argv) {
     pin_current_thread({4, 5, 6, 7});
     cv::setNumThreads(1);  // PROTOCOL §8
     if (argc < 4)
-        die("usage: bdirect_check <video.mp4> <model.rknn> <out_dir> [frames=100]");
+        die("usage: bdirect_check <video.mp4> <model.rknn> <out_dir> [frames=100] [freeze_commit=none]");
     const std::string video = argv[1], model = argv[2], out = argv[3];
     const int max_frames = argc > 4 ? std::atoi(argv[4]) : 100;
+    const std::string freeze = argc > 5 ? argv[5] : "none";
     CHECK(max_frames >= 1, "frames must be at least 1");
     std::filesystem::create_directories(out);
     const Header header = {
         {"start_time_utc", utc_now("%Y-%m-%dT%H:%M:%SZ")},
         {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
         {"prereg_v1_commit", kPreregCommit},
+        {"freeze_m1_commit", freeze},
         {"run_kind", "check"},
         {"model_sha256", command_output("sha256sum '" + model + "' | cut -d' ' -f1")},
         {"decoder", std::string("h264_rkmpp, ffmpeg ") + av_version_info()},

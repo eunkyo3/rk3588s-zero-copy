@@ -115,10 +115,12 @@
   - 세션 도구는 Bd에 `--variant Bd`를, Bk4에 `--variant B --prep-threads 4`를, `a55`의 모든 실행에 `--cores a55`를 넘긴다.
   - 갈래가 셋이면 반복 안의 순서가 B→C→Bd, C→Bd→B, Bd→B→C로 돌아간다.
   - 블록, 냉각 대기, 유효성, 세션, 이어 하기는 위의 스윕과 같다.
-- **B-direct의 첫 세션 전에**, `amend-A12` 뒤에 보드에서 root로, 저장소에서 손으로 돌린다.
+- **A12의 첫 세션 전에**, `amend-A12` 뒤에 보드에서 root로, 저장소에서 손으로 B의 기본 실행을 하나 돌려 `results/check/<UTC>_default_b/`에 남긴다. 그 `env.json`의 스레드, 고정, `queues`가 M1의 `31_main_B_2ch_r1`과 같아야 한다(A12).
+  - `./build/bench_main --variant B --channels 2 --source /home/pi/media/bench/pexels_36330861.mp4 --warmup 2 --duration 6 --out results/check/<UTC>_default_b`
+- **B-direct의 첫 세션 전에**, 같은 방식으로:
   - `mkdir -p results/check/<UTC>_bdirect_check && tools/collect_env.sh >results/check/<UTC>_bdirect_check/env.txt`
-  - `./build/bdirect_check /home/pi/media/bench/pexels_36330861.mp4 models/yolov8n_i8.rknn results/check/<UTC>_bdirect_check 100 >results/check/<UTC>_bdirect_check/check.txt`. 그 `check.csv`에 `passed,1`이 있어야 한다.
-  - 세션 도구는 A12 이후로 빌드한 그런 검사가 통과하기 전에는 `bdirect_main`, `bdirect_aux` 세션을 시작하지 않는다. `k4`와 `a55`는 이를 기다리지 않는다.
+  - `./build/bdirect_check /home/pi/media/bench/pexels_36330861.mp4 models/yolov8n_i8.rknn results/check/<UTC>_bdirect_check 100 2eec964d27545e081a44bc5ead01bbfcd2905a54 >results/check/<UTC>_bdirect_check/check.txt`. 그 `check.csv`에 `passed,1`이 있어야 한다.
+  - 세션 도구는 세션의 바이너리와 같은 커밋에서 A12 이후로 빌드한 그런 검사가 통과하기 전에는 `bdirect_main`, `bdirect_aux` 세션을 시작하지 않는다. `k4`와 `a55`는 이를 기다리지 않는다.
 - **리포트:** 이 설계들을 정리하기 전에 `tools/m1_report.py`에 설계마다 절을 더한다. §7의 지표를 갈래마다 같은 세션의 대조군 옆에 두고, 탐색용이라고 표시한다.
 
 ### 시간
@@ -137,6 +139,7 @@
 | `results/reference/<UTC>_reference/` | A 집합의 같은 것 |
 | `results/m1.1/<UTC>_4k/` | 4K 설계(A11)의 같은 것 |
 | `results/m1.1/<UTC>_k4/`, `…_a55/`, `…_bdirect_main/`, `…_bdirect_aux/` | §13의 설계(A12)의 같은 것 |
+| `results/check/<UTC>_default_b/` | A12의 B 기본 실행 |
 | `results/check/<UTC>_bdirect_check/` | B-direct의 기능 검사: `env.txt`, `check.txt`, `check.csv` |
 | `tools/bdirect_check.cpp` | 그 검사(A12) |
 | `tools/stream_session.py sweep`, `h3` | 스윕이나 H3의 세션 하나를 돌린다([테스트](../../tests/test_stream_session.py)) |

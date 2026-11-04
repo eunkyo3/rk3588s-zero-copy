@@ -457,16 +457,21 @@ class Sweeps(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             os.chdir(d)
             try:
-                self.assertFalse(ss.bdirect_check_done())
+                self.assertFalse(ss.bdirect_check_done("abc"))
                 run = Path("results/check/20261104T060000Z_bdirect_check")
                 run.mkdir(parents=True)
-                for amendment, passed, done in (("A12", "0", False), ("A11", "1", False), ("A12", "1", True),
-                                                ("A13", "1", True)):
-                    (run / "check.csv").write_text(f"# run_kind: check\n# amendment: {amendment}\nkey,value\n"
-                                                   f"passed,{passed}\n", encoding="utf-8")
-                    self.assertEqual(ss.bdirect_check_done(), done, amendment + passed)
+                for amendment, commit, passed, done in (("A12", "abc", "0", False), ("A11", "abc", "1", False),
+                                                        ("A12", "old", "1", False), ("A12", "abc", "1", True),
+                                                        ("A13", "abc", "1", True)):
+                    (run / "check.csv").write_text(f"# run_kind: check\n# code_commit: {commit}\n# amendment: "
+                                                   f"{amendment}\nkey,value\npassed,{passed}\n", encoding="utf-8")
+                    self.assertEqual(ss.bdirect_check_done("abc"), done, amendment + commit + passed)
                 run.rename(run.with_name("20261104T060000Z_bdirect_check_smoke"))
-                self.assertFalse(ss.bdirect_check_done())
+                self.assertFalse(ss.bdirect_check_done("abc"))
+                self.assertEqual(ss.build_commit(), "unknown")
+                Path("build").mkdir()
+                Path("build/CMakeCache.txt").write_text("X:BOOL=ON\nCODE_COMMIT:STRING=abc\n", encoding="utf-8")
+                self.assertEqual(ss.build_commit(), "abc")
             finally:
                 os.chdir(here)
 

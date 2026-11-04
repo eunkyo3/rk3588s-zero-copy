@@ -115,10 +115,12 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
   - The session tool passes `--variant Bd` for Bd, `--variant B --prep-threads 4` for Bk4, and `--cores a55` on every run of `a55`.
   - With three arms, the order within a repetition rotates: B→C→Bd, C→Bd→B, Bd→B→C.
   - Blocks, gate, validity, sessions and resuming are those of the sweeps above.
-- **Before B-direct's first session**, by hand on the board, as root from the repository, after `amend-A12`:
+- **Before the first session of A12**, by hand on the board, as root from the repository, after `amend-A12`: a default run of B, kept in `results/check/<UTC>_default_b/`, whose `env.json` has the threads, affinities and `queues` of M1's `31_main_B_2ch_r1` (A12):
+  - `./build/bench_main --variant B --channels 2 --source /home/pi/media/bench/pexels_36330861.mp4 --warmup 2 --duration 6 --out results/check/<UTC>_default_b`.
+- **Before B-direct's first session**, the same way:
   - `mkdir -p results/check/<UTC>_bdirect_check && tools/collect_env.sh >results/check/<UTC>_bdirect_check/env.txt`;
-  - `./build/bdirect_check /home/pi/media/bench/pexels_36330861.mp4 models/yolov8n_i8.rknn results/check/<UTC>_bdirect_check 100 >results/check/<UTC>_bdirect_check/check.txt`. Its `check.csv` must say `passed,1`.
-  - The session tool starts no `bdirect_main` or `bdirect_aux` session until such a check, built with A12 or later, has passed. `k4` and `a55` do not wait for it.
+  - `./build/bdirect_check /home/pi/media/bench/pexels_36330861.mp4 models/yolov8n_i8.rknn results/check/<UTC>_bdirect_check 100 2eec964d27545e081a44bc5ead01bbfcd2905a54 >results/check/<UTC>_bdirect_check/check.txt`. Its `check.csv` must say `passed,1`.
+  - The session tool starts no `bdirect_main` or `bdirect_aux` session until such a check has passed, built from the commit of the session's binary with A12 or later. `k4` and `a55` do not wait for it.
 - **Report:** before these designs are written up, `tools/m1_report.py` gets a section for each: §7's metrics, each arm next to the session's own controls, labelled exploratory.
 
 ### Time
@@ -137,6 +139,7 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 | `results/reference/<UTC>_reference/` | the same, for the A set |
 | `results/m1.1/<UTC>_4k/` | the same, for the 4K design (A11) |
 | `results/m1.1/<UTC>_k4/`, `…_a55/`, `…_bdirect_main/`, `…_bdirect_aux/` | the same, for the designs of §13 (A12) |
+| `results/check/<UTC>_default_b/` | A12's default run of B |
 | `results/check/<UTC>_bdirect_check/` | B-direct's functional check: `env.txt`, `check.txt`, `check.csv` |
 | `tools/bdirect_check.cpp` | that check (A12) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |
