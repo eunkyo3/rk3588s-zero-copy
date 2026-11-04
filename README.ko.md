@@ -6,7 +6,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 
 이 프로젝트가 공개하는 것:
 - 사전 등록한 가설마다 판정과 그 근거가 된 측정을 담은 리포트: [docs/report/M1.ko.md](docs/report/M1.ko.md)
-- 다채널 검출 데모
+- 다채널 검출 데모: [docs/notes/demo.ko.md](docs/notes/demo.ko.md)
 - 결과를 다시 만드는 스크립트
 
 라이브러리가 아니라 실험이다. 제로카피가 아무것도 절약하지 못한다는 결과도 유효한 답이다.
@@ -38,6 +38,11 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 - **조건:** 파이프라인이 A76 코어에서 돌고 디코더 버퍼가 CPU 캐시를 쓸 때의 결과다. 모든 C 결과에는 A6의 표시가 붙는다. NPU 런타임은 여전히 자체적으로 작은 복사를 한다.
 
 ![CPU, 본편 조건](docs/report/figures/cpu_main.svg)
+
+- **4K, 탐색용(M1.1):** 2026-11-04에 1–8채널로 24회를 실행했고, 모두 유효했다. 이번에도 C의 프로세스 CPU가 59–60% 적었고, 모든 채널 수에서 p99가 낮았다. 4K에서는 C의 텐서가 A5 기준으로 B와 동등하지 않다. 아무것도 판정하지 않는다. [보고서](docs/report/M1.ko.md#m1-이후-4k-입력m11-탐색용)를 보라.
+- **데모:** 8채널에서 C가 검출한 결과를 오프라인으로 렌더했다([docs/notes/demo.ko.md](docs/notes/demo.ko.md)). 영상은 `v0.1-m1` Release에 첨부하며, 그 속 원본 영상은 Apache-2.0이 아니다([라이선스](#라이선스)).
+
+![검출 데모의 한 프레임](docs/report/demo/demo_m1.jpg)
 
 ## 지금까지의 발견
 
@@ -179,7 +184,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에, `tools/stream_session.py`가 RTSP 세션에 이를 적용한다([docs/notes/comparison.ko.md](docs/notes/comparison.ko.md)). 보고서의 파일은 [docs/report/M1.ko.md](docs/report/M1.ko.md)의 명령으로 다시 만든다. 실행을 명령 하나로 재현하는 스크립트는 M3에서 나온다.
 
-테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_m1_stages.py`, `tests/test_demo_render.py`(동등성, 리포트, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
+테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_m1_stages.py`, `tests/test_demo_render.py`(동등성, 리포트, 단계, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
 
 ## 저장소 구조
 

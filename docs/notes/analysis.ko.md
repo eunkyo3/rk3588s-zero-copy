@@ -95,3 +95,4 @@
 |---|---|
 | `tools/m1_report.py` | 조건, 완료 여부, 판정, 표, 표시, 무효 ×2 기록, 세지 않는 시도, 경고를 Markdown으로, 이어서 4K 절(A11). `--check`는 M1의 완료 여부, `--json`은 `summary.json`([테스트](../../tests/test_m1_report.py)) |
 | `tools/m1_plots.py` | 그림을 SVG로([테스트](../../tests/test_m1_plots.py)) |
+| `tools/m1_stages.py` | 판정에 쓰는 실행에서 지연이 어디서 생기는지, §7.3 타임라인의 단계별로. 탐색용이며 사전 등록하지 않았다([테스트](../../tests/test_m1_stages.py)) |
