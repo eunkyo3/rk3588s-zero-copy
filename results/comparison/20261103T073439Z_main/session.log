@@ -1,0 +1,90 @@
+2026-11-03T07:34:45Z starting the stream server
+2026-11-03T07:34:50Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261103T073446Z-57948, clock offset 0.4 ms
+2026-11-03T07:34:50Z idle for 600 s
+2026-11-03T07:44:50Z soc-thermal baseline 38046 m°C
+2026-11-03T07:44:50Z main: 0 of 21 repetitions complete in earlier sessions, 0 to redo, 21 to run
+2026-11-03T07:44:51Z 01_main_B_8ch_r1: B, 8 ch, main
+2026-11-03T07:47:14Z 01_main_B_8ch_r1: valid
+2026-11-03T07:48:14Z 02_main_C_8ch_r1: C, 8 ch, main
+2026-11-03T07:50:37Z 02_main_C_8ch_r1: valid
+2026-11-03T07:51:37Z 03_main_C_8ch_r2: C, 8 ch, main
+2026-11-03T07:54:00Z 03_main_C_8ch_r2: valid
+2026-11-03T07:55:01Z 04_main_B_8ch_r2: B, 8 ch, main
+2026-11-03T07:57:24Z 04_main_B_8ch_r2: valid
+2026-11-03T07:58:24Z 05_main_B_8ch_r3: B, 8 ch, main
+2026-11-03T08:00:47Z 05_main_B_8ch_r3: valid
+2026-11-03T08:01:48Z 06_main_C_8ch_r3: C, 8 ch, main
+2026-11-03T08:04:11Z 06_main_C_8ch_r3: valid
+2026-11-03T08:05:11Z 07_main_B_1ch_r1: B, 1 ch, main
+2026-11-03T08:07:34Z 07_main_B_1ch_r1: valid
+2026-11-03T08:08:34Z 08_main_C_1ch_r1: C, 1 ch, main
+2026-11-03T08:10:57Z 08_main_C_1ch_r1: valid
+2026-11-03T08:11:57Z 09_main_C_1ch_r2: C, 1 ch, main
+2026-11-03T08:14:20Z 09_main_C_1ch_r2: valid
+2026-11-03T08:15:21Z 10_main_B_1ch_r2: B, 1 ch, main
+2026-11-03T08:17:43Z 10_main_B_1ch_r2: valid
+2026-11-03T08:18:49Z 11_main_B_1ch_r3: B, 1 ch, main
+2026-11-03T08:21:11Z 11_main_B_1ch_r3: valid
+2026-11-03T08:22:12Z 12_main_C_1ch_r3: C, 1 ch, main
+2026-11-03T08:24:35Z 12_main_C_1ch_r3: valid
+2026-11-03T08:25:36Z 13_main_B_16ch_r1: B, 16 ch, main
+2026-11-03T08:27:59Z 13_main_B_16ch_r1: valid
+2026-11-03T08:29:00Z 14_main_C_16ch_r1: C, 16 ch, main
+2026-11-03T08:31:22Z 14_main_C_16ch_r1: valid
+2026-11-03T08:32:23Z 15_main_C_16ch_r2: C, 16 ch, main
+2026-11-03T08:34:46Z 15_main_C_16ch_r2: valid
+2026-11-03T08:35:47Z 16_main_B_16ch_r2: B, 16 ch, main
+2026-11-03T08:38:10Z 16_main_B_16ch_r2: valid
+2026-11-03T08:39:14Z 17_main_B_16ch_r3: B, 16 ch, main
+2026-11-03T08:41:37Z 17_main_B_16ch_r3: valid
+2026-11-03T08:42:46Z 18_main_C_16ch_r3: C, 16 ch, main
+2026-11-03T08:45:09Z 18_main_C_16ch_r3: valid
+2026-11-03T08:46:09Z 19_main_B_4ch_r1: B, 4 ch, main
+2026-11-03T08:48:31Z 19_main_B_4ch_r1: valid
+2026-11-03T08:49:31Z 20_main_C_4ch_r1: C, 4 ch, main
+2026-11-03T08:51:54Z 20_main_C_4ch_r1: valid
+2026-11-03T08:52:54Z 21_main_C_4ch_r2: C, 4 ch, main
+2026-11-03T08:55:17Z 21_main_C_4ch_r2: valid
+2026-11-03T08:56:18Z 22_main_B_4ch_r2: B, 4 ch, main
+2026-11-03T08:58:41Z 22_main_B_4ch_r2: valid
+2026-11-03T08:59:42Z 23_main_B_4ch_r3: B, 4 ch, main
+2026-11-03T09:02:04Z 23_main_B_4ch_r3: valid
+2026-11-03T09:03:04Z 24_main_C_4ch_r3: C, 4 ch, main
+2026-11-03T09:05:27Z 24_main_C_4ch_r3: valid
+2026-11-03T09:06:27Z 25_main_B_32ch_r1: B, 32 ch, main
+2026-11-03T09:08:51Z 25_main_B_32ch_r1: valid
+2026-11-03T09:10:30Z 26_main_C_32ch_r1: C, 32 ch, main
+2026-11-03T09:12:54Z 26_main_C_32ch_r1: valid
+2026-11-03T09:14:30Z 27_main_C_32ch_r2: C, 32 ch, main
+2026-11-03T09:16:54Z 27_main_C_32ch_r2: valid
+2026-11-03T09:18:34Z 28_main_B_32ch_r2: B, 32 ch, main
+2026-11-03T09:20:58Z 28_main_B_32ch_r2: valid
+2026-11-03T09:22:51Z 29_main_B_32ch_r3: B, 32 ch, main
+2026-11-03T09:25:14Z 29_main_B_32ch_r3: valid
+2026-11-03T09:27:03Z 30_main_C_32ch_r3: C, 32 ch, main
+2026-11-03T09:29:26Z 30_main_C_32ch_r3: valid
+2026-11-03T09:30:57Z 31_main_B_2ch_r1: B, 2 ch, main
+2026-11-03T09:33:20Z 31_main_B_2ch_r1: valid
+2026-11-03T09:34:20Z 32_main_C_2ch_r1: C, 2 ch, main
+2026-11-03T09:36:43Z 32_main_C_2ch_r1: valid
+2026-11-03T09:37:44Z 33_main_C_2ch_r2: C, 2 ch, main
+2026-11-03T09:40:07Z 33_main_C_2ch_r2: valid
+2026-11-03T09:41:07Z 34_main_B_2ch_r2: B, 2 ch, main
+2026-11-03T09:43:30Z 34_main_B_2ch_r2: valid
+2026-11-03T09:44:31Z 35_main_B_2ch_r3: B, 2 ch, main
+2026-11-03T09:46:53Z 35_main_B_2ch_r3: valid
+2026-11-03T09:47:53Z 36_main_C_2ch_r3: C, 2 ch, main
+2026-11-03T09:50:16Z 36_main_C_2ch_r3: valid
+2026-11-03T09:51:16Z 37_main_B_12ch_r1: B, 12 ch, main
+2026-11-03T09:53:39Z 37_main_B_12ch_r1: valid
+2026-11-03T09:54:40Z 38_main_C_12ch_r1: C, 12 ch, main
+2026-11-03T09:57:03Z 38_main_C_12ch_r1: valid
+2026-11-03T09:58:03Z 39_main_C_12ch_r2: C, 12 ch, main
+2026-11-03T10:00:26Z 39_main_C_12ch_r2: valid
+2026-11-03T10:01:26Z 40_main_B_12ch_r2: B, 12 ch, main
+2026-11-03T10:03:49Z 40_main_B_12ch_r2: valid
+2026-11-03T10:04:49Z 41_main_B_12ch_r3: B, 12 ch, main
+2026-11-03T10:07:12Z 41_main_B_12ch_r3: valid
+2026-11-03T10:08:12Z 42_main_C_12ch_r3: C, 12 ch, main
+2026-11-03T10:10:35Z 42_main_C_12ch_r3: valid
+2026-11-03T10:10:35Z stopping the stream server
