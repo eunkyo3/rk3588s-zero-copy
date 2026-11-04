@@ -4,8 +4,8 @@
 
 How much does a zero-copy video pipeline actually save on an RK3588S, and under which conditions? This repository answers that with a pre-registered experiment on a NanoPi R6C. The code is here to make the experiment reproducible.
 
-The project will publish:
-- a report that gives each pre-registered hypothesis its verdicts, with the measurements behind them;
+The project publishes:
+- a report that gives each pre-registered hypothesis its verdicts, with the measurements behind them: [docs/report/M1.md](docs/report/M1.md);
 - a multi-channel detection demo;
 - scripts that reproduce the results.
 
@@ -21,6 +21,23 @@ Two pipelines share the same RTSP input, decoder (ffmpeg-rockchip `h264_rkmpp`, 
 | **C** zero copy | dma-buf fd → RGA → dma-heap buffer registered with `rknn_create_mem_from_fd` |
 | A (reference) | software decoding + the B path, 1–2 channels only |
 | none | decoding only, to find how many channels the decoder sustains |
+
+## M1 results
+
+134 runs on 2026-11-03, all valid, after `freeze-m1`. The full report is [docs/report/M1.md](docs/report/M1.md).
+
+| Hypothesis | Spec-literal | Practical | Numbers |
+|---|---|---|---|
+| H1, process CPU at 8 channels, 5 fps each | adopted | adopted | B 43.3 s, C 18.6 s per 120 s: 57.1% less |
+| H2, p99 latency at 5 channels, 30 fps each | rejected | rejected | B 24.5 ms, C 25.9 ms |
+| H3, most channels at 5 fps each | adopted | indeterminate (ceiling reached) | B 32, C 32, the cap |
+
+- **CPU:** C about halves the process CPU at every channel count, by 50 to 58% at 5 fps and 72 to 73% at 30 fps.
+- **Latency:** C's median latency is lower up to 16 channels. Its p99 is not lower once the NPU is busy: at 5 channels × 30 fps, and at 32 channels.
+- **Channels:** both variants sustained every count up to the cap of 32 channels, within the four A76 cores.
+- **Conditions:** these hold with the pipeline on the A76 cores and CPU-cached decoder buffers. Every C result carries A6's label: the NPU runtime still makes small copies of its own.
+
+![CPU, main condition](docs/report/figures/cpu_main.svg)
 
 ## Findings so far
 
@@ -45,7 +62,7 @@ flowchart LR
     end
     subgraph BOARD["NanoPi R6C, RK3588S"]
         BM["bench_main<br>one variant, N channels"]
-        SS["stream_session.py<br>M1-3 sessions"]
+        SS["stream_session.py<br>sessions"]
     end
     M -- "RTSP over TCP, ch1 to ch32<br>wired Ethernet" --> BM
     SS -. "SSH: start and stop the server,<br>read its log" .-> M
@@ -133,9 +150,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1-5, the freeze, is done: [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1), reference time 2026-11-03T06:58:17Z. Next: M1-6, the comparison runs of PROTOCOL §12, with the method fixed in [docs/notes/comparison.md](docs/notes/comparison.md). Before it, M1-3 calibrated the board. The fixed clocks, `P_cap` (194.2 inferences/s) and the H2 auxiliary point (5 channels) are fixed ([AMENDMENTS A7](prereg/AMENDMENTS.md)). So are the decode-only limit `L` = 32 (the search's cap), the main set {1, 2, 4, 8, 12, 16, 32}, the channel assignment and the cooling: the loop check and the thermal check passed ([AMENDMENTS A9](prereg/AMENDMENTS.md), [docs/notes/calibration.md](docs/notes/calibration.md)). The software, build and model are fixed too ([AMENDMENTS A10](prereg/AMENDMENTS.md)). A small exploratory 4K design (M1.1) is registered too ([AMENDMENTS A11](prereg/AMENDMENTS.md)). Done before: M1-4, equivalence: B and C are equivalent under the criteria in force ([AMENDMENTS A5](prereg/AMENDMENTS.md)), and not under the registered criteria ([docs/notes/equivalence.md](docs/notes/equivalence.md)). C's input path makes no CPU pixel copy, but small copies inside the NPU runtime, the same in B, exceed the §11.4 perf threshold ([AMENDMENTS A6](prereg/AMENDMENTS.md)).
-
-The comparison results come with the report of `v0.1-m1`.
+**Current status:** M1-6, the comparison runs, is done, and M1-7's report is [docs/report/M1.md](docs/report/M1.md). Before them came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). The small exploratory 4K design of M1.1 ([AMENDMENTS A11](prereg/AMENDMENTS.md)) runs after them.
 
 ## Build and run
 
@@ -162,9 +177,9 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 `{n}` becomes the channel number. A run warms up for 20 s and measures for 120 s. It writes `summary.csv`, `channels.csv`, `frames.csv`, `samples.csv`, `threads.csv` and `env.json` to `results/check/<UTC time>_C_8ch/`. Options are listed at the top of [src/app/bench_main.cpp](src/app/bench_main.cpp).
 
-Runs that count also follow the order, cooldown gate and validity rules of PROTOCOL §9. So far `tools/calib_npu.sh` applies them to the `P_cap` calibration; the session tools for later runs come with their milestones. One-command reproduction comes with M3.
+Runs that count also follow the order, cooldown gate and validity rules of PROTOCOL §9. `tools/calib_npu.sh` applies them to the `P_cap` calibration, and `tools/stream_session.py` to the sessions over RTSP ([docs/notes/comparison.md](docs/notes/comparison.md)). The report's files are regenerated by the commands in [docs/report/M1.md](docs/report/M1.md#reproducing-this-report). One-command reproduction of the runs comes with M3.
 
-Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py` and `tests/test_m1_plots.py` for the Python tools (the equivalence and report tests need numpy, the plot test matplotlib).
+Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py` and `tests/test_m1_stages.py` for the Python tools (the equivalence and report tests need numpy, the plot test matplotlib).
 
 ## Repository layout
 
@@ -177,8 +192,9 @@ Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summar
 | `tools/` | fixed clocks, calibration, equivalence and zero-copy evidence tools, diagnostics, the pre-registration order check, board setup, model conversion, deployment, environment capture |
 | `stream-server/` | mediamtx configuration, video preparation, and the publisher, which checks the channel assignment it is given |
 | `models/` | model download and conversion. The files are kept in a Release. |
-| `tests/` | unit tests of the pipeline core and of three Python tools |
-| `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration |
+| `tests/` | unit tests of the pipeline core and of the Python tools |
+| `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration, comparison, analysis |
+| `docs/report/` | the M1 report, its tables, summary file and figures |
 | `results/` | the raw results of every run; large tensor dumps are kept in Releases. Each file's header names its code, model and amendment (PROTOCOL §1). |
 
 ## License
