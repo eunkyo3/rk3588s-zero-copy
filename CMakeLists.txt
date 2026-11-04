@@ -80,8 +80,12 @@ target_link_libraries(calib_npu PRIVATE core)
 target_compile_definitions(calib_npu PRIVATE
     CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
 
+add_executable(demo_detect tools/demo_detect.cpp)
+target_link_libraries(demo_detect PRIVATE core)
+target_compile_definitions(demo_detect PRIVATE CODE_COMMIT="${CODE_COMMIT}")
+
 add_executable(test_core tests/test_core.cpp)
 target_link_libraries(test_core PRIVATE core)
 
 set_target_properties(bench_main spike_fd_chain compare_prepare rga_probe rga_kernel inputs_set_probe
-    equivalence_dump dump_tensor calib_npu test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
+    equivalence_dump dump_tensor calib_npu demo_detect test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
