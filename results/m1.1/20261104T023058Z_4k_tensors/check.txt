@@ -1,0 +1,1 @@
+equivalence_check: results/m1.1/20261104T023058Z_4k_tensors/b.jsonl: variant B, run kind m1.1; expected B, equivalence
