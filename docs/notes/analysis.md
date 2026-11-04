@@ -62,8 +62,17 @@ The report prints these first:
 
 It also lists every invalid ×2 record by variant, with the reasons of both attempts, H3's included (HYPOTHESES; §10 step 3), and the runs with samples at a trip point (warnings, §9.3).
 
+## The 4K design (A11)
+
+- **When:** this section and the report's 4K part were added on 2026-11-04, while the 4K loop check ran and before the first 4K session. M1's results had been seen by then; no 4K run existed.
+- **Where:** the report's last section, apart from M1 and labelled exploratory. No hypothesis is tested, and nothing is judged (A11).
+- **Same method as M1:** the runs that count, the metrics of one run, the mean and sample standard deviation, and the 10% flag, as above. The 4K sessions are `results/m1.1/<UTC>_4k`.
+- **Next to each 4K point:** M1's main-condition values for B and C at the same count, as the main sweep's table gives them (A11).
+- **Its own lists:** the 4K flags, invalid ×2 records, attempts that do not count and warnings are listed in the 4K section only.
+- **Not M1's completeness:** `--check` does not list the 4K runs. The 4K section says whether its own points are complete.
+
 ## Tools
 
 | Tool | Does |
 |---|---|
-| `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown; `--check` for completeness ([tests](../../tests/test_m1_report.py)) |
+| `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown, then the 4K section (A11); `--check` for M1's completeness ([tests](../../tests/test_m1_report.py)) |

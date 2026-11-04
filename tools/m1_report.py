@@ -12,7 +12,10 @@ or invalid x2. Then, with the method of docs/notes/analysis.md, it reports:
     coefficient of variation above 10% for a hypothesis metric is flagged (§9.3);
   - every invalid x2 record by variant, with the reasons of both attempts, H3's included;
   - the attempts that do not count (repeated, replaced, or cut short), with their reasons, and the
-    runs with samples at a trip point (warnings, §9.3).
+    runs with samples at a trip point (warnings, §9.3);
+  - the 4K design of AMENDMENTS A11 (results/m1.1/<UTC>_4k), apart and labelled exploratory: its
+    points with M1's main-condition values at the same counts next to them, and its own flags and
+    lists. It is not part of M1's completeness (--check).
 
 Usage, from the repository: python3 tools/m1_report.py [--check] [--out FILE]
   --check   only the completeness check: exit 0 if every point of every sweep is complete and H3 is done
@@ -60,6 +63,9 @@ CONDITIONS = [
     "1.2 MB per inference; binding the native layout fails, which suggests the runtime converts the outputs on "
     "the CPU, with code other than memcpy or memmove.",
 ]
+M11_NOTE = ("Exploratory (A11): no hypothesis is tested, and nothing here is judged. Videos ①, ② and ④ at 3840×2160, "
+            "16 Mbps (stream-server/assignment_4k.txt), main condition. Next to them are M1's main-condition values at "
+            "the same counts, from the main sweep. The flags and lists below are the 4K sessions' own.")
 
 
 # ---------------------------------------------------------------- the sessions and their attempts
@@ -246,29 +252,40 @@ def h3(n):
 
 # ---------------------------------------------------------------- the report
 
+def collect_sweep(root, sweep):
+    """One sweep's points, from its protocol sessions under root/results: data ({channels: {variant:
+    {"valid": {repetition: metrics}}}}), missing, invalid_x2, others and warnings, as in collect."""
+    sessions = sessions_of(root, sweep)
+    idle = {d.name: read_idle(d) for d in sessions if (d / "idle_baseline.csv").exists()}
+    runs, others = counted_runs(sessions, sweep)
+    out = {"sessions": len(sessions), "data": {}, "missing": [], "invalid_x2": [],
+           "others": [(sweep,) + o for o in others], "warnings": [(sweep,) + w for w in trip_warnings(sessions)]}
+    counts, _, variants, kind = ss.SWEEPS[sweep]
+    for ch in counts:
+        for v in variants:
+            point = out["data"].setdefault(ch, {}).setdefault(v, {"valid": {}})
+            for rep in range(1, ss.REPETITIONS + 1):
+                run = runs.get((ch, rep, v))
+                if run is None:
+                    out["missing"].append(f"{sweep} {ch} ch {v} r{rep}")
+                elif run["status"] == "valid":
+                    d = root / "results" / kind / run["session"] / run["name"]
+                    point["valid"][rep] = run_metrics(d, idle[run["session"]])
+                else:
+                    out["invalid_x2"].append((f"{sweep} {ch} ch {v} r{rep}", run["attempts"]))
+    return out
+
+
 def collect(root):
-    """Everything the report needs, from the protocol sessions under root/results."""
+    """Everything the report needs, from the protocol sessions under root/results. The 4K design (A11)
+    is kept apart, in c["4k"]: it is not part of M1's completeness."""
     c = {"data": {}, "missing": [], "invalid_x2": [], "others": [], "warnings": [], "h3_n": None, "h3_problem": None}
     for sweep in ("main", "aux", "reference"):
-        sessions = sessions_of(root, sweep)
-        idle = {d.name: read_idle(d) for d in sessions if (d / "idle_baseline.csv").exists()}
-        runs, others = counted_runs(sessions, sweep)
-        c["others"] += [(sweep,) + o for o in others]
-        c["warnings"] += [(sweep,) + w for w in trip_warnings(sessions)]
-        counts, _, variants, kind = ss.SWEEPS[sweep]
-        c["data"][sweep] = {}
-        for ch in counts:
-            for v in variants:
-                point = c["data"][sweep].setdefault(ch, {}).setdefault(v, {"valid": {}})
-                for rep in range(1, ss.REPETITIONS + 1):
-                    run = runs.get((ch, rep, v))
-                    if run is None:
-                        c["missing"].append(f"{sweep} {ch} ch {v} r{rep}")
-                    elif run["status"] == "valid":
-                        d = root / "results" / kind / run["session"] / run["name"]
-                        point["valid"][rep] = run_metrics(d, idle[run["session"]])
-                    else:
-                        c["invalid_x2"].append((f"{sweep} {ch} ch {v} r{rep}", run["attempts"]))
+        s = collect_sweep(root, sweep)
+        c["data"][sweep] = s["data"]
+        for k in ("missing", "invalid_x2", "others", "warnings"):
+            c[k] += s[k]
+    c["4k"] = collect_sweep(root, "4k")
     sessions = sessions_of(root, "h3")
     records = ss.load_records(sessions, ss.H3_PHASES)
     rows = runs_rows(sessions)
@@ -352,27 +369,55 @@ def report(c):
                   "|---|---|" + "---|" * len(variants)]
         for ch in sorted(points):
             for key, label in METRICS:
-                cells = []
-                for v in variants:
-                    k, mean, sd, cv = stats([r[key] for r in points[ch][v]["valid"].values()])
-                    cells.append(f"{fmt(mean)} ± {fmt(sd)} ({k})")
-                    if key in HYPOTHESIS_METRICS and not math.isnan(cv) and cv > CV_FLAG:
-                        flags.append(f"{sweep} {ch} ch {v}: {label} CV {cv * 100:.1f}%")
+                cells = [cell(sweep, ch, v, points[ch][v], key, label, flags) for v in variants]
                 lines.append(f"| {ch} | {label} | " + " | ".join(cells) + " |")
         lines.append("")
-    lines += ["## Flags", ""]
+    lines += record_lists(flags, c, "##") + [""] + report_4k(c)
+    return "\n".join(lines) + "\n"
+
+
+def cell(sweep, ch, v, point, key, label, flags):
+    """A point's "mean ± sd (n)" of a metric; appends to flags a hypothesis metric's CV above 10% (§9.3)."""
+    n, mean, sd, cv = stats([r[key] for r in point["valid"].values()])
+    if flags is not None and key in HYPOTHESIS_METRICS and not math.isnan(cv) and cv > CV_FLAG:
+        flags.append(f"{sweep} {ch} ch {v}: {label} CV {cv * 100:.1f}%")
+    return f"{fmt(mean)} ± {fmt(sd)} ({n})"
+
+
+def record_lists(flags, c, level):
+    """The flags, the invalid x2 records, the attempts that do not count and the warnings of c."""
+    lines = [f"{level} Flags", ""]
     lines += [f"- {f}" for f in flags] or ["No hypothesis metric has a coefficient of variation above 10%."]
-    lines += ["", "## Invalid x2", ""]
+    lines += ["", f"{level} Invalid x2", ""]
     lines += [f"- {what}: " + "; ".join(f"{name}: {why or 'no reason recorded'}" for name, why in attempts)
               for what, attempts in c["invalid_x2"]] or ["None."]
-    lines += ["", "## Attempts that do not count", "",
+    lines += ["", f"{level} Attempts that do not count", "",
               "Repeated invalid attempts, runs that a later session redid, and attempts cut short (§9.1, §9.3). "
               "Until a sweep is complete, the runs of its repetitions still in progress are listed here too."]
     lines += [f"- {sweep}: {name}: {'valid' if valid else 'invalid'}" + (f": {why}" if why else "")
               for sweep, name, valid, why in c["others"]] or ["None."]
-    lines += ["", "## Warnings: samples at a trip point", ""]
+    lines += ["", f"{level} Warnings: samples at a trip point", ""]
     lines += [f"- {sweep}: {name}: {n} samples" for sweep, name, n in c["warnings"]] or ["None."]
-    return "\n".join(lines) + "\n"
+    return lines
+
+
+def report_4k(c):
+    """The 4K design (A11): §7's metrics, B and C side by side, M1's main-condition values at the same
+    counts next to them. Exploratory: nothing is judged."""
+    k4, main = c["4k"], c["data"]["main"]
+    lines = ["## M1.1: 4K input (exploratory, A11)", "", M11_NOTE, ""]
+    if not k4["sessions"]:
+        return lines + ["No 4K session yet."]
+    lines += [f"Not complete: {', '.join(k4['missing'])}." if k4["missing"] else "Every point is complete.", ""]
+    heads = ["B, 4K", "C, 4K (A6 label)", "B, M1 main", "C, M1 main (A6 label)"]
+    lines += ["| Channels | Metric | " + " | ".join(f"{h}: mean ± sd (n)" for h in heads) + " |", "|---|---|" + "---|" * 4]
+    flags = []
+    for ch in sorted(k4["data"]):
+        for key, label in METRICS:
+            cells = [cell("4k", ch, v, k4["data"][ch][v], key, label, flags) for v in ("B", "C")]
+            cells += [cell("main", ch, v, main[ch][v], key, label, None) for v in ("B", "C")]
+            lines.append(f"| {ch} | {label} | " + " | ".join(cells) + " |")
+    return lines + [""] + record_lists(flags, k4, "###")
 
 
 def main(argv):
