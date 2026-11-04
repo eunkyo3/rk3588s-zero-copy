@@ -1,0 +1,24 @@
+2026-11-04T06:59:53Z starting the stream server
+2026-11-04T06:59:58Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261104T065954Z-121059, clock offset -2.1 ms
+2026-11-04T06:59:58Z idle for 600 s
+2026-11-04T07:09:58Z soc-thermal baseline 38999 m°C
+2026-11-04T07:09:58Z bdirect_aux: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-04T07:09:59Z 01_bdirect_aux_B_5ch_r1: B, 5 ch, aux
+2026-11-04T07:12:22Z 01_bdirect_aux_B_5ch_r1: valid
+2026-11-04T07:13:40Z 02_bdirect_aux_C_5ch_r1: C, 5 ch, aux
+2026-11-04T07:16:03Z 02_bdirect_aux_C_5ch_r1: valid
+2026-11-04T07:17:08Z 03_bdirect_aux_Bd_5ch_r1: Bd, 5 ch, aux
+2026-11-04T07:19:31Z 03_bdirect_aux_Bd_5ch_r1: valid
+2026-11-04T07:20:46Z 04_bdirect_aux_C_5ch_r2: C, 5 ch, aux
+2026-11-04T07:23:09Z 04_bdirect_aux_C_5ch_r2: valid
+2026-11-04T07:24:10Z 05_bdirect_aux_Bd_5ch_r2: Bd, 5 ch, aux
+2026-11-04T07:26:33Z 05_bdirect_aux_Bd_5ch_r2: valid
+2026-11-04T07:28:06Z 06_bdirect_aux_B_5ch_r2: B, 5 ch, aux
+2026-11-04T07:30:29Z 06_bdirect_aux_B_5ch_r2: valid
+2026-11-04T07:31:50Z 07_bdirect_aux_Bd_5ch_r3: Bd, 5 ch, aux
+2026-11-04T07:34:13Z 07_bdirect_aux_Bd_5ch_r3: valid
+2026-11-04T07:35:29Z 08_bdirect_aux_B_5ch_r3: B, 5 ch, aux
+2026-11-04T07:37:52Z 08_bdirect_aux_B_5ch_r3: valid
+2026-11-04T07:39:16Z 09_bdirect_aux_C_5ch_r3: C, 5 ch, aux
+2026-11-04T07:41:39Z 09_bdirect_aux_C_5ch_r3: valid
+2026-11-04T07:41:39Z stopping the stream server

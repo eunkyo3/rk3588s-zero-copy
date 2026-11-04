@@ -19,7 +19,8 @@ or invalid x2. Then, with the method of docs/notes/analysis.md, it reports:
   - the designs of §13 with AMENDMENTS A12 (results/m1.1/<UTC>_k4, _a55, _bdirect_main, _bdirect_aux),
     apart and labelled exploratory: each with the controls of its own sessions, never with M1's values
     (the binary differs), and its own flags and lists. For B-direct, Bd's process-CPU saving against B
-    next to C's, from the means. Not part of M1's completeness either.
+    next to C's, from the means; for a55, process CPU by the affinity of its threads, from threads.csv.
+    Not part of M1's completeness either.
 
 Usage, from the repository: python3 tools/m1_report.py [--check] [--out FILE] [--json FILE]
   --check   only M1's completeness check: exit 0 if every point of M1's sweeps is complete and H3 is done
@@ -86,6 +87,10 @@ A12_TITLES = {  # A12's sweeps, in its order
     "bdirect_main": "B-direct (`bdirect_main`): 8 channels, main condition",
     "bdirect_aux": "B-direct (`bdirect_aux`): 5 channels, auxiliary condition",
 }
+SPLIT_FROM_THREADS = ("a55",)  # bench_main's A76/A55 split keys on M1's affinities, cpu4-7 and cpu0
+SPLIT_NOTE = ("CPU of the threads by their affinity, mean over the valid runs, from threads.csv (the threads alive at "
+              "the window's end, so the sum can differ slightly from process CPU). bench_main's A76 and A55 rows count "
+              "only M1's affinities, cpu4-7 and cpu0; the rest is in the unattributed row:")
 M1_SWEEPS = ("main", "aux", "reference")  # with H3, M1's completeness; "4k" is A11's, A12_TITLES A12's
 assert set(ss.SWEEPS["4k"][0]) <= set(ss.SWEEPS["main"][0]), "A11: every 4K count is a main count"
 
@@ -191,6 +196,24 @@ def run_metrics(run_dir, idle):
     return m
 
 
+def threads_by_affinity(run_dir):
+    """A run's CPU in the window by thread affinity, from threads.csv: {affinity: s}. threads.csv has the
+    threads alive at the window's end."""
+    out = {}
+    for t in ss.read_csv(run_dir / "threads.csv")[1]:
+        out[t["affinity"]] = out.get(t["affinity"], 0.0) + float(t["cpu_s_in_window"])
+    return out
+
+
+def affinity_means(point):
+    """{affinity: mean over the point's valid runs} of threads_by_affinity, 0 where a run has none; None
+    without a valid run."""
+    runs = list(point.get("threads", {}).values())
+    if not runs:
+        return None
+    return {a: stats([r.get(a, 0.0) for r in runs])[1] for a in sorted({a for r in runs for a in r})}
+
+
 def idle_share(idle, key, window_s):
     """The idle baseline's value of key over a window of window_s (§7.2), scaled from the baseline's
     own length to the run's."""
@@ -276,7 +299,8 @@ def h3(n):
 
 def collect_sweep(root, sweep):
     """One sweep's points, from its protocol sessions under root/results: data ({channels: {variant:
-    {"valid": {repetition: metrics}}}}), missing, invalid_x2, others and warnings, as in collect."""
+    {"valid": {repetition: metrics}}}}, and for SPLIT_FROM_THREADS "threads": {repetition: {affinity: s}}
+    too), missing, invalid_x2, others and warnings, as in collect."""
     sessions = sessions_of(root, sweep)
     idle = {d.name: read_idle(d) for d in sessions if (d / "idle_baseline.csv").exists()}
     runs, others = counted_runs(sessions, sweep)
@@ -293,6 +317,8 @@ def collect_sweep(root, sweep):
                 elif run["status"] == "valid":
                     d = root / "results" / kind / run["session"] / run["name"]
                     point["valid"][rep] = run_metrics(d, idle[run["session"]])
+                    if sweep in SPLIT_FROM_THREADS:
+                        point.setdefault("threads", {})[rep] = threads_by_affinity(d)
                 else:
                     out["invalid_x2"].append((f"{sweep} {ch} ch {v} r{rep}", run["attempts"]))
     return out
@@ -485,6 +511,11 @@ def report_a12(c):
                 "not available." if share is None else
                 f"Bd saves {share[0] * 100:.1f}%, C saves {share[1] * 100:.1f}%"
                 + ("." if share[2] is None else f"; Bd's saving is {share[2] * 100:.0f}% of C's."))]
+        if sweep in SPLIT_FROM_THREADS:
+            means = {v: affinity_means(s["data"][ch][v]) for v in arms}
+            lines += ["", SPLIT_NOTE + " " + "; ".join(
+                f"{v}: " + ("no valid run" if m is None else ", ".join(f"cpu{a} {fmt(x)} s" for a, x in m.items()))
+                for v, m in means.items()) + "."]
         lines += [""] + record_lists(flags, s, "####",
                                      "No process CPU or p99 latency value has a coefficient of variation above 10%.")
     return lines
@@ -530,6 +561,9 @@ def summary(c):
             share = bdirect_share(c["a12"][sweep]["data"][ss.SWEEPS[sweep][0][0]])
             out["m1.1_a12"][sweep]["process_cpu_saving"] = (
                 None if share is None else dict(zip(("bd", "c", "bd_share_of_c"), share)))
+        for sweep in SPLIT_FROM_THREADS:
+            out["m1.1_a12"][sweep]["process_cpu_by_affinity"] = {
+                v: affinity_means(p) for v, p in c["a12"][sweep]["data"][ss.SWEEPS[sweep][0][0]].items()}
     return rounded(out)
 
 

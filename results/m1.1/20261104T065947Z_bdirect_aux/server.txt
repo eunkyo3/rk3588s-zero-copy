@@ -1,0 +1,9 @@
+log_dir: /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261104T065954Z-121059
+log_time_zone: UTC (TZ=UTC)
+clock_offset_s: -0.0021 (PC minus board; round trip of the exchange 0.0007 s)
+pc_ntp_synchronized: yes
+pc_repo_commit: 7a438ae3c3fb89823ec5e952472348d36fac5615
+pc_repo_status: clean
+pc_sha256: f719931dc80b22f98596b899667b9a4736d9aad6d6eb867f8bb09293ffd32fc7 mediamtx.yml 1f7d085127c512153314718b8ea71b307a200fa357c8d0668495787476a1b0ac publish.sh 0ffb7f18210d08ee38cb16668c4f3a2c96622e69d401119c0026d078a2b89523 mediamtx
+pc_versions: mediamtx v1.21.2 | ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers
+pc_binaries_sha256: 0ffb7f18210d08ee38cb16668c4f3a2c96622e69d401119c0026d078a2b89523 /home/eunkyo/rk3588s-zero-copy/stream-server/mediamtx e7e7fb30477f717e6f55f9180a70386c62677ef8a4d4d1a5d948f4098aa3eb99 /home/eunkyo/.local/bin/ffmpeg
