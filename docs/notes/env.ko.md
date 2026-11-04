@@ -11,11 +11,13 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 | [`prereg-v1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-v1) | `87fe874b4f196dafd48f6a175b2d7604625aedba` | 2026-10-30T02:01:36Z |
 | [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) | `2eec964d27545e081a44bc5ead01bbfcd2905a54` | 2026-11-03T06:58:17Z |
 | [`amend-A8`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A8) | `07fe535eefff5d13b77c0ac38ee4e03aa257cac7` | 2026-11-03T01:38:47Z |
-| `amend-A12` | 아직 만들지 않음 | |
+| [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12) | `cdb309e4bbe9bf17646526a722e0a1fccb5e9d56` | 2026-11-04T05:30:51Z |
 
 기준 시각은 `created_at`이다(PROTOCOL §1). 태그가 가리키는 커밋은 PR #1의 머지 커밋이며, 그 커미터 날짜(2026-10-30T01:58:11Z)는 쓰지 않는다. `amend-A8`은 `freeze-m1` 전에 만든 수정 기록의 Release로, 그 항목이 등록하는 검사에 기준 시각을 주기 위한 것이다([A8](../../prereg/AMENDMENTS.ko.md)). 태그가 가리키는 커밋은 PR #12의 머지 커밋이다. GitHub는 그 커밋의 시각을 Release의 `created_at`으로 주며, Release는 2026-11-03T01:40:12Z에 공개됐다. 검사는 둘 다 지난 02:19:49Z에 시작했다.
 
 `freeze-m1`은 PR #16의 머지 커밋을 가리키며, 그 커밋의 `prereg/AMENDMENTS.md`가 PROTOCOL §14의 모든 값(A1 ~ A11)을 담는다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-03T06:58:50Z에 공개됐다. 모든 비교·참고·M1.1 실행은 06:58:17Z 뒤에 시작하며, `tools/check_prereg_order.py`가 이를 검사한다.
+
+`amend-A12`는 `freeze-m1` 뒤의 첫 수정 기록 A12의 Release다. A12는 PROTOCOL §13의 M1.1 설계를 만드는 방법과 돌리는 방법을 정한다([A12](../../prereg/AMENDMENTS.ko.md)). 태그가 가리키는 커밋은 PR #28의 머지 커밋이다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-04T05:31:44Z에 공개됐다. 그 설계들의 모든 실행과 검사는 둘 다 지난 뒤에 시작한다.
 
 ## 보드 기준선
 
