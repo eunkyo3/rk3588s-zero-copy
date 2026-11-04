@@ -29,7 +29,7 @@ The demo video of `v0.1-m1`: eight channels in a 3 × 3 grid, each with the boxe
 | `docs/report/demo/` | the detections and logs, a still frame (`demo_m1.jpg`) and the video's SHA-256 |
 
 - The video is too large for the repository, which ignores `*.mp4`, so it is attached to the `v0.1-m1` Release.
-- **The run of 2026-11-04:** `tools/demo.sh` on the board from commit 1eebc77, 03:43 to 03:45 UTC, after the M1.1 runs. The video is 30 MB, and its SHA-256 is in `docs/report/demo/demo_m1.mp4.sha256`.
+- **The run of 2026-11-04:** `tools/demo.sh` on the board from commit 7d8e4fa, started at 04:02 UTC (the JSONL headers), after the M1.1 runs. The video is 30 MB, and its SHA-256 is in `docs/report/demo/demo_m1.mp4.sha256`.
 - **Tests:** `tests/test_demo_render.py` covers the assignment, the detections file, the box mapping, where a box's label goes, and which detections a channel shows for each frame (its start, the hold and the restart).
 
 ## Videos and licenses
