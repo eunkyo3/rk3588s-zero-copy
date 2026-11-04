@@ -1,7 +1,7 @@
-start_utc 2026-11-04T03:38:03Z
-tool tools/equivalence_check.py at commit 31f6e828f4ccbdeb0122d167859e58dfaf676ee5
-tool_sha256 9f2b8ce74b28d073527c98ffdcd150553f29028e8978f9c04c42fafe4cdfdd91
-why the chain's run of the check stopped with exit 2 (check.txt): the check took only run kind equivalence
+start_utc 2026-11-04T03:48:09Z
+tool tools/equivalence_check.py at commit 3c0ba586a5484b2c79b6ee6e66cdde913a734f86
+tool_sha256 4369eace123045cef34461d6861e35dc406f8f45094c3309f4a7e88c593ed2ae
+why: the chain's run of the check stopped with exit 2, because the check took only run kind equivalence; check.txt has its error
 tensors b.u8: OK c.u8: OK r.u8: OK 
-exit 1
-end_utc 2026-11-04T03:38:44Z
+exit 0
+end_utc 2026-11-04T03:48:36Z

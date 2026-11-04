@@ -35,11 +35,11 @@ boxes, every box post-processing returned (classes with at least 100 B boxes):
 registered criteria (PROTOCOL §11.1, §11.2), reported:
   tensor: MAE 4.5151 <= 2 FAIL, min PSNR 28.60 dB >= 35 FAIL, border pass: FAIL
   detection: all 14944 pairs within both thresholds (4708 are) FAIL, frames agreeing 37.90% >= 99% FAIL: FAIL
-criteria in force (AMENDMENTS A5), which set the exit code:
+A5's criteria, reported (run kind m1.1, AMENDMENTS A11: not in force):
   border 114 in every B and C tensor: pass
   tensor MAE, C 4.5151 <= R 1.8848: FAIL
   tensor min PSNR, C 28.60 dB >= R 37.26 dB: FAIL
   (a) pairs within both thresholds, C 31.50% >= R 40.94%: FAIL
   (b) frames agreeing, C 37.90% >= R 54.80%: FAIL
   (c) total boxes, |15816 - 15588| / 15588 = 1.46% <= 2%: pass
-verdict (A5): FAIL, not on the registered input; run kind m1.1, reported, not judged (AMENDMENTS A11)
+A5's criteria: not all hold; run kind m1.1, reported, not judged (AMENDMENTS A11)
