@@ -5,7 +5,8 @@ Channels 1 to 8 take their videos from the M1 assignment (stream-server/assignme
 4, twice). Each tile shows a channel's video with the boxes of its latest sampled frame: demo_detect
 ran C on 1 frame in 6 (5 fps), so a box stays up until the next inference, as on a live screen. Like
 the stream server, a video starts again at its end. Channels 5 to 8 start --offset seconds into their
-video, so that no two tiles show the same frames. The ninth tile says what the video is.
+video, so that no two tiles show the same frame at the same moment. The ninth tile says what the video
+is.
 
 Rendered offline from the detections: the video says nothing about timing, which is the benchmark's
 business (docs/notes/comparison.md).
@@ -43,7 +44,7 @@ INFO = ["RK3588S zero-copy pipeline: detection demo",
         "YOLOv8n INT8 on the NPU",
         "",
         "8 channels, 1080p, detections at 5 fps each",
-        "(1 frame in 6); boxes stay until the next",
+        "(1 frame in 6); boxes stay until the next inference",
         "",
         "Rendered offline from C's detections:",
         "not a timing measurement",
@@ -79,8 +80,17 @@ def to_tile(det, band):
     return (round((x1 - bx) * sx), round((y1 - by) * sy), round((x2 - bx) * sx), round((y2 - by) * sy))
 
 
+def label_top(x1, y1, th, channel_label):
+    """The bottom edge of a box's label: on the box's top edge, inside the tile, and below the channel
+    label (drawn last) where the two would overlap."""
+    lw, lh = channel_label
+    ty = max(y1, th + 4)
+    return lh + th + 4 if x1 < lw and ty - th - 4 < lh else ty
+
+
 def draw_tile(img, label, dets, labels, band):
     tile = cv2.resize(img, (TILE_W, TILE_H), interpolation=cv2.INTER_AREA)
+    (lw, lh), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
     for det in dets:
         name = labels[det[0]]
         color = CLASS_COLORS.get(name, OTHER)
@@ -88,12 +98,11 @@ def draw_tile(img, label, dets, labels, band):
         cv2.rectangle(tile, (x1, y1), (x2, y2), color, 2, cv2.LINE_AA)
         text = f"{name} {det[1]:.2f}"
         (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.38, 1)
-        ty = max(y1, th + 4)
+        ty = label_top(x1, y1, th, (lw + 12, lh + 12))
         cv2.rectangle(tile, (x1, ty - th - 4), (x1 + tw + 4, ty), color, -1)
         cv2.putText(tile, text, (x1 + 2, ty - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (255, 255, 255), 1, cv2.LINE_AA)
-    (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-    cv2.rectangle(tile, (0, 0), (tw + 12, th + 12), SURFACE, -1)
-    cv2.putText(tile, label, (6, th + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, INK, 1, cv2.LINE_AA)
+    cv2.rectangle(tile, (0, 0), (lw + 12, lh + 12), SURFACE, -1)
+    cv2.putText(tile, label, (6, lh + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, INK, 1, cv2.LINE_AA)
     return tile
 
 

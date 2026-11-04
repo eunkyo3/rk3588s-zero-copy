@@ -164,7 +164,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. 지금은 `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에 이를 적용하고, 이후 실행의 세션 도구는 각 마일스톤에서 나온다. 명령 하나로 재현하는 스크립트는 M3에서 나온다.
 
-테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`(동등성과 리포트 테스트는 numpy, 그림 테스트는 matplotlib 필요).
+테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_demo_render.py`(동등성, 리포트, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
 
 ## 저장소 구조
 
@@ -188,3 +188,5 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 - `src/core/yolov8_post.cpp`의 박스 디코딩은 rknn_model_zoo v2.3.2(Apache-2.0, Rockchip)를 따랐다.
 - 모델 파일은 이 저장소에 없다. Ultralytics YOLOv8에서 파생됐으므로 AGPL-3.0으로 배포하며, 라이선스 전문은 해당 Release에 있다([models/README.ko.md](models/README.ko.md)).
 - 벤치마크 영상도 이 저장소에 없다. 출처와 라이선스는 [docs/notes/preprocess.ko.md](docs/notes/preprocess.ko.md#벤치마크-영상)에 있다.
+- **데모 속 영상:** `v0.1-m1`의 데모 영상과 그 정지 화면 `docs/report/demo/demo_m1.jpg`에는 이 영상들이 나온다. 이들은 Apache-2.0이 아니라 원본 영상 각자의 라이선스, Pexels License와 Pixabay Content License를 따른다.
+  - 영상 제작자는 SHOX ART, Paul Bill, Sururi Ballıdağ(Pexels)와 Kanenori(Pixabay)다. 링크는 [docs/notes/demo.ko.md](docs/notes/demo.ko.md#영상과-라이선스)에 있다.

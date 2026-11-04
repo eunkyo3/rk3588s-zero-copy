@@ -15,7 +15,7 @@ The demo video of `v0.1-m1`: eight channels in a 3 × 3 grid, each with the boxe
   - `demo_detect` runs one frame at a time on NPU core 0. It does not use the pipeline's threads, queues or slots.
   - It shares the core's code unchanged: the decoder (`h264_rkmpp`), C's backend, the NPU contexts and the post-processing.
 - **Channels:** 1 to 8 of the M1 assignment ([stream-server/assignment_m1.txt](../../stream-server/assignment_m1.txt)), so videos ① to ④ twice.
-  - Channels 5 to 8 start 10 s into their video, so that no two tiles show the same frames.
+  - Channels 5 to 8 start 10 s into their video, so that no two tiles show the same frame at the same moment.
   - A video starts again at its end, as the stream server's do.
 - **Not a measurement:** the files carry no run kind, and they are kept out of `results/`.
 
@@ -30,7 +30,7 @@ The demo video of `v0.1-m1`: eight channels in a 3 × 3 grid, each with the boxe
 
 - The video is too large for the repository, which ignores `*.mp4`, so it is attached to the `v0.1-m1` Release.
 - **The run of 2026-11-04:** `tools/demo.sh` on the board from commit 1eebc77, 03:43 to 03:45 UTC, after the M1.1 runs. The video is 30 MB, and its SHA-256 is in `docs/report/demo/demo_m1.mp4.sha256`.
-- **Tests:** `tests/test_demo_render.py` covers the assignment, the detections file and the box mapping.
+- **Tests:** `tests/test_demo_render.py` covers the assignment, the detections file, the box mapping, where a box's label goes, and which detections a channel shows for each frame (its start, the hold and the restart).
 
 ## Videos and licenses
 
@@ -43,7 +43,7 @@ The demo video of `v0.1-m1`: eight channels in a 3 × 3 grid, each with the boxe
 
 - **Checked on 2026-11-04 (plan R14), before publishing:**
   - Both licenses allow modifying the videos and publishing the result. Neither requires credit; the demo gives it anyway.
-  - **Pexels:** do not sell unaltered copies, do not redistribute the videos on other stock platforms, and do not imply endorsement by the people or brands shown.
-  - **Pixabay:** do not distribute the content on a standalone basis. Combining it into a new work, as the grid with its boxes does, is not standalone use. Do not use it to suggest endorsement, nor in a misleading way.
-  - The demo is none of these: a non-commercial grid of downscaled clips with drawn boxes.
-- **The footage stays under its licenses.** The repository's Apache License 2.0 covers the code, not the footage in the demo video. The Release notes say so.
+  - **Pexels**, among others: do not sell unaltered copies, do not redistribute the videos on other stock platforms, do not imply endorsement by the people or brands shown, and do not show identifiable people in a bad light or in an offensive way.
+  - **Pixabay**, among others: do not distribute the content on a standalone basis, that is with no creative effort applied. Combining it into a new work, as the grid with its boxes does, is not standalone use. Do not use it in an immoral or illegal way, especially content with recognisable people, nor in a misleading or deceptive way.
+  - The demo does none of these: it is a non-commercial grid of downscaled clips with drawn boxes.
+- **The footage stays under its licenses.** The repository's Apache License 2.0 covers the code. It does not cover the footage in the demo video, nor in its still frame, `docs/report/demo/demo_m1.jpg`. The README says so, and so will the Release notes.
