@@ -1,14 +1,14 @@
 # When the channels' frames arrive (exploratory)
 
-After the fact (M1.1), not pre-registered and not used for any verdict. Per valid run that counts, with more than one channel: the spread of the channels' arrival phases, the shortest arc of the frame period (200 ms in the main condition, 33.3 ms in the auxiliary) that holds every channel's phase, next to the run's latency and its median wait for an NPU worker (Q2), in ms. A small spread means the channels' frames come together. The drift is the largest change of a channel's phase from the first sixth of its frames to the last. Method: `tools/m1_phases.py`.
+After the fact (M1.1), not pre-registered and not used for any verdict. Per valid run that counts, with more than one channel: the spread of the channels' arrival phases, the shortest arc of the frame period (200 ms in the main condition, 33.3 ms in the auxiliary) that holds every channel's phase, next to the run's latency and its median wait for an NPU worker (Q2), in ms. A small spread means the channels' frames come together. The drift is the largest change of a channel's phase from the first sixth of its frames to any later sixth. Method: `tools/m1_phases.py`.
 
-## main (M1)
+## main
 
 | Channels | Variant | Repetition | Spread | Drift | p50 | p99 | Q2 wait p50 |
 |---|---|---|---|---|---|---|---|
-| 2 | B | 1 | 0.6 | 0.2 | 21.7 | 22.4 | 0.0 |
+| 2 | B | 1 | 0.6 | 0.3 | 21.7 | 22.4 | 0.0 |
 | 2 | B | 2 | 0.7 | 0.0 | 21.8 | 22.4 | 0.0 |
-| 2 | B | 3 | 0.8 | 0.0 | 21.8 | 22.5 | 0.0 |
+| 2 | B | 3 | 0.8 | 0.1 | 21.8 | 22.5 | 0.0 |
 | 2 | C | 1 | 0.6 | 0.0 | 16.9 | 18.8 | 0.0 |
 | 2 | C | 2 | 1.3 | 0.0 | 16.9 | 19.0 | 0.0 |
 | 2 | C | 3 | 1.7 | 0.1 | 17.1 | 18.9 | 0.0 |
@@ -20,13 +20,13 @@ After the fact (M1.1), not pre-registered and not used for any verdict. Per vali
 | 4 | C | 3 | 11.7 | 0.1 | 17.4 | 21.1 | 0.0 |
 | 8 | B | 1 | 7.2 | 0.8 | 35.3 | 50.7 | 8.8 |
 | 8 | B | 2 | 6.7 | 0.1 | 36.1 | 50.5 | 8.3 |
-| 8 | B | 3 | 23.0 | 0.0 | 27.9 | 41.0 | 4.3 |
+| 8 | B | 3 | 23.0 | 0.1 | 27.9 | 41.0 | 4.3 |
 | 8 | C | 1 | 7.9 | 0.2 | 29.2 | 42.0 | 11.7 |
 | 8 | C | 2 | 7.1 | 0.1 | 30.8 | 44.2 | 12.9 |
-| 8 | C | 3 | 8.8 | 0.0 | 31.0 | 45.7 | 13.0 |
-| 12 | B | 1 | 31.8 | 0.1 | 35.8 | 48.5 | 12.2 |
+| 8 | C | 3 | 8.8 | 0.1 | 31.0 | 45.7 | 13.0 |
+| 12 | B | 1 | 31.8 | 0.2 | 35.8 | 48.5 | 12.2 |
 | 12 | B | 2 | 29.9 | 0.1 | 35.7 | 50.5 | 13.6 |
-| 12 | B | 3 | 34.0 | 0.4 | 37.0 | 50.2 | 13.6 |
+| 12 | B | 3 | 34.0 | 0.5 | 37.0 | 50.2 | 13.6 |
 | 12 | C | 1 | 18.0 | 0.1 | 34.2 | 52.4 | 16.1 |
 | 12 | C | 2 | 21.6 | 0.1 | 31.1 | 49.1 | 13.0 |
 | 12 | C | 3 | 28.6 | 0.2 | 31.3 | 43.3 | 12.9 |
@@ -43,7 +43,7 @@ After the fact (M1.1), not pre-registered and not used for any verdict. Per vali
 | 32 | C | 2 | 59.3 | 0.2 | 67.9 | 139.7 | 40.0 |
 | 32 | C | 3 | 63.5 | 0.2 | 67.6 | 144.0 | 37.9 |
 
-## aux (M1)
+## aux
 
 | Channels | Variant | Repetition | Spread | Drift | p50 | p99 | Q2 wait p50 |
 |---|---|---|---|---|---|---|---|
@@ -72,6 +72,14 @@ After the fact (M1.1), not pre-registered and not used for any verdict. Per vali
 | 5 | C | 2 | 13.3 | 0.0 | 17.7 | 23.4 | 0.0 |
 | 5 | C | 3 | 4.1 | 0.1 | 19.1 | 30.5 | 0.0 |
 
+## reference
+
+| Channels | Variant | Repetition | Spread | Drift | p50 | p99 | Q2 wait p50 |
+|---|---|---|---|---|---|---|---|
+| 2 | A | 1 | 3.2 | 0.2 | 22.0 | 22.7 | 0.0 |
+| 2 | A | 2 | 1.3 | 0.2 | 22.0 | 22.5 | 0.0 |
+| 2 | A | 3 | 1.5 | 0.2 | 22.0 | 22.6 | 0.0 |
+
 ## 4k (M1.1, A11)
 
 | Channels | Variant | Repetition | Spread | Drift | p50 | p99 | Q2 wait p50 |
@@ -87,7 +95,7 @@ After the fact (M1.1), not pre-registered and not used for any verdict. Per vali
 | 4 | B | 3 | 17.1 | 0.1 | 28.7 | 36.2 | 0.0 |
 | 4 | C | 1 | 17.0 | 0.1 | 22.3 | 24.2 | 0.0 |
 | 4 | C | 2 | 19.0 | 0.2 | 22.1 | 23.0 | 0.0 |
-| 4 | C | 3 | 18.2 | 0.4 | 22.3 | 23.5 | 0.0 |
+| 4 | C | 3 | 18.2 | 0.6 | 22.3 | 23.5 | 0.0 |
 | 8 | B | 1 | 116.8 | 0.2 | 29.7 | 34.6 | 0.0 |
 | 8 | B | 2 | 120.6 | 0.1 | 28.9 | 31.2 | 0.0 |
 | 8 | B | 3 | 129.0 | 0.2 | 29.2 | 31.5 | 0.0 |
@@ -102,9 +110,9 @@ After the fact (M1.1), not pre-registered and not used for any verdict. Per vali
 | 8 | B | 1 | 9.2 | 0.1 | 32.5 | 44.9 | 8.9 |
 | 8 | B | 2 | 14.9 | 0.1 | 28.5 | 42.8 | 4.7 |
 | 8 | B | 3 | 6.2 | 0.1 | 35.2 | 47.7 | 8.8 |
-| 8 | Bk4 | 1 | 6.0 | 0.1 | 33.2 | 53.2 | 10.8 |
+| 8 | Bk4 | 1 | 6.0 | 0.3 | 33.2 | 53.2 | 10.8 |
 | 8 | Bk4 | 2 | 7.6 | 0.2 | 33.2 | 47.9 | 10.9 |
-| 8 | Bk4 | 3 | 8.0 | 0.9 | 35.6 | 47.6 | 11.1 |
+| 8 | Bk4 | 3 | 8.0 | 1.2 | 35.6 | 47.6 | 11.1 |
 
 ## a55 (M1.1, A12)
 
@@ -119,13 +127,13 @@ After the fact (M1.1), not pre-registered and not used for any verdict. Per vali
 |---|---|---|---|---|---|---|---|
 | 8 | B | 1 | 9.0 | 0.3 | 34.0 | 46.9 | 8.3 |
 | 8 | B | 2 | 6.1 | 0.3 | 36.5 | 48.6 | 8.8 |
-| 8 | B | 3 | 5.9 | 1.8 | 36.4 | 48.7 | 8.8 |
+| 8 | B | 3 | 5.9 | 2.4 | 36.4 | 48.7 | 8.8 |
 | 8 | Bd | 1 | 45.2 | 0.1 | 21.0 | 30.8 | 0.0 |
-| 8 | Bd | 2 | 30.7 | 0.1 | 21.7 | 30.3 | 0.0 |
+| 8 | Bd | 2 | 30.7 | 0.2 | 21.7 | 30.3 | 0.0 |
 | 8 | Bd | 3 | 48.4 | 0.1 | 21.1 | 26.0 | 0.0 |
 | 8 | C | 1 | 8.7 | 0.2 | 28.8 | 43.7 | 11.3 |
-| 8 | C | 2 | 7.7 | 0.1 | 29.8 | 43.1 | 12.2 |
-| 8 | C | 3 | 17.6 | 0.0 | 28.9 | 36.3 | 11.1 |
+| 8 | C | 2 | 7.7 | 0.2 | 29.8 | 43.1 | 12.2 |
+| 8 | C | 3 | 17.6 | 0.1 | 28.9 | 36.3 | 11.1 |
 
 ## bdirect_aux (M1.1, A12)
 
@@ -133,7 +141,7 @@ After the fact (M1.1), not pre-registered and not used for any verdict. Per vali
 |---|---|---|---|---|---|---|---|
 | 5 | B | 1 | 16.7 | 0.9 | 21.3 | 26.8 | 0.0 |
 | 5 | B | 2 | 11.3 | 0.1 | 21.2 | 31.6 | 0.0 |
-| 5 | B | 3 | 4.9 | 0.1 | 25.4 | 33.0 | 0.0 |
+| 5 | B | 3 | 4.9 | 0.2 | 25.4 | 33.0 | 0.0 |
 | 5 | Bd | 1 | 3.6 | 0.5 | 23.5 | 34.8 | 0.0 |
 | 5 | Bd | 2 | 9.5 | 0.2 | 22.0 | 31.6 | 0.0 |
 | 5 | Bd | 3 | 11.2 | 0.3 | 21.2 | 31.8 | 0.0 |

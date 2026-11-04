@@ -30,17 +30,9 @@ STAGES = [("Q1 wait", "t1_ns", "t0_ns"), ("prepare", "t2a_ns", "t1_ns"), ("Q2 wa
           ("total", "t4_ns", "t0_ns")]
 
 
-def window_frames(run_dir):
-    """The rows of a run's frames.csv whose t4 is in the window."""
-    header, rows = ss.read_csv(run_dir / "summary.csv")
-    window_ns = int({r["key"]: r["value"] for r in rows}["window_s"]) * 10**9
-    warmup_ns = int(header["warmup_s"]) * 10**9
-    return [f for f in ss.read_csv(run_dir / "frames.csv")[1] if warmup_ns <= int(f["t4_ns"]) < warmup_ns + window_ns]
-
-
 def run_stages(run_dir):
     """{stage: (p50, p99) in ms} of one run, over the frames whose t4 is in the window."""
-    frames = window_frames(run_dir)
+    frames = rep.window_frames(run_dir)
     out = {}
     for name, end, start in STAGES:
         v = np.array([(int(f[end]) - int(f[start])) / 1e6 for f in frames])
@@ -69,7 +61,8 @@ def report(root):
     for sweep in ("main", "aux", "reference", "4k", *rep.A12_TITLES):
         data = sweep_stages(root, sweep)
         title = {"4k": "4k (M1.1, A11)"}.get(sweep, f"{sweep} (M1.1, A12)" if sweep in rep.A12_TITLES else sweep)
-        lines += [f"## {title}", "","| Channels | Variant | n | " + " | ".join(f"{s} p50 / p99" for s, _, _ in STAGES) + " |",
+        lines += [f"## {title}", "",
+                  "| Channels | Variant | n | " + " | ".join(f"{s} p50 / p99" for s, _, _ in STAGES) + " |",
                   "|---|---|---|" + "---|" * len(STAGES)]
         for ch in sorted(data):
             for v in sorted(data[ch]):

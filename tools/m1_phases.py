@@ -7,8 +7,8 @@ inferred frames come with a period of 200 or 33.3 ms. Its phase is the circular 
 that period, over the frames whose t4 falls in the window (as for §7.3's p99). The spread of a run is
 the shortest arc of that period that holds every channel's phase: near 0, the channels' frames come
 together, in bursts. The phases are set when a run's channels start and the protocol does not control
-them. The drift of a run is the largest change of a channel's phase from the first sixth of its frames to
-the last: near 0, the phases held for the whole window.
+them. The drift of a run is the largest change of a channel's phase, from the first sixth of its frames
+in time to any later sixth: near 0, the phases held for the whole window.
 
 Usage, from the repository: python3 tools/m1_phases.py [--out FILE]   (Markdown)
 """
@@ -20,26 +20,24 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import m1_report as rep  # noqa: E402
-import m1_stages as stages  # noqa: E402
 import stream_session as ss  # noqa: E402
 
-SWEEPS = {  # the sweeps with more than one channel at a point, and where they come from
-    "main": "M1", "aux": "M1", "4k": "M1.1, A11", "k4": "M1.1, A12", "a55": "M1.1, A12",
-    "bdirect_main": "M1.1, A12", "bdirect_aux": "M1.1, A12"}
+SWEEPS = {  # every sweep with a point of more than one channel, and where it comes from
+    "main": "M1", "aux": "M1", "reference": "M1", "4k": "M1.1, A11", **{s: "M1.1, A12" for s in rep.A12_TITLES}}
 
 
 def phase(t0_ns, period_ns):
     """The circular mean of t0_ns modulo period_ns, in ns, in [0, period_ns)."""
     a = 2 * np.pi * (np.asarray(t0_ns, dtype=np.float64) % period_ns) / period_ns
-    return float(np.arctan2(np.sin(a).mean(), np.cos(a).mean()) % (2 * np.pi) / (2 * np.pi) * period_ns)
+    return float(np.arctan2(np.sin(a).mean(), np.cos(a).mean()) % (2 * np.pi) / (2 * np.pi) * period_ns) % period_ns
 
 
 def drift(t0_ns, period_ns):
-    """How far the phase of the last sixth of t0_ns, in time, is from that of the first sixth, in ns."""
-    t = sorted(t0_ns)
-    n = max(1, len(t) // 6)
-    d = abs(phase(t[:n], period_ns) - phase(t[-n:], period_ns))
-    return min(d, period_ns - d)
+    """The largest change of the phase of t0_ns from the first sixth, in time, to any later sixth, in ns."""
+    sixths = [s for s in np.array_split(np.sort(np.asarray(t0_ns, dtype=np.float64)), 6) if len(s)]
+    first = phase(sixths[0], period_ns)
+    d = [abs(phase(s, period_ns) - first) for s in sixths[1:]]
+    return max((min(x, period_ns - x) for x in d), default=0.0)
 
 
 def spread(phases, period):
@@ -49,17 +47,21 @@ def spread(phases, period):
     return period - max(gaps)
 
 
-def run_phases(run_dir, fps):
-    """(spread, drift, latency p50, p99, Q2 wait p50), in ms, of one run, over the frames in its window."""
-    frames = stages.window_frames(run_dir)
+def run_phases(run_dir, fps, channels):
+    """(spread, drift, latency p50, p99, Q2 wait p50), in ms, of one run of channels channels, over the
+    frames in its window. Every channel must have frames there."""
+    frames = rep.window_frames(run_dir)
     period_ns = 1e9 / fps
     t0 = {}
     for f in frames:
         t0.setdefault(f["channel"], []).append(int(f["t0_ns"]))
+    if len(t0) != channels:
+        raise ValueError(f"{run_dir}: {len(t0)} of {channels} channels have frames in the window")
     total = [(int(f["t4_ns"]) - int(f["t0_ns"])) / 1e6 for f in frames]
     q2 = [(int(f["t2b_ns"]) - int(f["t2a_ns"])) / 1e6 for f in frames]
     return (spread([phase(v, period_ns) for v in t0.values()], period_ns) / 1e6,
-            max(drift(v, period_ns) for v in t0.values()) / 1e6, float(np.percentile(total, 50)), float(np.percentile(total, 99)), float(np.percentile(q2, 50)))
+            max(drift(v, period_ns) for v in t0.values()) / 1e6,
+            float(np.percentile(total, 50)), float(np.percentile(total, 99)), float(np.percentile(q2, 50)))
 
 
 def report(root):
@@ -69,19 +71,21 @@ def report(root):
              "frame period (200 ms in the main condition, 33.3 ms in the auxiliary) that holds every channel's "
              "phase, next to the run's latency and its median wait for an NPU worker (Q2), in ms. A small spread "
              "means the channels' frames come together. The drift is the largest change of a channel's phase from "
-             "the first sixth of its frames to the last. Method: `tools/m1_phases.py`.", ""]
+             "the first sixth of its frames to any later sixth. Method: `tools/m1_phases.py`.", ""]
     for sweep, source in SWEEPS.items():
-        counts, condition, _, kind = ss.SWEEPS[sweep]
+        _, condition, _, kind = ss.SWEEPS[sweep]
         runs, _ = rep.counted_runs(rep.sessions_of(root, sweep), sweep)
-        rows = [(ch, v, r, run) for (ch, r, v), run in sorted(runs.items()) if ch > 1 and run["status"] == "valid"]
-        lines += [f"## {sweep} ({source})", ""]
+        rows = sorted(((ch, v, r, run) for (ch, r, v), run in runs.items() if ch > 1 and run["status"] == "valid"),
+                      key=lambda x: x[:3])
+        lines += [f"## {sweep}" if source == "M1" else f"## {sweep} ({source})", ""]
         if not rows:
             lines += ["No run yet.", ""]
             continue
         lines += ["| Channels | Variant | Repetition | Spread | Drift | p50 | p99 | Q2 wait p50 |",
                   "|---|---|---|---|---|---|---|---|"]
-        for ch, v, r, run in sorted(rows, key=lambda x: (x[0], x[1], x[2])):
-            s, d, p50, p99, q2 = run_phases(root / "results" / kind / run["session"] / run["name"], ss.FPS[condition])
+        for ch, v, r, run in rows:
+            s, d, p50, p99, q2 = run_phases(root / "results" / kind / run["session"] / run["name"],
+                                            ss.FPS[condition], ch)
             lines.append(f"| {ch} | {v} | {r} | {s:.1f} | {d:.1f} | {p50:.1f} | {p99:.1f} | {q2:.1f} |")
         lines.append("")
     return "\n".join(lines)
