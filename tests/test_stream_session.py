@@ -281,6 +281,8 @@ class Sweeps(unittest.TestCase):
     def test_variant_order(self):
         self.assertEqual([ss.variant_order(("B", "C"), r) for r in (1, 2, 3)], [("B", "C"), ("C", "B"), ("B", "C")])
         self.assertEqual(ss.variant_order(("A",), 2), ("A",))
+        self.assertEqual([ss.variant_order(("B", "C", "Bd"), r) for r in (1, 2, 3)],
+                         [("B", "C", "Bd"), ("C", "Bd", "B"), ("Bd", "B", "C")])
 
     def test_plan(self):
         plan = ss.sweep_plan("main")
@@ -420,7 +422,7 @@ class Sweeps(unittest.TestCase):
     def test_the_4k_sweep(self):
         self.assertEqual(ss.channel_order(ss.SWEEPS["4k"][0]), [1, 8, 4, 2])
         self.assertEqual(ss.SWEEPS["4k"][3], "m1.1")
-        self.assertEqual(ss.ORDER[-1], "4k")
+        self.assertEqual(ss.ORDER[ss.ORDER.index("reference") + 1], "4k")
         expected = ss.VIDEO_SETS["4k"][3]
         served = "".join(f"ch{k}\t/home/u/media/bench4k/{v}\t{expected[v]}\n"
                          for k, v in enumerate(["pexels_36330861.mp4", "pexels_29130409.mp4", "pixabay_180386.mp4"], 1))
@@ -431,6 +433,24 @@ class Sweeps(unittest.TestCase):
         self.assertEqual(ss.video_problems("", expected), ["the server's assignment.tsv is empty"])
         two = "".join(line + "\n" for line in served.splitlines()[:2])
         self.assertEqual(ss.video_problems(two, expected), ["no channel serves pixabay_180386.mp4"])
+
+    def test_the_m1_1_designs(self):
+        # AMENDMENTS A12: after the 4K sweep, run kind m1.1, each design with its controls
+        self.assertEqual(ss.ORDER[ss.ORDER.index("4k") + 1:], ("bdirect_main", "bdirect_aux", "k4", "a55"))
+        self.assertEqual({ss.session_kind(n) for n in ss.ORDER[ss.ORDER.index("4k"):]}, {"m1.1"})
+        self.assertEqual(ss.sweep_plan("bdirect_main"), [(8, 1, ("B", "C", "Bd")), (8, 2, ("C", "Bd", "B")),
+                                                         (8, 3, ("Bd", "B", "C"))])
+        self.assertEqual([p[:2] for p in ss.sweep_plan("bdirect_aux")], [(5, 1), (5, 2), (5, 3)])
+        self.assertEqual(ss.SWEEPS["bdirect_aux"][1], "aux")
+        self.assertEqual(ss.sweep_plan("k4"), [(8, 1, ("B", "Bk4")), (8, 2, ("Bk4", "B")), (8, 3, ("B", "Bk4"))])
+        self.assertEqual(ss.sweep_plan("a55"), [(8, 1, ("B", "C"))])
+        self.assertEqual(ss.bench_args("B", "main"), ["--variant", "B"])
+        self.assertEqual(ss.bench_args("Bd", "bdirect_main"), ["--variant", "Bd"])
+        self.assertEqual(ss.bench_args("Bk4", "k4"), ["--variant", "B", "--prep-threads", "4"])
+        self.assertEqual(ss.bench_args("B", "k4"), ["--variant", "B"])
+        self.assertEqual(ss.bench_args("C", "a55"), ["--variant", "C", "--cores", "a55"])
+        self.assertTrue(all(ss.unsaturated(ss.SWEEPS[n][0][0], ss.SWEEPS[n][1], ss.LIMIT)
+                            for n in ("bdirect_main", "bdirect_aux", "k4", "a55")))  # rule 3 applies to every run
 
     def test_the_4k_loop_check_must_have_protocol_settings(self):
         here = os.getcwd()

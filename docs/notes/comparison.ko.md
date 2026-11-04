@@ -105,11 +105,27 @@
     - 4K에서는 A5의 기준이 모두 성립하지는 않는다. 이는 보고할 뿐, 판정하지 않는다.
 - **리포트:** 4K 결과를 정리하기 전에 `tools/m1_report.py`에 4K 절을 더한다. §7의 지표를 B와 C 나란히, 같은 채널 수의 M1 본편 조건 값을 옆에 두고, 탐색용이라고 표시한다(A11).
 
+### M1.1: §13의 설계(A12)
+
+- **실행:** 4K 스윕 뒤에 `sweep bdirect_main`, `sweep bdirect_aux`, `sweep k4`, `sweep a55` 순서로 돈다. 실행 종류는 `m1.1`이고, M1의 1080p 영상 세트를 쓰며, `results/m1.1/<UTC>_<스윕>/`에 남는다.
+  - 스윕마다 대조군을 같은 세션에서 다시 돌린다([A12](../../prereg/AMENDMENTS.ko.md)).
+    - 8채널 본편과 5채널 보조에서 B, C, Bd
+    - 8채널에서 B와 Bk4
+    - A55 코어의 8채널에서 B와 C, 반복 1회
+  - 세션 도구는 Bd에 `--variant Bd`를, Bk4에 `--variant B --prep-threads 4`를, `a55`의 모든 실행에 `--cores a55`를 넘긴다.
+  - 갈래가 셋이면 반복 안의 순서가 B→C→Bd, C→Bd→B, Bd→B→C로 돌아간다.
+  - 블록, 냉각 대기, 유효성, 세션, 이어 하기는 위의 스윕과 같다.
+- **그 첫 세션 전에**, `amend-A12` 뒤에 보드에서 root로, 저장소에서 손으로 돌린다.
+  - `./build/bdirect_check /home/pi/media/bench/pexels_36330861.mp4 models/yolov8n_i8.rknn 100`이 `pass`를 출력해야 한다.
+  - 그 출력은 `tools/collect_env.sh`의 출력과 함께 `results/check/<UTC>_bdirect_check/`에 둔다.
+- **리포트:** 이 설계들을 정리하기 전에 `tools/m1_report.py`에 설계마다 절을 더한다. §7의 지표를 갈래마다 같은 세션의 대조군 옆에 두고, 탐색용이라고 표시한다.
+
 ### 시간
 
 - 프로토콜대로의 실행 한 번은 약 2.5분이고, 냉각 대기 관문이 최소 60초를 더한다.
 - 따라서 본편 스윕(42회)은 약 2.5 ~ 3시간, 보조 스윕(30회)은 약 2시간, A 집합(6회)은 약 20분이 걸린다. H3은 탐색이 어디서 멈추느냐에 달렸다. 탐색 실행은 최대 50회, 확인 실행은 6회 이상이다.
 - 세션마다 10분 대기가 더해진다.
+- A12의 M1.1 설계는 세션 4개에 26회로, 약 2시간이 걸린다.
 
 ## 파일과 도구
 
@@ -119,4 +135,6 @@
 | `results/comparison/<UTC>_h3/` | H3 세션마다 하나, 같은 파일들 |
 | `results/reference/<UTC>_reference/` | A 집합의 같은 것 |
 | `results/m1.1/<UTC>_4k/` | 4K 설계(A11)의 같은 것 |
+| `results/m1.1/<UTC>_bdirect_main/`, `…_bdirect_aux/`, `…_k4/`, `…_a55/` | §13의 설계(A12)의 같은 것 |
+| `tools/bdirect_check.cpp` | 실행 전 B-direct의 기능 검사(A12) |
 | `tools/stream_session.py sweep`, `h3` | 스윕이나 H3의 세션 하나를 돌린다([테스트](../../tests/test_stream_session.py)) |

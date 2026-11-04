@@ -105,11 +105,27 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
     - A5's criteria do not all hold at 4K. That is reported, not judged.
 - **Report:** `tools/m1_report.py` gets a 4K section before the 4K results are written up: §7's metrics, B and C side by side, M1's main-condition values at the same counts next to them, labelled exploratory (A11).
 
+### M1.1: the designs of §13 (A12)
+
+- **Runs:** after the 4K sweep, in this order: `sweep bdirect_main`, `sweep bdirect_aux`, `sweep k4`, `sweep a55`. They have run kind `m1.1`, use M1's 1080p video set, and go in `results/m1.1/<UTC>_<sweep>/`.
+  - Each sweep reruns its controls in the same session ([A12](../../prereg/AMENDMENTS.md)):
+    - B, C and Bd at 8 channels main, and at 5 channels aux;
+    - B and Bk4 at 8 channels;
+    - B and C on the A55 cores at 8 channels, one repetition.
+  - The session tool passes `--variant Bd` for Bd, `--variant B --prep-threads 4` for Bk4, and `--cores a55` on every run of `a55`.
+  - With three arms, the order within a repetition rotates: B→C→Bd, C→Bd→B, Bd→B→C.
+  - Blocks, gate, validity, sessions and resuming are those of the sweeps above.
+- **Before the first of them**, by hand on the board, as root from the repository, after `amend-A12`:
+  - `./build/bdirect_check /home/pi/media/bench/pexels_36330861.mp4 models/yolov8n_i8.rknn 100` must print `pass`.
+  - Its output is kept in `results/check/<UTC>_bdirect_check/`, with `tools/collect_env.sh`'s output.
+- **Report:** before these designs are written up, `tools/m1_report.py` gets a section for each: §7's metrics, each arm next to the session's own controls, labelled exploratory.
+
 ### Time
 
 - A protocol run takes about 2.5 minutes, and the gate adds at least 60 s.
 - So the main sweep (42 runs) takes about 2.5 to 3 hours, the auxiliary sweep (30 runs) about 2 hours, and the A set (6 runs) about 20 minutes. H3 depends on where the searches stop: up to 50 search runs and 6 or more confirmation runs.
 - Each session adds 10 minutes of idling.
+- The M1.1 designs of A12 have 26 runs in 4 sessions, about 2 hours.
 
 ## Files and tools
 
@@ -119,4 +135,6 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 | `results/comparison/<UTC>_h3/` | one H3 session each, the same files |
 | `results/reference/<UTC>_reference/` | the same, for the A set |
 | `results/m1.1/<UTC>_4k/` | the same, for the 4K design (A11) |
+| `results/m1.1/<UTC>_bdirect_main/`, `…_bdirect_aux/`, `…_k4/`, `…_a55/` | the same, for the designs of §13 (A12) |
+| `tools/bdirect_check.cpp` | B-direct's functional check before its runs (A12) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |
