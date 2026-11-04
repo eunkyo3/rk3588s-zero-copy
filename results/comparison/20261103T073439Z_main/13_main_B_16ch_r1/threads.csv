@@ -1,0 +1,72 @@
+# start_time_utc: 2026-11-03T08:25:36Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# run_kind: comparison
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: B
+# channels: 16
+# condition: main
+# repetition: 1
+# code_commit: 86587a29975c28c1c49f202ba8f6023ed4074861
+# amendment: A11
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+tid,comm,affinity,cpu_s_in_window
+60411,pre-0,"4-7",25.060
+60412,pre-1,"4-7",25.040
+60413,npu-0,"4-7",5.980
+60415,npu-2,"4-7",5.960
+60414,npu-1,"4-7",5.910
+60374,dec-12,"4-7",0.920
+60371,dec-9,"4-7",0.900
+60375,dec-13,"4-7",0.890
+60377,dec-15,"4-7",0.880
+60376,dec-14,"4-7",0.880
+60373,dec-11,"4-7",0.880
+60378,dec-16,"4-7",0.880
+60367,dec-5,"4-7",0.870
+60372,dec-10,"4-7",0.870
+60370,dec-8,"4-7",0.870
+60366,dec-4,"4-7",0.860
+60363,dec-1,"4-7",0.860
+60368,dec-6,"4-7",0.840
+60365,dec-3,"4-7",0.810
+60369,dec-7,"4-7",0.800
+60364,dec-2,"4-7",0.790
+60409,mpp_dec_parser,"4-7",0.470
+60397,mpp_dec_parser,"4-7",0.470
+60407,mpp_dec_parser,"4-7",0.460
+60399,mpp_dec_parser,"4-7",0.460
+60395,mpp_dec_parser,"4-7",0.460
+60393,mpp_dec_parser,"4-7",0.460
+60405,mpp_dec_parser,"4-7",0.450
+60403,mpp_dec_parser,"4-7",0.450
+60401,mpp_dec_parser,"4-7",0.450
+60381,mpp_dec_parser,"4-7",0.440
+60387,mpp_dec_parser,"4-7",0.430
+60385,mpp_dec_parser,"4-7",0.430
+60383,mpp_dec_parser,"4-7",0.430
+60391,mpp_dec_parser,"4-7",0.420
+60389,mpp_dec_parser,"4-7",0.420
+60379,mpp_dec_parser,"4-7",0.390
+60398,mpp_dec_hal,"4-7",0.120
+60410,mpp_dec_hal,"4-7",0.120
+60416,metrics,"0",0.110
+60404,mpp_dec_hal,"4-7",0.110
+60402,mpp_dec_hal,"4-7",0.110
+60396,mpp_dec_hal,"4-7",0.110
+60394,mpp_dec_hal,"4-7",0.110
+60408,mpp_dec_hal,"4-7",0.100
+60406,mpp_dec_hal,"4-7",0.100
+60400,mpp_dec_hal,"4-7",0.100
+60386,mpp_dec_hal,"4-7",0.100
+60392,mpp_dec_hal,"4-7",0.090
+60390,mpp_dec_hal,"4-7",0.090
+60384,mpp_dec_hal,"4-7",0.090
+60382,mpp_dec_hal,"4-7",0.090
+60380,mpp_dec_hal,"4-7",0.090
+60388,mpp_dec_hal,"4-7",0.090
+60357,bench_main,"4-7",0.000

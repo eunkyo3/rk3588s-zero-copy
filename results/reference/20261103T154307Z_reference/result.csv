@@ -1,0 +1,21 @@
+# start_time_utc: 2026-11-03T15:53:18Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# run_kind: reference
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264 (software), ffmpeg 8b4385e9
+# code_commit: 86587a29975c28c1c49f202ba8f6023ed4074861
+# amendment: A11
+# session: 20261103T154307Z_reference
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 26 (reported by the operator at 2026-11-03 09:00 UTC)
+key,value
+sweep,reference
+session_status,completed
+channel_order,2 1
+earlier_sessions,none
+repetitions_run_here,2ch_r1 2ch_r2 2ch_r3 1ch_r1 1ch_r2 1ch_r3
+repetitions_left,none
+invalid_x2_runs,none
+protocol_settings,yes

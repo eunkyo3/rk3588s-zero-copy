@@ -1,0 +1,13 @@
+2026/11/03 16:03:27 INF [RTSP] [conn 10.88.0.2:34664] opened
+2026/11/03 16:03:27 INF [path ch1] runOnDemand command started
+2026/11/03 16:03:27 INF [RTSP] [conn 127.0.0.1:54020] opened
+2026/11/03 16:03:27 INF [RTSP] [session 48adc9ba] created by 127.0.0.1:54020
+2026/11/03 16:03:27 INF [path ch1] stream is available and online, 1 track (H264)
+2026/11/03 16:03:27 INF [RTSP] [session 48adc9ba] is publishing to path 'ch1'
+2026/11/03 16:03:27 INF [RTSP] [session 842fee4d] created by 10.88.0.2:34664
+2026/11/03 16:03:27 INF [RTSP] [session 842fee4d] is reading from path 'ch1', with TCP, 1 track (H264)
+2026/11/03 16:05:48 INF [RTSP] [conn 10.88.0.2:34664] closed: read tcp 10.88.0.1:8554->10.88.0.2:34664: read: connection reset by peer
+2026/11/03 16:05:48 INF [RTSP] [session 842fee4d] destroyed: not in use
+2026/11/03 16:05:49 INF [path ch1] runOnDemand command stopped: not needed by anyone
+2026/11/03 16:05:50 INF [RTSP] [session 48adc9ba] destroyed: torn down by 127.0.0.1:54020
+2026/11/03 16:05:50 INF [RTSP] [conn 127.0.0.1:54020] closed: EOF

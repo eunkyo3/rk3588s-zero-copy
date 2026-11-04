@@ -1,0 +1,26 @@
+2026/11/03 15:53:19 INF [RTSP] [conn 10.88.0.2:51322] opened
+2026/11/03 15:53:19 INF [RTSP] [conn 10.88.0.2:51320] opened
+2026/11/03 15:53:19 INF [path ch2] runOnDemand command started
+2026/11/03 15:53:19 INF [path ch1] runOnDemand command started
+2026/11/03 15:53:19 INF [RTSP] [conn 127.0.0.1:54486] opened
+2026/11/03 15:53:19 INF [RTSP] [conn 127.0.0.1:54496] opened
+2026/11/03 15:53:19 INF [RTSP] [session b46b7fef] created by 127.0.0.1:54486
+2026/11/03 15:53:19 INF [path ch2] stream is available and online, 1 track (H264)
+2026/11/03 15:53:19 INF [RTSP] [session b46b7fef] is publishing to path 'ch2'
+2026/11/03 15:53:19 INF [RTSP] [session 3210f7b6] created by 10.88.0.2:51322
+2026/11/03 15:53:19 INF [RTSP] [session 3210f7b6] is reading from path 'ch2', with TCP, 1 track (H264)
+2026/11/03 15:53:19 INF [RTSP] [session c2ec89ab] created by 127.0.0.1:54496
+2026/11/03 15:53:19 INF [path ch1] stream is available and online, 1 track (H264)
+2026/11/03 15:53:19 INF [RTSP] [session c2ec89ab] is publishing to path 'ch1'
+2026/11/03 15:53:19 INF [RTSP] [session 7e86bea7] created by 10.88.0.2:51320
+2026/11/03 15:53:19 INF [RTSP] [session 7e86bea7] is reading from path 'ch1', with TCP, 1 track (H264)
+2026/11/03 15:55:40 INF [RTSP] [conn 10.88.0.2:51320] closed: read tcp 10.88.0.1:8554->10.88.0.2:51320: read: connection reset by peer
+2026/11/03 15:55:40 INF [RTSP] [session 7e86bea7] destroyed: not in use
+2026/11/03 15:55:40 INF [RTSP] [conn 10.88.0.2:51322] closed: read tcp 10.88.0.1:8554->10.88.0.2:51322: read: connection reset by peer
+2026/11/03 15:55:40 INF [RTSP] [session 3210f7b6] destroyed: not in use
+2026/11/03 15:55:41 INF [path ch1] runOnDemand command stopped: not needed by anyone
+2026/11/03 15:55:41 INF [path ch2] runOnDemand command stopped: not needed by anyone
+2026/11/03 15:55:41 INF [RTSP] [session b46b7fef] destroyed: torn down by 127.0.0.1:54486
+2026/11/03 15:55:41 INF [RTSP] [conn 127.0.0.1:54486] closed: EOF
+2026/11/03 15:55:41 INF [RTSP] [session c2ec89ab] destroyed: torn down by 127.0.0.1:54496
+2026/11/03 15:55:41 INF [RTSP] [conn 127.0.0.1:54496] closed: EOF

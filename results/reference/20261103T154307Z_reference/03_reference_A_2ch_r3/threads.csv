@@ -1,0 +1,36 @@
+# start_time_utc: 2026-11-03T16:00:04Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# run_kind: reference
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264 (software), ffmpeg 8b4385e9
+# variant: A
+# channels: 2
+# condition: main
+# repetition: 3
+# code_commit: 86587a29975c28c1c49f202ba8f6023ed4074861
+# amendment: A11
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+tid,comm,affinity,cpu_s_in_window
+86505,av:h264:df1,"4-7",6.720
+86504,av:h264:df0,"4-7",6.700
+86508,av:h264:df4,"4-7",6.700
+86506,av:h264:df2,"4-7",6.640
+86507,av:h264:df3,"4-7",6.620
+86510,av:h264:df1,"4-7",6.040
+86509,av:h264:df0,"4-7",6.010
+86511,av:h264:df2,"4-7",5.450
+86513,av:h264:df4,"4-7",5.310
+86512,av:h264:df3,"4-7",4.770
+86515,pre-1,"4-7",2.980
+86514,pre-0,"4-7",2.940
+86518,npu-2,"4-7",0.640
+86517,npu-1,"4-7",0.640
+86503,dec-2,"4-7",0.620
+86516,npu-0,"4-7",0.620
+86502,dec-1,"4-7",0.520
+86519,metrics,"0",0.110
+86496,bench_main,"4-7",0.000

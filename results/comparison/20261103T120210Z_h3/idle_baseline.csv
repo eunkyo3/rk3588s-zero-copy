@@ -1,0 +1,22 @@
+# start_time_utc: 2026-11-03T12:10:21Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# run_kind: comparison
+# measurement: idle baseline of system CPU (PROTOCOL §7.2), not a run
+# code_commit: 86587a29975c28c1c49f202ba8f6023ed4074861
+# amendment: A11
+key,value
+window_s,120.0
+system_cpu0_s,0.350
+system_cpu1_s,0.250
+system_cpu2_s,0.070
+system_cpu3_s,0.030
+system_cpu4_s,0.000
+system_cpu5_s,0.050
+system_cpu6_s,0.070
+system_cpu7_s,0.000
+system_cpu0-3_s,0.700
+system_cpu4-5_s,0.050
+system_cpu6-7_s,0.070
+system_cpu_total_s,0.820
