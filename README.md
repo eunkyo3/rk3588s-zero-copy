@@ -39,7 +39,7 @@ Two pipelines share the same RTSP input, decoder (ffmpeg-rockchip `h264_rkmpp`, 
 
 ![CPU, main condition](docs/report/figures/cpu_main.svg)
 
-- **4K, exploratory (M1.1):** 24 runs on 2026-11-04 at 1 to 8 channels, all valid. C again used 59 to 60% less process CPU, and its p99 was lower at every count. At 4K, C's tensors are not equivalent to B's under A5. Nothing is judged; see [the report](docs/report/M1.md#after-m1-4k-input-m11-exploratory).
+- **4K, exploratory (M1.1):** 24 runs on 2026-11-04 at 1, 2, 4 and 8 channels, all valid. C again used 59 to 60% less process CPU, and its p99 was lower at every count. Equivalence under A5 is not claimed at 4K (tensor MAE against B: C 4.52, R 1.88). Nothing is judged; see [the report](docs/report/M1.md#after-m1-4k-input-m11-exploratory).
 - **Demo:** C's detections on eight channels, rendered offline ([docs/notes/demo.md](docs/notes/demo.md)). The video is attached to the `v0.1-m1` Release; its footage is not Apache-2.0 ([License](#license)).
 
 ![Detection demo, one frame](docs/report/demo/demo_m1.jpg)
@@ -155,7 +155,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1-6, the comparison runs, is done, and M1-7's report is [docs/report/M1.md](docs/report/M1.md). Before them came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). The small exploratory 4K design of M1.1 ([AMENDMENTS A11](prereg/AMENDMENTS.md)) runs after them.
+**Current status:** M1-6, the comparison runs, is done, and M1-7's report is [docs/report/M1.md](docs/report/M1.md). Before them came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). The small exploratory 4K design of M1.1 ([AMENDMENTS A11](prereg/AMENDMENTS.md)) ran after them, on 2026-11-04; its write-up comes with M1.1.
 
 ## Build and run
 
@@ -199,7 +199,7 @@ Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summar
 | `models/` | model download and conversion. The files are kept in a Release. |
 | `tests/` | unit tests of the pipeline core and of the Python tools |
 | `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration, comparison, analysis |
-| `docs/report/` | the M1 report, its tables, summary file and figures |
+| `docs/report/` | the M1 report, its tables, summary file, stage times and figures, and the demo's files |
 | `results/` | the raw results of every run; large tensor dumps are kept in Releases. Each file's header names its code, model and amendment (PROTOCOL §1). |
 
 ## License
