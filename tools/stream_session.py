@@ -82,7 +82,7 @@ from the login session (setsid nohup):
   COOLING=<text> AMBIENT_C=<°C> python3 tools/stream_session.py limit [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--set 4k] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py thermal --limit L [--out DIR]
-  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference,4k}
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference,4k,k4,a55,bdirect_main,bdirect_aux}
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
 --gate-s, for limit and h3 --start and --cap, and for sweep --counts. A sweep or h3 session with any of
