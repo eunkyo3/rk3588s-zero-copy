@@ -109,7 +109,7 @@ Both write the 640×360 image into the middle of a 640×640 slot whose border wa
 | Model | YOLOv8n from rknn_model_zoo v2.3.2, INT8 with rknn-toolkit2 2.3.2 | [models/README.md](models/README.md) |
 | Code | C++17, CMake, gcc 13.3 | |
 | Streams | mediamtx v1.21.2 and ffmpeg on a separate Linux PC | [stream-server/README.md](stream-server/README.md) |
-| Scripts | POSIX shell; Python 3, standard library only, plus numpy for `tools/equivalence_check.py` | sessions, analysis, checks |
+| Scripts | POSIX shell; Python 3, standard library only, plus numpy for `tools/equivalence_check.py` and `tools/m1_report.py`, and matplotlib for `tools/m1_plots.py` | sessions, analysis, checks |
 
 Exact versions and the hardware blocks: [docs/notes/env.md](docs/notes/env.md).
 
@@ -164,7 +164,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 Runs that count also follow the order, cooldown gate and validity rules of PROTOCOL §9. So far `tools/calib_npu.sh` applies them to the `P_cap` calibration; the session tools for later runs come with their milestones. One-command reproduction comes with M3.
 
-Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py` and `tests/test_equivalence_check.py` for the Python tools (the last needs numpy).
+Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py` and `tests/test_m1_plots.py` for the Python tools (the equivalence and report tests need numpy, the plot test matplotlib).
 
 ## Repository layout
 

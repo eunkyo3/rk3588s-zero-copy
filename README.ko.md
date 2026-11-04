@@ -109,7 +109,7 @@ flowchart TB
 | 모델 | rknn_model_zoo v2.3.2의 YOLOv8n, rknn-toolkit2 2.3.2로 INT8 변환 | [models/README.ko.md](models/README.ko.md) |
 | 코드 | C++17, CMake, gcc 13.3 | |
 | 스트림 | 별도 Linux PC의 mediamtx v1.21.2와 ffmpeg | [stream-server/README.ko.md](stream-server/README.ko.md) |
-| 스크립트 | POSIX 셸, Python 3(표준 라이브러리만, `tools/equivalence_check.py`는 numpy도 씀) | 세션, 분석, 검사 |
+| 스크립트 | POSIX 셸, Python 3(표준 라이브러리만. `tools/equivalence_check.py`와 `tools/m1_report.py`는 numpy, `tools/m1_plots.py`는 matplotlib도 씀) | 세션, 분석, 검사 |
 
 정확한 버전과 하드웨어 블록은 [docs/notes/env.ko.md](docs/notes/env.ko.md)에 있다.
 
@@ -164,7 +164,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. 지금은 `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에 이를 적용하고, 이후 실행의 세션 도구는 각 마일스톤에서 나온다. 명령 하나로 재현하는 스크립트는 M3에서 나온다.
 
-테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`(마지막은 numpy 필요).
+테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`(동등성과 리포트 테스트는 numpy, 그림 테스트는 matplotlib 필요).
 
 ## 저장소 구조
 
