@@ -95,3 +95,4 @@ It also lists every invalid ×2 record by variant, with the reasons of both atte
 |---|---|
 | `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown, then the 4K section (A11); `--check` for M1's completeness; `--json` for `summary.json` ([tests](../../tests/test_m1_report.py)) |
 | `tools/m1_plots.py` | the figures, as SVG ([tests](../../tests/test_m1_plots.py)) |
+| `tools/m1_stages.py` | where the latency goes, per stage of §7.3's timeline, from the runs that count; exploratory, not pre-registered ([tests](../../tests/test_m1_stages.py)) |

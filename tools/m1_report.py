@@ -487,7 +487,7 @@ def main(argv):
         Path(args.json).write_text(text, encoding="utf-8", newline="\n")
     text = report(c)
     if args.out:
-        Path(args.out).write_text(text, encoding="utf-8")
+        Path(args.out).write_text(text, encoding="utf-8", newline="\n")
     elif not args.json:
         print(text, end="")
     return 0

@@ -4,9 +4,9 @@
 
 RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약하며, 어떤 조건에서 그런가? 이 저장소는 NanoPi R6C에서 수행하는 사전 등록 실험으로 이 질문에 답한다. 코드는 실험을 재현할 수 있도록 여기에 둔다.
 
-이 프로젝트가 공개할 것:
-- 사전 등록한 가설마다 판정과 그 근거가 된 측정을 담은 리포트
-- 다채널 검출 데모
+이 프로젝트가 공개하는 것:
+- 사전 등록한 가설마다 판정과 그 근거가 된 측정을 담은 리포트: [docs/report/M1.ko.md](docs/report/M1.ko.md)
+- 다채널 검출 데모: [docs/notes/demo.ko.md](docs/notes/demo.ko.md)
 - 결과를 다시 만드는 스크립트
 
 라이브러리가 아니라 실험이다. 제로카피가 아무것도 절약하지 못한다는 결과도 유효한 답이다.
@@ -21,6 +21,28 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 | **C** 제로카피 | dma-buf fd → RGA → `rknn_create_mem_from_fd`로 등록한 dma-heap 버퍼 |
 | A (참조) | 소프트웨어 디코딩 + B 경로, 1–2채널만 |
 | none | 디코딩만 한다. 디코더가 몇 채널까지 감당하는지 찾는 데 쓴다 |
+
+## M1 결과
+
+`freeze-m1` 뒤 2026-11-03에 134회를 실행했고, 모두 유효했다. 전체 보고서는 [docs/report/M1.ko.md](docs/report/M1.ko.md)에 있다.
+
+| 가설 | 사양 판정 | 실질 판정 | 수치 |
+|---|---|---|---|
+| H1, 8채널(채널당 5 fps)의 프로세스 CPU | 채택 | 채택 | 120초당 B 43.3초, C 18.6초: 57.1% 적음 |
+| H2, 5채널(채널당 30 fps)의 p99 지연 | 기각 | 기각 | B 24.5 ms, C 25.9 ms |
+| H3, 채널당 5 fps를 유지하는 최대 채널 수 | 채택 | 판정 불가(상한 도달) | B 32, C 32, 상한 |
+
+- **CPU:** C는 모든 채널 수에서 프로세스 CPU를 절반가량 줄인다. 5 fps에서 50–58%, 30 fps에서 72–73%다.
+- **지연:** C의 중앙값 지연은 16채널까지 낮다. NPU가 바빠지면, 즉 30 fps 5채널과 32채널에서는 p99가 낮지 않다.
+- **채널:** 두 변형 모두 A76 코어 네 개 안에서 상한인 32채널까지 모든 채널 수를 유지했다.
+- **조건:** 파이프라인이 A76 코어에서 돌고 디코더 버퍼가 CPU 캐시를 쓸 때의 결과다. 모든 C 결과에는 A6의 표시가 붙는다. NPU 런타임은 여전히 자체적으로 작은 복사를 한다.
+
+![CPU, 본편 조건](docs/report/figures/cpu_main.svg)
+
+- **4K, 탐색용(M1.1):** 2026-11-04에 1·2·4·8채널로 24회를 실행했고, 모두 유효했다. 이번에도 C의 프로세스 CPU가 59–60% 적었고, 모든 채널 수에서 p99가 낮았다. 4K에서는 A5의 동등성을 주장하지 않는다(B에 대한 텐서 MAE: C 4.52, R 1.88). 아무것도 판정하지 않는다. [보고서](docs/report/M1.ko.md#m1-이후-4k-입력m11-탐색용)를 보라.
+- **데모:** 8채널에서 C가 검출한 결과를 오프라인으로 렌더했다([docs/notes/demo.ko.md](docs/notes/demo.ko.md)). 영상은 `v0.1-m1` Release에 첨부하며, 그 속 원본 영상은 Apache-2.0이 아니다([라이선스](#라이선스)).
+
+![검출 데모의 한 프레임](docs/report/demo/demo_m1.jpg)
 
 ## 지금까지의 발견
 
@@ -45,7 +67,7 @@ flowchart LR
     end
     subgraph BOARD["NanoPi R6C, RK3588S"]
         BM["bench_main<br>변형 하나, N채널"]
-        SS["stream_session.py<br>M1-3 세션"]
+        SS["stream_session.py<br>세션"]
     end
     M -- "RTSP over TCP, ch1~ch32<br>유선 이더넷" --> BM
     SS -. "SSH: 서버 시작·종료,<br>로그 읽기" .-> M
@@ -133,9 +155,7 @@ flowchart TB
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1-5 동결을 마쳤다. [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1), 기준 시각 2026-11-03T06:58:17Z. 다음: M1-6, PROTOCOL §12의 비교 실행이다. 방법은 [docs/notes/comparison.ko.md](docs/notes/comparison.ko.md)에 고정했다. 그에 앞서 M1-3에서 보드를 캘리브레이션했다. 고정 클럭, `P_cap`(초당 194.2회 추론), H2 보조 지점(5채널)을 확정했다([AMENDMENTS A7](prereg/AMENDMENTS.ko.md)). 디코딩 전용 상한 `L` = 32(탐색 상한), 본편 채널 집합 {1, 2, 4, 8, 12, 16, 32}, 채널 배정, 냉각 구성도 확정했다. 반복 재생 검사와 열 확인을 통과했다([AMENDMENTS A9](prereg/AMENDMENTS.ko.md), [docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)). 소프트웨어, 빌드, 모델도 확정했다([AMENDMENTS A10](prereg/AMENDMENTS.ko.md)). 작은 4K 탐색 설계(M1.1)도 등록했다([AMENDMENTS A11](prereg/AMENDMENTS.ko.md)). 앞서 끝난 것: M1-4 동등성. B와 C는 현재 기준([AMENDMENTS A5](prereg/AMENDMENTS.ko.md))으로는 동등하고, 등록 기준으로는 동등하지 않다([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)). C의 입력 경로에는 CPU 픽셀 복사가 없지만, NPU 런타임 안의 작은 복사(B도 같음)가 §11.4 perf 기준을 넘는다([AMENDMENTS A6](prereg/AMENDMENTS.ko.md)).
-
-비교 결과는 `v0.1-m1` 리포트와 함께 공개한다.
+**현재 상태:** M1-6 비교 실행을 마쳤고, M1-7 보고서는 [docs/report/M1.ko.md](docs/report/M1.ko.md)에 있다. 그에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 작은 4K 탐색 설계([AMENDMENTS A11](prereg/AMENDMENTS.ko.md))는 그 뒤 2026-11-04에 돌았고, 그 정리는 M1.1과 함께 나온다.
 
 ## 빌드와 실행
 
@@ -162,9 +182,9 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 `{n}`은 채널 번호로 바뀐다. 실행은 20초 예열한 뒤 120초 측정한다. `summary.csv`, `channels.csv`, `frames.csv`, `samples.csv`, `threads.csv`, `env.json`을 `results/check/<UTC 시각>_C_8ch/`에 쓴다. 옵션은 [src/app/bench_main.cpp](src/app/bench_main.cpp) 맨 위에 있다.
 
-판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. 지금은 `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에 이를 적용하고, 이후 실행의 세션 도구는 각 마일스톤에서 나온다. 명령 하나로 재현하는 스크립트는 M3에서 나온다.
+판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에, `tools/stream_session.py`가 RTSP 세션에 이를 적용한다([docs/notes/comparison.ko.md](docs/notes/comparison.ko.md)). 보고서의 파일은 [docs/report/M1.ko.md](docs/report/M1.ko.md#이-보고서-재현하기)의 명령으로 다시 만든다. 실행을 명령 하나로 재현하는 스크립트는 M3에서 나온다.
 
-테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_demo_render.py`(동등성, 리포트, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
+테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_m1_stages.py`, `tests/test_demo_render.py`(동등성, 리포트, 단계, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
 
 ## 저장소 구조
 
@@ -177,8 +197,9 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 | `tools/` | 클럭 고정, 캘리브레이션, 동등성, 제로카피 근거 도구, 진단 도구, 사전 등록 순서 검사, 보드 준비, 모델 변환, 배포, 환경 기록 |
 | `stream-server/` | mediamtx 설정, 영상 준비, 주어진 채널 배정을 검사하는 송출 스크립트 |
 | `models/` | 모델 다운로드와 변환. 파일은 Release에 있다. |
-| `tests/` | 파이프라인 코어와 Python 도구 3개의 테스트 |
-| `docs/notes/` | 마일스톤별 기록: 환경, 스파이크, 전처리, 코어, 동등성, 캘리브레이션 |
+| `tests/` | 파이프라인 코어와 Python 도구의 테스트 |
+| `docs/notes/` | 마일스톤별 기록: 환경, 스파이크, 전처리, 코어, 동등성, 캘리브레이션, 비교, 분석 |
+| `docs/report/` | M1 보고서와 그 표, 요약 파일, 단계별 시간, 그림, 그리고 데모의 파일 |
 | `results/` | 모든 실행의 원자료. 큰 텐서 덤프는 Release에 둔다. 파일마다 헤더에 코드, 모델, 수정 기록 번호가 있다(PROTOCOL §1). |
 
 ## 라이선스
