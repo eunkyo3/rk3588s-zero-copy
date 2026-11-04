@@ -99,6 +99,9 @@
   - `echo "dc02ec11ee5774588b90233e5e364bac37f2b4e8e0be771fd023e06539a59a8e  /home/pi/media/bench4k/pexels_36330861.mp4" | sha256sum -c`. A11에 적힌 ① 4K의 해시다.
   - `./build/equivalence_dump /home/pi/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 커밋> m1.1`
   - 이어서 그 디렉터리에 `tools/equivalence_check.py`를 돌린다. 수치를 보고하고, 아무것도 판정하지 않는다.
+  - **2026-11-04의 실행**([results/m1.1/20261104T023058Z_4k_tensors](../../results/m1.1/20261104T023058Z_4k_tensors)): 검사가 실행 종류 `equivalence`만 받았기 때문에 exit 2로 멈췄다(`check.txt`).
+    - 실행 종류 `m1.1`도 받도록 고친 뒤, 텐서의 SHA-256이 `tensors.sha256`과 맞는 것을 확인하고 같은 텐서에 다시 돌렸다.
+    - 그 출력은 `recheck.txt`와 `recheck.json`이다. `recheck_env.txt`에 도구의 커밋과 SHA-256, 시각, 종료 코드가 있다.
 - **리포트:** 4K 결과를 정리하기 전에 `tools/m1_report.py`에 4K 절을 더한다. §7의 지표를 B와 C 나란히, 같은 채널 수의 M1 본편 조건 값을 옆에 두고, 탐색용이라고 표시한다(A11).
 
 ### 시간

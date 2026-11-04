@@ -99,6 +99,9 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
   - `echo "dc02ec11ee5774588b90233e5e364bac37f2b4e8e0be771fd023e06539a59a8e  /home/pi/media/bench4k/pexels_36330861.mp4" | sha256sum -c`, A11's hash of ① at 4K;
   - `./build/equivalence_dump /home/pi/media/bench4k/pexels_36330861.mp4 models/yolov8n_i8.rknn results/m1.1/<UTC>_4k_tensors 1000 <freeze-m1 commit> m1.1`;
   - then `tools/equivalence_check.py` on its directory. Its numbers are reported, and nothing is judged.
+  - **The run of 2026-11-04** ([results/m1.1/20261104T023058Z_4k_tensors](../../results/m1.1/20261104T023058Z_4k_tensors)): the check stopped with exit 2, because it took only run kind `equivalence` (`check.txt`).
+    - It was fixed to take run kind `m1.1` as well, and re-run on the same tensors after their SHA-256 matched `tensors.sha256`.
+    - Its output is `recheck.txt` and `recheck.json`; `recheck_env.txt` holds the tool's commit and SHA-256, the times and the exit code.
 - **Report:** `tools/m1_report.py` gets a 4K section before the 4K results are written up: §7's metrics, B and C side by side, M1's main-condition values at the same counts next to them, labelled exploratory (A11).
 
 ### Time
