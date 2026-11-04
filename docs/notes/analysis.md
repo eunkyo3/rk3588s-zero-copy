@@ -13,7 +13,7 @@ This note and `tools/m1_report.py` were committed while the first main sweep ses
 - **Which runs:** for each measurement point and repetition, the runs of the session that completed the repetition ([comparison.md](comparison.md#resuming-a-sweep-91-93)). Of each such run, its last attempt counts. That attempt is valid, or the run is invalid ×2.
   - The attempts that do not count are listed with their reasons: invalid first attempts that were repeated, runs of a repetition that a later session redid, and attempts cut short. An attempt the session's death cut short reads "the session ended during the run".
 - **Complete point:** 3 valid runs, or invalid ×2 records for the runs that are not valid (§9.3).
-- `tools/m1_report.py --check` lists every run of every sweep that is not there yet, and H3 if its search is not done. A sweep without any session counts as not complete.
+- `tools/m1_report.py --check` lists every run of M1's sweeps (main, aux, reference) that is not there yet, and H3 if its search is not done. A sweep without any session counts as not complete.
 
 ## Metrics of one run
 
@@ -62,8 +62,18 @@ The report prints these first:
 
 It also lists every invalid ×2 record by variant, with the reasons of both attempts, H3's included (HYPOTHESES; §10 step 3), and the runs with samples at a trip point (warnings, §9.3).
 
+## The 4K design (A11)
+
+- **When:** this section and the report's 4K part were added on 2026-11-04, while the 4K loop check ran and before the first 4K session. M1's results had been seen by then; no 4K run existed.
+- **Where:** the report's last section, apart from M1 and labelled exploratory. No hypothesis is tested, and nothing is judged (A11).
+  - The conditions printed first still hold, except one: equivalence under A5 is not claimed at 4K (A11). The section says so.
+- **Same method as M1:** the runs that count, the metrics of one run, the mean and sample standard deviation, and the 10% flag, as above. The 4K sessions are `results/m1.1/<UTC>_4k`.
+- **Next to each 4K point:** M1's main-condition values for B and C at the same count, as the main sweep's table gives them (A11).
+- **Its own lists:** the 4K flags, invalid ×2 records, attempts that do not count and warnings are listed in the 4K section only.
+- **Not M1's completeness:** `--check` does not read the 4K runs. The 4K section says whether its own points are complete.
+
 ## Tools
 
 | Tool | Does |
 |---|---|
-| `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown; `--check` for completeness ([tests](../../tests/test_m1_report.py)) |
+| `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown, then the 4K section (A11); `--check` for M1's completeness ([tests](../../tests/test_m1_report.py)) |
