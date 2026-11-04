@@ -11,11 +11,13 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 | [`prereg-v1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-v1) | `87fe874b4f196dafd48f6a175b2d7604625aedba` | 2026-10-30T02:01:36Z |
 | [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) | `2eec964d27545e081a44bc5ead01bbfcd2905a54` | 2026-11-03T06:58:17Z |
 | [`amend-A8`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A8) | `07fe535eefff5d13b77c0ac38ee4e03aa257cac7` | 2026-11-03T01:38:47Z |
-| `amend-A12` | not created yet | |
+| [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12) | `cdb309e4bbe9bf17646526a722e0a1fccb5e9d56` | 2026-11-04T05:30:51Z |
 
 `created_at` is the reference time (PROTOCOL §1). The tagged commit is the merge of PR #1, whose committer date (2026-10-30T01:58:11Z) is not used. `amend-A8` is the Release of an amendment made before `freeze-m1`, so that the check it registers has a reference time ([A8](../../prereg/AMENDMENTS.md)). Its tagged commit is the merge of PR #12. GitHub gives that commit's time as the Release's `created_at`; the Release was published at 2026-11-03T01:40:12Z. The check started at 02:19:49Z, after both.
 
 `freeze-m1` tags the merge of PR #16, whose `prereg/AMENDMENTS.md` holds every value of PROTOCOL §14 (A1 to A11). Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-03T06:58:50Z. Every comparison, reference and M1.1 run starts after 06:58:17Z, which `tools/check_prereg_order.py` checks.
+
+`amend-A12` is the Release of the first amendment after `freeze-m1`, A12: how the M1.1 designs of PROTOCOL §13 are built and run ([A12](../../prereg/AMENDMENTS.md)). Its tagged commit is the merge of PR #28. Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-04T05:31:44Z. Every run of those designs, and their checks, starts after both.
 
 ## Board baseline
 
