@@ -311,8 +311,14 @@ class Report(unittest.TestCase):
             section = text[text.index("### A55 cores only"):]
             self.assertIn(rep.SPLIT_NOTE + " B: cpu0-3 30.500 s, cpu4 0.100 s; C: no valid run.", section)
             s = json.loads(json.dumps(rep.summary(c)))["m1.1_a12"]
-            self.assertEqual(s["a55"]["process_cpu_by_affinity"], {"B": {"0-3": 30.5, "4": 0.1}, "C": {}})
+            self.assertEqual(s["a55"]["process_cpu_by_affinity"], {"B": {"0-3": 30.5, "4": 0.1}, "C": None})
             self.assertNotIn("process_cpu_by_affinity", s["k4"])
+
+    def test_affinity_means(self):
+        # the mean over the valid runs, 0 for a run without the affinity; None without a valid run
+        self.assertEqual(rep.affinity_means({"threads": {1: {"0-3": 30.0, "4": 0.1}, 2: {"0-3": 32.0}}}),
+                         {"0-3": 31.0, "4": 0.05})
+        self.assertIsNone(rep.affinity_means({"valid": {}}))
 
     def test_the_4k_section(self):
         with tempfile.TemporaryDirectory() as t:

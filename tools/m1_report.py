@@ -88,8 +88,9 @@ A12_TITLES = {  # A12's sweeps, in its order
     "bdirect_aux": "B-direct (`bdirect_aux`): 5 channels, auxiliary condition",
 }
 SPLIT_FROM_THREADS = ("a55",)  # bench_main's A76/A55 split keys on M1's affinities, cpu4-7 and cpu0
-SPLIT_NOTE = ("Process CPU by the affinity of its threads, from threads.csv, mean over the valid runs. bench_main's "
-              "A76 and A55 split keys on M1's affinities, cpu4-7 and cpu0, so here every thread is unattributed:")
+SPLIT_NOTE = ("CPU of the threads by their affinity, mean over the valid runs, from threads.csv (the threads alive at "
+              "the window's end, so the sum can differ slightly from process CPU). bench_main's A76 and A55 rows count "
+              "only M1's affinities, cpu4-7 and cpu0; the rest is in the unattributed row:")
 M1_SWEEPS = ("main", "aux", "reference")  # with H3, M1's completeness; "4k" is A11's, A12_TITLES A12's
 assert set(ss.SWEEPS["4k"][0]) <= set(ss.SWEEPS["main"][0]), "A11: every 4K count is a main count"
 
@@ -196,7 +197,8 @@ def run_metrics(run_dir, idle):
 
 
 def threads_by_affinity(run_dir):
-    """A run's process CPU in the window by thread affinity, from threads.csv: {affinity: s}."""
+    """A run's CPU in the window by thread affinity, from threads.csv: {affinity: s}. threads.csv has the
+    threads alive at the window's end."""
     out = {}
     for t in ss.read_csv(run_dir / "threads.csv")[1]:
         out[t["affinity"]] = out.get(t["affinity"], 0.0) + float(t["cpu_s_in_window"])
@@ -204,8 +206,11 @@ def threads_by_affinity(run_dir):
 
 
 def affinity_means(point):
-    """{affinity: mean over the point's valid runs} of threads_by_affinity, 0 where a run has none."""
+    """{affinity: mean over the point's valid runs} of threads_by_affinity, 0 where a run has none; None
+    without a valid run."""
     runs = list(point.get("threads", {}).values())
+    if not runs:
+        return None
     return {a: stats([r.get(a, 0.0) for r in runs])[1] for a in sorted({a for r in runs for a in r})}
 
 
@@ -294,7 +299,8 @@ def h3(n):
 
 def collect_sweep(root, sweep):
     """One sweep's points, from its protocol sessions under root/results: data ({channels: {variant:
-    {"valid": {repetition: metrics}}}}), missing, invalid_x2, others and warnings, as in collect."""
+    {"valid": {repetition: metrics}}}}, and for SPLIT_FROM_THREADS "threads": {repetition: {affinity: s}}
+    too), missing, invalid_x2, others and warnings, as in collect."""
     sessions = sessions_of(root, sweep)
     idle = {d.name: read_idle(d) for d in sessions if (d / "idle_baseline.csv").exists()}
     runs, others = counted_runs(sessions, sweep)
@@ -506,9 +512,10 @@ def report_a12(c):
                 f"Bd saves {share[0] * 100:.1f}%, C saves {share[1] * 100:.1f}%"
                 + ("." if share[2] is None else f"; Bd's saving is {share[2] * 100:.0f}% of C's."))]
         if sweep in SPLIT_FROM_THREADS:
+            means = {v: affinity_means(s["data"][ch][v]) for v in arms}
             lines += ["", SPLIT_NOTE + " " + "; ".join(
-                f"{v}: " + (", ".join(f"cpu{a} {fmt(x)} s" for a, x in affinity_means(s["data"][ch][v]).items())
-                            or "no valid run") for v in arms) + "."]
+                f"{v}: " + ("no valid run" if m is None else ", ".join(f"cpu{a} {fmt(x)} s" for a, x in m.items()))
+                for v, m in means.items()) + "."]
         lines += [""] + record_lists(flags, s, "####",
                                      "No process CPU or p99 latency value has a coefficient of variation above 10%.")
     return lines

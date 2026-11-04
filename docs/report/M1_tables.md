@@ -962,7 +962,7 @@ Every point is complete.
 | largest RSS (kB) | 242860.000 ± – (1) | 236604.000 ± – (1) |
 | highest temperature (m°C) | 49000.000 ± – (1) | 47153.000 ± – (1) |
 
-Process CPU by the affinity of its threads, from threads.csv, mean over the valid runs. bench_main's A76 and A55 split keys on M1's affinities, cpu4-7 and cpu0, so here every thread is unattributed: B: cpu0-3 150.620 s, cpu4 0.030 s; C: cpu0-3 51.630 s, cpu4 0.040 s.
+CPU of the threads by their affinity, mean over the valid runs, from threads.csv (the threads alive at the window's end, so the sum can differ slightly from process CPU). bench_main's A76 and A55 rows count only M1's affinities, cpu4-7 and cpu0; the rest is in the unattributed row: B: cpu0-3 150.620 s, cpu4 0.030 s; C: cpu0-3 51.630 s, cpu4 0.040 s.
 
 #### Flags
 
