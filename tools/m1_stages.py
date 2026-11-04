@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Where the latency goes (exploratory, not pre-registered): per stage of PROTOCOL §7.3's timeline,
-from the frames.csv of the runs that count (tools/m1_report.py).
+from the frames.csv of the runs that count (tools/m1_report.py): M1's sweeps, then M1.1's (4K, A11; the
+designs of §13, A12).
 
 Stages of a processed frame, over the frames whose t4 falls in the window (as for §7.3's p99):
   Q1 wait  t1 - t0    decoded, waiting for a preprocessing thread
@@ -29,12 +30,17 @@ STAGES = [("Q1 wait", "t1_ns", "t0_ns"), ("prepare", "t2a_ns", "t1_ns"), ("Q2 wa
           ("total", "t4_ns", "t0_ns")]
 
 
-def run_stages(run_dir):
-    """{stage: (p50, p99) in ms} of one run, over the frames whose t4 is in the window."""
+def window_frames(run_dir):
+    """The rows of a run's frames.csv whose t4 is in the window."""
     header, rows = ss.read_csv(run_dir / "summary.csv")
     window_ns = int({r["key"]: r["value"] for r in rows}["window_s"]) * 10**9
     warmup_ns = int(header["warmup_s"]) * 10**9
-    frames = [f for f in ss.read_csv(run_dir / "frames.csv")[1] if warmup_ns <= int(f["t4_ns"]) < warmup_ns + window_ns]
+    return [f for f in ss.read_csv(run_dir / "frames.csv")[1] if warmup_ns <= int(f["t4_ns"]) < warmup_ns + window_ns]
+
+
+def run_stages(run_dir):
+    """{stage: (p50, p99) in ms} of one run, over the frames whose t4 is in the window."""
+    frames = window_frames(run_dir)
     out = {}
     for name, end, start in STAGES:
         v = np.array([(int(f[end]) - int(f[start])) / 1e6 for f in frames])
@@ -60,9 +66,10 @@ def report(root):
              "Not pre-registered and not used for any verdict. Per stage of §7.3's timeline, the median and the "
              "99th percentile in ms, each the mean over the point's valid runs (n). The stages' percentiles do "
              "not add up to the total's.", ""]
-    for sweep in ("main", "aux", "reference"):
+    for sweep in ("main", "aux", "reference", "4k", *rep.A12_TITLES):
         data = sweep_stages(root, sweep)
-        lines += [f"## {sweep}", "", "| Channels | Variant | n | " + " | ".join(f"{s} p50 / p99" for s, _, _ in STAGES) + " |",
+        title = {"4k": "4k (M1.1, A11)"}.get(sweep, f"{sweep} (M1.1, A12)" if sweep in rep.A12_TITLES else sweep)
+        lines += [f"## {title}", "","| Channels | Variant | n | " + " | ".join(f"{s} p50 / p99" for s, _, _ in STAGES) + " |",
                   "|---|---|---|" + "---|" * len(STAGES)]
         for ch in sorted(data):
             for v in sorted(data[ch]):
