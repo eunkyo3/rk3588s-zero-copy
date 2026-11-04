@@ -417,6 +417,39 @@ class Sweeps(unittest.TestCase):
             self.assertEqual((rows[0][1], rows[0][7], rows[0][9], rows[0][18]), ("01_main_C_8ch_r1_repeat", "2", "0", "s1/02"))
             self.assertEqual(s.invalid_x2, ["01_main_C_8ch_r1"])
 
+    def test_the_4k_sweep(self):
+        self.assertEqual(ss.channel_order(ss.SWEEPS["4k"][0]), [1, 8, 4, 2])
+        self.assertEqual(ss.SWEEPS["4k"][3], "m1.1")
+        self.assertEqual(ss.ORDER[-1], "4k")
+        expected = ss.VIDEO_SETS["4k"][3]
+        served = "".join(f"ch{k}\t/home/u/media/bench4k/{v}\t{expected[v]}\n"
+                         for k, v in enumerate(["pexels_36330861.mp4", "pexels_29130409.mp4", "pixabay_180386.mp4"], 1))
+        self.assertEqual(ss.video_problems(served, expected), [])
+        wrong = served.replace(expected["pixabay_180386.mp4"], "0" * 64)
+        self.assertIn("pixabay_180386.mp4 with SHA-256", ss.video_problems(wrong, expected)[0])
+        self.assertIn("not in the set", ss.video_problems("ch1\tx/pexels_29969146.mp4\tab\n", expected)[0])
+        self.assertEqual(ss.video_problems("", expected), ["the server's assignment.tsv is empty"])
+        two = "".join(line + "\n" for line in served.splitlines()[:2])
+        self.assertEqual(ss.video_problems(two, expected), ["no channel serves pixabay_180386.mp4"])
+
+    def test_the_4k_loop_check_must_have_protocol_settings(self):
+        here = os.getcwd()
+        with tempfile.TemporaryDirectory() as d:
+            os.chdir(d)
+            try:
+                self.assertFalse(ss.loop_check_done("4k"))
+                smoke = Path("results/check/20261104T000000Z_loop_4k")
+                smoke.mkdir(parents=True)
+                (smoke / "result.csv").write_text("# run_kind: check\nkey,value\npassed,1\n"
+                                                  "protocol_settings,no: warmup 2 (protocol 20)\n", encoding="utf-8")
+                self.assertFalse(ss.loop_check_done("4k"))
+                real = Path("results/check/20261104T010000Z_loop_4k")
+                real.mkdir()
+                (real / "result.csv").write_text("key,value\npassed,0\nprotocol_settings,yes\n", encoding="utf-8")
+                self.assertTrue(ss.loop_check_done("4k"))  # even though a video failed (A11)
+            finally:
+                os.chdir(here)
+
     def test_idle_baseline(self):
         before = "cpu  1 1 1 1 1 1 1 1 0 0\ncpu0 10 0 5 100 7 1 1 0 0 0\ncpu4 0 0 0 0 0 0 0 0 0 0\nintr 5\n"
         after = "cpu  9 9 9 9 9 9 9 9 0 0\ncpu0 20 2 5 300 9 2 1 1 0 0\ncpu4 100 0 0 0 0 0 0 0 0 0\n"
