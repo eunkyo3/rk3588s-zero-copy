@@ -1,0 +1,21 @@
+# start_time_utc: 2026-11-04T08:55:45Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# code_commit: c2689d778a572859d5e85914dccf6f80ffbb674d
+# amendment: A12
+# source: /home/pi/media/bench/pexels_36330861.mp4
+# purpose: exploration before M2's pre-registration; not a run that counts
+# rounds: 15
+# runs_per_round: 20
+config,init_flags,input_mem,output_mem,sync_output,error,checked,outputs_equal,runs_ok,cpu_ms_median,cpu_ms_min,cpu_ms_max,wall_ms_median,wall_ms_min,wall_ms_max,post_cpu_ms_median,post_cpu_ms_min,post_cpu_ms_max
+m1_cached_input,0x0,0x1,0x1,0,,20,20,300,0.842,0.840,0.865,14.109,14.098,14.152,0.306,0.296,0.321
+m1_uncached_input,0x0,0x2,0x1,0,,20,18,300,0.819,0.817,0.830,14.088,14.076,14.102,0.304,0.295,0.319
+no_flush_input,0x4000,0x2,0x1,0,,20,15,300,0.821,0.819,0.837,14.089,14.080,14.373,0.303,0.295,0.318
+no_flush_output,0x8000,0x2,0x1,0,,20,17,300,0.636,0.633,0.647,13.902,13.890,14.408,0.301,0.292,0.316
+no_flush_output_sync,0x8000,0x2,0x1,1,,20,17,300,0.802,0.798,0.812,14.077,14.063,14.335,0.306,0.294,0.317
+no_flush_both,0xc000,0x2,0x1,0,,20,17,300,0.628,0.626,0.641,13.907,13.900,14.429,0.300,0.291,0.314
+uncached_output,0x0,0x2,0x2,0,,20,12,300,2.621,2.619,2.658,15.905,15.883,16.067,3.104,3.080,3.174
+sram,0x800,0x2,0x1,0,,20,17,300,0.793,0.790,0.803,14.184,14.044,15.899,0.304,0.294,0.318
+sram_output,0x800,0x2,0x4,0,,20,17,300,0.800,0.796,0.814,14.071,14.052,16.095,0.304,0.295,0.318
