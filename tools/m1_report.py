@@ -16,6 +16,10 @@ or invalid x2. Then, with the method of docs/notes/analysis.md, it reports:
   - the 4K design of AMENDMENTS A11 (results/m1.1/<UTC>_4k), apart and labelled exploratory: its
     points with M1's main-condition values at the same counts next to them, and its own flags and
     lists. It is not part of M1's completeness (--check).
+  - the designs of §13 with AMENDMENTS A12 (results/m1.1/<UTC>_k4, _a55, _bdirect_main, _bdirect_aux),
+    apart and labelled exploratory: each with the controls of its own sessions, never with M1's values
+    (the binary differs), and its own flags and lists. For B-direct, Bd's process-CPU saving against B
+    next to C's, from the means. Not part of M1's completeness either.
 
 Usage, from the repository: python3 tools/m1_report.py [--check] [--out FILE] [--json FILE]
   --check   only M1's completeness check: exit 0 if every point of M1's sweeps is complete and H3 is done
@@ -72,7 +76,17 @@ M11_NOTE = ("Exploratory (A11): no hypothesis is tested, and nothing here is jud
             "16 Mbps (stream-server/assignment_4k.txt), main condition. Next to them are M1's main-condition values at "
             "the same counts, from the main sweep. Equivalence under A5 is not claimed at 4K. The flags and lists "
             "below are the 4K sessions' own.")
-M1_SWEEPS = ("main", "aux", "reference")  # with H3, M1's completeness; "4k" is A11's
+A12_NOTE = ("Exploratory (A12): the optional designs of PROTOCOL §13, each with its controls rerun in its own "
+            "sessions, on M1's 1080p videos. Nothing is judged, and no value here is set against M1's: the binary "
+            "differs. Bd is B-direct; Bk4 is B with K = 4; in a55, B and C run on cpu0-3, with the metrics thread "
+            "on cpu4. The flags and lists of each design are its sessions' own.")
+A12_TITLES = {  # A12's sweeps, in its order
+    "k4": "B with K = 4 (`k4`): 8 channels, main condition",
+    "a55": "A55 cores only (`a55`): 8 channels, main condition, one repetition",
+    "bdirect_main": "B-direct (`bdirect_main`): 8 channels, main condition",
+    "bdirect_aux": "B-direct (`bdirect_aux`): 5 channels, auxiliary condition",
+}
+M1_SWEEPS = ("main", "aux", "reference")  # with H3, M1's completeness; "4k" is A11's, A12_TITLES A12's
 assert set(ss.SWEEPS["4k"][0]) <= set(ss.SWEEPS["main"][0]), "A11: every 4K count is a main count"
 
 
@@ -284,17 +298,19 @@ def collect_sweep(root, sweep):
     return out
 
 
-def collect(root, with_4k=True):
-    """Everything the report needs, from the protocol sessions under root/results. The 4K design (A11)
-    is kept apart, in c["4k"], and only with with_4k: it is not part of M1's completeness."""
+def collect(root, with_m1_1=True):
+    """Everything the report needs, from the protocol sessions under root/results. M1.1's designs are
+    kept apart, A11's 4K in c["4k"] and A12's in c["a12"][sweep], and only with with_m1_1: they are not
+    part of M1's completeness."""
     c = {"data": {}, "missing": [], "invalid_x2": [], "others": [], "warnings": [], "h3_n": None, "h3_problem": None}
     for sweep in M1_SWEEPS:
         s = collect_sweep(root, sweep)
         c["data"][sweep] = s["data"]
         for k in ("missing", "invalid_x2", "others", "warnings"):
             c[k] += s[k]
-    if with_4k:
+    if with_m1_1:
         c["4k"] = collect_sweep(root, "4k")
+        c["a12"] = {sweep: collect_sweep(root, sweep) for sweep in A12_TITLES}
     sessions = sessions_of(root, "h3")
     records = ss.load_records(sessions, ss.H3_PHASES)
     rows = runs_rows(sessions)
@@ -385,7 +401,7 @@ def report(c):
                 cells = [cell(sweep, ch, v, points[ch][v], key, label, flags) for v in variants]
                 lines.append(f"| {ch} | {label} | " + " | ".join(cells) + " |")
         lines.append("")
-    lines += record_lists(flags, c, "##") + [""] + report_4k(c)
+    lines += record_lists(flags, c, "##") + [""] + report_4k(c) + [""] + report_a12(c)
     return "\n".join(lines) + "\n"
 
 
@@ -434,6 +450,46 @@ def report_4k(c):
         flags, k4, "###", "No process CPU or p99 latency value has a coefficient of variation above 10%.")
 
 
+def bdirect_share(arms):
+    """B-direct (A12): from the mean process CPU of B, C and Bd, (Bd's saving, C's saving, Bd's saving as a
+    share of C's), savings against B; None where a mean is missing or B's is 0, and no share where B and C
+    are equal."""
+    b, c, d = (stats([r["process_cpu_s"] for r in arms[v]["valid"].values()])[1] for v in ("B", "C", "Bd"))
+    if any(math.isnan(x) for x in (b, c, d)) or b == 0:
+        return None
+    return (b - d) / b, (b - c) / b, (b - d) / (b - c) if abs(b - c) > FLOAT_TOLERANCE else None
+
+
+def report_a12(c):
+    """A12's designs of §13: §7's metrics, each arm next to its session's controls. Exploratory: nothing
+    is judged."""
+    lines = ["## M1.1: the designs of §13 (exploratory, A12)", "", A12_NOTE]
+    for sweep, title in A12_TITLES.items():
+        s = c["a12"][sweep]
+        lines += ["", f"### {title}", ""]
+        if not s["sessions"]:
+            lines.append("No session yet.")
+            continue
+        lines += [f"Not complete: {', '.join(s['missing'])}." if s["missing"] else "Every point is complete.", ""]
+        arms = ss.SWEEPS[sweep][2]
+        ch = ss.SWEEPS[sweep][0][0]
+        lines += ["| Metric | " + " | ".join(f"{v}{' (A6 label)' if v == 'C' else ''}: mean ± sd (n)" for v in arms)
+                  + " |", "|---|" + "---|" * len(arms)]
+        flags = []
+        for key, label in METRICS:
+            lines.append(f"| {label} | " + " | ".join(cell(sweep, ch, v, s["data"][ch][v], key, label, flags)
+                                                      for v in arms) + " |")
+        if "Bd" in arms:
+            share = bdirect_share(s["data"][ch])
+            lines += ["", "Process CPU against B, from the means: " + (
+                "not available." if share is None else
+                f"Bd saves {share[0] * 100:.1f}%, C saves {share[1] * 100:.1f}%"
+                + ("." if share[2] is None else f"; Bd's saving is {share[2] * 100:.0f}% of C's."))]
+        lines += [""] + record_lists(flags, s, "####",
+                                     "No process CPU or p99 latency value has a coefficient of variation above 10%.")
+    return lines
+
+
 def rounded(x):
     """x with every float rounded to SUMMARY_DIGITS, nan as None and -0.0 as 0.0."""
     if isinstance(x, float):
@@ -466,6 +522,14 @@ def summary(c):
         k4 = c["4k"]
         out["m1.1_4k"] = {"exploratory": "A11", "sessions": k4["sessions"], "points": point_stats(k4["data"]),
                           **lists(k4)}
+    if "a12" in c:
+        out["m1.1_a12"] = {"exploratory": "A12", **{
+            sweep: {"sessions": s["sessions"], "points": point_stats(s["data"]), **lists(s)}
+            for sweep, s in c["a12"].items()}}
+        for sweep in ("bdirect_main", "bdirect_aux"):
+            share = bdirect_share(c["a12"][sweep]["data"][ss.SWEEPS[sweep][0][0]])
+            out["m1.1_a12"][sweep]["process_cpu_saving"] = (
+                None if share is None else dict(zip(("bd", "c", "bd_share_of_c"), share)))
     return rounded(out)
 
 
@@ -478,7 +542,7 @@ def main(argv):
     if args.check and (args.out or args.json):
         ap.error("--check writes nothing")
     sys.stdout.reconfigure(encoding="utf-8")
-    c = collect(Path(__file__).resolve().parent.parent, with_4k=not args.check)
+    c = collect(Path(__file__).resolve().parent.parent, with_m1_1=not args.check)
     if args.check:
         print("\n".join(c["missing"]) if c["missing"] else "complete")
         return 1 if c["missing"] else 0

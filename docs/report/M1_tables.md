@@ -842,3 +842,23 @@ None.
 ### Warnings: samples at a trip point
 
 None.
+
+## M1.1: the designs of §13 (exploratory, A12)
+
+Exploratory (A12): the optional designs of PROTOCOL §13, each with its controls rerun in its own sessions, on M1's 1080p videos. Nothing is judged, and no value here is set against M1's: the binary differs. Bd is B-direct; Bk4 is B with K = 4; in a55, B and C run on cpu0-3, with the metrics thread on cpu4. The flags and lists of each design are its sessions' own.
+
+### B with K = 4 (`k4`): 8 channels, main condition
+
+No session yet.
+
+### A55 cores only (`a55`): 8 channels, main condition, one repetition
+
+No session yet.
+
+### B-direct (`bdirect_main`): 8 channels, main condition
+
+No session yet.
+
+### B-direct (`bdirect_aux`): 5 channels, auxiliary condition
+
+No session yet.
