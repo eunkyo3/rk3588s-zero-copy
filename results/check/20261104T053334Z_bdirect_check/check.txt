@@ -1,0 +1,8 @@
+B-direct: {"slot_heap": "system-dma32", "decoder_buffer_access": "mmap per buffer, DMA_BUF_IOCTL_SYNC START/END(READ) per frame", "slot_access": "DMA_BUF_IOCTL_SYNC START/END(WRITE) per frame", "opencv_interpolation": "INTER_AREA, luma box moved by one pixel at 1/3 scale", "opencv_color": "COLOR_YUV2RGB_NV12 (BT.601 limited)", "input_binding": "UINT8 NHWC rknn_create_mem_from_fd", "decoder_buffers_per_channel_max": 6, "decoder_buffers_retired": 0}
+frames: 100
+tensors_equal_to_b: 100
+outputs_equal_to_b: 100
+checked_frames: 2
+bound_outputs_equal_to_rknn_outputs_get: 2
+outputs_equal_on_cores_0_1_2: 2
+passed: 1
