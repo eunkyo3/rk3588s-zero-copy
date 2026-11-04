@@ -13,7 +13,9 @@
 #include "core/npu.h"
 #include "preprocess/backend.h"
 
-constexpr int kInputSlots = 11;  // N = K + depth(Q2) + 3 (PROTOCOL §5.1)
+constexpr int kQ2Depth = 6;
+// N = K + depth(Q2) + 3 (PROTOCOL §5.1): 11 for M1's K = 2.
+constexpr int input_slots(int preprocess_threads) { return preprocess_threads + kQ2Depth + 3; }
 
 struct PipelineConfig {
     std::vector<std::string> sources;  // one URL or file per channel
@@ -21,6 +23,8 @@ struct PipelineConfig {
     int warmup_s = 20;
     int duration_s = 120;
     bool software_decode = false;      // variant A
+    int preprocess_threads = 2;        // K; 4 for M1.1's B with K = 4 (AMENDMENTS A12)
+    int metrics_cpu = 0;               // 4 when the pipeline runs on the A55 cores (A12)
 };
 
 struct FrameRecord {

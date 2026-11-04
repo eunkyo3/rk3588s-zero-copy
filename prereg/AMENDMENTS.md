@@ -385,3 +385,56 @@ Each entry has this form:
     - The session tool gets the 4K set, as an option, before these runs. It is not part of the shared core.
 - Affected data: none.
 - Release: none. The runs come after `freeze-m1`, whose Release is their reference time (§1).
+
+## A12 — 2026-11-04 — M1.1 designs of §13: how they are built and run
+- Change: fixes what PROTOCOL §13 leaves open for its three optional M1.1 designs, before any of their runs. §13 itself registered the designs at `prereg-v1`. None of them is used for any verdict.
+  - **B-direct** (variant `Bd`):
+    - B's decoder-buffer access and its OpenCV preprocessing (`letterbox_nv12` with A4's interpolation) are unchanged. They write into input slots from the cached heap `system-dma32`, mapped by the CPU.
+    - Each `prepare` brackets its writes with one `DMA_BUF_IOCTL_SYNC` START(WRITE) and one END(WRITE) on the slot.
+    - Every context registers every slot with `rknn_create_mem_from_fd`, and `bind` is `rknn_set_io_mem`, as in C. So `bind` copies nothing.
+    - N = 11 slots. Their border is filled with 114 once, as for B and C; here, after the registration.
+    - The runtime keeps its default input flush (§8). Any cache maintenance it adds on these cached slots is part of what B-direct measures.
+    - The code is a new file, `src/preprocess/cpu_direct.cpp`. B's and C's files do not change.
+  - **B-direct's functional check** (`tools/bdirect_check`, run kind `check`, in `results/check/<UTC>_bdirect_check/`, with a `check.csv` whose header names the commit, the amendment and `freeze-m1`):
+    - On the first 100 frames of ① at 1080p, B and B-direct prepare every frame, each on its own contexts, and context 0 runs on the bound input.
+    - B-direct's input tensor, read back after the run, must equal B's byte for byte, and the outputs must be equal.
+    - On frames 0 and 99, B-direct's bound outputs must also equal `rknn_outputs_get`, and contexts 1 and 2 must give context 0's outputs.
+    - It runs after `amend-A12`. The session tool starts no B-direct session until a check has passed that was built from the same commit as the session's binary, with A12 or a later amendment. If it fails, B-direct does not run; the other two designs do not depend on it.
+  - **B with K = 4** (arm `Bk4`): `bench_main --variant B --prep-threads 4`. It runs 4 preprocessing threads and N = K + 6 + 3 = 13 slots. Everything else is B.
+  - **A55 only** (`bench_main --cores a55`):
+    - The binary pins itself to cpu0–3 instead of cpu4–7 before any library starts a thread. So every decoder, MPP, preprocessing, NPU and runtime thread runs on the A55 cores.
+    - The metrics thread, on cpu0 in M1, moves to cpu4, off the measured cores.
+    - Process CPU then counts the metrics thread on the A76 cores, where M1 counted it on the A55 cores (about 0.1 s per run).
+  - **The code change and §15:**
+    - K and the metrics thread's CPU become fields of the shared core's `PipelineConfig`. `bench_main` gains `--prep-threads` and `--cores`, and now rejects an option it does not know. M1's sessions passed none.
+    - §13's last sentence puts this change under §15, because it touches the shared core.
+    - Read literally, §15 would invalidate M1's comparison and reference runs and A11's 4K runs, which used the shared core this change touches. A12 does not rerun them. That is a judgement made here, after M1's results, on two grounds:
+      - they all ran before this change, on the code of `freeze-m1` and of A11, which stays tagged, and their verdicts and numbers rest on that code;
+      - the change leaves the default path as it was. Without the new options, the threads, slots, pinning and queues are M1's.
+    - **Evidence for the default path:** a short run of B at 2 channels during development had the same threads, affinities and `queues` record in `env.json` as M1's run `31_main_B_2ch_r1`. It was not kept. So after `amend-A12`, with the binary of the runs, one such run is kept in `results/check/<UTC>_default_b/` and compared the same way, before the first session.
+    - The output of a default run changes in three places: `env.json` gains a `cores` line; the header names amendment A12; and `code_commit` changes.
+    - Every M1.1 run of these designs uses the changed code, and is compared only with the controls of its own session.
+  - **Sessions:** `tools/stream_session.py sweep <name>`, run kind `m1.1`, M1's 1080p video set, `results/m1.1/<UTC>_<name>/`. They run in this order, after the 4K sweep:
+
+    | Sweep | Channels, condition | Arms | Repetitions |
+    |---|---|---|---|
+    | `k4` | 8, main | B, Bk4 | 3 |
+    | `a55` | 8, main, every arm with `--cores a55` | B, C | 1 |
+    | `bdirect_main` | 8, main | B, C, Bd | 3 |
+    | `bdirect_aux` | 5, auxiliary (H2's point) | B, C, Bd | 3 |
+
+    - The order within a repetition rotates. With three arms it is B→C→Bd, C→Bd→B, Bd→B→C; with two, B→C, C→B, B→C, as in §9.1.
+    - Cooldown gate, validity rules 1 to 4 and the repeat of an invalid run are as in §9. Every point is unsaturated, so rule 3 applies to every run.
+    - A run that is invalid twice is reported as such. On the A55 cores that is an accepted outcome.
+    - **Where the arm is recorded:** in `runs.tsv` and the run's name. A Bk4 run's `summary.csv` header says variant B, and an A55 run's header does not name its cores. `env.json` records K, N and the cores of every run.
+  - **Reported:** §7's metrics, each design side by side with its own controls. Nothing is judged.
+    - B-direct: Bd against B and C. How much of C's saving remains when only the last copy is removed.
+    - K = 4: Bk4 against B.
+    - A55: B against C on the A55 cores.
+- Reason:
+  - §13 registered these designs but not how to build or run them. Their details are fixed here, before any of their runs.
+  - **What was done before this entry:** while the code was written, there were short runs on the board, in `/tmp` and not kept: Bd, Bk4, C with `--cores a55` and B, at 2 channels from a file, with 6 s windows. They checked threads, slots, pinning and `env.json`. Their CPU figures were printed, but they come from 6 s windows and are not used. `tools/bdirect_check` also passed on 100 frames, in an earlier form and in this one, with its output in `/tmp`.
+  - This amendment is written after M1's results are known. The designs, their channel counts and repetitions are §13's own. What is fixed here is how they are built, the order and the controls.
+  - **Why the controls are rerun:** K and the cores change the shared core's code, so no comparison mixes binaries. A repetition's runs complete within one session (§9.1), so each comparison within a repetition is on one binary and one day.
+- Affected data: none, by the judgement above. M1's runs and A11's 4K runs are not rerun, and no M1.1 run of these designs is compared with them.
+- Release: `amend-A12`. Every run of these designs, B-direct's check included, starts after it.

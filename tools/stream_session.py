@@ -18,6 +18,12 @@ Subcommands:
   sweep 4k     the exploratory 4K design of AMENDMENTS A11 (M1.1): B and C at 1, 2, 4 and 8 channels of
                the 4K set, run kind m1.1, after every sweep of §12 and after the 4K loop check
                (loop-check --set 4k). The session checks the 4K videos' SHA-256 against A11.
+  sweep k4, a55, bdirect_main, bdirect_aux
+               the optional M1.1 designs of §13 with AMENDMENTS A12, run kind m1.1, after the 4K sweep,
+               each with its controls rerun in the same session: B with K = 4 (Bk4) against B at 8
+               channels; B and C on the A55 cores at 8 channels, one repetition; B-direct (Bd) against B
+               and C at 8 channels main and at 5 channels aux, once tools/bdirect_check has passed.
+               With three arms the order rotates.
   h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
@@ -139,11 +145,19 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     "aux": ((1, 2, 3, 4, 5), "aux", ("B", "C"), "comparison"),
     "reference": ((1, 2), "main", ("A",), "reference"),
     "4k": ((1, 2, 4, 8), "main", ("B", "C"), "m1.1"),  # A11, with the 4K video set
+    # AMENDMENTS A12: §13's optional designs, each with its controls; the arms are named in ARMS
+    "k4": ((8,), "main", ("B", "Bk4"), "m1.1"),
+    "a55": ((8,), "main", ("B", "C"), "m1.1"),
+    "bdirect_main": ((8,), "main", ("B", "C", "Bd"), "m1.1"),
+    "bdirect_aux": ((5,), "aux", ("B", "C", "Bd"), "m1.1"),
 }
+ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"]}  # A12; else --variant <arm>
+SWEEP_OPTIONS = {"a55": ["--cores", "a55"]}  # A12: on every run of the sweep
+SWEEP_REPETITIONS = {"a55": 1}  # A12 (§13: × 1); the other sweeps have REPETITIONS
 IDLE_BASELINE_S = 120  # §7.2
 H3_START, SUSTAIN_FPS = 8, 4.75  # §10 (min(8, L)), HYPOTHESES H3
 H3_PHASES = ("h3_search", "h3_confirm")
-ORDER = ("main", "aux", "h3", "reference", "4k")  # docs/notes/comparison.md
+ORDER = ("main", "aux", "h3", "reference", "4k", "k4", "a55", "bdirect_main", "bdirect_aux")  # comparison.md
 SESSION_NAME = r"\d{8}T\d{6}Z_"  # results/<kind>/<UTC>_<sweep or h3>
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
@@ -318,15 +332,22 @@ def channel_order(counts):
 
 
 def variant_order(variants, repetition):
-    """§9.1: B->C in repetitions 1 and 3, C->B in repetition 2."""
-    return tuple(variants) if repetition % 2 else tuple(reversed(variants))
+    """§9.1: B->C in repetitions 1 and 3, C->B in repetition 2. Three arms rotate (A12): B->C->Bd,
+    C->Bd->B, Bd->B->C."""
+    k = (repetition - 1) % len(variants)
+    return tuple(variants[k:]) + tuple(variants[:k])
+
+
+def bench_args(arm, phase):
+    """bench_main's options for an arm in a phase: --variant, then K or the cores where A12 changes them."""
+    return ARMS.get(arm, ["--variant", arm]) + SWEEP_OPTIONS.get(phase, [])
 
 
 def sweep_plan(sweep, counts=None):
     """[(channels, repetition, variants in run order)] of a sweep, in run order."""
     all_counts, _, variants, _ = SWEEPS[sweep]
     return [(c, r, variant_order(variants, r)) for c in channel_order(counts or all_counts)
-            for r in range(1, REPETITIONS + 1)]
+            for r in range(1, SWEEP_REPETITIONS.get(sweep, REPETITIONS) + 1)]
 
 
 def sweep_state(records, variants):
@@ -758,8 +779,7 @@ class Session:
                       re.finditer(r"^thermal_(\S+): temp_mc=-?\d+ trip0_mc=(\d+)", env, re.M)}
         if "soc-thermal" not in self.trips:
             raise Stop("env.txt has no trip point for soc-thermal")
-        commit = re.search(r"^CODE_COMMIT:STRING=(.*)$", Path("build/CMakeCache.txt").read_text(), re.M)
-        self.code_commit = commit.group(1) if commit else "unknown"
+        self.code_commit = build_commit()
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
@@ -890,7 +910,7 @@ class Session:
             raise Stop("collect_env.sh failed")
         console_before = self.console_size()
         run_dir = self.out / name
-        cmd = ["./build/bench_main", "--variant", variant, "--channels", str(channels), "--source", source,
+        cmd = ["./build/bench_main", *bench_args(variant, phase), "--channels", str(channels), "--source", source,
                "--condition", condition, "--warmup", str(a.warmup), "--duration", str(a.duration),
                "--run-kind", run_kind, "--repetition", str(repetition), "--freeze-commit", FREEZE_M1_COMMIT,
                "--out", str(run_dir)]
@@ -1109,6 +1129,27 @@ def loop_check_done(video_set):
     return False
 
 
+def build_commit():
+    """The commit build/ was built from (tools/deploy_board.sh sets CODE_COMMIT), or "unknown"."""
+    cache = Path("build/CMakeCache.txt")
+    commit = re.search(r"^CODE_COMMIT:STRING=(.*)$", cache.read_text(), re.M) if cache.exists() else None
+    return commit.group(1) if commit else "unknown"
+
+
+def bdirect_check_done(commit):
+    """Whether tools/bdirect_check has passed with the binary of the runs (A12): results/check/
+    <UTC>_bdirect_check whose check.csv says passed 1, built from commit with amendment A12 or later."""
+    for d in Path("results", "check").glob("*_bdirect_check"):
+        check = d / "check.csv"
+        if re.fullmatch(SESSION_NAME + "bdirect_check", d.name) and check.exists():
+            header, rows = read_csv(check)
+            amendment = re.fullmatch(r"A(\d+)", header.get("amendment", ""))
+            if (amendment and int(amendment[1]) >= 12 and header.get("code_commit") == commit
+                    and {r["key"]: r["value"] for r in rows}.get("passed") == "1"):
+                return True
+    return False
+
+
 def order_problem(name):
     """Why a protocol session of name cannot start now (docs/notes/comparison.md), or None."""
     for earlier in ORDER[:ORDER.index(name)]:
@@ -1116,6 +1157,9 @@ def order_problem(name):
             return f"{earlier} comes before {name} and is not complete"
     if name == "4k" and not loop_check_done("4k"):
         return "the loop check of the 4K set (loop-check --set 4k) comes before the first 4K session (A11)"
+    if name.startswith("bdirect_") and not bdirect_check_done(build_commit()):
+        return ("a passed tools/bdirect_check of this build, in results/check/<UTC>_bdirect_check, comes before "
+                "B-direct (A12)")
     if progress(name) == "complete":
         return f"{name} is complete"
     return None
@@ -1258,7 +1302,7 @@ def main(argv):
     ap.add_argument("--set", choices=list(VIDEO_SETS), help="loop-check: the video set (default m1)")
     args = ap.parse_args(argv)
     if (args.command == "sweep") != (args.sweep is not None):
-        ap.error("sweep needs main, aux, reference or 4k; the other commands take none")
+        ap.error(f"sweep needs one of {', '.join(SWEEPS)}; the other commands take none")
     if args.counts and (args.command != "sweep" or not set(args.counts) <= set(SWEEPS[args.sweep][0])
                         or len(set(args.counts)) != len(args.counts)):
         ap.error("--counts is for sweep, with distinct counts of that sweep")

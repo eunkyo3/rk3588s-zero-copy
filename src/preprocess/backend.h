@@ -35,3 +35,4 @@ public:
 std::unique_ptr<Backend> make_zero_copy_rga(const std::string& model_path, int rga_interp);  // C
 std::unique_ptr<Backend> make_cpu_copy(int interpolation);                    // B
 std::unique_ptr<Backend> make_cpu_software();                                 // A
+std::unique_ptr<Backend> make_cpu_direct(int interpolation);                  // B-direct (M1.1, A12)

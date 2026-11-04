@@ -20,8 +20,6 @@
 
 namespace {
 
-constexpr int kPreprocessThreads = 2;  // K
-constexpr size_t kQ2Depth = 6;
 constexpr int kNominalFps = 30;
 constexpr int64_t kSecond = 1000000000;
 
@@ -69,7 +67,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
     std::atomic<bool> stop{false};
     StageQueue<Sampled> q1(2 * n);
     StageQueue<Prepared> q2(kQ2Depth);
-    SlotPool slots(kInputSlots);
+    SlotPool slots(input_slots(cfg.preprocess_threads));
     RunResult res;
     std::atomic<int64_t> t_w{INT64_MAX}, t_e{INT64_MAX};
     auto in_window = [&](int64_t t) { return t >= t_w.load() && t < t_e.load(); };
@@ -152,7 +150,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
         const size_t expected = size_t(n) * kNominalFps / cfg.sample_stride * (cfg.warmup_s + cfg.duration_s + 10);
         for (auto& v : records)
             v.reserve(expected / NpuContexts::kCount + 64);
-        for (int p = 0; p < kPreprocessThreads; p++) {
+        for (int p = 0; p < cfg.preprocess_threads; p++) {
             pre.emplace_back([&, p] {
                 name_current_thread("pre-" + std::to_string(p));
                 while (auto item = q1.pop()) {
@@ -202,10 +200,10 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
         }
     }
 
-    // ---- metrics thread on cpu0: one sample per second, CPU snapshots at t_w and t_e ----
+    // ---- metrics thread on cpu0 (or cfg.metrics_cpu): one sample per second, CPU snapshots at t_w and t_e ----
     std::thread metrics([&] {
         name_current_thread("metrics");
-        pin_current_thread({0});
+        pin_current_thread({cfg.metrics_cpu});
         for (int64_t tick = res.t_start + kSecond;; tick += kSecond) {
             sleep_until_ns(tick);
             // Frame counts first, at the window's start and end alike, then the CPU snapshot.
