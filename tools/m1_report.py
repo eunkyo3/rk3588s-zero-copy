@@ -17,12 +17,16 @@ or invalid x2. Then, with the method of docs/notes/analysis.md, it reports:
     points with M1's main-condition values at the same counts next to them, and its own flags and
     lists. It is not part of M1's completeness (--check).
 
-Usage, from the repository: python3 tools/m1_report.py [--check] [--out FILE]
+Usage, from the repository: python3 tools/m1_report.py [--check] [--out FILE] [--json FILE]
   --check   only M1's completeness check: exit 0 if every point of M1's sweeps is complete and H3 is done
   --out     write the report there (Markdown) instead of printing it
+  --json    also write the report's numbers there (summary.json of M1-7): completeness, verdicts, and every
+            point's n, mean, sd and cv per metric, floats rounded to 3 decimals; without --out, the report
+            is not printed
 """
 import argparse
 import csv
+import json
 import math
 import sys
 from pathlib import Path
@@ -35,6 +39,7 @@ import stream_session as ss  # noqa: E402
 H1_THRESHOLD, H2_RATIO, H2_DROP_PP = 0.25, 0.9, 0.01  # HYPOTHESES H1, H2
 FLOAT_TOLERANCE = 1e-9  # for H2's drop-rate bound, compared on values written to 5 decimals
 CV_FLAG = 0.10  # §9.3
+SUMMARY_DIGITS = 3  # summary.json (M1-7: a clean clone gives the same file, to 3 decimals)
 HYPOTHESIS_METRICS = ("process_cpu_s", "latency_p99_ms")  # H1, H2
 LOST = "the session ended during the run"
 SYSTEM_KEYS = [f"system_cpu{c}_s" for c in range(8)] + ["system_cpu0-3_s", "system_cpu4-5_s", "system_cpu6-7_s",
@@ -335,12 +340,16 @@ def fmt(x, digits=3):
     return "–" if x is None or (isinstance(x, float) and math.isnan(x)) else f"{x:.{digits}f}"
 
 
-def verdict_rows(c):
+def verdicts(c):
+    """H1, H2 and H3 from the collected points."""
     main8, aux5 = c["data"]["main"][8], c["data"]["aux"][5]
-    v1 = h1(list(main8["B"]["valid"].values()), list(main8["C"]["valid"].values()))
-    v2 = h2(aux5["B"]["valid"], aux5["C"]["valid"])
-    v3 = h3(c["h3_n"])
-    flag = lambda v: " (flagged)" if v.get("flagged") else ""  # noqa: E731
+    return (h1(list(main8["B"]["valid"].values()), list(main8["C"]["valid"].values())),
+            h2(aux5["B"]["valid"], aux5["C"]["valid"]), h3(c["h3_n"]))
+
+
+def verdict_rows(c):
+    v1, v2, v3 = verdicts(c)
+    flag =lambda v: " (flagged)" if v.get("flagged") else ""  # noqa: E731
     rows = [
         f"| H1, CPU at 8 channels | {v1['spec']}{flag(v1)} | {v1['practical']} | B {fmt(v1.get('B'))} s, "
         f"C {fmt(v1.get('C'))} s, saving {fmt(v1.get('saving', math.nan) * 100, 1)}%"
@@ -425,20 +434,61 @@ def report_4k(c):
         flags, k4, "###", "No process CPU or p99 latency value has a coefficient of variation above 10%.")
 
 
+def rounded(x):
+    """x with every float rounded to SUMMARY_DIGITS, nan as None and -0.0 as 0.0."""
+    if isinstance(x, float):
+        return None if math.isnan(x) else round(x, SUMMARY_DIGITS) + 0.0
+    if isinstance(x, dict):
+        return {k: rounded(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [rounded(v) for v in x]
+    return x
+
+
+def point_stats(data):
+    """{channels: {variant: {metric: {n, mean, sd, cv}}}} of a sweep's points, channels as strings."""
+    return {str(ch): {v: {key: dict(zip(("n", "mean", "sd", "cv"), stats([r[key] for r in p["valid"].values()])))
+                          for key, _ in METRICS} for v, p in by_variant.items()}
+            for ch, by_variant in sorted(data.items())}
+
+
+def lists(c):
+    return {"missing": c["missing"], "invalid_x2": c["invalid_x2"], "others": c["others"], "warnings": c["warnings"]}
+
+
+def summary(c):
+    """The report's numbers (M1-7): completeness, verdicts and every point's statistics, rounded, so
+    that a clean clone writes the same file."""
+    v1, v2, v3 = verdicts(c)
+    out = {"complete": not c["missing"], "verdicts": {"H1": v1, "H2": v2, "H3": v3}, "h3_problem": c["h3_problem"],
+           "points": {sweep: point_stats(data) for sweep, data in c["data"].items()}, **lists(c)}
+    if "4k" in c:
+        k4 = c["4k"]
+        out["m1.1_4k"] = {"exploratory": "A11", "sessions": k4["sessions"], "points": point_stats(k4["data"]),
+                          **lists(k4)}
+    return rounded(out)
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--out")
+    ap.add_argument("--json")
     args = ap.parse_args(argv)
+    if args.check and (args.out or args.json):
+        ap.error("--check writes nothing")
     sys.stdout.reconfigure(encoding="utf-8")
     c = collect(Path(__file__).resolve().parent.parent, with_4k=not args.check)
     if args.check:
         print("\n".join(c["missing"]) if c["missing"] else "complete")
         return 1 if c["missing"] else 0
+    if args.json:
+        text = json.dumps(summary(c), indent=1, ensure_ascii=False) + "\n"
+        Path(args.json).write_text(text, encoding="utf-8", newline="\n")
     text = report(c)
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")
-    else:
+    elif not args.json:
         print(text, end="")
     return 0
 

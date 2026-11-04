@@ -4,6 +4,7 @@ and the report.
 
 Usage: python3 tests/test_m1_report.py
 """
+import json
 import math
 import sys
 import tempfile
@@ -77,6 +78,11 @@ class Stats(unittest.TestCase):
         self.assertEqual(rep.stats([4.0])[:2], (1, 4.0))
         self.assertTrue(math.isnan(rep.stats([4.0])[2]))
         self.assertEqual(rep.stats([])[0], 0)
+
+    def test_rounded(self):
+        self.assertEqual(rep.rounded({"a": [1.23456, -0.0001, math.nan], "b": (2, True, "x")}),
+                         {"a": [1.235, 0.0, None], "b": [2, True, "x"]})
+        self.assertEqual(str(rep.rounded(-0.0001)), "0.0")
 
     def test_p99_is_numpys_linear_interpolation(self):
         values = [float(x) for x in range(1, 101)]  # (n - 1) * 0.99 = 98.01 -> 99 + 0.01
@@ -219,6 +225,14 @@ class Report(unittest.TestCase):
             self.assertIn("- main 1 ch B r1: 20261104T000000Z_main/07_main_B_1ch_r1: bench exit -11; "
                           "20261104T000000Z_main/07_main_B_1ch_r1_repeat: clock below fixed: dmc_hz", text)
             self.assertIn("- main: 20261104T000000Z_main/01_main_B_8ch_r1: 2 samples", text)
+            s = json.loads(json.dumps(rep.summary(c)))
+            self.assertEqual(s["verdicts"]["H1"]["saving"], 0.3)
+            self.assertEqual(s["points"]["main"]["8"]["C"]["process_cpu_s"], {"n": 3, "mean": 7.0, "sd": 2.646,
+                                                                              "cv": 0.378})
+            self.assertEqual(s["points"]["main"]["1"]["B"]["process_cpu_s"], {"n": 0, "mean": None, "sd": None,
+                                                                              "cv": None})
+            self.assertFalse(s["complete"])
+            self.assertEqual(s["m1.1_4k"]["sessions"], 0)
             self.assertIn("## M1.1: 4K input (exploratory, A11)", text)
             self.assertTrue(text.endswith("No 4K session yet.\n"))
 
