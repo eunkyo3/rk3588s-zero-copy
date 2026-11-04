@@ -152,8 +152,6 @@ flowchart TB
 
 **현재 상태:** M1-6 비교 실행을 마쳤고, M1-7 보고서는 [docs/report/M1.ko.md](docs/report/M1.ko.md)에 있다. 그에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 작은 4K 탐색 설계([AMENDMENTS A11](prereg/AMENDMENTS.ko.md))는 그 뒤에 돈다.
 
-비교 결과는 `v0.1-m1` 리포트와 함께 공개한다.
-
 ## 빌드와 실행
 
 보드에서 한다. MPP, librga, librknnrt는 FriendlyElec 이미지에 들어 있다.
