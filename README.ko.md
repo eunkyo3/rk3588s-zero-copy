@@ -151,13 +151,13 @@ flowchart TB
 
 | 마일스톤 | 내용 | 릴리스 |
 |---|---|---|
-| M1 | B 대 C 파이프라인, 채널 스윕 리포트, 다채널 검출 데모 | `v0.1-m1` |
-| M1.1 (선택) | 민감도 및 탐색 실행 | `v0.1.1` |
+| M1 | B 대 C 파이프라인, 채널 스윕 리포트, 다채널 검출 데모 | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) |
+| M1.1 (선택) | 민감도 및 탐색 실행 | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) |
 | M2 | 후처리 최적화, 동일 모델 | `v0.2-m2` |
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1을 [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1)으로 공개했다. 보고서 [docs/report/M1.ko.md](docs/report/M1.ko.md)와 데모 영상이 함께 있다. 비교 실행에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 탐색 설계는 그 뒤 2026-11-04에 돌았다. [AMENDMENTS A11](prereg/AMENDMENTS.ko.md)의 4K 입력과, A12가 정한 대로 만들고 돌린 PROTOCOL §13의 선택 설계다. 그 보고서는 [docs/report/M1.1.ko.md](docs/report/M1.1.ko.md)이고, M1.1은 `v0.1.1`로 공개할 예정이다.
+**현재 상태:** M1을 [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1)으로 공개했다. 보고서 [docs/report/M1.ko.md](docs/report/M1.ko.md)와 데모 영상이 함께 있다. 비교 실행에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 탐색 설계는 그 뒤 2026-11-04에 돌았다. [AMENDMENTS A11](prereg/AMENDMENTS.ko.md)의 4K 입력과, A12가 정한 대로 만들고 돌린 PROTOCOL §13의 선택 설계다. M1.1을 [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1)로 공개했다. 보고서 [docs/report/M1.1.ko.md](docs/report/M1.1.ko.md)가 함께 있다. 다음은 M2다.
 
 ## 빌드와 실행
 
