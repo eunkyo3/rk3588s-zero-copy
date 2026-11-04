@@ -151,13 +151,13 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 
 | Milestone | Content | Release |
 |---|---|---|
-| M1 | B vs C pipelines, channel sweep report, multi-channel detection demo | `v0.1-m1` |
-| M1.1 (optional) | sensitivity and exploratory runs | `v0.1.1` |
+| M1 | B vs C pipelines, channel sweep report, multi-channel detection demo | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) |
+| M1.1 (optional) | sensitivity and exploratory runs | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) |
 | M2 | post-processing optimization, same model | `v0.2-m2` |
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1 is released as [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1), with the report [docs/report/M1.md](docs/report/M1.md) and the demo video. Before the comparison runs came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). M1.1's exploratory designs ran after them, on 2026-11-04: the 4K input of [AMENDMENTS A11](prereg/AMENDMENTS.md) and the optional designs of PROTOCOL §13, built and run as A12 fixes them. Their report is [docs/report/M1.1.md](docs/report/M1.1.md); M1.1 is to be released as `v0.1.1`.
+**Current status:** M1 is released as [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1), with the report [docs/report/M1.md](docs/report/M1.md) and the demo video. Before the comparison runs came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). M1.1's exploratory designs ran after them, on 2026-11-04: the 4K input of [AMENDMENTS A11](prereg/AMENDMENTS.md) and the optional designs of PROTOCOL §13, built and run as A12 fixes them. M1.1 is released as [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1), with the report [docs/report/M1.1.md](docs/report/M1.1.md). Next is M2.
 
 ## Build and run
 
