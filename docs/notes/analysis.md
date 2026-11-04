@@ -80,6 +80,7 @@ It also lists every invalid ×2 record by variant, with the reasons of both atte
 - **Each design with its own controls:** one table per design, its arms side by side (`k4`: B, Bk4; `a55`: B, C on cpu0–3; `bdirect_*`: B, C, Bd). No value is set against M1's, because the binary differs (A12).
 - **B-direct's saving:** from the mean process CPU of each arm, Bd's saving against B, (B − Bd) / B, next to C's, (B − C) / B, and Bd's as a share of C's, (B − Bd) / (B − C). From the means only, with no interval.
 - **Its own lists:** each design's flags, invalid ×2 records, attempts that do not count and warnings are listed under that design.
+- **a55's process CPU by core:** `bench_main` splits process CPU into A76 and A55 by M1's affinities, cpu4–7 and cpu0. In `a55` the pipeline's threads are on cpu0–3 and the metrics thread on cpu4, so that split puts every thread under unattributed. Under a55's table the report adds each arm's process CPU by the affinity of its threads, from `threads.csv`, the mean over the valid runs. This was added on 2026-11-04 after a55's table had been seen with 0 on both clusters; it changes no value in the table.
 - **Not M1's completeness:** `--check` does not read these runs. Each design says whether its own points are complete.
 
 ## Summary file and figures (M1-7)

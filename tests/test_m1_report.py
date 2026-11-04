@@ -62,6 +62,12 @@ def fake_run(d, cpu, latencies, fps=5.0, system=20.0):
     (d / "frames.csv").write_text("channel,t0_ns,t4_ns\n" + frames, encoding="utf-8")
 
 
+def threads_file(d, rows):
+    """threads.csv with rows (tid, comm, affinity, cpu_s_in_window)."""
+    (d / "threads.csv").write_text("# start_time_utc: x\ntid,comm,affinity,cpu_s_in_window\n"
+                                   + "".join(f'{t},{c},"{a}",{s}\n' for t, c, a, s in rows), encoding="utf-8")
+
+
 def idle_file(d, total=2.4):
     keys = {"window_s": "120.0"}
     keys.update({k: "0.1" for k in rep.SYSTEM_KEYS})
@@ -289,6 +295,24 @@ class Report(unittest.TestCase):
             self.assertIsNone(s["bdirect_aux"]["process_cpu_saving"])  # Bd has no valid run
             self.assertEqual(s["k4"]["points"]["8"]["Bk4"]["process_cpu_s"]["n"], 0)
             self.assertIn("a55 8 ch B r1", s["a55"]["missing"])
+
+    def test_a55_split_from_threads(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            a55 = session(root / "results" / "m1.1", "20261104T060000Z_a55",
+                          [("01_a55_B_8ch_r1", "B", 8, 1, 1, "1", ""), ("02_a55_C_8ch_r1", "C", 8, 1, 1, "0", "x"),
+                           ("02_a55_C_8ch_r1_repeat", "C", 8, 1, 2, "0", "y")])
+            idle_file(a55)
+            fake_run(a55 / "01_a55_B_8ch_r1", 30.6, [10.0] * 100)
+            threads_file(a55 / "01_a55_B_8ch_r1", [(1, "pre-0", "0-3", 20.0), (2, "pre-1", "0-3", 10.5),
+                                                   (3, "metrics", "4", 0.1)])
+            c = rep.collect(root)
+            text = rep.report(c)
+            section = text[text.index("### A55 cores only"):]
+            self.assertIn(rep.SPLIT_NOTE + " B: cpu0-3 30.500 s, cpu4 0.100 s; C: no valid run.", section)
+            s = json.loads(json.dumps(rep.summary(c)))["m1.1_a12"]
+            self.assertEqual(s["a55"]["process_cpu_by_affinity"], {"B": {"0-3": 30.5, "4": 0.1}, "C": {}})
+            self.assertNotIn("process_cpu_by_affinity", s["k4"])
 
     def test_the_4k_section(self):
         with tempfile.TemporaryDirectory() as t:
