@@ -1,0 +1,2 @@
+mediamtx v1.21.2
+ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers

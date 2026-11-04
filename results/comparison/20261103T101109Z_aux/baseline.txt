@@ -1,0 +1,2 @@
+idle_s: 600
+soc_thermal_baseline_mc: 36861

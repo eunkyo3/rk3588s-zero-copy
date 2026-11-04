@@ -1,0 +1,7 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	start_utc
+1	01_reference_A_2ch_r1	reference	A	2	main	1	1	2026-11-03T15:53:18Z
+2	02_reference_A_2ch_r2	reference	A	2	main	2	1	2026-11-03T15:56:41Z
+3	03_reference_A_2ch_r3	reference	A	2	main	3	1	2026-11-03T16:00:04Z
+4	04_reference_A_1ch_r1	reference	A	1	main	1	1	2026-11-03T16:03:27Z
+5	05_reference_A_1ch_r2	reference	A	1	main	2	1	2026-11-03T16:06:50Z
+6	06_reference_A_1ch_r3	reference	A	1	main	3	1	2026-11-03T16:10:13Z
