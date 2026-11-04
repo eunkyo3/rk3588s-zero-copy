@@ -103,6 +103,7 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
     - The check was fixed to take run kind `m1.1` and to judge nothing for it. It was re-run on the same tensors after their SHA-256 matched `tensors.sha256`.
     - Its output is `recheck.txt` and `recheck.json`. `recheck_env.txt` holds the tool's commit and SHA-256, the times and the exit code, 0.
     - A5's criteria do not all hold at 4K. That is reported, not judged.
+    - The tensors are kept, compressed with xz, in the release [data-m1.1-20261104T023058Z](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-m1.1-20261104T023058Z).
 - **Report:** `tools/m1_report.py` gets a 4K section before the 4K results are written up: §7's metrics, B and C side by side, M1's main-condition values at the same counts next to them, labelled exploratory (A11).
 
 ### Time

@@ -155,7 +155,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1-6, the comparison runs, is done, and M1-7's report is [docs/report/M1.md](docs/report/M1.md). Before them came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). The small exploratory 4K design of M1.1 ([AMENDMENTS A11](prereg/AMENDMENTS.md)) ran after them, on 2026-11-04; its write-up comes with M1.1.
+**Current status:** M1 is released as [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1), with the report [docs/report/M1.md](docs/report/M1.md) and the demo video. Before the comparison runs came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). The small exploratory 4K design of M1.1 ([AMENDMENTS A11](prereg/AMENDMENTS.md)) ran after them, on 2026-11-04. Its write-up comes with M1.1 (`v0.1.1`), together with the other optional designs of PROTOCOL §13.
 
 ## Build and run
 
