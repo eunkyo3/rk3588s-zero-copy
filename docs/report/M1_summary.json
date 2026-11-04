@@ -8731,2620 +8731,2608 @@
  "m1.1_a12": {
   "exploratory": "A12",
   "k4": {
-   "sessions": 0,
+   "sessions": 1,
    "points": {
     "8": {
      "B": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 43.85,
+       "sd": 0.274,
+       "cv": 0.006
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 43.73,
+       "sd": 0.229,
+       "cv": 0.005
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.097,
+       "sd": 0.006,
+       "cv": 0.06
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.023,
+       "sd": 0.042,
+       "cv": 1.784
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.14,
+       "sd": 0.963,
+       "cv": 0.45
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.993,
+       "sd": 0.347,
+       "cv": 0.349
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.227,
+       "sd": 0.103,
+       "cv": 0.453
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.297,
+       "sd": 0.031,
+       "cv": 0.103
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.967,
+       "sd": 2.705,
+       "cv": 0.247
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.87,
+       "sd": 0.539,
+       "cv": 0.055
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.633,
+       "sd": 1.161,
+       "cv": 0.121
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.013,
+       "sd": 1.073,
+       "cv": 0.107
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.657,
+       "sd": 1.339,
+       "cv": 0.366
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 20.837,
+       "sd": 2.489,
+       "cv": 0.119
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 19.647,
+       "sd": 1.387,
+       "cv": 0.071
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 44.14,
+       "sd": 3.472,
+       "cv": 0.079
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.65,
+       "sd": 0.963,
+       "cv": 0.583
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.723,
+       "sd": 0.347,
+       "cv": 0.479
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.067,
+       "sd": 0.103,
+       "cv": 1.539
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.207,
+       "sd": 0.031,
+       "cv": 0.148
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.767,
+       "sd": 2.705,
+       "cv": 0.251
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.79,
+       "sd": 0.539,
+       "cv": 0.055
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.353,
+       "sd": 1.161,
+       "cv": 0.124
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.833,
+       "sd": 1.073,
+       "cv": 0.109
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.647,
+       "sd": 1.339,
+       "cv": 0.506
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 20.557,
+       "sd": 2.489,
+       "cv": 0.121
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 19.187,
+       "sd": 1.387,
+       "cv": 0.072
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 42.39,
+       "sd": 3.472,
+       "cv": 0.082
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 32.062,
+       "sd": 3.367,
+       "cv": 0.105
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 45.141,
+       "sd": 2.426,
+       "cv": 0.054
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 45.141,
+       "sd": 2.426,
+       "cv": 0.054
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.548,
+       "sd": 1.494,
+       "cv": 0.175
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 13.301,
+       "sd": 1.466,
+       "cv": 0.11
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 242774.667,
+       "sd": 679.109,
+       "cv": 0.003
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 48691.667,
+       "sd": 1066.366,
+       "cv": 0.022
       }
      },
      "Bk4": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 45.0,
+       "sd": 0.215,
+       "cv": 0.005
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 44.89,
+       "sd": 0.251,
+       "cv": 0.006
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.103,
+       "sd": 0.012,
+       "cv": 0.112
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.007,
+       "sd": 0.035,
+       "cv": 5.268
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.56,
+       "sd": 0.891,
+       "cv": 0.348
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.937,
+       "sd": 0.265,
+       "cv": 0.283
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.427,
+       "sd": 0.334,
+       "cv": 0.782
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.247,
+       "sd": 0.085,
+       "cv": 0.345
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.503,
+       "sd": 1.995,
+       "cv": 0.173
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.17,
+       "sd": 1.657,
+       "cv": 0.148
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.287,
+       "sd": 1.666,
+       "cv": 0.148
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.583,
+       "sd": 1.69,
+       "cv": 0.146
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 4.17,
+       "sd": 1.308,
+       "cv": 0.314
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.673,
+       "sd": 3.64,
+       "cv": 0.161
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.87,
+       "sd": 3.355,
+       "cv": 0.147
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 49.713,
+       "sd": 8.172,
+       "cv": 0.164
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.07,
+       "sd": 0.891,
+       "cv": 0.43
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.667,
+       "sd": 0.265,
+       "cv": 0.398
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.267,
+       "sd": 0.334,
+       "cv": 1.252
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.157,
+       "sd": 0.085,
+       "cv": 0.543
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.303,
+       "sd": 1.995,
+       "cv": 0.176
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.09,
+       "sd": 1.657,
+       "cv": 0.149
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.007,
+       "sd": 1.666,
+       "cv": 0.151
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.403,
+       "sd": 1.69,
+       "cv": 0.148
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.16,
+       "sd": 1.308,
+       "cv": 0.414
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.393,
+       "sd": 3.64,
+       "cv": 0.163
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.41,
+       "sd": 3.355,
+       "cv": 0.15
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 47.963,
+       "sd": 8.172,
+       "cv": 0.17
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 33.986,
+       "sd": 1.376,
+       "cv": 0.041
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 49.553,
+       "sd": 3.191,
+       "cv": 0.064
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 49.553,
+       "sd": 3.191,
+       "cv": 0.064
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.634,
+       "sd": 0.058,
+       "cv": 0.01
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.171,
+       "sd": 0.611,
+       "cv": 0.075
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.022,
+       "sd": 0.019,
+       "cv": 0.866
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 246294.667,
+       "sd": 56.616,
+       "cv": 0.0
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 48692.0,
+       "sd": 533.472,
+       "cv": 0.011
       }
      }
     }
    },
-   "missing": [
-    "k4 8 ch B r1",
-    "k4 8 ch B r2",
-    "k4 8 ch B r3",
-    "k4 8 ch Bk4 r1",
-    "k4 8 ch Bk4 r2",
-    "k4 8 ch Bk4 r3"
-   ],
+   "missing": [],
    "invalid_x2": [],
    "others": [],
    "warnings": []
   },
   "a55": {
-   "sessions": 0,
+   "sessions": 1,
    "points": {
     "8": {
      "B": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 150.64,
        "sd": null,
        "cv": null
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 150.64,
        "sd": null,
        "cv": null
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 34.06,
        "sd": null,
        "cv": null
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 33.36,
        "sd": null,
        "cv": null
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 34.8,
        "sd": null,
        "cv": null
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 42.92,
        "sd": null,
        "cv": null
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.56,
        "sd": null,
        "cv": null
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.31,
        "sd": null,
        "cv": null
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.22,
        "sd": null,
        "cv": null
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.06,
        "sd": null,
        "cv": null
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 145.14,
        "sd": null,
        "cv": null
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.87,
        "sd": null,
        "cv": null
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.28,
        "sd": null,
        "cv": null
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 146.29,
        "sd": null,
        "cv": null
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 33.73,
        "sd": null,
        "cv": null
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 33.29,
        "sd": null,
        "cv": null
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 34.78,
        "sd": null,
        "cv": null
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 42.9,
        "sd": null,
        "cv": null
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.52,
        "sd": null,
        "cv": null
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.14,
        "sd": null,
        "cv": null
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.21,
        "sd": null,
        "cv": null
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.06,
        "sd": null,
        "cv": null
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 144.7,
        "sd": null,
        "cv": null
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.66,
        "sd": null,
        "cv": null
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.27,
        "sd": null,
        "cv": null
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 145.63,
        "sd": null,
        "cv": null
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 67.938,
        "sd": null,
        "cv": null
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 98.149,
        "sd": null,
        "cv": null
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 98.149,
        "sd": null,
        "cv": null
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 48.453,
        "sd": null,
        "cv": null
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 78.903,
        "sd": null,
        "cv": null
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.001,
        "sd": null,
        "cv": null
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 5.0,
        "sd": null,
        "cv": null
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 5.0,
        "sd": null,
        "cv": null
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 5.0,
        "sd": null,
        "cv": null
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 242860.0,
        "sd": null,
        "cv": null
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 49000.0,
        "sd": null,
        "cv": null
       }
      },
      "C": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 51.7,
        "sd": null,
        "cv": null
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 51.7,
        "sd": null,
        "cv": null
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 13.31,
        "sd": null,
        "cv": null
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 7.94,
        "sd": null,
        "cv": null
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 7.58,
        "sd": null,
        "cv": null
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 9.93,
        "sd": null,
        "cv": null
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.48,
        "sd": null,
        "cv": null
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.2,
        "sd": null,
        "cv": null
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.15,
        "sd": null,
        "cv": null
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.07,
        "sd": null,
        "cv": null
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 38.76,
        "sd": null,
        "cv": null
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.68,
        "sd": null,
        "cv": null
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.22,
        "sd": null,
        "cv": null
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 39.66,
        "sd": null,
        "cv": null
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 12.98,
        "sd": null,
        "cv": null
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 7.87,
        "sd": null,
        "cv": null
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 7.56,
        "sd": null,
        "cv": null
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 9.91,
        "sd": null,
        "cv": null
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.44,
        "sd": null,
        "cv": null
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.03,
        "sd": null,
        "cv": null
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.14,
        "sd": null,
        "cv": null
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.07,
        "sd": null,
        "cv": null
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 38.32,
        "sd": null,
        "cv": null
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.47,
        "sd": null,
        "cv": null
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.21,
        "sd": null,
        "cv": null
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 39.0,
        "sd": null,
        "cv": null
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 38.009,
        "sd": null,
        "cv": null
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 54.359,
        "sd": null,
        "cv": null
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 54.359,
        "sd": null,
        "cv": null
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 2.322,
        "sd": null,
        "cv": null
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 3.227,
        "sd": null,
        "cv": null
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.001,
        "sd": null,
        "cv": null
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 5.0,
        "sd": null,
        "cv": null
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 5.0,
        "sd": null,
        "cv": null
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 5.0,
        "sd": null,
        "cv": null
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 0.0,
        "sd": null,
        "cv": null
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 236604.0,
        "sd": null,
        "cv": null
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
+       "n": 1,
+       "mean": 47153.0,
        "sd": null,
        "cv": null
       }
      }
     }
    },
-   "missing": [
-    "a55 8 ch B r1",
-    "a55 8 ch C r1"
-   ],
+   "missing": [],
    "invalid_x2": [],
    "others": [],
-   "warnings": []
+   "warnings": [],
+   "process_cpu_by_affinity": {
+    "B": {
+     "0-3": 150.62,
+     "4": 0.03
+    },
+    "C": {
+     "0-3": 51.63,
+     "4": 0.04
+    }
+   }
   },
   "bdirect_main": {
-   "sessions": 0,
+   "sessions": 1,
    "points": {
     "8": {
      "B": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 44.037,
+       "sd": 0.268,
+       "cv": 0.006
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 43.93,
+       "sd": 0.246,
+       "cv": 0.006
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.097,
+       "sd": 0.012,
+       "cv": 0.119
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.01,
+       "sd": 0.02,
+       "cv": 2.0
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.51,
+       "sd": 0.74,
+       "cv": 0.295
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.09,
+       "sd": 0.489,
+       "cv": 0.448
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.267,
+       "sd": 0.058,
+       "cv": 0.217
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.297,
+       "sd": 0.075,
+       "cv": 0.253
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.557,
+       "sd": 2.337,
+       "cv": 0.221
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.967,
+       "sd": 1.657,
+       "cv": 0.151
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.743,
+       "sd": 1.709,
+       "cv": 0.159
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.903,
+       "sd": 2.291,
+       "cv": 0.21
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 4.163,
+       "sd": 1.138,
+       "cv": 0.273
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 21.523,
+       "sd": 3.884,
+       "cv": 0.18
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 21.647,
+       "sd": 3.999,
+       "cv": 0.185
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 47.333,
+       "sd": 8.985,
+       "cv": 0.19
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.92,
+       "sd": 0.74,
+       "cv": 0.385
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.86,
+       "sd": 0.489,
+       "cv": 0.568
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.217,
+       "sd": 0.058,
+       "cv": 0.266
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.187,
+       "sd": 0.075,
+       "cv": 0.402
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.477,
+       "sd": 2.337,
+       "cv": 0.223
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.947,
+       "sd": 1.657,
+       "cv": 0.151
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.593,
+       "sd": 1.709,
+       "cv": 0.161
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.833,
+       "sd": 2.291,
+       "cv": 0.211
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.184,
+       "sd": 1.138,
+       "cv": 0.357
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 21.423,
+       "sd": 3.884,
+       "cv": 0.181
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 21.427,
+       "sd": 3.999,
+       "cv": 0.187
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 46.034,
+       "sd": 8.985,
+       "cv": 0.195
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 35.646,
+       "sd": 1.403,
+       "cv": 0.039
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 48.061,
+       "sd": 1.027,
+       "cv": 0.021
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 48.061,
+       "sd": 1.027,
+       "cv": 0.021
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.033,
+       "sd": 0.764,
+       "cv": 0.076
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 15.334,
+       "sd": 0.929,
+       "cv": 0.061
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.011,
+       "sd": 0.019,
+       "cv": 1.732
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 242337.333,
+       "sd": 958.168,
+       "cv": 0.004
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 49000.0,
+       "sd": 0.0,
+       "cv": 0.0
       }
      },
      "C": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 19.487,
+       "sd": 0.257,
+       "cv": 0.013
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 19.397,
+       "sd": 0.266,
+       "cv": 0.014
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.103,
+       "sd": 0.006,
+       "cv": 0.056
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": -0.013,
+       "sd": 0.012,
+       "cv": -0.866
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.147,
+       "sd": 1.194,
+       "cv": 0.379
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.363,
+       "sd": 0.515,
+       "cv": 0.378
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.883,
+       "sd": 0.434,
+       "cv": 0.491
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.547,
+       "sd": 0.432,
+       "cv": 0.79
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.827,
+       "sd": 5.585,
+       "cv": 0.633
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.873,
+       "sd": 4.0,
+       "cv": 0.405
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.74,
+       "sd": 4.958,
+       "cv": 0.509
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.127,
+       "sd": 5.135,
+       "cv": 0.563
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.94,
+       "sd": 1.768,
+       "cv": 0.298
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 18.7,
+       "sd": 9.542,
+       "cv": 0.51
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 18.867,
+       "sd": 10.085,
+       "cv": 0.535
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 43.507,
+       "sd": 20.62,
+       "cv": 0.474
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.557,
+       "sd": 1.194,
+       "cv": 0.467
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.134,
+       "sd": 0.515,
+       "cv": 0.454
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.833,
+       "sd": 0.434,
+       "cv": 0.52
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.437,
+       "sd": 0.432,
+       "cv": 0.989
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.747,
+       "sd": 5.585,
+       "cv": 0.639
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.853,
+       "sd": 4.0,
+       "cv": 0.406
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.59,
+       "sd": 4.958,
+       "cv": 0.517
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 9.057,
+       "sd": 5.135,
+       "cv": 0.567
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 4.961,
+       "sd": 1.768,
+       "cv": 0.356
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 18.6,
+       "sd": 9.542,
+       "cv": 0.513
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 18.647,
+       "sd": 10.085,
+       "cv": 0.541
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 42.208,
+       "sd": 20.62,
+       "cv": 0.489
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 29.144,
+       "sd": 0.542,
+       "cv": 0.019
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 41.03,
+       "sd": 4.14,
+       "cv": 0.101
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 41.03,
+       "sd": 4.14,
+       "cv": 0.101
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.927,
+       "sd": 0.41,
+       "cv": 0.213
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.351,
+       "sd": 0.065,
+       "cv": 0.019
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.011,
+       "sd": 0.019,
+       "cv": 1.732
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 237326.667,
+       "sd": 178.632,
+       "cv": 0.001
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 46845.333,
+       "sd": 532.894,
+       "cv": 0.011
       }
      },
      "Bd": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 42.787,
+       "sd": 0.673,
+       "cv": 0.016
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 42.687,
+       "sd": 0.725,
+       "cv": 0.017
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.103,
+       "sd": 0.006,
+       "cv": 0.056
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": -0.003,
+       "sd": 0.049,
+       "cv": -14.799
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.29,
+       "sd": 0.471,
+       "cv": 0.206
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.8,
+       "sd": 0.304,
+       "cv": 0.38
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.337,
+       "sd": 0.186,
+       "cv": 0.553
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.293,
+       "sd": 0.055,
+       "cv": 0.188
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.633,
+       "sd": 1.05,
+       "cv": 0.099
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.687,
+       "sd": 0.802,
+       "cv": 0.075
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.733,
+       "sd": 1.081,
+       "cv": 0.092
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.41,
+       "sd": 0.607,
+       "cv": 0.053
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.72,
+       "sd": 0.157,
+       "cv": 0.042
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 21.32,
+       "sd": 1.748,
+       "cv": 0.082
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 23.143,
+       "sd": 1.57,
+       "cv": 0.068
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 48.183,
+       "sd": 3.42,
+       "cv": 0.071
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.7,
+       "sd": 0.471,
+       "cv": 0.277
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.57,
+       "sd": 0.304,
+       "cv": 0.533
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.287,
+       "sd": 0.186,
+       "cv": 0.649
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.183,
+       "sd": 0.055,
+       "cv": 0.3
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.553,
+       "sd": 1.05,
+       "cv": 0.099
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 10.667,
+       "sd": 0.802,
+       "cv": 0.075
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.583,
+       "sd": 1.081,
+       "cv": 0.093
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 11.34,
+       "sd": 0.607,
+       "cv": 0.054
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.741,
+       "sd": 0.157,
+       "cv": 0.057
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 21.22,
+       "sd": 1.748,
+       "cv": 0.082
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.924,
+       "sd": 1.57,
+       "cv": 0.068
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 46.884,
+       "sd": 3.42,
+       "cv": 0.073
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 21.251,
+       "sd": 0.363,
+       "cv": 0.017
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 29.026,
+       "sd": 2.642,
+       "cv": 0.091
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 29.026,
+       "sd": 2.641,
+       "cv": 0.091
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.178,
+       "sd": 0.031,
+       "cv": 0.006
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 6.494,
+       "sd": 0.969,
+       "cv": 0.149
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 224596.0,
+       "sd": 469.911,
+       "cv": 0.002
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 48999.333,
+       "sd": 1599.26,
+       "cv": 0.033
       }
      }
     }
    },
-   "missing": [
-    "bdirect_main 8 ch B r1",
-    "bdirect_main 8 ch B r2",
-    "bdirect_main 8 ch B r3",
-    "bdirect_main 8 ch C r1",
-    "bdirect_main 8 ch C r2",
-    "bdirect_main 8 ch C r3",
-    "bdirect_main 8 ch Bd r1",
-    "bdirect_main 8 ch Bd r2",
-    "bdirect_main 8 ch Bd r3"
-   ],
+   "missing": [],
    "invalid_x2": [],
    "others": [],
    "warnings": [],
-   "process_cpu_saving": null
+   "process_cpu_saving": {
+    "bd": 0.028,
+    "c": 0.557,
+    "bd_share_of_c": 0.051
+   }
   },
   "bdirect_aux": {
-   "sessions": 0,
+   "sessions": 1,
    "points": {
     "5": {
      "B": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 130.953,
+       "sd": 0.556,
+       "cv": 0.004
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 130.797,
+       "sd": 0.526,
+       "cv": 0.004
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.127,
+       "sd": 0.021,
+       "cv": 0.164
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.03,
+       "sd": 0.026,
+       "cv": 0.882
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.263,
+       "sd": 1.155,
+       "cv": 0.51
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.903,
+       "sd": 1.221,
+       "cv": 0.641
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.323,
+       "sd": 0.101,
+       "cv": 0.313
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.273,
+       "sd": 0.148,
+       "cv": 0.543
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 34.787,
+       "sd": 2.189,
+       "cv": 0.063
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 34.45,
+       "sd": 1.705,
+       "cv": 0.049
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 33.113,
+       "sd": 2.148,
+       "cv": 0.065
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 33.78,
+       "sd": 3.675,
+       "cv": 0.109
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 4.763,
+       "sd": 2.321,
+       "cv": 0.487
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 69.237,
+       "sd": 3.383,
+       "cv": 0.049
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 66.893,
+       "sd": 5.802,
+       "cv": 0.087
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 140.893,
+       "sd": 10.714,
+       "cv": 0.076
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.633,
+       "sd": 1.155,
+       "cv": 0.707
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.813,
+       "sd": 1.221,
+       "cv": 0.673
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.313,
+       "sd": 0.101,
+       "cv": 0.323
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.083,
+       "sd": 0.148,
+       "cv": 1.781
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 34.767,
+       "sd": 2.189,
+       "cv": 0.063
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 34.33,
+       "sd": 1.705,
+       "cv": 0.05
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 33.103,
+       "sd": 2.148,
+       "cv": 0.065
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 33.77,
+       "sd": 3.675,
+       "cv": 0.109
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.843,
+       "sd": 2.321,
+       "cv": 0.604
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 69.097,
+       "sd": 3.383,
+       "cv": 0.049
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 66.873,
+       "sd": 5.802,
+       "cv": 0.087
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 139.813,
+       "sd": 10.714,
+       "cv": 0.077
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.642,
+       "sd": 2.413,
+       "cv": 0.107
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.467,
+       "sd": 3.242,
+       "cv": 0.106
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.467,
+       "sd": 3.242,
+       "cv": 0.106
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 5.465,
+       "sd": 0.577,
+       "cv": 0.106
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 7.912,
+       "sd": 2.83,
+       "cv": 0.358
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 176062.667,
+       "sd": 487.3,
+       "cv": 0.003
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 60076.0,
+       "sd": 0.0,
+       "cv": 0.0
       }
      },
      "C": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 37.447,
+       "sd": 1.408,
+       "cv": 0.038
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 37.3,
+       "sd": 1.43,
+       "cv": 0.038
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.143,
+       "sd": 0.006,
+       "cv": 0.04
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.003,
+       "sd": 0.021,
+       "cv": 6.245
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.51,
+       "sd": 0.345,
+       "cv": 0.229
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.327,
+       "sd": 0.194,
+       "cv": 0.146
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.577,
+       "sd": 0.24,
+       "cv": 0.416
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.357,
+       "sd": 0.275,
+       "cv": 0.771
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.8,
+       "sd": 3.371,
+       "cv": 0.383
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.617,
+       "sd": 3.297,
+       "cv": 0.383
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.45,
+       "sd": 2.979,
+       "cv": 0.353
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.51,
+       "sd": 3.327,
+       "cv": 0.391
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.77,
+       "sd": 0.537,
+       "cv": 0.143
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 17.417,
+       "sd": 6.648,
+       "cv": 0.382
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 16.96,
+       "sd": 6.234,
+       "cv": 0.368
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 38.147,
+       "sd": 12.949,
+       "cv": 0.339
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.88,
+       "sd": 0.345,
+       "cv": 0.392
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.237,
+       "sd": 0.194,
+       "cv": 0.157
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.567,
+       "sd": 0.24,
+       "cv": 0.423
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.167,
+       "sd": 0.275,
+       "cv": 1.65
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.78,
+       "sd": 3.371,
+       "cv": 0.384
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.497,
+       "sd": 3.297,
+       "cv": 0.388
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.44,
+       "sd": 2.979,
+       "cv": 0.353
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.5,
+       "sd": 3.327,
+       "cv": 0.391
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.85,
+       "sd": 0.537,
+       "cv": 0.189
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 17.277,
+       "sd": 6.648,
+       "cv": 0.385
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 16.94,
+       "sd": 6.234,
+       "cv": 0.368
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 37.067,
+       "sd": 12.949,
+       "cv": 0.349
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 17.701,
+       "sd": 0.176,
+       "cv": 0.01
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.782,
+       "sd": 2.955,
+       "cv": 0.13
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.782,
+       "sd": 2.955,
+       "cv": 0.13
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.683,
+       "sd": 0.023,
+       "cv": 0.014
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.28,
+       "sd": 0.968,
+       "cv": 0.424
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.011,
+       "sd": 0.019,
+       "cv": 1.732
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 173520.0,
+       "sd": 145.986,
+       "cv": 0.001
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 53922.667,
+       "sd": 532.894,
+       "cv": 0.01
       }
      },
      "Bd": {
       "process_cpu_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 129.853,
+       "sd": 0.655,
+       "cv": 0.005
       },
       "process_cpu_a76_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 129.7,
+       "sd": 0.64,
+       "cv": 0.005
       },
       "process_cpu_a55_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.123,
+       "sd": 0.006,
+       "cv": 0.047
       },
       "process_cpu_unattributed_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.03,
+       "sd": 0.026,
+       "cv": 0.882
       },
       "system_cpu0_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.317,
+       "sd": 0.235,
+       "cv": 0.178
       },
       "system_cpu1_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.283,
+       "sd": 0.25,
+       "cv": 0.195
       },
       "system_cpu2_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.247,
+       "sd": 0.194,
+       "cv": 0.786
       },
       "system_cpu3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.46,
+       "sd": 0.333,
+       "cv": 0.724
       },
       "system_cpu4_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 26.09,
+       "sd": 3.647,
+       "cv": 0.14
       },
       "system_cpu5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 28.357,
+       "sd": 4.615,
+       "cv": 0.163
       },
       "system_cpu6_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.817,
+       "sd": 3.432,
+       "cv": 0.111
       },
       "system_cpu7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 32.43,
+       "sd": 1.329,
+       "cv": 0.041
       },
       "system_cpu0-3_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 3.307,
+       "sd": 0.851,
+       "cv": 0.257
       },
       "system_cpu4-5_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 54.447,
+       "sd": 6.948,
+       "cv": 0.128
       },
       "system_cpu6-7_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 63.247,
+       "sd": 3.931,
+       "cv": 0.062
       },
       "system_cpu_total_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 121.0,
+       "sd": 3.735,
+       "cv": 0.031
       },
       "system_cpu0_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.687,
+       "sd": 0.235,
+       "cv": 0.342
       },
       "system_cpu1_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 1.193,
+       "sd": 0.25,
+       "cv": 0.209
       },
       "system_cpu2_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.237,
+       "sd": 0.194,
+       "cv": 0.82
       },
       "system_cpu3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.27,
+       "sd": 0.333,
+       "cv": 1.233
       },
       "system_cpu4_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 26.07,
+       "sd": 3.647,
+       "cv": 0.14
       },
       "system_cpu5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 28.237,
+       "sd": 4.615,
+       "cv": 0.163
       },
       "system_cpu6_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.807,
+       "sd": 3.432,
+       "cv": 0.111
       },
       "system_cpu7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 32.42,
+       "sd": 1.329,
+       "cv": 0.041
       },
       "system_cpu0-3_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 2.387,
+       "sd": 0.851,
+       "cv": 0.357
       },
       "system_cpu4-5_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 54.307,
+       "sd": 6.948,
+       "cv": 0.128
       },
       "system_cpu6-7_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 63.227,
+       "sd": 3.931,
+       "cv": 0.062
       },
       "system_cpu_total_minus_idle_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 119.92,
+       "sd": 3.735,
+       "cv": 0.031
       },
       "latency_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 22.241,
+       "sd": 1.152,
+       "cv": 0.052
       },
       "latency_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 32.744,
+       "sd": 1.802,
+       "cv": 0.055
       },
       "latency_p99_bench_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 32.744,
+       "sd": 1.802,
+       "cv": 0.055
       },
       "mpp_hold_p50_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 6.288,
+       "sd": 1.273,
+       "cv": 0.202
       },
       "mpp_hold_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 8.661,
+       "sd": 3.297,
+       "cv": 0.381
       },
       "slot_wait_p99_ms": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 0.001,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "inference_fps_min": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 29.997,
+       "sd": 0.005,
+       "cv": 0.0
       },
       "inference_fps_mean": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 29.999,
+       "sd": 0.001,
+       "cv": 0.0
       },
       "inference_fps_max": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 30.0,
+       "sd": 0.0,
+       "cv": 0.0
       },
       "drop_rate": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "decoder_drops": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "drift_max_s": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
+       "n": 3,
+       "mean": 0.0,
+       "sd": 0.0,
        "cv": null
       },
       "rss_window_max_kb": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 162636.0,
+       "sd": 749.047,
+       "cv": 0.005
       },
       "temp_max_mc": {
-       "n": 0,
-       "mean": null,
-       "sd": null,
-       "cv": null
+       "n": 3,
+       "mean": 60384.0,
+       "sd": 533.472,
+       "cv": 0.009
       }
      }
     }
    },
-   "missing": [
-    "bdirect_aux 5 ch B r1",
-    "bdirect_aux 5 ch B r2",
-    "bdirect_aux 5 ch B r3",
-    "bdirect_aux 5 ch C r1",
-    "bdirect_aux 5 ch C r2",
-    "bdirect_aux 5 ch C r3",
-    "bdirect_aux 5 ch Bd r1",
-    "bdirect_aux 5 ch Bd r2",
-    "bdirect_aux 5 ch Bd r3"
-   ],
+   "missing": [],
    "invalid_x2": [],
    "others": [],
    "warnings": [],
-   "process_cpu_saving": null
+   "process_cpu_saving": {
+    "bd": 0.008,
+    "c": 0.714,
+    "bd_share_of_c": 0.012
+   }
   }
  }
 }

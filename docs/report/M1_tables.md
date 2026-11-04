@@ -849,16 +849,271 @@ Exploratory (A12): the optional designs of PROTOCOL §13, each with its controls
 
 ### B with K = 4 (`k4`): 8 channels, main condition
 
-No session yet.
+Every point is complete.
+
+| Metric | B: mean ± sd (n) | Bk4: mean ± sd (n) |
+|---|---|---|
+| process CPU (s) | 43.850 ± 0.274 (3) | 45.000 ± 0.215 (3) |
+| process CPU, A76 (s) | 43.730 ± 0.229 (3) | 44.890 ± 0.251 (3) |
+| process CPU, A55 (s) | 0.097 ± 0.006 (3) | 0.103 ± 0.012 (3) |
+| process CPU, unattributed (s) | 0.023 ± 0.042 (3) | 0.007 ± 0.035 (3) |
+| system cpu0 (s) | 2.140 ± 0.963 (3) | 2.560 ± 0.891 (3) |
+| system cpu1 (s) | 0.993 ± 0.347 (3) | 0.937 ± 0.265 (3) |
+| system cpu2 (s) | 0.227 ± 0.103 (3) | 0.427 ± 0.334 (3) |
+| system cpu3 (s) | 0.297 ± 0.031 (3) | 0.247 ± 0.085 (3) |
+| system cpu4 (s) | 10.967 ± 2.705 (3) | 11.503 ± 1.995 (3) |
+| system cpu5 (s) | 9.870 ± 0.539 (3) | 11.170 ± 1.657 (3) |
+| system cpu6 (s) | 9.633 ± 1.161 (3) | 11.287 ± 1.666 (3) |
+| system cpu7 (s) | 10.013 ± 1.073 (3) | 11.583 ± 1.690 (3) |
+| system cpu0-3 (s) | 3.657 ± 1.339 (3) | 4.170 ± 1.308 (3) |
+| system cpu4-5 (s) | 20.837 ± 2.489 (3) | 22.673 ± 3.640 (3) |
+| system cpu6-7 (s) | 19.647 ± 1.387 (3) | 22.870 ± 3.355 (3) |
+| system cpu total (s) | 44.140 ± 3.472 (3) | 49.713 ± 8.172 (3) |
+| system cpu0 minus idle (s) | 1.650 ± 0.963 (3) | 2.070 ± 0.891 (3) |
+| system cpu1 minus idle (s) | 0.723 ± 0.347 (3) | 0.667 ± 0.265 (3) |
+| system cpu2 minus idle (s) | 0.067 ± 0.103 (3) | 0.267 ± 0.334 (3) |
+| system cpu3 minus idle (s) | 0.207 ± 0.031 (3) | 0.157 ± 0.085 (3) |
+| system cpu4 minus idle (s) | 10.767 ± 2.705 (3) | 11.303 ± 1.995 (3) |
+| system cpu5 minus idle (s) | 9.790 ± 0.539 (3) | 11.090 ± 1.657 (3) |
+| system cpu6 minus idle (s) | 9.353 ± 1.161 (3) | 11.007 ± 1.666 (3) |
+| system cpu7 minus idle (s) | 9.833 ± 1.073 (3) | 11.403 ± 1.690 (3) |
+| system cpu0-3 minus idle (s) | 2.647 ± 1.339 (3) | 3.160 ± 1.308 (3) |
+| system cpu4-5 minus idle (s) | 20.557 ± 2.489 (3) | 22.393 ± 3.640 (3) |
+| system cpu6-7 minus idle (s) | 19.187 ± 1.387 (3) | 22.410 ± 3.355 (3) |
+| system cpu total minus idle (s) | 42.390 ± 3.472 (3) | 47.963 ± 8.172 (3) |
+| p50 latency (ms) | 32.062 ± 3.367 (3) | 33.986 ± 1.376 (3) |
+| p99 latency (ms) | 45.141 ± 2.426 (3) | 49.553 ± 3.191 (3) |
+| p99 latency, bench_main's (ms) | 45.141 ± 2.426 (3) | 49.553 ± 3.191 (3) |
+| MPP hold p50 (ms) | 8.548 ± 1.494 (3) | 5.634 ± 0.058 (3) |
+| MPP hold p99 (ms) | 13.301 ± 1.466 (3) | 8.171 ± 0.611 (3) |
+| slot wait p99 (ms) | 0.001 ± 0.000 (3) | 0.001 ± 0.000 (3) |
+| inference rate, lowest channel (fps) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) |
+| inference rate, channel mean (fps) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) |
+| inference rate, highest channel (fps) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) |
+| drop rate | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) |
+| decoder drops | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) |
+| largest drift (s) | 0.000 ± 0.000 (3) | 0.022 ± 0.019 (3) |
+| largest RSS (kB) | 242774.667 ± 679.109 (3) | 246294.667 ± 56.616 (3) |
+| highest temperature (m°C) | 48691.667 ± 1066.366 (3) | 48692.000 ± 533.472 (3) |
+
+#### Flags
+
+No process CPU or p99 latency value has a coefficient of variation above 10%.
+
+#### Invalid x2
+
+None.
+
+#### Attempts that do not count
+
+Repeated invalid attempts, runs that a later session redid, and attempts cut short (§9.1, §9.3). Until a sweep is complete, the runs of its repetitions still in progress are listed here too.
+None.
+
+#### Warnings: samples at a trip point
+
+None.
 
 ### A55 cores only (`a55`): 8 channels, main condition, one repetition
 
-No session yet.
+Every point is complete.
+
+| Metric | B: mean ± sd (n) | C (A6 label): mean ± sd (n) |
+|---|---|---|
+| process CPU (s) | 150.640 ± – (1) | 51.700 ± – (1) |
+| process CPU, A76 (s) | 0.000 ± – (1) | 0.000 ± – (1) |
+| process CPU, A55 (s) | 0.000 ± – (1) | 0.000 ± – (1) |
+| process CPU, unattributed (s) | 150.640 ± – (1) | 51.700 ± – (1) |
+| system cpu0 (s) | 34.060 ± – (1) | 13.310 ± – (1) |
+| system cpu1 (s) | 33.360 ± – (1) | 7.940 ± – (1) |
+| system cpu2 (s) | 34.800 ± – (1) | 7.580 ± – (1) |
+| system cpu3 (s) | 42.920 ± – (1) | 9.930 ± – (1) |
+| system cpu4 (s) | 0.560 ± – (1) | 0.480 ± – (1) |
+| system cpu5 (s) | 0.310 ± – (1) | 0.200 ± – (1) |
+| system cpu6 (s) | 0.220 ± – (1) | 0.150 ± – (1) |
+| system cpu7 (s) | 0.060 ± – (1) | 0.070 ± – (1) |
+| system cpu0-3 (s) | 145.140 ± – (1) | 38.760 ± – (1) |
+| system cpu4-5 (s) | 0.870 ± – (1) | 0.680 ± – (1) |
+| system cpu6-7 (s) | 0.280 ± – (1) | 0.220 ± – (1) |
+| system cpu total (s) | 146.290 ± – (1) | 39.660 ± – (1) |
+| system cpu0 minus idle (s) | 33.730 ± – (1) | 12.980 ± – (1) |
+| system cpu1 minus idle (s) | 33.290 ± – (1) | 7.870 ± – (1) |
+| system cpu2 minus idle (s) | 34.780 ± – (1) | 7.560 ± – (1) |
+| system cpu3 minus idle (s) | 42.900 ± – (1) | 9.910 ± – (1) |
+| system cpu4 minus idle (s) | 0.520 ± – (1) | 0.440 ± – (1) |
+| system cpu5 minus idle (s) | 0.140 ± – (1) | 0.030 ± – (1) |
+| system cpu6 minus idle (s) | 0.210 ± – (1) | 0.140 ± – (1) |
+| system cpu7 minus idle (s) | 0.060 ± – (1) | 0.070 ± – (1) |
+| system cpu0-3 minus idle (s) | 144.700 ± – (1) | 38.320 ± – (1) |
+| system cpu4-5 minus idle (s) | 0.660 ± – (1) | 0.470 ± – (1) |
+| system cpu6-7 minus idle (s) | 0.270 ± – (1) | 0.210 ± – (1) |
+| system cpu total minus idle (s) | 145.630 ± – (1) | 39.000 ± – (1) |
+| p50 latency (ms) | 67.938 ± – (1) | 38.009 ± – (1) |
+| p99 latency (ms) | 98.149 ± – (1) | 54.359 ± – (1) |
+| p99 latency, bench_main's (ms) | 98.149 ± – (1) | 54.359 ± – (1) |
+| MPP hold p50 (ms) | 48.453 ± – (1) | 2.322 ± – (1) |
+| MPP hold p99 (ms) | 78.903 ± – (1) | 3.227 ± – (1) |
+| slot wait p99 (ms) | 0.001 ± – (1) | 0.001 ± – (1) |
+| inference rate, lowest channel (fps) | 5.000 ± – (1) | 5.000 ± – (1) |
+| inference rate, channel mean (fps) | 5.000 ± – (1) | 5.000 ± – (1) |
+| inference rate, highest channel (fps) | 5.000 ± – (1) | 5.000 ± – (1) |
+| drop rate | 0.000 ± – (1) | 0.000 ± – (1) |
+| decoder drops | 0.000 ± – (1) | 0.000 ± – (1) |
+| largest drift (s) | 0.000 ± – (1) | 0.000 ± – (1) |
+| largest RSS (kB) | 242860.000 ± – (1) | 236604.000 ± – (1) |
+| highest temperature (m°C) | 49000.000 ± – (1) | 47153.000 ± – (1) |
+
+Process CPU by the affinity of its threads, from threads.csv, mean over the valid runs. bench_main's A76 and A55 split keys on M1's affinities, cpu4-7 and cpu0, so here every thread is unattributed: B: cpu0-3 150.620 s, cpu4 0.030 s; C: cpu0-3 51.630 s, cpu4 0.040 s.
+
+#### Flags
+
+No process CPU or p99 latency value has a coefficient of variation above 10%.
+
+#### Invalid x2
+
+None.
+
+#### Attempts that do not count
+
+Repeated invalid attempts, runs that a later session redid, and attempts cut short (§9.1, §9.3). Until a sweep is complete, the runs of its repetitions still in progress are listed here too.
+None.
+
+#### Warnings: samples at a trip point
+
+None.
 
 ### B-direct (`bdirect_main`): 8 channels, main condition
 
-No session yet.
+Every point is complete.
+
+| Metric | B: mean ± sd (n) | C (A6 label): mean ± sd (n) | Bd: mean ± sd (n) |
+|---|---|---|---|
+| process CPU (s) | 44.037 ± 0.268 (3) | 19.487 ± 0.257 (3) | 42.787 ± 0.673 (3) |
+| process CPU, A76 (s) | 43.930 ± 0.246 (3) | 19.397 ± 0.266 (3) | 42.687 ± 0.725 (3) |
+| process CPU, A55 (s) | 0.097 ± 0.012 (3) | 0.103 ± 0.006 (3) | 0.103 ± 0.006 (3) |
+| process CPU, unattributed (s) | 0.010 ± 0.020 (3) | -0.013 ± 0.012 (3) | -0.003 ± 0.049 (3) |
+| system cpu0 (s) | 2.510 ± 0.740 (3) | 3.147 ± 1.194 (3) | 2.290 ± 0.471 (3) |
+| system cpu1 (s) | 1.090 ± 0.489 (3) | 1.363 ± 0.515 (3) | 0.800 ± 0.304 (3) |
+| system cpu2 (s) | 0.267 ± 0.058 (3) | 0.883 ± 0.434 (3) | 0.337 ± 0.186 (3) |
+| system cpu3 (s) | 0.297 ± 0.075 (3) | 0.547 ± 0.432 (3) | 0.293 ± 0.055 (3) |
+| system cpu4 (s) | 10.557 ± 2.337 (3) | 8.827 ± 5.585 (3) | 10.633 ± 1.050 (3) |
+| system cpu5 (s) | 10.967 ± 1.657 (3) | 9.873 ± 4.000 (3) | 10.687 ± 0.802 (3) |
+| system cpu6 (s) | 10.743 ± 1.709 (3) | 9.740 ± 4.958 (3) | 11.733 ± 1.081 (3) |
+| system cpu7 (s) | 10.903 ± 2.291 (3) | 9.127 ± 5.135 (3) | 11.410 ± 0.607 (3) |
+| system cpu0-3 (s) | 4.163 ± 1.138 (3) | 5.940 ± 1.768 (3) | 3.720 ± 0.157 (3) |
+| system cpu4-5 (s) | 21.523 ± 3.884 (3) | 18.700 ± 9.542 (3) | 21.320 ± 1.748 (3) |
+| system cpu6-7 (s) | 21.647 ± 3.999 (3) | 18.867 ± 10.085 (3) | 23.143 ± 1.570 (3) |
+| system cpu total (s) | 47.333 ± 8.985 (3) | 43.507 ± 20.620 (3) | 48.183 ± 3.420 (3) |
+| system cpu0 minus idle (s) | 1.920 ± 0.740 (3) | 2.557 ± 1.194 (3) | 1.700 ± 0.471 (3) |
+| system cpu1 minus idle (s) | 0.860 ± 0.489 (3) | 1.134 ± 0.515 (3) | 0.570 ± 0.304 (3) |
+| system cpu2 minus idle (s) | 0.217 ± 0.058 (3) | 0.833 ± 0.434 (3) | 0.287 ± 0.186 (3) |
+| system cpu3 minus idle (s) | 0.187 ± 0.075 (3) | 0.437 ± 0.432 (3) | 0.183 ± 0.055 (3) |
+| system cpu4 minus idle (s) | 10.477 ± 2.337 (3) | 8.747 ± 5.585 (3) | 10.553 ± 1.050 (3) |
+| system cpu5 minus idle (s) | 10.947 ± 1.657 (3) | 9.853 ± 4.000 (3) | 10.667 ± 0.802 (3) |
+| system cpu6 minus idle (s) | 10.593 ± 1.709 (3) | 9.590 ± 4.958 (3) | 11.583 ± 1.081 (3) |
+| system cpu7 minus idle (s) | 10.833 ± 2.291 (3) | 9.057 ± 5.135 (3) | 11.340 ± 0.607 (3) |
+| system cpu0-3 minus idle (s) | 3.184 ± 1.138 (3) | 4.961 ± 1.768 (3) | 2.741 ± 0.157 (3) |
+| system cpu4-5 minus idle (s) | 21.423 ± 3.884 (3) | 18.600 ± 9.542 (3) | 21.220 ± 1.748 (3) |
+| system cpu6-7 minus idle (s) | 21.427 ± 3.999 (3) | 18.647 ± 10.085 (3) | 22.924 ± 1.570 (3) |
+| system cpu total minus idle (s) | 46.034 ± 8.985 (3) | 42.208 ± 20.620 (3) | 46.884 ± 3.420 (3) |
+| p50 latency (ms) | 35.646 ± 1.403 (3) | 29.144 ± 0.542 (3) | 21.251 ± 0.363 (3) |
+| p99 latency (ms) | 48.061 ± 1.027 (3) | 41.030 ± 4.140 (3) | 29.026 ± 2.642 (3) |
+| p99 latency, bench_main's (ms) | 48.061 ± 1.027 (3) | 41.030 ± 4.140 (3) | 29.026 ± 2.641 (3) |
+| MPP hold p50 (ms) | 10.033 ± 0.764 (3) | 1.927 ± 0.410 (3) | 5.178 ± 0.031 (3) |
+| MPP hold p99 (ms) | 15.334 ± 0.929 (3) | 3.351 ± 0.065 (3) | 6.494 ± 0.969 (3) |
+| slot wait p99 (ms) | 0.001 ± 0.000 (3) | 0.001 ± 0.000 (3) | 0.001 ± 0.000 (3) |
+| inference rate, lowest channel (fps) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) |
+| inference rate, channel mean (fps) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) |
+| inference rate, highest channel (fps) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) | 5.000 ± 0.000 (3) |
+| drop rate | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) |
+| decoder drops | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) |
+| largest drift (s) | 0.011 ± 0.019 (3) | 0.011 ± 0.019 (3) | 0.000 ± 0.000 (3) |
+| largest RSS (kB) | 242337.333 ± 958.168 (3) | 237326.667 ± 178.632 (3) | 224596.000 ± 469.911 (3) |
+| highest temperature (m°C) | 49000.000 ± 0.000 (3) | 46845.333 ± 532.894 (3) | 48999.333 ± 1599.260 (3) |
+
+Process CPU against B, from the means: Bd saves 2.8%, C saves 55.7%; Bd's saving is 5% of C's.
+
+#### Flags
+
+- bdirect_main 8 ch C: p99 latency (ms) CV 10.1%
+
+#### Invalid x2
+
+None.
+
+#### Attempts that do not count
+
+Repeated invalid attempts, runs that a later session redid, and attempts cut short (§9.1, §9.3). Until a sweep is complete, the runs of its repetitions still in progress are listed here too.
+None.
+
+#### Warnings: samples at a trip point
+
+None.
 
 ### B-direct (`bdirect_aux`): 5 channels, auxiliary condition
 
-No session yet.
+Every point is complete.
+
+| Metric | B: mean ± sd (n) | C (A6 label): mean ± sd (n) | Bd: mean ± sd (n) |
+|---|---|---|---|
+| process CPU (s) | 130.953 ± 0.556 (3) | 37.447 ± 1.408 (3) | 129.853 ± 0.655 (3) |
+| process CPU, A76 (s) | 130.797 ± 0.526 (3) | 37.300 ± 1.430 (3) | 129.700 ± 0.640 (3) |
+| process CPU, A55 (s) | 0.127 ± 0.021 (3) | 0.143 ± 0.006 (3) | 0.123 ± 0.006 (3) |
+| process CPU, unattributed (s) | 0.030 ± 0.026 (3) | 0.003 ± 0.021 (3) | 0.030 ± 0.026 (3) |
+| system cpu0 (s) | 2.263 ± 1.155 (3) | 1.510 ± 0.345 (3) | 1.317 ± 0.235 (3) |
+| system cpu1 (s) | 1.903 ± 1.221 (3) | 1.327 ± 0.194 (3) | 1.283 ± 0.250 (3) |
+| system cpu2 (s) | 0.323 ± 0.101 (3) | 0.577 ± 0.240 (3) | 0.247 ± 0.194 (3) |
+| system cpu3 (s) | 0.273 ± 0.148 (3) | 0.357 ± 0.275 (3) | 0.460 ± 0.333 (3) |
+| system cpu4 (s) | 34.787 ± 2.189 (3) | 8.800 ± 3.371 (3) | 26.090 ± 3.647 (3) |
+| system cpu5 (s) | 34.450 ± 1.705 (3) | 8.617 ± 3.297 (3) | 28.357 ± 4.615 (3) |
+| system cpu6 (s) | 33.113 ± 2.148 (3) | 8.450 ± 2.979 (3) | 30.817 ± 3.432 (3) |
+| system cpu7 (s) | 33.780 ± 3.675 (3) | 8.510 ± 3.327 (3) | 32.430 ± 1.329 (3) |
+| system cpu0-3 (s) | 4.763 ± 2.321 (3) | 3.770 ± 0.537 (3) | 3.307 ± 0.851 (3) |
+| system cpu4-5 (s) | 69.237 ± 3.383 (3) | 17.417 ± 6.648 (3) | 54.447 ± 6.948 (3) |
+| system cpu6-7 (s) | 66.893 ± 5.802 (3) | 16.960 ± 6.234 (3) | 63.247 ± 3.931 (3) |
+| system cpu total (s) | 140.893 ± 10.714 (3) | 38.147 ± 12.949 (3) | 121.000 ± 3.735 (3) |
+| system cpu0 minus idle (s) | 1.633 ± 1.155 (3) | 0.880 ± 0.345 (3) | 0.687 ± 0.235 (3) |
+| system cpu1 minus idle (s) | 1.813 ± 1.221 (3) | 1.237 ± 0.194 (3) | 1.193 ± 0.250 (3) |
+| system cpu2 minus idle (s) | 0.313 ± 0.101 (3) | 0.567 ± 0.240 (3) | 0.237 ± 0.194 (3) |
+| system cpu3 minus idle (s) | 0.083 ± 0.148 (3) | 0.167 ± 0.275 (3) | 0.270 ± 0.333 (3) |
+| system cpu4 minus idle (s) | 34.767 ± 2.189 (3) | 8.780 ± 3.371 (3) | 26.070 ± 3.647 (3) |
+| system cpu5 minus idle (s) | 34.330 ± 1.705 (3) | 8.497 ± 3.297 (3) | 28.237 ± 4.615 (3) |
+| system cpu6 minus idle (s) | 33.103 ± 2.148 (3) | 8.440 ± 2.979 (3) | 30.807 ± 3.432 (3) |
+| system cpu7 minus idle (s) | 33.770 ± 3.675 (3) | 8.500 ± 3.327 (3) | 32.420 ± 1.329 (3) |
+| system cpu0-3 minus idle (s) | 3.843 ± 2.321 (3) | 2.850 ± 0.537 (3) | 2.387 ± 0.851 (3) |
+| system cpu4-5 minus idle (s) | 69.097 ± 3.383 (3) | 17.277 ± 6.648 (3) | 54.307 ± 6.948 (3) |
+| system cpu6-7 minus idle (s) | 66.873 ± 5.802 (3) | 16.940 ± 6.234 (3) | 63.227 ± 3.931 (3) |
+| system cpu total minus idle (s) | 139.813 ± 10.714 (3) | 37.067 ± 12.949 (3) | 119.920 ± 3.735 (3) |
+| p50 latency (ms) | 22.642 ± 2.413 (3) | 17.701 ± 0.176 (3) | 22.241 ± 1.152 (3) |
+| p99 latency (ms) | 30.467 ± 3.242 (3) | 22.782 ± 2.955 (3) | 32.744 ± 1.802 (3) |
+| p99 latency, bench_main's (ms) | 30.467 ± 3.242 (3) | 22.782 ± 2.955 (3) | 32.744 ± 1.802 (3) |
+| MPP hold p50 (ms) | 5.465 ± 0.577 (3) | 1.683 ± 0.023 (3) | 6.288 ± 1.273 (3) |
+| MPP hold p99 (ms) | 7.912 ± 2.830 (3) | 2.280 ± 0.968 (3) | 8.661 ± 3.297 (3) |
+| slot wait p99 (ms) | 0.001 ± 0.000 (3) | 0.001 ± 0.000 (3) | 0.001 ± 0.000 (3) |
+| inference rate, lowest channel (fps) | 30.000 ± 0.000 (3) | 30.000 ± 0.000 (3) | 29.997 ± 0.005 (3) |
+| inference rate, channel mean (fps) | 30.000 ± 0.000 (3) | 30.000 ± 0.000 (3) | 29.999 ± 0.001 (3) |
+| inference rate, highest channel (fps) | 30.000 ± 0.000 (3) | 30.000 ± 0.000 (3) | 30.000 ± 0.000 (3) |
+| drop rate | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) |
+| decoder drops | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) | 0.000 ± 0.000 (3) |
+| largest drift (s) | 0.000 ± 0.000 (3) | 0.011 ± 0.019 (3) | 0.000 ± 0.000 (3) |
+| largest RSS (kB) | 176062.667 ± 487.300 (3) | 173520.000 ± 145.986 (3) | 162636.000 ± 749.047 (3) |
+| highest temperature (m°C) | 60076.000 ± 0.000 (3) | 53922.667 ± 532.894 (3) | 60384.000 ± 533.472 (3) |
+
+Process CPU against B, from the means: Bd saves 0.8%, C saves 71.4%; Bd's saving is 1% of C's.
+
+#### Flags
+
+- bdirect_aux 5 ch B: p99 latency (ms) CV 10.6%
+- bdirect_aux 5 ch C: p99 latency (ms) CV 13.0%
+
+#### Invalid x2
+
+None.
+
+#### Attempts that do not count
+
+Repeated invalid attempts, runs that a later session redid, and attempts cut short (§9.1, §9.3). Until a sweep is complete, the runs of its repetitions still in progress are listed here too.
+None.
+
+#### Warnings: samples at a trip point
+
+None.
