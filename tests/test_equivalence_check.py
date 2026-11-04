@@ -230,15 +230,23 @@ class EndToEnd(Cases, unittest.TestCase):
             self.assertIn("model_sha256", out)
 
     def test_m1_1_is_reported_not_judged(self):
-        with tempfile.TemporaryDirectory() as t:
+        # C further from B than R: A5's criteria do not all hold, and the check still exits 0. The input has
+        # the registered frame count and band, so only its run kind keeps it from being the registered input.
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(eq, "REGISTERED_FRAMES", self.N), \
+                mock.patch.object(eq, "REGISTERED_BAND", tuple(self.BAND[2:])):
             d = Path(t)
             base = [[self.A] for _ in range(self.N)]
-            for k, v in (("B", 100), ("C", 101), ("R", 103)):
+            for k, v in (("B", 100), ("C", 103), ("R", 101)):
                 self.write(d, k, base, [v] * self.N, run_kind="m1.1")
             code, out, summary = self.run_check(d, self.N)
         self.assertEqual(code, 0, out)
-        self.assertIn("verdict (A5): PASS, not on the registered input; run kind m1.1, reported, not judged", out)
+        self.assertIn("(run kind m1.1, AMENDMENTS A11: not the registered input; reported, not judged)", out)
+        self.assertIn("A5's criteria, reported (run kind m1.1, AMENDMENTS A11: not in force):", out)
+        self.assertIn("A5's criteria: not all hold; run kind m1.1, reported, not judged (AMENDMENTS A11)", out)
+        self.assertNotIn("verdict", out)
         self.assertFalse(summary["registered_input"])
+        self.assertIsNone(summary["pass"])
+        self.assertFalse(summary["a5"]["tensor_mae"])
         self.assertEqual(summary["headers"]["C"]["run_kind"], "m1.1")
 
     def test_run_kinds_must_agree(self):
@@ -406,6 +414,15 @@ class Pooled(Cases, unittest.TestCase):
             code, out, _ = self.run_sets(d, "s1", "s2")
         self.assertEqual(code, 2, out)
         self.assertIn("header field code_commit differs between the sources", out)
+
+    def test_sources_must_share_run_kind(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            self.write_set(d / "s1", "v1.mp4")
+            self.write_set(d / "s2", "v2.mp4", run_kind="m1.1")
+            code, out, _ = self.run_sets(d, "s1", "s2")
+        self.assertEqual(code, 2, out)
+        self.assertIn("header field run_kind differs between the sources", out)
 
     def test_a_source_given_twice(self):
         with tempfile.TemporaryDirectory() as t:

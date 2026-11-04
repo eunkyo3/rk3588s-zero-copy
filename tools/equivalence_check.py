@@ -26,8 +26,9 @@ post-processing returned, over all frames and classes.
 The registered input is 1,000 frames and a 640x360 band (§11); other inputs are checked the same
 way, and the report says that they are not the registered input.
 
-Run kind m1.1, the 4K tensors of AMENDMENTS A11, is checked the same way. The report says that its
-numbers are reported and not judged, and that it is not the registered input.
+Run kind m1.1, the 4K tensors of AMENDMENTS A11, is checked the same way, but no criteria are in
+force: A5's criteria are reported and nothing is judged. It is not the registered input, the JSON's
+"pass" is null, and the exit code is 0 once the check has run.
 
 Pooled (the held-out check of AMENDMENTS A8): with --set DIR FRAMES once per source, two or more,
 DIR holding b.jsonl, c.jsonl and r.jsonl from one tools/equivalence_dump run, the frames of all
@@ -467,7 +468,8 @@ def run(args):
         f"  detection: all {ds['C']['pairs']} pairs within both thresholds ({ds['C']['both_ok']} are) "
         f"{verdict(ds['C']['both_ok'] == ds['C']['pairs'])}, frames agreeing {pct(ds['C']['frames_agreeing_share'])} "
         f">= 99% {verdict(ds['C']['frames_agreeing_share'] >= FRAMES_AGREE_MIN)}: {verdict(reg_det)}",
-        "criteria in force (AMENDMENTS A5), which set the exit code:",
+        "A5's criteria, reported (run kind m1.1, AMENDMENTS A11: not in force):" if m1_1
+        else "criteria in force (AMENDMENTS A5), which set the exit code:",
         f"  border 114 in every B and C tensor: {verdict(a5['border_114_b_and_c'])}",
         f"  tensor MAE, C {ts['C']['mae']:.4f} <= R {ts['R']['mae']:.4f}: {verdict(a5['tensor_mae'])}",
         f"  tensor min PSNR, C {ts['C']['min_psnr_db']:.2f} dB >= R {ts['R']['min_psnr_db']:.2f} dB: "
@@ -489,9 +491,13 @@ def run(args):
                        f"{pct(d['C']['frames_agreeing_share'])} / R {pct(d['R']['frames_agreeing_share'])}; (c) "
                        f"{e['total_dev']:+.2%}; border {'yes' if e['border'] else 'NO'}: "
                        f"{'PASS' if e['pass'] else 'FAIL'}")
-    out.append(f"verdict (A5): {'PASS' if passed else 'FAIL'}" + (f", pooled over {len(sets)} sources" if pooled else "")
-               + ("" if registered_input else ", not on the registered input")
-               + ("; run kind m1.1, reported, not judged (AMENDMENTS A11)" if m1_1 else ""))
+    if m1_1:
+        out.append(f"A5's criteria: {'all hold' if passed else 'not all hold'}; run kind m1.1, reported, "
+                   "not judged (AMENDMENTS A11)")
+    else:
+        out.append(f"verdict (A5): {'PASS' if passed else 'FAIL'}"
+                   + (f", pooled over {len(sets)} sources" if pooled else "")
+                   + ("" if registered_input else ", not on the registered input"))
     # The JSON first: if writing it fails, no report with a verdict is printed.
     if args.json:
         summary = {
@@ -499,7 +505,7 @@ def run(args):
             "headers": [h for h, _, _ in sets] if pooled else headers, "tensor": ts, "detection": ds,
             "boxes_total": totals,
             "boxes_per_class": {k: {labels[c]: v for c, v in sorted(cnt.items())} for k, cnt in per_class.items()},
-            "registered": {"tensor": reg_tensor, "detection": reg_det}, "a5": a5, "pass": passed,
+            "registered": {"tensor": reg_tensor, "detection": reg_det}, "a5": a5, "pass": None if m1_1 else passed,
         }
         if pooled:
             summary["sources"] = [{"source": source, "frames": frames, "tensor": e["tensor"],
@@ -507,7 +513,7 @@ def run(args):
                                    "pass": e["pass"]} for source, frames, e in per_source]
         Path(args.json).write_text(json.dumps(finite(summary), indent=1) + "\n", encoding="utf-8")
     print("\n".join(out))
-    return 0 if passed else 1
+    return 0 if passed or m1_1 else 1
 
 
 def main(argv=None):
