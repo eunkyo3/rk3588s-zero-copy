@@ -6,7 +6,7 @@ results/reference/<UTC>_reference). For every measurement point it takes the run
 repetition, the runs of the session that completed it (docs/notes/comparison.md); a run there is valid
 or invalid x2. Then, with the method of docs/notes/analysis.md, it reports:
   - the conditions every result is stated with (HYPOTHESES, A1, A5, A6, A8);
-  - completeness: every point of every sweep, and H3 (§9.3, §10);
+  - completeness: every point of M1's sweeps (main, aux, reference), and H3 (§9.3, §10);
   - the verdicts of H1, H2 and H3, spec-literal and practical (HYPOTHESES);
   - per point and metric, the mean and the sample standard deviation over the valid runs (§7.8); a
     coefficient of variation above 10% for a hypothesis metric is flagged (§9.3);
@@ -18,7 +18,7 @@ or invalid x2. Then, with the method of docs/notes/analysis.md, it reports:
     lists. It is not part of M1's completeness (--check).
 
 Usage, from the repository: python3 tools/m1_report.py [--check] [--out FILE]
-  --check   only the completeness check: exit 0 if every point of every sweep is complete and H3 is done
+  --check   only M1's completeness check: exit 0 if every point of M1's sweeps is complete and H3 is done
   --out     write the report there (Markdown) instead of printing it
 """
 import argparse
@@ -65,7 +65,10 @@ CONDITIONS = [
 ]
 M11_NOTE = ("Exploratory (A11): no hypothesis is tested, and nothing here is judged. Videos ①, ② and ④ at 3840×2160, "
             "16 Mbps (stream-server/assignment_4k.txt), main condition. Next to them are M1's main-condition values at "
-            "the same counts, from the main sweep. The flags and lists below are the 4K sessions' own.")
+            "the same counts, from the main sweep. Equivalence under A5 is not claimed at 4K. The flags and lists "
+            "below are the 4K sessions' own.")
+M1_SWEEPS = ("main", "aux", "reference")  # with H3, M1's completeness; "4k" is A11's
+assert set(ss.SWEEPS["4k"][0]) <= set(ss.SWEEPS["main"][0]), "A11: every 4K count is a main count"
 
 
 # ---------------------------------------------------------------- the sessions and their attempts
@@ -276,16 +279,17 @@ def collect_sweep(root, sweep):
     return out
 
 
-def collect(root):
+def collect(root, with_4k=True):
     """Everything the report needs, from the protocol sessions under root/results. The 4K design (A11)
-    is kept apart, in c["4k"]: it is not part of M1's completeness."""
+    is kept apart, in c["4k"], and only with with_4k: it is not part of M1's completeness."""
     c = {"data": {}, "missing": [], "invalid_x2": [], "others": [], "warnings": [], "h3_n": None, "h3_problem": None}
-    for sweep in ("main", "aux", "reference"):
+    for sweep in M1_SWEEPS:
         s = collect_sweep(root, sweep)
         c["data"][sweep] = s["data"]
         for k in ("missing", "invalid_x2", "others", "warnings"):
             c[k] += s[k]
-    c["4k"] = collect_sweep(root, "4k")
+    if with_4k:
+        c["4k"] = collect_sweep(root, "4k")
     sessions = sessions_of(root, "h3")
     records = ss.load_records(sessions, ss.H3_PHASES)
     rows = runs_rows(sessions)
@@ -384,10 +388,10 @@ def cell(sweep, ch, v, point, key, label, flags):
     return f"{fmt(mean)} ± {fmt(sd)} ({n})"
 
 
-def record_lists(flags, c, level):
+def record_lists(flags, c, level, no_flags="No hypothesis metric has a coefficient of variation above 10%."):
     """The flags, the invalid x2 records, the attempts that do not count and the warnings of c."""
     lines = [f"{level} Flags", ""]
-    lines += [f"- {f}" for f in flags] or ["No hypothesis metric has a coefficient of variation above 10%."]
+    lines += [f"- {f}" for f in flags] or [no_flags]
     lines += ["", f"{level} Invalid x2", ""]
     lines += [f"- {what}: " + "; ".join(f"{name}: {why or 'no reason recorded'}" for name, why in attempts)
               for what, attempts in c["invalid_x2"]] or ["None."]
@@ -417,7 +421,8 @@ def report_4k(c):
             cells = [cell("4k", ch, v, k4["data"][ch][v], key, label, flags) for v in ("B", "C")]
             cells += [cell("main", ch, v, main[ch][v], key, label, None) for v in ("B", "C")]
             lines.append(f"| {ch} | {label} | " + " | ".join(cells) + " |")
-    return lines + [""] + record_lists(flags, k4, "###")
+    return lines + [""] + record_lists(
+        flags, k4, "###", "No process CPU or p99 latency value has a coefficient of variation above 10%.")
 
 
 def main(argv):
@@ -426,7 +431,7 @@ def main(argv):
     ap.add_argument("--out")
     args = ap.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
-    c = collect(Path(__file__).resolve().parent.parent)
+    c = collect(Path(__file__).resolve().parent.parent, with_4k=not args.check)
     if args.check:
         print("\n".join(c["missing"]) if c["missing"] else "complete")
         return 1 if c["missing"] else 0
