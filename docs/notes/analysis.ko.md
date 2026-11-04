@@ -106,4 +106,5 @@
 |---|---|
 | `tools/m1_report.py` | 조건, 완료 여부, 판정, 표, 표시, 무효 ×2 기록, 세지 않는 시도, 경고를 Markdown으로, 이어서 4K 절(A11)과 A12의 설계. `--check`는 M1의 완료 여부, `--json`은 `summary.json`([테스트](../../tests/test_m1_report.py)) |
 | `tools/m1_plots.py` | 그림을 SVG로([테스트](../../tests/test_m1_plots.py)) |
-| `tools/m1_stages.py` | 판정에 쓰는 실행에서 지연이 어디서 생기는지, §7.3 타임라인의 단계별로. 탐색용이며 사전 등록하지 않았다([테스트](../../tests/test_m1_stages.py)) |
+| `tools/m1_stages.py` | 판정에 쓰는 실행에서 지연이 어디서 생기는지, §7.3 타임라인의 단계별로. M1의 스윕 다음에 M1.1의 스윕. 탐색용이며 사전 등록하지 않았다([테스트](../../tests/test_m1_stages.py)) |
+| `tools/m1_phases.py` | 실행마다 채널들의 프레임이 얼마나 몰려 도착하는지(위상의 흩어짐)를 그 지연과 나란히. 탐색용이며, 모든 실행이 끝난 뒤에 발견했다([M1.1 보고서](../report/M1.1.ko.md#도착-위상사후-발견), [테스트](../../tests/test_m1_phases.py)) |

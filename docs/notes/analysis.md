@@ -106,4 +106,5 @@ It also lists every invalid ×2 record by variant, with the reasons of both atte
 |---|---|
 | `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown, then the 4K section (A11) and A12's designs; `--check` for M1's completeness; `--json` for `summary.json` ([tests](../../tests/test_m1_report.py)) |
 | `tools/m1_plots.py` | the figures, as SVG ([tests](../../tests/test_m1_plots.py)) |
-| `tools/m1_stages.py` | where the latency goes, per stage of §7.3's timeline, from the runs that count; exploratory, not pre-registered ([tests](../../tests/test_m1_stages.py)) |
+| `tools/m1_stages.py` | where the latency goes, per stage of §7.3's timeline, from the runs that count, M1's sweeps then M1.1's; exploratory, not pre-registered ([tests](../../tests/test_m1_stages.py)) |
+| `tools/m1_phases.py` | per run, how close together the channels' frames arrive (the spread of their phases), next to its latency; exploratory, found after every run ([M1.1 report](../report/M1.1.md#arrival-phases-found-after-the-fact), [tests](../../tests/test_m1_phases.py)) |
