@@ -5,8 +5,9 @@
 // Each configuration gets its own context on NPU core 0, with its init flags, an input memory and
 // output memories (rknn_create_mem2, cacheable or not, or SRAM), all bound with rknn_set_io_mem as
 // M1 binds them. Inputs are two decoded frames of the video, letterboxed as A does.
-//   - Correctness: 20 runs alternating the two frames; after each, every output must equal
-//     rknn_outputs_get of a separate context on that frame (NpuContexts::reference_outputs).
+//   - Correctness: 40 runs alternating the two frames; after each, every output must equal
+//     rknn_outputs_get of a separate context on that frame (NpuContexts::reference_outputs). A run
+//     whose outputs equal the other frame's instead is counted as stale, and every mismatch is listed.
 //   - Cost: in each round, every configuration in turn runs the round's frame `runs` times. Process
 //     CPU time (every thread, the runtime's included) and wall time per run, then the thread CPU of
 //     yolov8_post on its outputs per call. Median and range over the rounds.
@@ -54,21 +55,28 @@ struct Config {
     uint32_t init_flags;
     uint64_t in_mem, out_mem;  // rknn_create_mem2 flags
     bool sync_out;             // rknn_mem_sync(FROM_DEVICE) on every output after the run, timed with it
+    bool barrier;              // dsb sy after the CPU writes the input, before rknn_run
 };
 
 constexpr uint64_t kCached = RKNN_FLAG_MEMORY_CACHEABLE, kUncached = RKNN_FLAG_MEMORY_NON_CACHEABLE;
 
+constexpr uint32_t kNoFlushIn = RKNN_FLAG_DISABLE_FLUSH_INPUT_MEM_CACHE;
+constexpr uint32_t kNoFlushOut = RKNN_FLAG_DISABLE_FLUSH_OUTPUT_MEM_CACHE;
+
 const Config kConfigs[] = {
-    {"m1_cached_input", 0, kCached, kCached, false},      // B's binding
-    {"m1_uncached_input", 0, kUncached, kCached, false},  // like C's uncached dma32 input
-    {"no_flush_input", RKNN_FLAG_DISABLE_FLUSH_INPUT_MEM_CACHE, kUncached, kCached, false},
-    {"no_flush_output", RKNN_FLAG_DISABLE_FLUSH_OUTPUT_MEM_CACHE, kUncached, kCached, false},
-    {"no_flush_output_sync", RKNN_FLAG_DISABLE_FLUSH_OUTPUT_MEM_CACHE, kUncached, kCached, true},
-    {"no_flush_both", RKNN_FLAG_DISABLE_FLUSH_INPUT_MEM_CACHE | RKNN_FLAG_DISABLE_FLUSH_OUTPUT_MEM_CACHE, kUncached,
-     kCached, false},
-    {"uncached_output", 0, kUncached, kUncached, false},
-    {"sram", RKNN_FLAG_ENABLE_SRAM, kUncached, kCached, false},
-    {"sram_output", RKNN_FLAG_ENABLE_SRAM, kUncached, RKNN_FLAG_MEMORY_TRY_ALLOC_SRAM, false},
+    {"m1_cached_input", 0, kCached, kCached, false, false},      // B's binding
+    {"m1_uncached_input", 0, kUncached, kCached, false, false},  // an uncached input, as C's dma32 slots
+    {"m1_uncached_input_dsb", 0, kUncached, kCached, false, true},
+    {"no_flush_input", kNoFlushIn, kUncached, kCached, false, false},
+    {"no_flush_output", kNoFlushOut, kUncached, kCached, false, false},
+    {"no_flush_output_sync", kNoFlushOut, kUncached, kCached, true, false},
+    {"no_flush_output_cached_input", kNoFlushOut, kCached, kCached, false, false},
+    {"no_flush_output_sync_cached_input", kNoFlushOut, kCached, kCached, true, false},
+    {"no_flush_both", kNoFlushIn | kNoFlushOut, kUncached, kCached, false, false},
+    {"uncached_output", 0, kUncached, kUncached, false, false},
+    {"sram", RKNN_FLAG_ENABLE_SRAM, kUncached, kCached, false, false},
+    {"sram_cached_input", RKNN_FLAG_ENABLE_SRAM, kCached, kCached, false, false},
+    {"sram_output", RKNN_FLAG_ENABLE_SRAM, kUncached, RKNN_FLAG_MEMORY_TRY_ALLOC_SRAM, false, false},
 };
 
 struct Probe {
@@ -77,7 +85,8 @@ struct Probe {
     rknn_tensor_mem* in = nullptr;
     std::vector<rknn_tensor_mem*> out;
     std::string error;
-    int runs_ok = 0, outputs_equal = 0, checked = 0;
+    int runs_ok = 0, outputs_equal = 0, stale = 0, checked = 0;
+    std::string mismatches;  // the correctness runs that did not match: index, "s" when stale
     std::vector<double> cpu, wall, post;
 };
 
@@ -122,6 +131,12 @@ bool open_probe(Probe& p, std::vector<char>& model, const NpuContexts& ref) {
         }
     }
     return true;
+}
+
+void write_input(Probe& p, const std::vector<uint8_t>& frame) {
+    std::memcpy(p.in->virt_addr, frame.data(), frame.size());
+    if (p.cfg->barrier)
+        asm volatile("dsb sy" ::: "memory");
 }
 
 bool run(Probe& p) {
@@ -214,14 +229,21 @@ int main(int argc, char** argv) {
     for (auto& p : probes) {
         if (!open_probe(p, model, ref))
             continue;
-        for (int i = 0; i < 20; i++) {
-            std::memcpy(p.in->virt_addr, frame[i % 2].data(), frame[i % 2].size());
+        for (int i = 0; i < 40; i++) {
+            write_input(p, frame[i % 2]);
             if (!run(p)) {
                 p.error = "rknn_run failed";
                 break;
             }
             p.checked++;
-            p.outputs_equal += outputs(p, ref) == expected[i % 2];
+            const auto got = outputs(p, ref);
+            if (got == expected[i % 2]) {
+                p.outputs_equal++;
+            } else {
+                const bool stale = got == expected[1 - i % 2];
+                p.stale += stale;
+                p.mismatches += (p.mismatches.empty() ? "" : " ") + std::to_string(i) + (stale ? "s" : "");
+            }
         }
     }
 
@@ -229,7 +251,7 @@ int main(int argc, char** argv) {
         for (auto& p : probes) {
             if (!p.error.empty())
                 continue;
-            std::memcpy(p.in->virt_addr, frame[r % 2].data(), frame[r % 2].size());
+            write_input(p, frame[r % 2]);
             const double c0 = clock_ms(CLOCK_PROCESS_CPUTIME_ID);
             const int64_t t0 = now_ns();
             for (int i = 0; i < runs; i++)
@@ -251,16 +273,17 @@ int main(int argc, char** argv) {
     CHECK(csv, "cannot write %s", path.c_str());
     for (const auto& [k, v] : header)
         std::fprintf(csv, "# %s: %s\n", k.c_str(), v.c_str());
-    std::fputs("config,init_flags,input_mem,output_mem,sync_output,error,checked,outputs_equal,runs_ok,"
-               "cpu_ms_median,cpu_ms_min,cpu_ms_max,wall_ms_median,wall_ms_min,wall_ms_max,"
+    std::fputs("config,init_flags,input_mem,output_mem,sync_output,barrier,error,checked,outputs_equal,stale,"
+               "mismatches,runs_ok,cpu_ms_median,cpu_ms_min,cpu_ms_max,wall_ms_median,wall_ms_min,wall_ms_max,"
                "post_cpu_ms_median,post_cpu_ms_min,post_cpu_ms_max\n",
                csv);
     for (const auto& p : probes) {
-        char line[512];
-        std::snprintf(line, sizeof line, "%s,0x%x,0x%llx,0x%llx,%d,%s,%d,%d,%d,%s,%s,%s\n", p.cfg->name,
+        char line[768];
+        std::snprintf(line, sizeof line, "%s,0x%x,0x%llx,0x%llx,%d,%d,%s,%d,%d,%d,%s,%d,%s,%s,%s\n", p.cfg->name,
                       p.cfg->init_flags, static_cast<unsigned long long>(p.cfg->in_mem),
-                      static_cast<unsigned long long>(p.cfg->out_mem), p.cfg->sync_out, p.error.c_str(), p.checked,
-                      p.outputs_equal, p.runs_ok, stats(p.cpu).c_str(), stats(p.wall).c_str(), stats(p.post).c_str());
+                      static_cast<unsigned long long>(p.cfg->out_mem), p.cfg->sync_out, p.cfg->barrier,
+                      p.error.c_str(), p.checked, p.outputs_equal, p.stale, p.mismatches.c_str(), p.runs_ok,
+                      stats(p.cpu).c_str(), stats(p.wall).c_str(), stats(p.post).c_str());
         std::fputs(line, csv);
         std::fputs(line, stdout);
     }
