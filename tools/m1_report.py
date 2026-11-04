@@ -176,15 +176,19 @@ def num(summary, key):
         return math.nan
 
 
+def window_frames(run_dir):
+    """The rows of a run's frames.csv whose t4 is in the window (§7.3)."""
+    header, rows = ss.read_csv(run_dir / "summary.csv")
+    warmup_ns = int(header["warmup_s"]) * 10**9
+    window_ns = int({r["key"]: r["value"] for r in rows}["window_s"]) * 10**9
+    return [f for f in ss.read_csv(run_dir / "frames.csv")[1] if warmup_ns <= int(f["t4_ns"]) < warmup_ns + window_ns]
+
+
 def run_metrics(run_dir, idle):
     """The metrics of one valid run. idle: the session's idle baseline (rows of idle_baseline.csv)."""
-    header, rows = ss.read_csv(run_dir / "summary.csv")
-    s = {r["key"]: r["value"] for r in rows}
+    s = {r["key"]: r["value"] for r in ss.read_csv(run_dir / "summary.csv")[1]}
     channels = ss.read_csv(run_dir / "channels.csv")[1]
-    frames = ss.read_csv(run_dir / "frames.csv")[1]
-    warmup_ns, window_ns = int(header["warmup_s"]) * 10**9, int(s["window_s"]) * 10**9
-    lat = [(int(f["t4_ns"]) - int(f["t0_ns"])) / 1e6 for f in frames
-           if warmup_ns <= int(f["t4_ns"]) < warmup_ns + window_ns]
+    lat = [(int(f["t4_ns"]) - int(f["t0_ns"])) / 1e6 for f in window_frames(run_dir)]
     m = {k: num(s, k) for k, _ in METRICS}
     m["latency_p99_ms"] = p99(lat)
     m["latency_p99_bench_ms"] = num(s, "latency_p99_ms")

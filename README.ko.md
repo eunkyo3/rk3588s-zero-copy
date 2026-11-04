@@ -6,6 +6,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 
 이 프로젝트가 공개하는 것:
 - 사전 등록한 가설마다 판정과 그 근거가 된 측정을 담은 리포트: [docs/report/M1.ko.md](docs/report/M1.ko.md)
+- 선택 설계에 대한 탐색용 리포트. 아무것도 판정하지 않는다: [docs/report/M1.1.ko.md](docs/report/M1.1.ko.md)
 - 다채널 검출 데모: [docs/notes/demo.ko.md](docs/notes/demo.ko.md)
 - 결과를 다시 만드는 스크립트
 
@@ -39,7 +40,8 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 
 ![CPU, 본편 조건](docs/report/figures/cpu_main.svg)
 
-- **4K, 탐색용(M1.1):** 2026-11-04에 1·2·4·8채널로 24회를 실행했고, 모두 유효했다. 이번에도 C의 프로세스 CPU가 59–60% 적었고, 모든 채널 수에서 p99가 낮았다. 4K에서는 A5의 동등성을 주장하지 않는다(B에 대한 텐서 MAE: C 4.52, R 1.88). 아무것도 판정하지 않는다. [보고서](docs/report/M1.ko.md#m1-이후-4k-입력m11-탐색용)를 보라.
+- **4K, 탐색용(M1.1):** 2026-11-04에 1·2·4·8채널로 24회를 실행했고, 모두 유효했다. 이번에도 C의 프로세스 CPU가 59–60% 적었고, 모든 채널 수에서 p99가 낮았다. 4K에서는 A5의 동등성을 주장하지 않는다(B에 대한 텐서 MAE: C 4.52, R 1.88). 아무것도 판정하지 않는다. [M1.1 보고서](docs/report/M1.1.ko.md#4k-입력a11)를 보라.
+- **§13의 설계, 탐색용(M1.1):** 2026-11-04에 26회를 실행했고 모두 유효했다. 설계마다 자기 B와 C를 다시 돌렸다. B의 마지막 복사만 없앤 B-direct는 8채널에서 B의 프로세스 CPU를 2.8% 줄였다. C는 55.7%다. 그러니 C의 절감은 대부분 C와 B-direct를 가르는 것, 주로 RGA3에서의 변환에 있다. 전처리 스레드 네 개는 B의 지연을 낮추지 않았고, A55 코어에서 두 변형 모두 8채널을 유지했다. 사후에 발견한 것: 채널들의 프레임이 얼마나 몰려 도착하는지는 프로토콜이 통제하지 않는데, 여러 채널의 측정점에서 지연이 이와 함께 움직였다. 아무것도 판정하지 않는다. [M1.1 보고서](docs/report/M1.1.ko.md)를 보라.
 - **데모:** 8채널에서 C가 검출한 결과를 오프라인으로 렌더했다([docs/notes/demo.ko.md](docs/notes/demo.ko.md)). 영상은 `v0.1-m1` Release에 첨부하며, 그 속 원본 영상은 Apache-2.0이 아니다([라이선스](#라이선스)).
 
 ![검출 데모의 한 프레임](docs/report/demo/demo_m1.jpg)
@@ -155,7 +157,7 @@ flowchart TB
 | M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
 
-**현재 상태:** M1을 [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1)으로 공개했다. 보고서 [docs/report/M1.ko.md](docs/report/M1.ko.md)와 데모 영상이 함께 있다. 비교 실행에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 작은 4K 탐색 설계([AMENDMENTS A11](prereg/AMENDMENTS.ko.md))는 그 뒤 2026-11-04에 돌았다. 그 정리는 PROTOCOL §13의 다른 선택 설계와 함께 M1.1(`v0.1.1`)에서 나온다.
+**현재 상태:** M1을 [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1)으로 공개했다. 보고서 [docs/report/M1.ko.md](docs/report/M1.ko.md)와 데모 영상이 함께 있다. 비교 실행에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 탐색 설계는 그 뒤 2026-11-04에 돌았다. [AMENDMENTS A11](prereg/AMENDMENTS.ko.md)의 4K 입력과, A12가 정한 대로 만들고 돌린 PROTOCOL §13의 선택 설계다. 그 보고서는 [docs/report/M1.1.ko.md](docs/report/M1.1.ko.md)이고, M1.1은 `v0.1.1`로 공개할 예정이다.
 
 ## 빌드와 실행
 
@@ -184,7 +186,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에, `tools/stream_session.py`가 RTSP 세션에 이를 적용한다([docs/notes/comparison.ko.md](docs/notes/comparison.ko.md)). 보고서의 파일은 [docs/report/M1.ko.md](docs/report/M1.ko.md#이-보고서-재현하기)의 명령으로 다시 만든다. 실행을 명령 하나로 재현하는 스크립트는 M3에서 나온다.
 
-테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_m1_stages.py`, `tests/test_demo_render.py`(동등성, 리포트, 단계, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
+테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_m1_stages.py`, `tests/test_m1_phases.py`, `tests/test_demo_render.py`(동등성, 리포트, 단계, 위상, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
 
 ## 저장소 구조
 
@@ -192,14 +194,14 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 |---|---|
 | `prereg/` | 가설, 프로토콜, 수정 기록. 영어판이 기준이고 `*.ko.md`는 번역이다. |
 | `src/core/` | 공통 파이프라인: 입력, 큐, 슬롯, NPU 컨텍스트, 후처리, 지표, 결과 기록 |
-| `src/preprocess/` | 변형별 부분: B(`cpu_copy`), C(`zero_copy_rga`), A(`cpu_sw`) |
+| `src/preprocess/` | 변형별 부분: B(`cpu_copy`), C(`zero_copy_rga`), A(`cpu_sw`), 그리고 M1.1의 B-direct(`cpu_direct`) |
 | `src/app/bench_main.cpp` | 벤치마크 실행 파일: 변형 하나를 채널 수 하나로 한 번 실행 |
 | `tools/` | 클럭 고정, 캘리브레이션, 동등성, 제로카피 근거 도구, 진단 도구, 사전 등록 순서 검사, 보드 준비, 모델 변환, 배포, 환경 기록 |
 | `stream-server/` | mediamtx 설정, 영상 준비, 주어진 채널 배정을 검사하는 송출 스크립트 |
 | `models/` | 모델 다운로드와 변환. 파일은 Release에 있다. |
 | `tests/` | 파이프라인 코어와 Python 도구의 테스트 |
 | `docs/notes/` | 마일스톤별 기록: 환경, 스파이크, 전처리, 코어, 동등성, 캘리브레이션, 비교, 분석 |
-| `docs/report/` | M1 보고서와 그 표, 요약 파일, 단계별 시간, 그림, 그리고 데모의 파일 |
+| `docs/report/` | M1과 M1.1 보고서와 그 표, 요약 파일, 단계별 시간, 도착 위상, 그림, 그리고 데모의 파일 |
 | `results/` | 모든 실행의 원자료. 큰 텐서 덤프는 Release에 둔다. 파일마다 헤더에 코드, 모델, 수정 기록 번호가 있다(PROTOCOL §1). |
 
 ## 라이선스
