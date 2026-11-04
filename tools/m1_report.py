@@ -349,7 +349,7 @@ def verdicts(c):
 
 def verdict_rows(c):
     v1, v2, v3 = verdicts(c)
-    flag =lambda v: " (flagged)" if v.get("flagged") else ""  # noqa: E731
+    flag = lambda v: " (flagged)" if v.get("flagged") else ""  # noqa: E731
     rows = [
         f"| H1, CPU at 8 channels | {v1['spec']}{flag(v1)} | {v1['practical']} | B {fmt(v1.get('B'))} s, "
         f"C {fmt(v1.get('C'))} s, saving {fmt(v1.get('saving', math.nan) * 100, 1)}%"

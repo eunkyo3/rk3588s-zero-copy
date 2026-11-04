@@ -4,6 +4,8 @@ second run writes the same bytes (M1-7: a clean clone gives the same files).
 
 Usage: python3 tests/test_m1_plots.py
 """
+import math
+import shutil
 import sys
 import tempfile
 import unittest
@@ -15,6 +17,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 import m1_plots as plots  # noqa: E402
 from test_m1_report import fake_run, idle_file, session  # noqa: E402
 
+H3_SMOKE = ROOT / "results" / "check" / "20261103T071611Z_h3_smoke"
 FIGURES = ["cpu_main.svg", "latency_main.svg", "decoder_main.svg", "cpu_aux.svg", "latency_aux.svg",
            "decoder_aux.svg", "h3.svg"]
 
@@ -55,6 +58,42 @@ class Figures(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             plots.write_figures(Path(t), Path(t) / "out")
             self.assertEqual(sorted(p.name for p in (Path(t) / "out").iterdir()), sorted(FIGURES))
+
+    def test_a_point_without_a_valid_run_breaks_the_line(self):
+        points = {1: {"B": {"valid": {1: {"x": 1.0}, 2: {"x": 3.0}}}}, 2: {"B": {"valid": {}}},
+                  4: {"B": {"valid": {1: {"x": 5.0}}}}}
+        s = plots.series(points, "B", "x")
+        self.assertEqual((s[0][:2], s[2]), ((1, 2.0), (4, 5.0, 0.0)))  # one run: no error bar
+        self.assertTrue(math.isnan(s[1][1]))
+        self.assertEqual(plots.series(points, "C", "x"), [])
+
+
+@unittest.skipUnless(H3_SMOKE.exists(), "needs the H3 smoke session in results/check")
+class H3Runs(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        shutil.copytree(H3_SMOKE, self.root / "results" / "comparison" / "20261103T071611Z_h3")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_the_runs_that_count(self):
+        runs, problem = plots.h3_runs(self.root, limit=2, start=1)  # the smoke session's settings
+        self.assertIsNone(problem)
+        for v in ("B", "C"):
+            self.assertEqual(sorted((ch, phase) for ch, phase, _ in runs[v]),
+                             [(1, "h3_search"), (2, "h3_confirm"), (2, "h3_confirm"), (2, "h3_confirm"),
+                              (2, "h3_search")])
+
+    def test_records_that_do_not_replay_and_a_session_without_idle_baseline(self):
+        runs, problem = plots.h3_runs(self.root)  # L = 32 and a start at 8: the smoke runs do not fit
+        self.assertIsNotNone(problem)
+        self.assertEqual(runs, {"B": [], "C": []})
+        (self.root / "results" / "comparison" / "20261104T000000Z_h3").mkdir()  # stopped before its baseline
+        self.assertEqual(plots.h3_runs(self.root, limit=2, start=1)[0]["B"][0][:2], (1, "h3_search"))
+        plots.h3_figure(self.root, self.root / "h3.svg")
+        self.assertIn(b"could not be replayed", (self.root / "h3.svg").read_bytes())
 
 
 if __name__ == "__main__":

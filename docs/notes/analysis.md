@@ -80,12 +80,14 @@ It also lists every invalid ×2 record by variant, with the reasons of both atte
   - CPU: process CPU (total, A76, A55) and system CPU minus idle (total, cpu0–3, cpu4–7);
   - latency: p50, p99 and drop rate;
   - decoder: MPP hold time (p50, p99) and slot wait (p99);
-  - H3: each run that counts, search and confirmation, one run per point.
+  - H3: each valid run that counts, search and confirmation, one run per point. Invalid ×2 runs are not drawn; the report lists them.
+- **In the sweeps' figures:**
+  - a point is the mean over its valid runs, with the sample standard deviation as an error bar, none for a point with one valid run;
+  - a point without a valid run breaks the line;
+  - A's runs are drawn with the main sweep.
 - **In every figure:**
-  - a point is the mean over its valid runs, with the sample standard deviation as an error bar;
-  - A's runs are drawn with the main sweep;
   - vertical rules mark the measured limits: the NPU's, `P_cap` / fps (A7: 38.8 channels at 5 fps, 6.5 at 30 fps), and the decoder's, `L` = 32, the search's cap (A9).
-- **Reproducible:** the SVG files carry no date or matplotlib version, so the same matplotlib writes the same bytes. Their colours, B blue, C orange and A green, pass the palette's colour-vision checks; each variant also has its own marker.
+- **Reproducible:** the SVG files carry no date or matplotlib version and have LF line ends, so the same matplotlib writes the same bytes on any system. Their colours, B blue, C orange and A green, pass the palette's colour-vision checks; each variant also has its own marker.
 
 ## Tools
 

@@ -5,17 +5,19 @@
   - latency_<sweep>.svg: p50 and p99 latency, drop rate;
   - decoder_<sweep>.svg: MPP hold time (p50, p99) and slot wait (p99);
   - h3.svg: the H3 runs that count (search and confirmation): the lowest channel's inference rate,
-    process CPU and p99 latency, one run per point.
-for the main and auxiliary sweeps; A's runs (the reference sweep) are drawn with the main sweep. Each
-point is the mean over its valid runs, with the sample standard deviation as an error bar. The
-vertical lines are the measured limits: the NPU's, P_cap / fps (A7), and the decoder's, L = 32, the
-search's cap (A9).
+    process CPU and p99 latency, one valid run per point; invalid x2 runs are not drawn.
+for the main and auxiliary sweeps; A's runs (the reference sweep) are drawn with the main sweep. In
+the sweeps' figures a point is the mean over its valid runs, with the sample standard deviation as an
+error bar (none for one valid run); a point without a valid run breaks the line. The vertical lines
+are the measured limits: the NPU's, P_cap / fps (A7), and the decoder's, L = 32, the search's cap (A9).
 
-The files carry no date or version, so a clean clone writes the same bytes with the same matplotlib.
+The files carry no date or version and have LF line ends, so a clean clone writes the same bytes with
+the same matplotlib.
 
 Usage, from the repository: python3 tools/m1_plots.py [--out DIR]   (default docs/report/figures)
 """
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -68,14 +70,14 @@ def value(metric, m):
 
 
 def series(points, variant, metric):
-    """[(channels, mean, sd)] of a sweep's points for one variant, over the points with a valid run."""
+    """[(channels, mean, sd)] of a sweep's points for one variant: nan where a point has no valid run,
+    so the line breaks there; sd 0 (no error bar) for a point with one valid run."""
     out = []
     for ch in sorted(points):
         runs = points[ch].get(variant, {"valid": {}})["valid"].values()
         n, mean, sd, _ = rep.stats([value(metric, m) for m in runs])
-        if n:
-            out.append((ch, mean, 0.0 if sd != sd else sd))
-    return out
+        out.append((ch, mean, 0.0 if math.isnan(sd) else sd))
+    return out if any(not math.isnan(y) for _, y, _ in out) else []
 
 
 def draw(ax, xs, ys, err, variant, connect=True):
@@ -101,11 +103,11 @@ def limits_note(fps, x_max):
     return "Vertical rules, measured limits: " + "; ".join(shown) + ". Error bars: sample sd."
 
 
-def x_axis(ax, sweep, counts):
+def x_axis(ax, sweep, counts, lowest=8):
     if sweep == "aux":  # room right of each rule for its tag
         ax.set_xlim(0.5, P_CAP / 30 + 1)
-    elif sweep == "h3":
-        ax.set_xlim(7, P_CAP / 5 + 4.5)
+    elif sweep == "h3":  # lowest: the lowest count the H3 search reached
+        ax.set_xlim(min(lowest, ss.H3_START) - 1, P_CAP / 5 + 4.5)
     else:
         ax.set_xscale("log", base=2)
         ax.set_xlim(0.8, P_CAP / 5 * 1.35)
@@ -128,7 +130,7 @@ def small_multiples(c, sweep, panels, ncols, title, path):
             if pts:
                 xs, ys, err = zip(*pts)
                 draw(ax, xs, ys, err, v)
-                low = min([low] + [y - e for y, e in zip(ys, err)])
+                low = min([low] + [y - e for y, e in zip(ys, err) if not math.isnan(y)])
         ax.set_title(label, loc="left")
         ax.set_ylim(bottom=low)
         x_axis(ax, sweep, sorted(points))
@@ -150,29 +152,35 @@ def finish(fig, ax, title, note, path):
                    bbox_to_anchor=(0.005, 1 - 0.38 / height), ncol=len(labels), fontsize=8.5, labelcolor=INK)
     fig.text(0.01, 0.06 / height, note, ha="left", va="bottom", fontsize=7.5, color=INK_2)
     fig.tight_layout(rect=(0, 0.3 / height, 1, 1 - 0.62 / height))
-    fig.savefig(path, metadata={"Date": None, "Creator": None})
+    with open(path, "w", encoding="utf-8", newline="\n") as f:  # the same bytes on every OS
+        fig.savefig(f, format="svg", metadata={"Date": None, "Creator": None})
     plt.close(fig)
 
 
-def h3_runs(root):
-    """{variant: [(channels, phase, metrics)]} of the H3 runs that count and are valid."""
+def h3_runs(root, limit=ss.LIMIT, start=ss.H3_START):
+    """({variant: [(channels, phase, metrics)]} of the H3 runs that count and are valid, or None if
+    the records could not be replayed): the runs counted up to the problem stay."""
     sessions = rep.sessions_of(root, "h3")
     records = ss.load_records(sessions, ss.H3_PHASES)
     by_name = {f"{r['session']}/{r['name']}": r for r in records}
     trials = ss.h3_trials(records)
-    ss.h3_replay(trials)  # marks the trials it counts
-    idle = {d.name: rep.read_idle(d) for d in sessions}
+    problem = None
+    try:
+        ss.h3_replay(trials, limit, start)  # marks the trials it counts
+    except ss.Stop as e:
+        problem = str(e)
+    idle = {d.name: rep.read_idle(d) for d in sessions if (d / "idle_baseline.csv").exists()}
     out = {"B": [], "C": []}
     for t in trials:
         last = by_name[t["names"][-1]]
         if t.get("counted") and last["valid"]:
             d = root / "results" / "comparison" / last["session"] / last["name"]
             out[t["variant"]].append((t["channels"], t["phase"], rep.run_metrics(d, idle[last["session"]])))
-    return out
+    return out, problem
 
 
 def h3_figure(root, path):
-    runs = h3_runs(root)
+    runs, problem = h3_runs(root)
     fig, axes = plt.subplots(1, len(H3_PANELS), figsize=(3.3 * len(H3_PANELS), 3.6), squeeze=False)
     counts = sorted({ch for rs in runs.values() for ch, _, _ in rs})
     for ax, (metric, label) in zip(axes.flat, H3_PANELS):
@@ -188,14 +196,19 @@ def h3_figure(root, path):
                            zorder=4, label=f"{LABELS[v]}, confirmation")
         if metric == "inference_fps_min":
             ax.axhline(ss.SUSTAIN_FPS, color=INK_2, linewidth=0.8, zorder=1)
-            ax.text(counts[0] if counts else 8, ss.SUSTAIN_FPS, f" sustained: ≥ {ss.SUSTAIN_FPS} fps", va="bottom",
-                    fontsize=7, color=INK_2)
-            ax.set_ylim(4.5, 5.2)
+            lowest_fps = min([m[metric] for rs in runs.values() for _, _, m in rs], default=5.0)
+            ax.text(min(counts, default=ss.H3_START), ss.SUSTAIN_FPS, f" sustained: ≥ {ss.SUSTAIN_FPS} fps",
+                    va="bottom", fontsize=7, color=INK_2)
+            ax.set_ylim(min(4.5, lowest_fps - 0.1), 5.2)
         else:
             ax.set_ylim(bottom=0)
         ax.set_title(label, loc="left")
-        x_axis(ax, "h3", [ch for ch in counts if ch % 4 == 0])
-    note = limits_note(ss.FPS["main"], axes.flat[0].get_xlim()[1]).replace(" Error bars: sample sd.", "")
+        x_axis(ax, "h3", [ch for ch in counts if ch % 4 == 0 or ch < ss.H3_START],
+               lowest=min(counts, default=ss.H3_START))
+    note = limits_note(ss.FPS["main"], axes.flat[0].get_xlim()[1]).replace(
+        "Error bars: sample sd.", "Invalid x2 runs are not drawn.")
+    if problem:
+        note += f" The H3 records could not be replayed past a point: {problem}"
     finish(fig, axes.flat[0], "H3: the runs that count, main condition, one run per point", note, path)
 
 
