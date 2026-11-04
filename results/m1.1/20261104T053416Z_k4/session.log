@@ -1,0 +1,18 @@
+2026-11-04T05:34:21Z starting the stream server
+2026-11-04T05:34:27Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261104T053423Z-114078, clock offset 0.3 ms
+2026-11-04T05:34:27Z idle for 600 s
+2026-11-04T05:44:27Z soc-thermal baseline 39445 m°C
+2026-11-04T05:44:27Z k4: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-04T05:44:28Z 01_k4_B_8ch_r1: B, 8 ch, main
+2026-11-04T05:46:50Z 01_k4_B_8ch_r1: valid
+2026-11-04T05:47:51Z 02_k4_Bk4_8ch_r1: Bk4, 8 ch, main
+2026-11-04T05:50:14Z 02_k4_Bk4_8ch_r1: valid
+2026-11-04T05:51:14Z 03_k4_Bk4_8ch_r2: Bk4, 8 ch, main
+2026-11-04T05:53:37Z 03_k4_Bk4_8ch_r2: valid
+2026-11-04T05:54:37Z 04_k4_B_8ch_r2: B, 8 ch, main
+2026-11-04T05:57:00Z 04_k4_B_8ch_r2: valid
+2026-11-04T05:58:00Z 05_k4_B_8ch_r3: B, 8 ch, main
+2026-11-04T06:00:22Z 05_k4_B_8ch_r3: valid
+2026-11-04T06:01:23Z 06_k4_Bk4_8ch_r3: Bk4, 8 ch, main
+2026-11-04T06:03:46Z 06_k4_Bk4_8ch_r3: valid
+2026-11-04T06:03:46Z stopping the stream server

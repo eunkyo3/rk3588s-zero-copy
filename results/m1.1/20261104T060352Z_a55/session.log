@@ -1,0 +1,10 @@
+2026-11-04T06:03:58Z starting the stream server
+2026-11-04T06:04:03Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261104T060359Z-116467, clock offset -1.1 ms
+2026-11-04T06:04:03Z idle for 600 s
+2026-11-04T06:14:03Z soc-thermal baseline 39784 m°C
+2026-11-04T06:14:03Z a55: 0 of 1 repetitions complete in earlier sessions, 0 to redo, 1 to run
+2026-11-04T06:14:04Z 01_a55_B_8ch_r1: B, 8 ch, main
+2026-11-04T06:16:27Z 01_a55_B_8ch_r1: valid
+2026-11-04T06:17:28Z 02_a55_C_8ch_r1: C, 8 ch, main
+2026-11-04T06:19:52Z 02_a55_C_8ch_r1: valid
+2026-11-04T06:19:52Z stopping the stream server

@@ -1,0 +1,24 @@
+2026-11-04T06:20:03Z starting the stream server
+2026-11-04T06:20:09Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261104T062005Z-117843, clock offset -0.6 ms
+2026-11-04T06:20:09Z idle for 600 s
+2026-11-04T06:30:09Z soc-thermal baseline 39784 m°C
+2026-11-04T06:30:09Z bdirect_main: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-04T06:30:10Z 01_bdirect_main_B_8ch_r1: B, 8 ch, main
+2026-11-04T06:32:33Z 01_bdirect_main_B_8ch_r1: valid
+2026-11-04T06:33:34Z 02_bdirect_main_C_8ch_r1: C, 8 ch, main
+2026-11-04T06:35:56Z 02_bdirect_main_C_8ch_r1: valid
+2026-11-04T06:36:57Z 03_bdirect_main_Bd_8ch_r1: Bd, 8 ch, main
+2026-11-04T06:39:20Z 03_bdirect_main_Bd_8ch_r1: valid
+2026-11-04T06:40:21Z 04_bdirect_main_C_8ch_r2: C, 8 ch, main
+2026-11-04T06:42:44Z 04_bdirect_main_C_8ch_r2: valid
+2026-11-04T06:43:45Z 05_bdirect_main_Bd_8ch_r2: Bd, 8 ch, main
+2026-11-04T06:46:08Z 05_bdirect_main_Bd_8ch_r2: valid
+2026-11-04T06:47:08Z 06_bdirect_main_B_8ch_r2: B, 8 ch, main
+2026-11-04T06:49:31Z 06_bdirect_main_B_8ch_r2: valid
+2026-11-04T06:50:31Z 07_bdirect_main_Bd_8ch_r3: Bd, 8 ch, main
+2026-11-04T06:52:54Z 07_bdirect_main_Bd_8ch_r3: valid
+2026-11-04T06:53:54Z 08_bdirect_main_B_8ch_r3: B, 8 ch, main
+2026-11-04T06:56:17Z 08_bdirect_main_B_8ch_r3: valid
+2026-11-04T06:57:18Z 09_bdirect_main_C_8ch_r3: C, 8 ch, main
+2026-11-04T06:59:41Z 09_bdirect_main_C_8ch_r3: valid
+2026-11-04T06:59:41Z stopping the stream server
