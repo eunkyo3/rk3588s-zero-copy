@@ -250,6 +250,14 @@ class Report(unittest.TestCase):
             idle_file(bd)
             for name, cpu in zip((r[0] for r in rows), (10.0, 4.0, 7.0)):
                 fake_run(bd / name, cpu, [10.0] * 100)
+            aux = session(root / "results" / "m1.1", "20261104T070000Z_bdirect_aux",
+                          [("01_bdirect_aux_B_5ch_r1", "B", 5, 1, 1, "1", ""),
+                           ("02_bdirect_aux_C_5ch_r1", "C", 5, 1, 1, "1", ""),
+                           ("03_bdirect_aux_Bd_5ch_r1", "Bd", 5, 1, 1, "0", "a"),
+                           ("03_bdirect_aux_Bd_5ch_r1_repeat", "Bd", 5, 1, 2, "0", "b")])
+            idle_file(aux)
+            fake_run(aux / "01_bdirect_aux_B_5ch_r1", 20.0, [10.0] * 100)
+            fake_run(aux / "02_bdirect_aux_C_5ch_r1", 6.0, [10.0] * 100)
             k4 = session(root / "results" / "m1.1", "20261104T050000Z_k4",
                          [("01_k4_B_8ch_r1", "B", 8, 1, 1, "1", ""), ("02_k4_Bk4_8ch_r1", "Bk4", 8, 1, 1, "0", "x"),
                           ("02_k4_Bk4_8ch_r1_repeat", "Bk4", 8, 1, 2, "0", "y")])
@@ -267,9 +275,18 @@ class Report(unittest.TestCase):
                           "20261104T050000Z_k4/02_k4_Bk4_8ch_r1_repeat: y", section)
             self.assertIn("### A55 cores only (`a55`): 8 channels, main condition, one repetition\n\nNo session yet.",
                           section)
+            self.assertIn("| Metric | B: mean ± sd (n) | Bk4: mean ± sd (n) |", section)
+            designs = {t: section[section.index(t):] for t in ("### B with K = 4", "### B-direct (`bdirect_main`)",
+                                                               "### B-direct (`bdirect_aux`)")}
+            k4_part = designs["### B with K = 4"][:designs["### B with K = 4"].index("### A55")]
+            self.assertIn("- k4 8 ch Bk4 r1:", k4_part)  # each design's lists are its own
+            self.assertNotIn("k4 8 ch Bk4", designs["### B-direct (`bdirect_main`)"])
+            self.assertIn("- bdirect_aux 5 ch Bd r1:", designs["### B-direct (`bdirect_aux`)"])
+            self.assertIn("Process CPU against B, from the means: not available.", designs["### B-direct (`bdirect_aux`)"])
             self.assertNotIn("bdirect_main 8 ch", text[:text.index("## M1.1: the designs of §13")])
             s = json.loads(json.dumps(rep.summary(c)))["m1.1_a12"]
             self.assertEqual(s["bdirect_main"]["process_cpu_saving"], {"bd": 0.3, "c": 0.6, "bd_share_of_c": 0.5})
+            self.assertIsNone(s["bdirect_aux"]["process_cpu_saving"])  # Bd has no valid run
             self.assertEqual(s["k4"]["points"]["8"]["Bk4"]["process_cpu_s"]["n"], 0)
             self.assertIn("a55 8 ch B r1", s["a55"]["missing"])
 

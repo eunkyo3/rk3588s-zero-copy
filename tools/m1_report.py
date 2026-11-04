@@ -452,11 +452,12 @@ def report_4k(c):
 
 def bdirect_share(arms):
     """B-direct (A12): from the mean process CPU of B, C and Bd, (Bd's saving, C's saving, Bd's saving as a
-    share of C's), savings against B; None where a mean is missing or B equals C."""
+    share of C's), savings against B; None where a mean is missing or B's is 0, and no share where B and C
+    are equal."""
     b, c, d = (stats([r["process_cpu_s"] for r in arms[v]["valid"].values()])[1] for v in ("B", "C", "Bd"))
-    if any(math.isnan(x) for x in (b, c, d)):
+    if any(math.isnan(x) for x in (b, c, d)) or b == 0:
         return None
-    return (b - d) / b, (b - c) / b, (b - d) / (b - c) if b != c else None
+    return (b - d) / b, (b - c) / b, (b - d) / (b - c) if abs(b - c) > FLOAT_TOLERANCE else None
 
 
 def report_a12(c):
@@ -525,12 +526,10 @@ def summary(c):
         out["m1.1_a12"] = {"exploratory": "A12", **{
             sweep: {"sessions": s["sessions"], "points": point_stats(s["data"]), **lists(s)}
             for sweep, s in c["a12"].items()}}
-        share = bdirect_share(c["a12"]["bdirect_main"]["data"][8]) if c["a12"]["bdirect_main"]["sessions"] else None
-        out["m1.1_a12"]["bdirect_main"]["process_cpu_saving"] = (
-            None if share is None else dict(zip(("bd", "c", "bd_share_of_c"), share)))
-        share = bdirect_share(c["a12"]["bdirect_aux"]["data"][5]) if c["a12"]["bdirect_aux"]["sessions"] else None
-        out["m1.1_a12"]["bdirect_aux"]["process_cpu_saving"] = (
-            None if share is None else dict(zip(("bd", "c", "bd_share_of_c"), share)))
+        for sweep in ("bdirect_main", "bdirect_aux"):
+            share = bdirect_share(c["a12"][sweep]["data"][ss.SWEEPS[sweep][0][0]])
+            out["m1.1_a12"][sweep]["process_cpu_saving"] = (
+                None if share is None else dict(zip(("bd", "c", "bd_share_of_c"), share)))
     return rounded(out)
 
 
