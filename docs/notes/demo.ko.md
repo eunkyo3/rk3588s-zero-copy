@@ -29,6 +29,7 @@
 | `docs/report/demo/` | 검출 결과와 로그, 정지 화면(`demo_m1.jpg`), 영상의 SHA-256 |
 
 - 영상은 저장소에 넣기에 크고 저장소가 `*.mp4`를 무시하므로, `v0.1-m1` Release에 첨부한다.
+- **2026-11-04의 실행:** M1.1 실행을 마친 뒤 03:43–03:45 UTC에 커밋 1eebc77로 보드에서 `tools/demo.sh`를 돌렸다. 영상은 30 MB이고, 그 SHA-256은 `docs/report/demo/demo_m1.mp4.sha256`에 있다.
 - **테스트:** `tests/test_demo_render.py`가 채널 배정, 검출 파일, 박스 좌표 변환을 다룬다.
 
 ## 영상과 라이선스
