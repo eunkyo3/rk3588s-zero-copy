@@ -234,7 +234,44 @@ class Report(unittest.TestCase):
             self.assertFalse(s["complete"])
             self.assertEqual(s["m1.1_4k"]["sessions"], 0)
             self.assertIn("## M1.1: 4K input (exploratory, A11)", text)
-            self.assertTrue(text.endswith("No 4K session yet.\n"))
+            self.assertIn("No 4K session yet.\n\n## M1.1: the designs of §13 (exploratory, A12)", text)
+            self.assertEqual(text.count("No session yet."), 4)
+            self.assertEqual({k: v["sessions"] for k, v in s["m1.1_a12"].items() if k != "exploratory"},
+                             {"k4": 0, "a55": 0, "bdirect_main": 0, "bdirect_aux": 0})
+            self.assertIsNone(s["m1.1_a12"]["bdirect_main"]["process_cpu_saving"])
+
+    def test_the_a12_section(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            rows = [("01_bdirect_main_B_8ch_r1", "B", 8, 1, 1, "1", ""),
+                    ("02_bdirect_main_C_8ch_r1", "C", 8, 1, 1, "1", ""),
+                    ("03_bdirect_main_Bd_8ch_r1", "Bd", 8, 1, 1, "1", "")]
+            bd = session(root / "results" / "m1.1", "20261104T060000Z_bdirect_main", rows)
+            idle_file(bd)
+            for name, cpu in zip((r[0] for r in rows), (10.0, 4.0, 7.0)):
+                fake_run(bd / name, cpu, [10.0] * 100)
+            k4 = session(root / "results" / "m1.1", "20261104T050000Z_k4",
+                         [("01_k4_B_8ch_r1", "B", 8, 1, 1, "1", ""), ("02_k4_Bk4_8ch_r1", "Bk4", 8, 1, 1, "0", "x"),
+                          ("02_k4_Bk4_8ch_r1_repeat", "Bk4", 8, 1, 2, "0", "y")])
+            idle_file(k4)
+            fake_run(k4 / "01_k4_B_8ch_r1", 9.0, [10.0] * 100)
+            c = rep.collect(root)
+            self.assertFalse(any(m.startswith(("k4", "bdirect")) for m in c["missing"]))  # not M1's completeness
+            text = rep.report(c)
+            section = text[text.index("## M1.1: the designs of §13"):]
+            self.assertIn("| process CPU (s) | 10.000 ± – (1) | 4.000 ± – (1) | 7.000 ± – (1) |", section)
+            self.assertIn("| B: mean ± sd (n) | C (A6 label): mean ± sd (n) | Bd: mean ± sd (n) |", section)
+            self.assertIn("Bd saves 30.0%, C saves 60.0%; Bd's saving is 50% of C's.", section)
+            self.assertIn("Not complete: bdirect_main 8 ch B r2", section)
+            self.assertIn("- k4 8 ch Bk4 r1: 20261104T050000Z_k4/02_k4_Bk4_8ch_r1: x; "
+                          "20261104T050000Z_k4/02_k4_Bk4_8ch_r1_repeat: y", section)
+            self.assertIn("### A55 cores only (`a55`): 8 channels, main condition, one repetition\n\nNo session yet.",
+                          section)
+            self.assertNotIn("bdirect_main 8 ch", text[:text.index("## M1.1: the designs of §13")])
+            s = json.loads(json.dumps(rep.summary(c)))["m1.1_a12"]
+            self.assertEqual(s["bdirect_main"]["process_cpu_saving"], {"bd": 0.3, "c": 0.6, "bd_share_of_c": 0.5})
+            self.assertEqual(s["k4"]["points"]["8"]["Bk4"]["process_cpu_s"]["n"], 0)
+            self.assertIn("a55 8 ch B r1", s["a55"]["missing"])
 
     def test_the_4k_section(self):
         with tempfile.TemporaryDirectory() as t:
@@ -279,7 +316,7 @@ class Report(unittest.TestCase):
                                                                             ("02_4k_C_1ch_r1", "C", 1, 1, 1, "1", "")])
             fake_run(k4 / "01_4k_B_1ch_r1", 9.0, [10.0] * 100)  # no idle baseline: the 4K part cannot be read
             fake_run(k4 / "02_4k_C_1ch_r1", 2.0, [10.0] * 100)
-            c = rep.collect(root, with_4k=False)
+            c = rep.collect(root, with_m1_1=False)
             self.assertNotIn("4k", c)
             self.assertEqual(len(c["missing"]), 42 + 30 + 6 + 1)
             with self.assertRaises(KeyError):

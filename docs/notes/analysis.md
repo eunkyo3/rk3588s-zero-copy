@@ -72,9 +72,19 @@ It also lists every invalid ×2 record by variant, with the reasons of both atte
 - **Its own lists:** the 4K flags, invalid ×2 records, attempts that do not count and warnings are listed in the 4K section only.
 - **Not M1's completeness:** `--check` does not read the 4K runs. The 4K section says whether its own points are complete.
 
+## The designs of §13 (A12)
+
+- **When:** this section and the report's A12 part were added on 2026-11-04, while A12's first session (`k4`) ran. No metric of any A12 run had been looked at.
+- **Where:** after the 4K section, apart from M1 and labelled exploratory. Nothing is judged (A12).
+- **Same method as M1:** the runs that count, the metrics of one run, the mean and sample standard deviation, and the 10% flag. The sessions are `results/m1.1/<UTC>_k4`, `_a55`, `_bdirect_main` and `_bdirect_aux`; a55 has one repetition.
+- **Each design with its own controls:** one table per design, its arms side by side (`k4`: B, Bk4; `a55`: B, C on cpu0–3; `bdirect_*`: B, C, Bd). No value is set against M1's, because the binary differs (A12).
+- **B-direct's saving:** from the mean process CPU of each arm, Bd's saving against B, (B − Bd) / B, next to C's, (B − C) / B, and Bd's as a share of C's, (B − Bd) / (B − C). From the means only, with no interval.
+- **Its own lists:** each design's flags, invalid ×2 records, attempts that do not count and warnings are listed under that design.
+- **Not M1's completeness:** `--check` does not read these runs. Each design says whether its own points are complete.
+
 ## Summary file and figures (M1-7)
 
-- **`summary.json`:** `tools/m1_report.py --json FILE` writes the report's numbers: completeness, the verdicts, and per point and metric the n, mean, sample standard deviation and coefficient of variation. It also lists the invalid ×2 records, the attempts that do not count and the warnings, and has the 4K design apart (`m1.1_4k`).
+- **`summary.json`:** `tools/m1_report.py --json FILE` writes the report's numbers: completeness, the verdicts, and per point and metric the n, mean, sample standard deviation and coefficient of variation. It also lists the invalid ×2 records, the attempts that do not count and the warnings, and has the 4K design apart (`m1.1_4k`), and A12's designs too (`m1.1_a12`, with B-direct's savings).
   - Floats are rounded to 3 decimals; nan is `null`. A clean clone must write the same file (M1-7).
 - **Figures:** `tools/m1_plots.py` draws SVG files from the same points, for the main and auxiliary sweeps:
   - CPU: process CPU (total, A76, A55) and system CPU minus idle (total, cpu0–3, cpu4–7);
@@ -93,6 +103,6 @@ It also lists every invalid ×2 record by variant, with the reasons of both atte
 
 | Tool | Does |
 |---|---|
-| `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown, then the 4K section (A11); `--check` for M1's completeness; `--json` for `summary.json` ([tests](../../tests/test_m1_report.py)) |
+| `tools/m1_report.py` | conditions, completeness, verdicts, tables, flags, invalid ×2 records, attempts that do not count and warnings, as Markdown, then the 4K section (A11) and A12's designs; `--check` for M1's completeness; `--json` for `summary.json` ([tests](../../tests/test_m1_report.py)) |
 | `tools/m1_plots.py` | the figures, as SVG ([tests](../../tests/test_m1_plots.py)) |
 | `tools/m1_stages.py` | where the latency goes, per stage of §7.3's timeline, from the runs that count; exploratory, not pre-registered ([tests](../../tests/test_m1_stages.py)) |

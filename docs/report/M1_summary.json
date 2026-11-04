@@ -8727,5 +8727,2624 @@
   "invalid_x2": [],
   "others": [],
   "warnings": []
+ },
+ "m1.1_a12": {
+  "exploratory": "A12",
+  "k4": {
+   "sessions": 0,
+   "points": {
+    "8": {
+     "B": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     },
+     "Bk4": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     }
+    }
+   },
+   "missing": [
+    "k4 8 ch B r1",
+    "k4 8 ch B r2",
+    "k4 8 ch B r3",
+    "k4 8 ch Bk4 r1",
+    "k4 8 ch Bk4 r2",
+    "k4 8 ch Bk4 r3"
+   ],
+   "invalid_x2": [],
+   "others": [],
+   "warnings": []
+  },
+  "a55": {
+   "sessions": 0,
+   "points": {
+    "8": {
+     "B": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     },
+     "C": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     }
+    }
+   },
+   "missing": [
+    "a55 8 ch B r1",
+    "a55 8 ch C r1"
+   ],
+   "invalid_x2": [],
+   "others": [],
+   "warnings": []
+  },
+  "bdirect_main": {
+   "sessions": 0,
+   "points": {
+    "8": {
+     "B": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     },
+     "C": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     },
+     "Bd": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     }
+    }
+   },
+   "missing": [
+    "bdirect_main 8 ch B r1",
+    "bdirect_main 8 ch B r2",
+    "bdirect_main 8 ch B r3",
+    "bdirect_main 8 ch C r1",
+    "bdirect_main 8 ch C r2",
+    "bdirect_main 8 ch C r3",
+    "bdirect_main 8 ch Bd r1",
+    "bdirect_main 8 ch Bd r2",
+    "bdirect_main 8 ch Bd r3"
+   ],
+   "invalid_x2": [],
+   "others": [],
+   "warnings": [],
+   "process_cpu_saving": null
+  },
+  "bdirect_aux": {
+   "sessions": 0,
+   "points": {
+    "5": {
+     "B": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     },
+     "C": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     },
+     "Bd": {
+      "process_cpu_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a76_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_a55_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "process_cpu_unattributed_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu1_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu2_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu0-3_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu4-5_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu6-7_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "system_cpu_total_minus_idle_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "latency_p99_bench_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p50_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "mpp_hold_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "slot_wait_p99_ms": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_min": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_mean": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "inference_fps_max": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drop_rate": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "decoder_drops": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "drift_max_s": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "rss_window_max_kb": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      },
+      "temp_max_mc": {
+       "n": 0,
+       "mean": null,
+       "sd": null,
+       "cv": null
+      }
+     }
+    }
+   },
+   "missing": [
+    "bdirect_aux 5 ch B r1",
+    "bdirect_aux 5 ch B r2",
+    "bdirect_aux 5 ch B r3",
+    "bdirect_aux 5 ch C r1",
+    "bdirect_aux 5 ch C r2",
+    "bdirect_aux 5 ch C r3",
+    "bdirect_aux 5 ch Bd r1",
+    "bdirect_aux 5 ch Bd r2",
+    "bdirect_aux 5 ch Bd r3"
+   ],
+   "invalid_x2": [],
+   "others": [],
+   "warnings": [],
+   "process_cpu_saving": null
+  }
  }
 }
