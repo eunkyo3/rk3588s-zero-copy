@@ -272,7 +272,7 @@ def collect_sweep(root, sweep):
     for ch in counts:
         for v in variants:
             point = out["data"].setdefault(ch, {}).setdefault(v, {"valid": {}})
-            for rep in range(1, ss.REPETITIONS + 1):
+            for rep in range(1, ss.SWEEP_REPETITIONS.get(sweep, ss.REPETITIONS) + 1):
                 run = runs.get((ch, rep, v))
                 if run is None:
                     out["missing"].append(f"{sweep} {ch} ch {v} r{rep}")

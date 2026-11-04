@@ -87,6 +87,8 @@ target_compile_definitions(demo_detect PRIVATE CODE_COMMIT="${CODE_COMMIT}")
 
 add_executable(bdirect_check tools/bdirect_check.cpp)
 target_link_libraries(bdirect_check PRIVATE core)
+target_compile_definitions(bdirect_check PRIVATE
+    CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
 
 add_executable(test_core tests/test_core.cpp)
 target_link_libraries(test_core PRIVATE core)

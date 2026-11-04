@@ -436,7 +436,7 @@ class Sweeps(unittest.TestCase):
 
     def test_the_m1_1_designs(self):
         # AMENDMENTS A12: after the 4K sweep, run kind m1.1, each design with its controls
-        self.assertEqual(ss.ORDER[ss.ORDER.index("4k") + 1:], ("bdirect_main", "bdirect_aux", "k4", "a55"))
+        self.assertEqual(ss.ORDER[ss.ORDER.index("4k") + 1:], ("k4", "a55", "bdirect_main", "bdirect_aux"))
         self.assertEqual({ss.session_kind(n) for n in ss.ORDER[ss.ORDER.index("4k"):]}, {"m1.1"})
         self.assertEqual(ss.sweep_plan("bdirect_main"), [(8, 1, ("B", "C", "Bd")), (8, 2, ("C", "Bd", "B")),
                                                          (8, 3, ("Bd", "B", "C"))])
@@ -451,6 +451,24 @@ class Sweeps(unittest.TestCase):
         self.assertEqual(ss.bench_args("C", "a55"), ["--variant", "C", "--cores", "a55"])
         self.assertTrue(all(ss.unsaturated(ss.SWEEPS[n][0][0], ss.SWEEPS[n][1], ss.LIMIT)
                             for n in ("bdirect_main", "bdirect_aux", "k4", "a55")))  # rule 3 applies to every run
+
+    def test_b_direct_needs_its_check(self):
+        here = os.getcwd()
+        with tempfile.TemporaryDirectory() as d:
+            os.chdir(d)
+            try:
+                self.assertFalse(ss.bdirect_check_done())
+                run = Path("results/check/20261104T060000Z_bdirect_check")
+                run.mkdir(parents=True)
+                for amendment, passed, done in (("A12", "0", False), ("A11", "1", False), ("A12", "1", True),
+                                                ("A13", "1", True)):
+                    (run / "check.csv").write_text(f"# run_kind: check\n# amendment: {amendment}\nkey,value\n"
+                                                   f"passed,{passed}\n", encoding="utf-8")
+                    self.assertEqual(ss.bdirect_check_done(), done, amendment + passed)
+                run.rename(run.with_name("20261104T060000Z_bdirect_check_smoke"))
+                self.assertFalse(ss.bdirect_check_done())
+            finally:
+                os.chdir(here)
 
     def test_the_4k_loop_check_must_have_protocol_settings(self):
         here = os.getcwd()

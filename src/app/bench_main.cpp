@@ -17,6 +17,7 @@
 // Run as root: the NPU load is read from debugfs (PROTOCOL §7.7).
 #include <filesystem>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -53,35 +54,35 @@ void usage() {
 }  // namespace
 
 int main(int argc, char** argv) {
-    // --cores is read first: the pinning comes before any library starts a thread.
-    bool a55 = false;
-    for (int i = 1; i + 1 < argc; i++)
-        if (std::string(argv[i]) == "--cores")
-            a55 = std::string(argv[i + 1]) == "a55";
-    // Before any library starts a thread, so MPP, librknnrt and ffmpeg threads inherit it (PROTOCOL §8).
-    pin_current_thread(a55 ? std::vector<int>{0, 1, 2, 3} : std::vector<int>{4, 5, 6, 7});
-
     std::map<std::string, std::string> a = {
         {"condition", "main"}, {"warmup", "20"}, {"duration", "120"}, {"model", "models/yolov8n_i8.rknn"},
         {"run-kind", "check"}, {"repetition", "1"}, {"freeze-commit", "none"}, {"prep-threads", "2"},
         {"cores", "a76"}};
+    const std::set<std::string> known = {"variant", "channels", "source", "out"};
     std::string args_json = "[";
     for (int i = 1; i < argc; i++) {
         args_json += (i > 1 ? ", " : "") + json_string(argv[i]);
         std::string k = argv[i];
         if (k.rfind("--", 0) != 0 || i + 1 >= argc)
             usage();
-        a[k.substr(2)] = argv[++i];
+        k = k.substr(2);
+        CHECK(a.count(k) || known.count(k), "unknown option --%s", k.c_str());
+        a[k] = argv[++i];
         args_json += ", " + json_string(argv[i]);
     }
     args_json += "]";
     for (const char* k : {"variant", "channels", "source"})
         if (!a.count(k))
             usage();
+    CHECK(a["cores"] == "a76" || a["cores"] == "a55", "cores must be a76 or a55");
+    const bool a55 = a["cores"] == "a55";
+    // Parsing starts no thread. The pinning comes before any library starts one, so MPP, librknnrt and
+    // ffmpeg threads inherit it (PROTOCOL §8).
+    pin_current_thread(a55 ? std::vector<int>{0, 1, 2, 3} : std::vector<int>{4, 5, 6, 7});
+
     const std::string variant = a["variant"];
     CHECK(variant == "none" || variant == "A" || variant == "B" || variant == "C" || variant == "Bd",
           "unknown variant %s", variant.c_str());
-    CHECK(a["cores"] == "a76" || a["cores"] == "a55", "cores must be a76 or a55");
     cv::setNumThreads(1);  // PROTOCOL §8
     CHECK(a["condition"] == "main" || a["condition"] == "aux", "condition must be main or aux");
     const std::string kind = a["run-kind"];  // PROTOCOL §1: check_prereg_order relies on these

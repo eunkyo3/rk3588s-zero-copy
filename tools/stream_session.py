@@ -18,11 +18,12 @@ Subcommands:
   sweep 4k     the exploratory 4K design of AMENDMENTS A11 (M1.1): B and C at 1, 2, 4 and 8 channels of
                the 4K set, run kind m1.1, after every sweep of §12 and after the 4K loop check
                (loop-check --set 4k). The session checks the 4K videos' SHA-256 against A11.
-  sweep bdirect_main, bdirect_aux, k4, a55
+  sweep k4, a55, bdirect_main, bdirect_aux
                the optional M1.1 designs of §13 with AMENDMENTS A12, run kind m1.1, after the 4K sweep,
-               each with its controls rerun in the same session: B-direct (Bd) against B and C at 8
-               channels main and at 5 channels aux; B with K = 4 (Bk4) against B at 8 channels; B and C
-               on the A55 cores at 8 channels, one repetition. With three arms the order rotates.
+               each with its controls rerun in the same session: B with K = 4 (Bk4) against B at 8
+               channels; B and C on the A55 cores at 8 channels, one repetition; B-direct (Bd) against B
+               and C at 8 channels main and at 5 channels aux, once tools/bdirect_check has passed.
+               With three arms the order rotates.
   h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
@@ -145,10 +146,10 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     "reference": ((1, 2), "main", ("A",), "reference"),
     "4k": ((1, 2, 4, 8), "main", ("B", "C"), "m1.1"),  # A11, with the 4K video set
     # AMENDMENTS A12: §13's optional designs, each with its controls; the arms are named in ARMS
-    "bdirect_main": ((8,), "main", ("B", "C", "Bd"), "m1.1"),
-    "bdirect_aux": ((5,), "aux", ("B", "C", "Bd"), "m1.1"),
     "k4": ((8,), "main", ("B", "Bk4"), "m1.1"),
     "a55": ((8,), "main", ("B", "C"), "m1.1"),
+    "bdirect_main": ((8,), "main", ("B", "C", "Bd"), "m1.1"),
+    "bdirect_aux": ((5,), "aux", ("B", "C", "Bd"), "m1.1"),
 }
 ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"]}  # A12; else --variant <arm>
 SWEEP_OPTIONS = {"a55": ["--cores", "a55"]}  # A12: on every run of the sweep
@@ -156,7 +157,7 @@ SWEEP_REPETITIONS = {"a55": 1}  # A12 (§13: × 1); the other sweeps have REPETI
 IDLE_BASELINE_S = 120  # §7.2
 H3_START, SUSTAIN_FPS = 8, 4.75  # §10 (min(8, L)), HYPOTHESES H3
 H3_PHASES = ("h3_search", "h3_confirm")
-ORDER = ("main", "aux", "h3", "reference", "4k", "bdirect_main", "bdirect_aux", "k4", "a55")  # comparison.md
+ORDER = ("main", "aux", "h3", "reference", "4k", "k4", "a55", "bdirect_main", "bdirect_aux")  # comparison.md
 SESSION_NAME = r"\d{8}T\d{6}Z_"  # results/<kind>/<UTC>_<sweep or h3>
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
@@ -1129,6 +1130,19 @@ def loop_check_done(video_set):
     return False
 
 
+def bdirect_check_done():
+    """Whether tools/bdirect_check has passed with the code of A12 or later (A12): results/check/
+    <UTC>_bdirect_check whose check.csv says passed 1, built with amendment A12 or a later one."""
+    for d in Path("results", "check").glob("*_bdirect_check"):
+        check = d / "check.csv"
+        if re.fullmatch(SESSION_NAME + "bdirect_check", d.name) and check.exists():
+            header, rows = read_csv(check)
+            amendment = re.fullmatch(r"A(\d+)", header.get("amendment", ""))
+            if amendment and int(amendment[1]) >= 12 and {r["key"]: r["value"] for r in rows}.get("passed") == "1":
+                return True
+    return False
+
+
 def order_problem(name):
     """Why a protocol session of name cannot start now (docs/notes/comparison.md), or None."""
     for earlier in ORDER[:ORDER.index(name)]:
@@ -1136,6 +1150,8 @@ def order_problem(name):
             return f"{earlier} comes before {name} and is not complete"
     if name == "4k" and not loop_check_done("4k"):
         return "the loop check of the 4K set (loop-check --set 4k) comes before the first 4K session (A11)"
+    if name.startswith("bdirect_") and not bdirect_check_done():
+        return "a passed tools/bdirect_check, in results/check/<UTC>_bdirect_check, comes before B-direct (A12)"
     if progress(name) == "complete":
         return f"{name} is complete"
     return None

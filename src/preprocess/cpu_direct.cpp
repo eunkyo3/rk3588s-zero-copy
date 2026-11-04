@@ -80,9 +80,6 @@ public:
             sl.size = size;
             sl.virt = static_cast<uint8_t*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, sl.fd, 0));
             CHECK(sl.virt != MAP_FAILED, "mmap of slot failed");
-            sync(sl.fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
-            std::memset(sl.virt, kPad, size);
-            sync(sl.fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
             slots_.push_back(sl);
         }
         for (int k = 0; k < NpuContexts::kCount; k++) {
@@ -91,6 +88,12 @@ public:
                 CHECK(m, "rknn_create_mem_from_fd failed");
                 mem_[k].push_back(m);
             }
+        }
+        // After the registration: the heap syncs the cache for the devices attached to the buffer.
+        for (auto& sl : slots_) {
+            sync(sl.fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
+            std::memset(sl.virt, kPad, size);
+            sync(sl.fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
         }
     }
 
