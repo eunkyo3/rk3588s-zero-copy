@@ -18,11 +18,14 @@
 // the sums keep decode_dfl's order. Before the video, the table's decoding is checked against
 // decode_dfl on random bins: the four distances must be the same floats.
 //
+// Version 4 is version 3 with software prefetches: the outputs the NPU has just written are not in
+// the CPU's caches, so the reads of the class scores and of the box bins wait for memory.
+//
 // The frames of the video are decoded by the hardware decoder and prepared as B does, into context 0
-// (NPU core 0, M1's bindings). For each frame the context runs four times on the same input; after
+// (NPU core 0, M1's bindings). For each frame the context runs five times on the same input; after
 // each run one version is timed (thread CPU per call), the order rotating with each frame, so each
 // reads outputs the runtime has just written. Their detections must equal the scalar version's,
-// field for field. A fifth run times the parts of version 3 (monotonic clock, so with the clock
+// field for field. A sixth run times the parts of version 4 (monotonic clock, so with the clock
 // reads' own cost): the scan, the box decoding of the candidates, and the sort with the NMS.
 //
 // Usage: post_probe <video.mp4> <model.rknn> <out_dir> [frames=300]   (as root, clocks fixed)
@@ -222,10 +225,12 @@ void decode_branch_neon(const int8_t* box, const rknn_tensor_attr& box_attr, con
 // row is read in address order; then, block by block in cell order, the candidates, with the box
 // bins of a block that has one loaded once, 16 cells at a time. Same comparisons, same candidates in
 // the same order, same box arithmetic. With a table (version 3), the box decoding is decode_dfl_table's.
+// With prefetch (version 4), the class scores of the blocks are prefetched two rows ahead, and the box
+// bins of all the blocks with a candidate before the first is decoded; the reads are the same.
 void decode_branch_neon2(const int8_t* box, const rknn_tensor_attr& box_attr, const int8_t* cls,
                          const rknn_tensor_attr& cls_attr, const int8_t* sum, const rknn_tensor_attr& sum_attr,
                          int model_h, float conf_thresh, std::vector<Detection>& out, Counts& n,
-                         const float* table) {
+                         const float* table, bool prefetch = false) {
     const int grid_h = box_attr.dims[2];
     const int grid_w = box_attr.dims[3];
     const int grid_len = grid_h * grid_w;
@@ -254,14 +259,22 @@ void decode_branch_neon2(const int8_t* box, const rknn_tensor_attr& box_attr, co
     std::vector<uint8x16_t> best_cls(scan.size(), vdupq_n_u8(0xff));
     for (int c = 0; c < kNumClasses; c++) {
         const int8_t* row = cls + c * grid_len;
+        const int8_t* ahead = cls + std::min(c + 2, kNumClasses - 1) * grid_len;
         const uint8x16_t cv = vdupq_n_u8(static_cast<uint8_t>(c));
         for (size_t i = 0; i < scan.size(); i++) {
+            if (prefetch)
+                __builtin_prefetch(ahead + scan[i]);
             const int8x16_t v = vld1q_s8(row + scan[i]);
             const uint8x16_t gt = vcgtq_s8(v, best[i]);
             best[i] = vbslq_s8(gt, v, best[i]);
             best_cls[i] = vbslq_u8(gt, cv, best_cls[i]);
         }
     }
+    if (prefetch)
+        for (size_t i = 0; i < scan.size(); i++)
+            if (vmaxvq_u8(vandq_u8(pass[i], vmvnq_u8(vceqq_u8(best_cls[i], vdupq_n_u8(0xff))))) != 0)
+                for (int k = 0; k < 4 * dfl_len; k++)
+                    __builtin_prefetch(box + k * grid_len + scan[i]);
 
     std::vector<float> bins(4 * dfl_len);
     std::vector<int8_t> rows(size_t(4 * dfl_len) * 16);
@@ -303,9 +316,9 @@ void decode_branch_neon2(const int8_t* box, const rknn_tensor_attr& box_attr, co
         n.branch_ns += now_ns() - t_branch;
 }
 
-// yolov8_post with the scan of decode_branch_neon (version 1) or decode_branch_neon2 (version 2, and
-// with the table version 3); the checks of the outputs' layout are those of yolov8_post, which runs on
-// the same outputs too.
+// yolov8_post with the scan of decode_branch_neon (version 1) or decode_branch_neon2 (version 2; with
+// the table version 3, and with the prefetches too version 4); the checks of the outputs' layout are
+// those of yolov8_post, which runs on the same outputs too.
 std::vector<Detection> yolov8_post_neon(const std::vector<const int8_t*>& outputs,
                                         const std::vector<rknn_tensor_attr>& attrs, int model_h, Counts& n,
                                         int version, float conf_thresh = 0.25f, float nms_thresh = 0.45f) {
@@ -317,7 +330,8 @@ std::vector<Detection> yolov8_post_neon(const std::vector<const int8_t*>& output
                                model_h, conf_thresh, cand, n);
         else
             decode_branch_neon2(outputs[i], attrs[i], outputs[i + 1], attrs[i + 1], outputs[i + 2], attrs[i + 2],
-                                model_h, conf_thresh, cand, n, version == 3 ? exp_table(attrs[i]) : nullptr);
+                                model_h, conf_thresh, cand, n, version >= 3 ? exp_table(attrs[i]) : nullptr,
+                                version == 4);
     }
     const int64_t t_nms = n.profile ? now_ns() : 0;
     std::stable_sort(cand.begin(), cand.end(), [](const Detection& a, const Detection& b) { return a.score > b.score; });
@@ -415,9 +429,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::vector<double> ms[4];  // scalar, NEON versions 1, 2 and 3
-    long identical[4] = {0, 0, 0, 0}, detections = 0;
-    Counts n[4], profiled;
+    constexpr int kVersions = 5;  // scalar, NEON versions 1 to 4
+    std::vector<double> ms[kVersions];
+    long identical[kVersions] = {}, detections = 0;
+    Counts n[kVersions], profiled;
     int64_t prof_total_ns = 0;
     std::atomic<bool> stop{false};
     int frames = 0;
@@ -428,9 +443,9 @@ int main(int argc, char** argv) {
             if (frames < max_frames) {
                 b->prepare(f, 0, 0);
                 b->bind(npu, 0, 0);
-                std::vector<Detection> got[4];
-                for (int pass = 0; pass < 4; pass++) {
-                    const int v = (pass + frames) % 4;
+                std::vector<Detection> got[kVersions];
+                for (int pass = 0; pass < kVersions; pass++) {
+                    const int v = (pass + frames) % kVersions;
                     CHECK(rknn_run(npu.ctx[0], nullptr) == RKNN_SUCC, "rknn_run failed");
                     const auto ptrs = npu.output_ptrs(0);
                     const double t0 = thread_cpu_ms();
@@ -441,10 +456,10 @@ int main(int argc, char** argv) {
                     CHECK(rknn_run(npu.ctx[0], nullptr) == RKNN_SUCC, "rknn_run failed");
                     profiled.profile = true;
                     const int64_t t0 = now_ns();
-                    yolov8_post_neon(npu.output_ptrs(0), npu.outputs, mh, profiled, 3);
+                    yolov8_post_neon(npu.output_ptrs(0), npu.outputs, mh, profiled, 4);
                     prof_total_ns += now_ns() - t0;
                 }
-                for (int v = 0; v < 4; v++)
+                for (int v = 0; v < kVersions; v++)
                     identical[v] += same(got[0], got[v]);
                 detections += static_cast<long>(got[0].size());
                 if (++frames == max_frames)
@@ -481,17 +496,17 @@ int main(int argc, char** argv) {
         {"exp_table_random_checks", std::to_string(table_checks)},
         {"exp_table_random_mismatches", std::to_string(table_mismatches)},
     };
-    const char* names[4] = {"scalar", "neon1", "neon2", "neon3"};
-    for (int v = 0; v < 4; v++) {
+    const char* names[kVersions] = {"scalar", "neon1", "neon2", "neon3", "neon4"};
+    for (int v = 0; v < kVersions; v++) {
         rows.push_back({std::string(names[v]) + "_identical_to_scalar", std::to_string(identical[v])});
         rows.push_back({std::string(names[v]) + "_cpu_ms_mean", f3(mean(ms[v]))});
         rows.push_back({std::string(names[v]) + "_cpu_ms_median", f3(nearest_rank(ms[v], 0.5))});
         rows.push_back({std::string(names[v]) + "_cpu_ms_p90", f3(nearest_rank(ms[v], 0.9))});
     }
-    rows.push_back({"profiled_neon3_ms_mean", f3(prof_total_ns / 1e6 / fr)});
-    rows.push_back({"profiled_neon3_scan_ms_mean", f3((profiled.branch_ns - profiled.decode_ns) / 1e6 / fr)});
-    rows.push_back({"profiled_neon3_box_decoding_ms_mean", f3(profiled.decode_ns / 1e6 / fr)});
-    rows.push_back({"profiled_neon3_sort_and_nms_ms_mean", f3(profiled.nms_ns / 1e6 / fr)});
+    rows.push_back({"profiled_neon4_ms_mean", f3(prof_total_ns / 1e6 / fr)});
+    rows.push_back({"profiled_neon4_scan_ms_mean", f3((profiled.branch_ns - profiled.decode_ns) / 1e6 / fr)});
+    rows.push_back({"profiled_neon4_box_decoding_ms_mean", f3(profiled.decode_ns / 1e6 / fr)});
+    rows.push_back({"profiled_neon4_sort_and_nms_ms_mean", f3(profiled.nms_ns / 1e6 / fr)});
     const std::string path = out_dir + "/post_probe.csv";
     FILE* csv = std::fopen(path.c_str(), "w");
     CHECK(csv, "cannot write %s", path.c_str());
@@ -503,5 +518,8 @@ int main(int argc, char** argv) {
         std::printf("%s: %s\n", k.c_str(), v.c_str());
     }
     CHECK(!std::ferror(csv) && std::fclose(csv) == 0, "writing %s failed", path.c_str());
-    return identical[1] == frames && identical[2] == frames && identical[3] == frames && table_mismatches == 0 ? 0 : 1;
+    bool all_identical = table_mismatches == 0;
+    for (int v = 1; v < kVersions; v++)
+        all_identical = all_identical && identical[v] == frames;
+    return all_identical ? 0 : 1;
 }
