@@ -1,0 +1,23 @@
+# start_time_utc: 2026-11-05T06:20:50Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: C
+# channels: 2
+# condition: main
+# post: m1
+# stagger: off
+# repetition: 1
+# code_commit: 71042417f406b1c5cd42c3783763c372bcd72d4d
+# amendment: A12
+# warmup_s: 2
+# duration_s: 6
+# source: /home/pi/media/bench/pexels_36330861.mp4
+channel,decoded_in_window,decode_fps,drift_max_s,decoder_drops,sampled_in_window,q1_drops_in_window,processed_in_window,inference_fps,ended_early
+1,180,30.000,0.000,0,30,0,30,5.000,0
+2,180,30.000,0.000,0,30,0,30,5.000,0
