@@ -452,7 +452,7 @@ Each entry has this form:
   - **Equivalence (§4):** [results/check/20261105T061858Z_m2_equivalence](../results/check/20261105T061858Z_m2_equivalence), passed.
     - Videos ① to ④ had 1,186, 752, 714 and 948 frames, each with the SHA-256 of `docs/notes/preprocess/videos_manifest.tsv`, and none of their frames differed.
     - 12,500 synthetic sets, with 1,000,000 box decodings, had none that differed.
-  - **Default path (§7 step 2):** [results/check/20261105T062050Z_default_c](../results/check/20261105T062050Z_default_c). This is C with the defaults, at 2 channels, from a file, with a 6 s window. Its 13 threads, their affinities and its `queues` equal those of M1's `32_main_C_2ch_r1`.
+  - **Default path (§7 step 2):** [results/check/20261105T062050Z_default_c](../results/check/20261105T062050Z_default_c). This is C with the defaults, at 2 channels, main condition, from a file, with a 6 s window. Its 13 threads, their affinities and its `queues` equal those of M1's `32_main_C_2ch_r1`.
   - **m2-check (§7 step 3):** [results/check/20261105T062145Z_m2_check](../results/check/20261105T062145Z_m2_check), 06:21 to 06:38 UTC, ambient 28 °C. Both runs were valid.
 
     | Arm | Sampler rule | Stagger error | Phase spread | Process CPU | `/proc/schedstat` sum | Every CPU above 0 |
@@ -472,6 +472,6 @@ Each entry has this form:
     - `20261105T050152Z_m2_smoke`: C and Cp, 2 channels, 6 s windows.
     - `20261105T050252Z_m2_equivalence_smoke` and `20261105T060549Z_m2_equivalence_smoke`: the equivalence tool on video ② only. The second, with the revised tool, is recorded as incomplete.
     - They checked the options and records; their CPU figures come from 6 s windows and are not used.
-  - **A board reset:** at 05:44:16 UTC the board reset itself about 20 s into a rebuild, with no shutdown and no kernel warning logged. Its cause is unknown. The checks above ran after it, and every session fixes the clocks again.
+  - **A board reset:** the board reset itself during a rebuild. Its journal's last entry is at 05:43:53 UTC, when the rebuild's ssh session opened, and it booted again at 05:44:15 (`boot_time_utc` in the checks' `env.txt`). No shutdown and no kernel warning were logged. Its cause is unknown. The checks above ran after it, and every session fixes the clocks again.
 - Affected data: none.
 - Release: `amend-A13`. `freeze-m2` tags the merge of the pull request that adds this entry. Its `created_at` is the reference time of M2's runs.
