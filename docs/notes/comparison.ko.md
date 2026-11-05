@@ -124,12 +124,28 @@
   - 세션 도구는 세션의 바이너리와 같은 커밋에서 A12 이후로 빌드한 그런 검사가 통과하기 전에는 `bdirect_main`, `bdirect_aux` 세션을 시작하지 않는다. `k4`와 `a55`는 이를 기다리지 않는다.
 - **리포트:** 이 설계들을 정리하기 전에 `tools/m1_report.py`에 설계마다 절을 더한다. §7의 지표를 갈래마다 같은 세션의 대조군 옆에 두고, 탐색용이라고 표시한다.
 
+### M2: C 대 Cp([prereg/M2.md](../../prereg/M2.ko.md))
+
+- **`freeze-m2` 전에**, 보드에서 root로, 저장소에서, `-dirty`가 아닌 구현 빌드로 다음 순서대로 한다(M2 §7 3단계). 동등성 검사가 맨 먼저이고, §4의 실패 규칙에 따라 고치면 모든 단계를 다시 한다.
+  1. **동등성(§4):**
+     - `mkdir -p results/check/<UTC>_m2_equivalence && tools/collect_env.sh >results/check/<UTC>_m2_equivalence/env.txt`
+     - `./build/m2_equivalence models/yolov8n_i8.rknn results/check/<UTC>_m2_equivalence /home/pi/media/bench/pexels_36330861.mp4 /home/pi/media/bench/pexels_29130409.mp4 /home/pi/media/bench/pexels_29969146.mp4 /home/pi/media/bench/pixabay_180386.mp4 >results/check/<UTC>_m2_equivalence/m2_equivalence.txt`. 그 `m2_equivalence.csv`에 `passed,1`이 있어야 한다.
+  2. **기본 경로(§7 2단계):** `./build/bench_main --variant C --channels 2 --source /home/pi/media/bench/pexels_36330861.mp4 --warmup 2 --duration 6 --out results/check/<UTC>_default_c`
+  3. **시차 표집과 `/proc/schedstat`(§3.1, §3.2):** `COOLING=... AMBIENT_C=... python3 tools/stream_session.py m2-check`. 본편 8채널, 시차 표집으로 C, 다음 Cp를 프로토콜의 워밍업, 측정 창, 냉각 대기, 유휴 기준값으로 돌려 `results/check/<UTC>_m2_check/`에 남긴다.
+  4. **이 점검들의 판정:** `python3 tools/m2_checks.py --equivalence results/check/<UTC>_m2_equivalence --default results/check/<UTC>_default_c --c <m2_check의 C 실행> --cp <m2_check의 Cp 실행>`이 판정을 점검 실행의 CPU 값과 함께 출력한다(§7 3단계). 모두 통과하면 종료 코드 0이다. 그 출력은 `freeze-m2`가 가리키는 수정 항목에 들어간다.
+- **`freeze-m2` 뒤의 실행:** `sweep m2_main`, 다음 `sweep m2_aux`. 실행 종류는 `m2`이고, `results/m2/<UTC>_<스윕>/`에 남는다.
+  - 세션 도구는 C에 `--variant C`를, Cp에 `--variant C --post neon`을, `m2_main`의 모든 실행에 `--stagger on`을 넘기고, [env.md](env.ko.md)의 Registration 표에서 읽은 `freeze-m2`의 커밋을 `--freeze-m2-commit`으로 넘긴다.
+  - 반복마다 순서는 C→Cp, Cp→C, C→Cp다. 블록, 냉각 대기, 유효성, 세션, 이어 하기는 위의 스윕과 같다.
+  - `freeze-m2`의 행이 env.md에 있고, 이 빌드의 두 후처리 오브젝트(그 SHA-256)에 대한 통과한 동등성 검사가 `results/check/`에 있기 전에는 어떤 M2 세션도 시작하지 않는다. 같은 오브젝트로 검사가 한 번이라도 실패하면 Cp는 더 돌지 않는다(M2 §4). `m2-check`는 동등성 검사가 필요하지만 `freeze-m2`는 필요 없다.
+  - 세션마다 유휴 기준값에 `/proc/schedstat`의 행도 들어가고(M2 §3.2), `result.csv`에 두 오브젝트의 SHA-256이 기록된다.
+
 ### 시간
 
 - 프로토콜대로의 실행 한 번은 약 2.5분이고, 냉각 대기 관문이 최소 60초를 더한다.
 - 따라서 본편 스윕(42회)은 약 2.5 ~ 3시간, 보조 스윕(30회)은 약 2시간, A 집합(6회)은 약 20분이 걸린다. H3은 탐색이 어디서 멈추느냐에 달렸다. 탐색 실행은 최대 50회, 확인 실행은 6회 이상이다.
 - 세션마다 10분 대기가 더해진다.
 - A12의 M1.1 설계는 세션 4개에 26회로, 약 2–2.5시간이 걸린다.
+- M2의 `m2-check`는 2회로 약 20분, 그 스윕은 세션 2개에 12회로 약 1–1.25시간이 걸린다.
 
 ## 파일과 도구
 
@@ -143,4 +159,7 @@
 | `results/check/<UTC>_default_b/` | A12의 B 기본 실행 |
 | `results/check/<UTC>_bdirect_check/` | B-direct의 기능 검사: `env.txt`, `check.txt`, `check.csv` |
 | `tools/bdirect_check.cpp` | 그 검사(A12) |
+| `results/check/<UTC>_m2_equivalence/`, `…_default_c/`, `…_m2_check/` | `freeze-m2` 전 M2의 점검(M2 §7 3단계) |
+| `results/m2/<UTC>_m2_main/`, `…_m2_aux/` | M2 세션 하나씩, 스윕과 같은 파일 |
+| `tools/m2_equivalence.cpp`, `tools/m2_checks.py` | M2의 동등성 검사(§4)와 `freeze-m2` 전 점검의 판정([테스트](../../tests/test_m2_checks.py)) |
 | `tools/stream_session.py sweep`, `h3` | 스윕이나 H3의 세션 하나를 돌린다([테스트](../../tests/test_stream_session.py)) |

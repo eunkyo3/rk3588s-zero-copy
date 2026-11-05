@@ -124,12 +124,28 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
   - The session tool starts no `bdirect_main` or `bdirect_aux` session until such a check has passed, built from the commit of the session's binary with A12 or later. `k4` and `a55` do not wait for it.
 - **Report:** before these designs are written up, `tools/m1_report.py` gets a section for each: §7's metrics, each arm next to the session's own controls, labelled exploratory.
 
+### M2: C against Cp ([prereg/M2.md](../../prereg/M2.md))
+
+- **Before `freeze-m2`**, on the board as root from the repository, with a build of the implementation that is not `-dirty`, in this order (M2 §7 step 3). The equivalence check comes first; a fix under §4's failure rules repeats every step.
+  1. **Equivalence (§4):**
+     - `mkdir -p results/check/<UTC>_m2_equivalence && tools/collect_env.sh >results/check/<UTC>_m2_equivalence/env.txt`;
+     - `./build/m2_equivalence models/yolov8n_i8.rknn results/check/<UTC>_m2_equivalence /home/pi/media/bench/pexels_36330861.mp4 /home/pi/media/bench/pexels_29130409.mp4 /home/pi/media/bench/pexels_29969146.mp4 /home/pi/media/bench/pixabay_180386.mp4 >results/check/<UTC>_m2_equivalence/m2_equivalence.txt`. Its `m2_equivalence.csv` must say `passed,1`.
+  2. **Default path (§7 step 2):** `./build/bench_main --variant C --channels 2 --source /home/pi/media/bench/pexels_36330861.mp4 --warmup 2 --duration 6 --out results/check/<UTC>_default_c`.
+  3. **Stagger and `/proc/schedstat` (§3.1, §3.2):** `COOLING=... AMBIENT_C=... python3 tools/stream_session.py m2-check`. It runs C, then Cp, at 8 channels main, staggered, with the protocol's warm-up, window, gate and idle baseline, into `results/check/<UTC>_m2_check/`.
+  4. **The verdicts of these checks:** `python3 tools/m2_checks.py --equivalence results/check/<UTC>_m2_equivalence --default results/check/<UTC>_default_c --c <m2_check's C run> --cp <m2_check's Cp run>` prints them, with the check runs' CPU values (§7 step 3). Exit 0 when all pass. Its output goes into the amendment that `freeze-m2` tags.
+- **Runs, after `freeze-m2`:** `sweep m2_main`, then `sweep m2_aux`. They have run kind `m2` and go in `results/m2/<UTC>_<sweep>/`.
+  - The session tool passes `--variant C` for C and `--variant C --post neon` for Cp, `--stagger on` on every run of `m2_main`, and `--freeze-m2-commit` with `freeze-m2`'s commit from the Registration table of [env.md](env.md).
+  - The order per repetition is C→Cp, Cp→C, C→Cp. Blocks, gate, validity, sessions and resuming are those of the sweeps above.
+  - No M2 session starts until `freeze-m2` has its row in env.md and a passed equivalence check of this build's two post-processing objects (their SHA-256) is in `results/check/`. A failed check of the same objects stops Cp for good (M2 §4). `m2-check` needs the equivalence check but not `freeze-m2`.
+  - Each session's idle baseline also has `/proc/schedstat`'s rows (M2 §3.2), and its `result.csv` records the two objects' SHA-256.
+
 ### Time
 
 - A protocol run takes about 2.5 minutes, and the gate adds at least 60 s.
 - So the main sweep (42 runs) takes about 2.5 to 3 hours, the auxiliary sweep (30 runs) about 2 hours, and the A set (6 runs) about 20 minutes. H3 depends on where the searches stop: up to 50 search runs and 6 or more confirmation runs.
 - Each session adds 10 minutes of idling.
 - The M1.1 designs of A12 have 26 runs in 4 sessions, about 2 to 2.5 hours.
+- M2's `m2-check` has 2 runs, about 20 minutes; its sweeps have 12 runs in 2 sessions, about 1 to 1.25 hours.
 
 ## Files and tools
 
@@ -143,4 +159,7 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 | `results/check/<UTC>_default_b/` | A12's default run of B |
 | `results/check/<UTC>_bdirect_check/` | B-direct's functional check: `env.txt`, `check.txt`, `check.csv` |
 | `tools/bdirect_check.cpp` | that check (A12) |
+| `results/check/<UTC>_m2_equivalence/`, `…_default_c/`, `…_m2_check/` | M2's checks before `freeze-m2` (M2 §7 step 3) |
+| `results/m2/<UTC>_m2_main/`, `…_m2_aux/` | one M2 session each, the files of a sweep |
+| `tools/m2_equivalence.cpp`, `tools/m2_checks.py` | M2's equivalence check (§4), and the verdicts of the checks before `freeze-m2` ([tests](../../tests/test_m2_checks.py)) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |
