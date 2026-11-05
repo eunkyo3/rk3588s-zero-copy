@@ -66,6 +66,25 @@ def compare_detections(c_frames, cp_frames):
             sum(len(v) > 1 for v in c.values()) + sum(len(v) > 1 for v in cp.values()))
 
 
+def aligned_agreement(c_frames, cp_frames, channel, max_shift=60, min_frames=50):
+    """Exploratory, after the fact: the share of a channel's video frames whose detection counts agree
+    when Cp's frame numbers are shifted by s, for the s that agrees most, and for the next best s. Each
+    run's pts start where its reader joined, not at the video's first frame, so pts names the same frame
+    only within a run. Returns (shift, agreement, frames, next best agreement), or None with too few frames."""
+    n = VIDEO_FRAMES[(channel - 1) % 4]
+    c = {video_frame(channel, int(x["pts"])): int(x["detections"]) for x in c_frames if int(x["channel"]) == channel}
+    cp = {video_frame(channel, int(x["pts"])): int(x["detections"]) for x in cp_frames if int(x["channel"]) == channel}
+    rates = []
+    for s in range(-max_shift, max_shift + 1):
+        keys = [k for k in cp if (k + s) % n in c]
+        if len(keys) >= min_frames:
+            rates.append((sum(c[(k + s) % n] == cp[k] for k in keys) / len(keys), s, len(keys)))
+    if len(rates) < 2:
+        return None
+    rates.sort(reverse=True)
+    return rates[0][1], rates[0][0], rates[0][2], rates[1][0]
+
+
 def run_m2_metrics(run_dir, idle, sweep):
     """rep.run_metrics, with /proc/schedstat's system CPU minus the idle baseline (§3.2), the
     post-processing stage, and the arrival phases."""
@@ -235,11 +254,26 @@ def report(c):
                                  f"{f(m['schedstat_total_minus_idle_s'])} | {f(m['post_p50_ms'])} | "
                                  f"{f(m['latency_p99_ms'], 1)} | {f(m['phase_spread_ms'], 1)} |")
         lines += ["", "**Detection counts, C against Cp, frames both runs processed (§4, no verdict):**", ""]
+        aligned = []
         for r in range(1, ss.REPETITIONS + 1):
             if r in p["C"] and r in p["Cp"]:
-                n, diff, within = compare_detections(p["C"][r]["_all_frames"], p["Cp"][r]["_all_frames"])
+                fc, fp = p["C"][r]["_all_frames"], p["Cp"][r]["_all_frames"]
+                n, diff, within = compare_detections(fc, fp)
                 lines.append(f"- r{r}: {n} video frames compared, {diff} with different counts; "
                              f"{within} with more than one count within a run.")
+                for ch in sorted({int(x["channel"]) for x in fc}):
+                    a = aligned_agreement(fc, fp, ch)
+                    if a:
+                        aligned.append((r, ch) + a)
+        if aligned:
+            low = min(a[3] for a in aligned)
+            nxt = max(a[5] for a in aligned)
+            shifts = sorted({a[2] for a in aligned})
+            lines += ["", "**Investigated (exploratory, after the fact):** pts names the same video frame only within a "
+                      "run; its origin differs between runs. Shifting each channel's Cp frames by the one shift that "
+                      f"agrees most, over {len(aligned)} channel-repetitions: at that shift, the lowest share of compared "
+                      f"frames whose counts agree is {pct(low, 0)}; at any other shift, the highest is {pct(nxt, 0)}. Shifts: "
+                      + ", ".join(f"{s:+d}" for s in shifts) + " frames."]
         (m1, m11) = M1_C[sweep]
         lines += ["", f"**M2's C next to earlier C (exploratory):** M2 {mean_sd(p['C'], 'process_cpu_s')} s; "
                   f"M1 {m1[0]:.3f} ± {m1[1]:.3f} s; M1.1 {m11[0]:.3f} ± {m11[1]:.3f} s. The main condition's sampler and "

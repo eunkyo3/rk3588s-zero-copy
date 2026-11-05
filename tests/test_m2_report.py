@@ -92,5 +92,21 @@ class Detections(unittest.TestCase):
         self.assertEqual(mr.compare_detections(c, cp), (2, 2, 1))
 
 
+class Aligned(unittest.TestCase):
+    def test_shift_found(self):
+        counts = [(k * 7) % 5 for k in range(1186)]  # a count per video frame of ①
+        c = [{"channel": "1", "pts": str(k * 3000), "detections": str(counts[k])} for k in range(0, 1186, 2)]
+        # Cp's pts start 4 frames later: its frame k is C's frame k + 4
+        cp = [{"channel": "1", "pts": str(k * 3000), "detections": str(counts[(k + 4) % 1186])} for k in range(0, 1186, 2)]
+        shift, agree, n, nxt = mr.aligned_agreement(c, cp, 1)
+        self.assertEqual((shift, agree), (4, 1.0))
+        self.assertGreater(n, 500)
+        self.assertLess(nxt, 1.0)
+
+    def test_too_few_frames(self):
+        c = [{"channel": "1", "pts": "0", "detections": "1"}]
+        self.assertIsNone(mr.aligned_agreement(c, c, 1))
+
+
 if __name__ == "__main__":
     unittest.main()
