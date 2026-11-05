@@ -12,7 +12,8 @@
 // (NPU core 0, M1's bindings). For each frame the context runs twice on the same input; after one run
 // the scalar version is timed, after the other the NEON one (thread CPU per call), the order changing
 // with each frame, so both read outputs the runtime has just written. Their detections must be equal,
-// field for field.
+// field for field. A third run times the parts of the NEON version (monotonic clock, so with the
+// clock reads' own cost): the scan, the box decoding of the candidates, and the sort with the NMS.
 //
 // Usage: post_probe <video.mp4> <model.rknn> <out_dir> [frames=300]   (as root, clocks fixed)
 //   <out_dir>/post_probe.csv  "# key: value" header lines (PROTOCOL §1.4, run kind check), then key,value
@@ -89,7 +90,9 @@ float iou(const Detection& a, const Detection& b) {
 }
 
 struct Counts {
-    long cells = 0, blocks = 0, blocks_scanned = 0, cells_passing = 0;
+    long cells = 0, blocks = 0, blocks_scanned = 0, cells_passing = 0, candidates = 0;
+    bool profile = false;  // time the parts below
+    int64_t branch_ns = 0, decode_ns = 0, nms_ns = 0;
 };
 
 void decode_branch_neon(const int8_t* box, const rknn_tensor_attr& box_attr, const int8_t* cls,
@@ -110,6 +113,7 @@ void decode_branch_neon(const int8_t* box, const rknn_tensor_attr& box_attr, con
     alignas(16) int8_t best_v[16];
     alignas(16) uint8_t best_c[16], pass_v[16];
     n.cells += grid_len;
+    const int64_t t_branch = n.profile ? now_ns() : 0;
     for (int cell0 = 0; cell0 < grid_len; cell0 += 16) {
         n.blocks++;
         const uint8x16_t pass = vcgeq_s8(vld1q_s8(sum + cell0), sum_t);  // not below the threshold
@@ -133,6 +137,8 @@ void decode_branch_neon(const int8_t* box, const rknn_tensor_attr& box_attr, con
             n.cells_passing++;
             if (best_c[lane] == 0xff)
                 continue;
+            n.candidates++;
+            const int64_t t_decode = n.profile ? now_ns() : 0;
             const int cell = cell0 + lane, y = cell / grid_w, x = cell % grid_w;
             for (int k = 0; k < 4 * dfl_len; k++)
                 bins[k] = dequantize(box[k * grid_len + cell], box_attr.zp, box_attr.scale);
@@ -141,8 +147,12 @@ void decode_branch_neon(const int8_t* box, const rknn_tensor_attr& box_attr, con
             out.push_back({best_c[lane], dequantize(best_v[lane], cls_attr.zp, cls_attr.scale),
                            (x + 0.5f - d[0]) * stride, (y + 0.5f - d[1]) * stride, (x + 0.5f + d[2]) * stride,
                            (y + 0.5f + d[3]) * stride});
+            if (n.profile)
+                n.decode_ns += now_ns() - t_decode;
         }
     }
+    if (n.profile)
+        n.branch_ns += now_ns() - t_branch;
 }
 
 // yolov8_post with the scan of decode_branch_neon; the checks of the outputs' layout are those of
@@ -156,6 +166,7 @@ std::vector<Detection> yolov8_post_neon(const std::vector<const int8_t*>& output
         decode_branch_neon(outputs[i], attrs[i], outputs[i + 1], attrs[i + 1], outputs[i + 2], attrs[i + 2], model_h,
                            conf_thresh, cand, n);
     }
+    const int64_t t_nms = n.profile ? now_ns() : 0;
     std::stable_sort(cand.begin(), cand.end(), [](const Detection& a, const Detection& b) { return a.score > b.score; });
     std::vector<Detection> kept;
     std::vector<bool> removed(cand.size(), false);
@@ -168,6 +179,8 @@ std::vector<Detection> yolov8_post_neon(const std::vector<const int8_t*>& output
                 removed[j] = true;
         }
     }
+    if (n.profile)
+        n.nms_ns += now_ns() - t_nms;
     return kept;
 }
 
@@ -224,7 +237,8 @@ int main(int argc, char** argv) {
 
     std::vector<double> scalar_ms, neon_ms;
     long identical = 0, detections = 0;
-    Counts n;
+    Counts n, profiled;
+    int64_t prof_total_ns = 0;
     std::atomic<bool> stop{false};
     int frames = 0;
     VideoSource src(video, /*software=*/false, /*paced=*/false);
@@ -242,6 +256,14 @@ int main(int argc, char** argv) {
                     const double t0 = thread_cpu_ms();
                     got[neon] = neon ? yolov8_post_neon(ptrs, npu.outputs, mh, n) : yolov8_post(ptrs, npu.outputs, mw, mh);
                     (neon ? neon_ms : scalar_ms).push_back(thread_cpu_ms() - t0);
+                }
+                {
+                    CHECK(rknn_run(npu.ctx[0], nullptr) == RKNN_SUCC, "rknn_run failed");
+                    Counts& prof = profiled;
+                    prof.profile = true;
+                    const int64_t t0 = now_ns();
+                    yolov8_post_neon(npu.output_ptrs(0), npu.outputs, mh, prof);
+                    prof_total_ns += now_ns() - t0;
                 }
                 identical += same(got[0], got[1]);
                 detections += static_cast<long>(got[0].size());
@@ -279,6 +301,11 @@ int main(int argc, char** argv) {
         {"cells_passing_score_sum_per_frame", f3(double(n.cells_passing) / std::max(1, frames))},
         {"blocks_of_16_per_frame", f3(double(n.blocks) / std::max(1, frames))},
         {"blocks_scanned_per_frame", f3(double(n.blocks_scanned) / std::max(1, frames))},
+        {"candidates_per_frame", f3(double(n.candidates) / std::max(1, frames))},
+        {"profiled_neon_ms_mean", f3(prof_total_ns / 1e6 / std::max(1, frames))},
+        {"profiled_scan_ms_mean", f3((profiled.branch_ns - profiled.decode_ns) / 1e6 / std::max(1, frames))},
+        {"profiled_box_decoding_ms_mean", f3(profiled.decode_ns / 1e6 / std::max(1, frames))},
+        {"profiled_sort_and_nms_ms_mean", f3(profiled.nms_ns / 1e6 / std::max(1, frames))},
     };
     const std::string path = out_dir + "/post_probe.csv";
     FILE* csv = std::fopen(path.c_str(), "w");
