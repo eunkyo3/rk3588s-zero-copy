@@ -1,0 +1,112 @@
+# start_time_utc: 2026-11-05T01:03:42Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: d6486fa588822338d471ceb0e5195934bb89027d
+# amendment: A12
+# source: /home/pi/media/bench/pexels_36330861.mp4
+# purpose: diagnostic before M2's pre-registration; not a run that counts
+part,case,run,context,frame,result,differing_bytes,largest_difference
+A,cached_alternating,0,0,0,equal,0,0
+A,cached_alternating,1,0,1,equal,0,0
+A,cached_alternating,2,0,0,equal,0,0
+A,cached_alternating,3,0,1,equal,0,0
+A,cached_alternating,4,0,0,equal,0,0
+A,cached_alternating,5,0,1,equal,0,0
+A,cached_alternating,6,0,0,equal,0,0
+A,cached_alternating,7,0,1,equal,0,0
+A,cached_alternating,8,0,0,equal,0,0
+A,cached_alternating,9,0,1,equal,0,0
+A,uncached_alternating,0,0,0,other,507959,254
+A,uncached_alternating,1,0,1,other,239547,116
+A,uncached_alternating,2,0,0,equal,0,0
+A,uncached_alternating,3,0,1,equal,0,0
+A,uncached_alternating,4,0,0,equal,0,0
+A,uncached_alternating,5,0,1,equal,0,0
+A,uncached_alternating,6,0,0,equal,0,0
+A,uncached_alternating,7,0,1,equal,0,0
+A,uncached_alternating,8,0,0,equal,0,0
+A,uncached_alternating,9,0,1,equal,0,0
+A,uncached_same_frame,0,0,0,other,507569,253
+A,uncached_same_frame,1,0,0,equal,0,0
+A,uncached_same_frame,2,0,0,equal,0,0
+A,uncached_same_frame,3,0,0,equal,0,0
+A,uncached_same_frame,4,0,0,equal,0,0
+A,uncached_same_frame,5,0,0,equal,0,0
+A,uncached_same_frame,6,0,0,equal,0,0
+A,uncached_same_frame,7,0,0,equal,0,0
+A,uncached_same_frame,8,0,0,equal,0,0
+A,uncached_same_frame,9,0,0,equal,0,0
+A,uncached_rebind,0,0,0,other,508359,254
+A,uncached_rebind,1,0,1,other,253161,80
+A,uncached_rebind,2,0,0,equal,0,0
+A,uncached_rebind,3,0,1,equal,0,0
+A,uncached_rebind,4,0,0,equal,0,0
+A,uncached_rebind,5,0,1,equal,0,0
+A,uncached_rebind,6,0,0,equal,0,0
+A,uncached_rebind,7,0,1,equal,0,0
+A,uncached_rebind,8,0,0,equal,0,0
+A,uncached_rebind,9,0,1,equal,0,0
+A,uncached_rebind,10,0,0,equal,0,0
+A,uncached_rebind,11,0,1,equal,0,0
+A,uncached_rebind,12,0,0,equal,0,0
+A,uncached_rebind,13,0,1,equal,0,0
+A,uncached_rebind,14,0,0,equal,0,0
+A,uncached_rebind,15,0,1,equal,0,0
+A,uncached_pad_warmup,warmup0,0,pad,other,516838,115
+A,uncached_pad_warmup,warmup1,0,pad,other,519337,99
+A,uncached_pad_warmup,warmup2,0,pad,other,519413,100
+A,uncached_pad_warmup,warmup3,0,pad,previous_outputs,519413,100
+A,uncached_pad_warmup,warmup4,0,pad,previous_outputs,519413,100
+A,uncached_pad_warmup,0,0,0,equal,0,0
+A,uncached_pad_warmup,1,0,1,equal,0,0
+A,uncached_pad_warmup,2,0,0,equal,0,0
+A,uncached_pad_warmup,3,0,1,equal,0,0
+A,uncached_pad_warmup,4,0,0,equal,0,0
+A,uncached_pad_warmup,5,0,1,equal,0,0
+A,uncached_pad_warmup,6,0,0,equal,0,0
+A,uncached_pad_warmup,7,0,1,equal,0,0
+A,uncached_pad_warmup,8,0,0,equal,0,0
+A,uncached_pad_warmup,9,0,1,equal,0,0
+A,uncached_wait_10ms,0,0,0,other,508773,254
+A,uncached_wait_10ms,1,0,1,equal,0,0
+A,uncached_wait_10ms,2,0,0,equal,0,0
+A,uncached_wait_10ms,3,0,1,equal,0,0
+A,uncached_wait_10ms,4,0,0,equal,0,0
+A,uncached_wait_10ms,5,0,1,equal,0,0
+A,uncached_wait_10ms,6,0,0,equal,0,0
+A,uncached_wait_10ms,7,0,1,equal,0,0
+A,uncached_wait_10ms,8,0,0,equal,0,0
+A,uncached_wait_10ms,9,0,1,equal,0,0
+B,c_rga,0,0,0,equal,0,0
+B,c_rga,0,1,0,equal,0,0
+B,c_rga,0,2,0,equal,0,0
+B,c_rga,1,0,1,equal,0,0
+B,c_rga,1,1,1,equal,0,0
+B,c_rga,1,2,1,equal,0,0
+B,c_rga,2,0,2,equal,0,0
+B,c_rga,2,1,2,equal,0,0
+B,c_rga,2,2,2,equal,0,0
+B,c_rga,3,0,3,equal,0,0
+B,c_rga,3,1,3,equal,0,0
+B,c_rga,3,2,3,equal,0,0
+B,c_rga,4,0,4,equal,0,0
+B,c_rga,4,1,4,equal,0,0
+B,c_rga,4,2,4,equal,0,0
+B,c_rga,5,0,5,equal,0,0
+B,c_rga,5,1,5,equal,0,0
+B,c_rga,5,2,5,equal,0,0
+B,c_rga,6,0,6,equal,0,0
+B,c_rga,6,1,6,equal,0,0
+B,c_rga,6,2,6,equal,0,0
+B,c_rga,7,0,7,equal,0,0
+B,c_rga,7,1,7,equal,0,0
+B,c_rga,7,2,7,equal,0,0
+B,c_rga,8,0,8,equal,0,0
+B,c_rga,8,1,8,equal,0,0
+B,c_rga,8,2,8,equal,0,0
+B,c_rga,9,0,9,equal,0,0
+B,c_rga,9,1,9,equal,0,0
+B,c_rga,9,2,9,equal,0,0

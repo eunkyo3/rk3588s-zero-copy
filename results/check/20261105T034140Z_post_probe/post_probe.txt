@@ -1,0 +1,33 @@
+mpp[115176]: mpp_platform: client 18 driver is not ready!
+mpp[115176]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+frames: 300
+detections_per_frame: 16.2600
+cells_per_frame: 8400.0000
+cells_passing_score_sum_per_frame: 1995.5433
+blocks_of_16_per_frame: 525.0000
+blocks_scanned_per_frame: 194.7833
+candidates_per_frame: 107.2667
+exp_tables: 3
+exp_table_build_ms: 1.5672
+exp_table_random_checks: 600000
+exp_table_random_mismatches: 0
+scalar_identical_to_scalar: 300
+scalar_cpu_ms_mean: 0.3675
+scalar_cpu_ms_median: 0.3660
+scalar_cpu_ms_p90: 0.3946
+neon1_identical_to_scalar: 300
+neon1_cpu_ms_mean: 0.2033
+neon1_cpu_ms_median: 0.2021
+neon1_cpu_ms_p90: 0.2284
+neon2_identical_to_scalar: 300
+neon2_cpu_ms_mean: 0.1760
+neon2_cpu_ms_median: 0.1753
+neon2_cpu_ms_p90: 0.1969
+neon3_identical_to_scalar: 300
+neon3_cpu_ms_mean: 0.1415
+neon3_cpu_ms_median: 0.1417
+neon3_cpu_ms_p90: 0.1610
+profiled_neon3_ms_mean: 0.1383
+profiled_neon3_scan_ms_mean: 0.0603
+profiled_neon3_box_decoding_ms_mean: 0.0652
+profiled_neon3_sort_and_nms_ms_mean: 0.0109

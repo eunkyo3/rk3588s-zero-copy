@@ -1,0 +1,21 @@
+mpp[113882]: mpp_platform: client 18 driver is not ready!
+mpp[113882]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+frames: 300
+identical_detections: 300
+detections_per_frame: 16.2600
+scalar_cpu_ms_mean: 0.3587
+scalar_cpu_ms_median: 0.3564
+scalar_cpu_ms_p90: 0.3853
+neon_cpu_ms_mean: 0.2014
+neon_cpu_ms_median: 0.2001
+neon_cpu_ms_p90: 0.2255
+cells_per_frame: 8400.0000
+cells_passing_score_sum_per_frame: 1995.5433
+blocks_of_16_per_frame: 525.0000
+blocks_scanned_per_frame: 194.7833
+candidates_per_frame: 107.2667
+profiled_neon_ms_mean: 0.2056
+profiled_scan_ms_mean: 0.0913
+profiled_box_decoding_ms_mean: 0.0987
+profiled_sort_and_nms_ms_mean: 0.0140
+exit 0
