@@ -7,6 +7,7 @@ How much does a zero-copy video pipeline actually save on an RK3588S, and under 
 The project publishes:
 - a report that gives each pre-registered hypothesis its verdicts, with the measurements behind them: [docs/report/M1.md](docs/report/M1.md);
 - an exploratory report on the optional designs, which judges nothing: [docs/report/M1.1.md](docs/report/M1.1.md);
+- M2's report, a faster post-processing for C with its own pre-registered hypotheses: [docs/report/M2.md](docs/report/M2.md);
 - a multi-channel detection demo: [docs/notes/demo.md](docs/notes/demo.md);
 - scripts that reproduce the results.
 
@@ -42,6 +43,7 @@ Two pipelines share the same RTSP input, decoder (ffmpeg-rockchip `h264_rkmpp`, 
 
 - **4K, exploratory (M1.1):** 24 runs on 2026-11-04 at 1, 2, 4 and 8 channels, all valid. C again used 59 to 60% less process CPU, and its p99 was lower at every count. Equivalence under A5 is not claimed at 4K (tensor MAE against B: C 4.52, R 1.88). Nothing is judged; see [the M1.1 report](docs/report/M1.1.md#4k-input-a11).
 - **The designs of §13, exploratory (M1.1):** 26 runs on 2026-11-04, all valid, each design with its own B and C rerun. B-direct, which drops only B's last copy, saved 2.8% of B's process CPU at 8 channels, against C's 55.7%: most of C's saving lies in what separates C from B-direct, chiefly the conversion on RGA3. Four preprocessing threads did not lower B's latency, and on the A55 cores both variants held 8 channels. Found after the fact: how close together the channels' frames arrive is not controlled by the protocol, and at multi-channel points latency went with it. Nothing is judged; see [the M1.1 report](docs/report/M1.1.md).
+- **M2, a faster post-processing for C (pre-registered):** 12 runs on 2026-11-05, all valid. Arm Cp, C with a NEON post-processing whose detections equal M1's, used 6.07% less process CPU than C at 8 channels and 14.73% less at 5 channels × 30 fps; both hypotheses (thresholds 3% and 5%, set after the prototype, which is disclosed) were adopted. Most of the difference is in the NPU workers' threads, where post-processing runs (exploratory). See [the M2 report](docs/report/M2.md).
 - **Demo:** C's detections on eight channels, rendered offline ([docs/notes/demo.md](docs/notes/demo.md)). The video is attached to the `v0.1-m1` Release; its footage is not Apache-2.0 ([License](#license)).
 
 ![Detection demo, one frame](docs/report/demo/demo_m1.jpg)
@@ -157,7 +159,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M3 | one-command reproduction scripts | `v0.3-m3` |
 | M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
 
-**Current status:** M1 is released as [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1), with the report [docs/report/M1.md](docs/report/M1.md) and the demo video. Before the comparison runs came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). M1.1's exploratory designs ran after them, on 2026-11-04: the 4K input of [AMENDMENTS A11](prereg/AMENDMENTS.md) and the optional designs of PROTOCOL §13, built and run as A12 fixes them. M1.1 is released as [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1), with the report [docs/report/M1.1.md](docs/report/M1.1.md). Next is M2.
+**Current status:** M1 is released as [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1), with the report [docs/report/M1.md](docs/report/M1.md) and the demo video. Before the comparison runs came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). M1.1's exploratory designs ran after them, on 2026-11-04: the 4K input of [AMENDMENTS A11](prereg/AMENDMENTS.md) and the optional designs of PROTOCOL §13, built and run as A12 fixes them. M1.1 is released as [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1), with the report [docs/report/M1.1.md](docs/report/M1.1.md). M2, a faster post-processing for C, was pre-registered in [prereg/M2.md](prereg/M2.md) ([`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), then [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2), reference time 2026-11-05T07:04:00Z) and ran on 2026-11-05. Both CPU hypotheses were adopted: Cp used 6.07% less process CPU than C at 8 channels (threshold 3%) and 14.73% less at 5 channels × 30 fps (threshold 5%), with identical detections. Report: [docs/report/M2.md](docs/report/M2.md). The Release `v0.2-m2` comes next.
 
 ## Build and run
 
@@ -201,7 +203,7 @@ Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summar
 | `models/` | model download and conversion. The files are kept in a Release. |
 | `tests/` | unit tests of the pipeline core and of the Python tools |
 | `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration, comparison, analysis, the exploration before M2 |
-| `docs/report/` | the M1 and M1.1 reports, their tables, summary file, stage times, arrival phases and figures, and the demo's files |
+| `docs/report/` | the M1, M1.1 and M2 reports, their tables, summary file, stage times, arrival phases and figures, and the demo's files |
 | `results/` | the raw results of every run; large tensor dumps are kept in Releases. Each file's header names its code, model and amendment (PROTOCOL §1). |
 
 ## License

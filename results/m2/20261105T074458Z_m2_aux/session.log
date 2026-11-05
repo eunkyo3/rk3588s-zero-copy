@@ -1,0 +1,18 @@
+2026-11-05T07:45:03Z starting the stream server
+2026-11-05T07:45:09Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261105T074505Z-142435, clock offset 0.3 ms
+2026-11-05T07:45:09Z idle for 600 s
+2026-11-05T07:55:09Z soc-thermal baseline 40492 m°C
+2026-11-05T07:55:09Z m2_aux: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-05T07:55:10Z 01_m2_aux_C_5ch_r1: C, 5 ch, aux
+2026-11-05T07:57:33Z 01_m2_aux_C_5ch_r1: valid
+2026-11-05T07:58:33Z 02_m2_aux_Cp_5ch_r1: Cp, 5 ch, aux
+2026-11-05T08:00:56Z 02_m2_aux_Cp_5ch_r1: valid
+2026-11-05T08:01:56Z 03_m2_aux_Cp_5ch_r2: Cp, 5 ch, aux
+2026-11-05T08:04:19Z 03_m2_aux_Cp_5ch_r2: valid
+2026-11-05T08:05:19Z 04_m2_aux_C_5ch_r2: C, 5 ch, aux
+2026-11-05T08:07:42Z 04_m2_aux_C_5ch_r2: valid
+2026-11-05T08:08:43Z 05_m2_aux_C_5ch_r3: C, 5 ch, aux
+2026-11-05T08:11:06Z 05_m2_aux_C_5ch_r3: valid
+2026-11-05T08:12:06Z 06_m2_aux_Cp_5ch_r3: Cp, 5 ch, aux
+2026-11-05T08:14:29Z 06_m2_aux_Cp_5ch_r3: valid
+2026-11-05T08:14:29Z stopping the stream server
