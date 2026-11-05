@@ -200,7 +200,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 | `stream-server/` | mediamtx 설정, 영상 준비, 주어진 채널 배정을 검사하는 송출 스크립트 |
 | `models/` | 모델 다운로드와 변환. 파일은 Release에 있다. |
 | `tests/` | 파이프라인 코어와 Python 도구의 테스트 |
-| `docs/notes/` | 마일스톤별 기록: 환경, 스파이크, 전처리, 코어, 동등성, 캘리브레이션, 비교, 분석 |
+| `docs/notes/` | 마일스톤별 기록: 환경, 스파이크, 전처리, 코어, 동등성, 캘리브레이션, 비교, 분석, M2 전의 탐색 |
 | `docs/report/` | M1과 M1.1 보고서와 그 표, 요약 파일, 단계별 시간, 도착 위상, 그림, 그리고 데모의 파일 |
 | `results/` | 모든 실행의 원자료. 큰 텐서 덤프는 Release에 둔다. 파일마다 헤더에 코드, 모델, 수정 기록 번호가 있다(PROTOCOL §1). |
 

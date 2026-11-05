@@ -200,7 +200,7 @@ Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summar
 | `stream-server/` | mediamtx configuration, video preparation, and the publisher, which checks the channel assignment it is given |
 | `models/` | model download and conversion. The files are kept in a Release. |
 | `tests/` | unit tests of the pipeline core and of the Python tools |
-| `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration, comparison, analysis |
+| `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration, comparison, analysis, the exploration before M2 |
 | `docs/report/` | the M1 and M1.1 reports, their tables, summary file, stage times, arrival phases and figures, and the demo's files |
 | `results/` | the raw results of every run; large tensor dumps are kept in Releases. Each file's header names its code, model and amendment (PROTOCOL §1). |
 
