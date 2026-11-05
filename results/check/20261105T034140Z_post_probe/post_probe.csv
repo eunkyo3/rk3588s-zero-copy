@@ -1,0 +1,42 @@
+# start_time_utc: 2026-11-05T03:42:11Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: d15c8405d56a9a30998edb46d62a979d327c1ea0
+# amendment: A12
+# source: /home/pi/media/bench/pexels_36330861.mp4
+# purpose: NEON prototype before M2's pre-registration; not a run that counts
+key,value
+frames,300
+detections_per_frame,16.2600
+cells_per_frame,8400.0000
+cells_passing_score_sum_per_frame,1995.5433
+blocks_of_16_per_frame,525.0000
+blocks_scanned_per_frame,194.7833
+candidates_per_frame,107.2667
+exp_tables,3
+exp_table_build_ms,1.5672
+exp_table_random_checks,600000
+exp_table_random_mismatches,0
+scalar_identical_to_scalar,300
+scalar_cpu_ms_mean,0.3675
+scalar_cpu_ms_median,0.3660
+scalar_cpu_ms_p90,0.3946
+neon1_identical_to_scalar,300
+neon1_cpu_ms_mean,0.2033
+neon1_cpu_ms_median,0.2021
+neon1_cpu_ms_p90,0.2284
+neon2_identical_to_scalar,300
+neon2_cpu_ms_mean,0.1760
+neon2_cpu_ms_median,0.1753
+neon2_cpu_ms_p90,0.1969
+neon3_identical_to_scalar,300
+neon3_cpu_ms_mean,0.1415
+neon3_cpu_ms_median,0.1417
+neon3_cpu_ms_p90,0.1610
+profiled_neon3_ms_mean,0.1383
+profiled_neon3_scan_ms_mean,0.0603
+profiled_neon3_box_decoding_ms_mean,0.0652
+profiled_neon3_sort_and_nms_ms_mean,0.0109
