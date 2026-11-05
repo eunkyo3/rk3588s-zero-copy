@@ -11,11 +11,18 @@
 // Version 2 (decode_branch_neon2) changes the order of the reads only: the class scores row by row
 // over the blocks that pass, and the box bins of a block with a candidate in 16-cell loads.
 //
+// Version 3 is version 2 with the softmax terms of the box decoding read from a table. A term,
+// exp(b[i] - max_v), takes two quantized bins only: b[i] is dequantize(q_i), and max_v, as dequantize
+// increases with q, is dequantize of the side's largest q. The table holds the term for all 256 x 256
+// pairs, computed once per (zp, scale) with decode_dfl's expression, so the terms are the same floats;
+// the sums keep decode_dfl's order. Before the video, the table's decoding is checked against
+// decode_dfl on random bins: the four distances must be the same floats.
+//
 // The frames of the video are decoded by the hardware decoder and prepared as B does, into context 0
-// (NPU core 0, M1's bindings). For each frame the context runs three times on the same input; after
+// (NPU core 0, M1's bindings). For each frame the context runs four times on the same input; after
 // each run one version is timed (thread CPU per call), the order rotating with each frame, so each
 // reads outputs the runtime has just written. Their detections must equal the scalar version's,
-// field for field. A fourth run times the parts of version 2 (monotonic clock, so with the clock
+// field for field. A fifth run times the parts of version 3 (monotonic clock, so with the clock
 // reads' own cost): the scan, the box decoding of the candidates, and the sort with the NMS.
 //
 // Usage: post_probe <video.mp4> <model.rknn> <out_dir> [frames=300]   (as root, clocks fixed)
@@ -27,9 +34,11 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <memory>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -79,6 +88,57 @@ void decode_dfl(const float* bins, int dfl_len, float out[4]) {
             float e = std::exp(b[i] - max_v);
             sum += e;
             acc += e * i;
+        }
+        out[side] = acc / sum;
+    }
+}
+
+// exp(b - m) for the dequantized bins b and m of all pairs (q_m, q_b), at [(q_m + 128) * 256 + q_b + 128].
+struct ExpTable {
+    int32_t zp;
+    float scale;
+    std::vector<float> e;
+};
+
+std::vector<ExpTable> g_exp_tables;  // one per (zp, scale) of the box outputs, filled before the video
+
+void add_exp_table(int32_t zp, float scale) {
+    for (const auto& t : g_exp_tables)
+        if (t.zp == zp && t.scale == scale)
+            return;
+    if (!(scale > 0))
+        throw std::runtime_error("post_probe: box scale not positive");
+    ExpTable t{zp, scale, std::vector<float>(256 * 256)};
+    volatile float v[256];  // stored and read back, as decode_dfl reads its bins
+    for (int q = 0; q < 256; q++)
+        v[q] = dequantize(static_cast<int8_t>(q - 128), zp, scale);
+    for (int m = 0; m < 256; m++)
+        for (int q = 0; q < 256; q++)
+            t.e[m * 256 + q] = std::exp(v[q] - v[m]);
+    g_exp_tables.push_back(std::move(t));
+}
+
+const float* exp_table(const rknn_tensor_attr& a) {
+    for (const auto& t : g_exp_tables)
+        if (t.zp == a.zp && t.scale == a.scale)
+            return t.e.data();
+    throw std::runtime_error("post_probe: no table for a box output");
+}
+
+// decode_dfl on quantized bins, the bin i of a side at q[(side * dfl_len + i) * step], with the terms
+// from the table.
+void decode_dfl_table(const float* table, const int8_t* q, size_t step, int dfl_len, float out[4]) {
+    for (int side = 0; side < 4; side++) {
+        const int8_t* b = q + side * dfl_len * step;
+        int8_t max_q = b[0];
+        for (int i = 1; i < dfl_len; i++)
+            max_q = std::max(max_q, b[i * step]);
+        const float* e = table + (max_q + 128) * 256 + 128;
+        float sum = 0.0f, acc = 0.0f;
+        for (int i = 0; i < dfl_len; i++) {
+            const float ei = e[b[i * step]];
+            sum += ei;
+            acc += ei * i;
         }
         out[side] = acc / sum;
     }
@@ -161,10 +221,11 @@ void decode_branch_neon(const int8_t* box, const rknn_tensor_attr& box_attr, con
 // Version 2: first the blocks whose score sums pass; then their class scores row by row, so each class
 // row is read in address order; then, block by block in cell order, the candidates, with the box
 // bins of a block that has one loaded once, 16 cells at a time. Same comparisons, same candidates in
-// the same order, same box arithmetic.
+// the same order, same box arithmetic. With a table (version 3), the box decoding is decode_dfl_table's.
 void decode_branch_neon2(const int8_t* box, const rknn_tensor_attr& box_attr, const int8_t* cls,
                          const rknn_tensor_attr& cls_attr, const int8_t* sum, const rknn_tensor_attr& sum_attr,
-                         int model_h, float conf_thresh, std::vector<Detection>& out, Counts& n) {
+                         int model_h, float conf_thresh, std::vector<Detection>& out, Counts& n,
+                         const float* table) {
     const int grid_h = box_attr.dims[2];
     const int grid_w = box_attr.dims[3];
     const int grid_len = grid_h * grid_w;
@@ -223,10 +284,14 @@ void decode_branch_neon2(const int8_t* box, const rknn_tensor_attr& box_attr, co
                 continue;
             n.candidates++;
             const int cell = cell0 + lane, y = cell / grid_w, x = cell % grid_w;
-            for (int k = 0; k < 4 * dfl_len; k++)
-                bins[k] = dequantize(rows[size_t(k) * 16 + lane], box_attr.zp, box_attr.scale);
             float d[4];
-            decode_dfl(bins.data(), dfl_len, d);
+            if (table) {
+                decode_dfl_table(table, &rows[lane], 16, dfl_len, d);
+            } else {
+                for (int k = 0; k < 4 * dfl_len; k++)
+                    bins[k] = dequantize(rows[size_t(k) * 16 + lane], box_attr.zp, box_attr.scale);
+                decode_dfl(bins.data(), dfl_len, d);
+            }
             out.push_back({best_c[lane], dequantize(best_v[lane], cls_attr.zp, cls_attr.scale),
                            (x + 0.5f - d[0]) * stride, (y + 0.5f - d[1]) * stride, (x + 0.5f + d[2]) * stride,
                            (y + 0.5f + d[3]) * stride});
@@ -238,17 +303,21 @@ void decode_branch_neon2(const int8_t* box, const rknn_tensor_attr& box_attr, co
         n.branch_ns += now_ns() - t_branch;
 }
 
-// yolov8_post with the scan of decode_branch_neon (version 1) or decode_branch_neon2 (version 2); the
-// checks of the outputs' layout are those of yolov8_post, which runs on the same outputs too.
+// yolov8_post with the scan of decode_branch_neon (version 1) or decode_branch_neon2 (version 2, and
+// with the table version 3); the checks of the outputs' layout are those of yolov8_post, which runs on
+// the same outputs too.
 std::vector<Detection> yolov8_post_neon(const std::vector<const int8_t*>& outputs,
                                         const std::vector<rknn_tensor_attr>& attrs, int model_h, Counts& n,
                                         int version, float conf_thresh = 0.25f, float nms_thresh = 0.45f) {
     std::vector<Detection> cand;
     for (int b = 0; b < 3; b++) {
         const int i = b * 3;
-        (version == 1 ? decode_branch_neon : decode_branch_neon2)(outputs[i], attrs[i], outputs[i + 1], attrs[i + 1],
-                                                                  outputs[i + 2], attrs[i + 2], model_h, conf_thresh,
-                                                                  cand, n);
+        if (version == 1)
+            decode_branch_neon(outputs[i], attrs[i], outputs[i + 1], attrs[i + 1], outputs[i + 2], attrs[i + 2],
+                               model_h, conf_thresh, cand, n);
+        else
+            decode_branch_neon2(outputs[i], attrs[i], outputs[i + 1], attrs[i + 1], outputs[i + 2], attrs[i + 2],
+                                model_h, conf_thresh, cand, n, version == 3 ? exp_table(attrs[i]) : nullptr);
     }
     const int64_t t_nms = n.profile ? now_ns() : 0;
     std::stable_sort(cand.begin(), cand.end(), [](const Detection& a, const Detection& b) { return a.score > b.score; });
@@ -319,9 +388,36 @@ int main(int argc, char** argv) {
     b->init(npu, 1);
     const int mw = npu.model_w(), mh = npu.model_h();
 
-    std::vector<double> ms[3];  // scalar, NEON version 1, NEON version 2
-    long identical[3] = {0, 0, 0}, detections = 0;
-    Counts n[3], profiled;
+    const int64_t t_tables = now_ns();
+    for (int b = 0; b < 3; b++)
+        add_exp_table(npu.outputs[b * 3].zp, npu.outputs[b * 3].scale);
+    const double table_build_ms = (now_ns() - t_tables) / 1e6;
+    // The table's decoding against decode_dfl on random bins, for each table: every other set of bins
+    // uniform over the 256 values, the others within a narrower range at a random level.
+    const int dfl_len = npu.outputs[0].dims[1] / 4;
+    long table_checks = 0, table_mismatches = 0;
+    std::mt19937 rng(1);
+    for (const auto& t : g_exp_tables) {
+        std::vector<int8_t> q(4 * dfl_len);
+        std::vector<float> bins(4 * dfl_len);
+        for (int r = 0; r < 200000; r++) {
+            const int width = r % 2 ? 256 : 1 + static_cast<int>(rng() % 32);
+            const int low = static_cast<int>(rng() % (257 - width)) - 128;
+            for (auto& v : q)
+                v = static_cast<int8_t>(low + static_cast<int>(rng() % width));
+            for (int k = 0; k < 4 * dfl_len; k++)
+                bins[k] = dequantize(q[k], t.zp, t.scale);
+            float want[4], got[4];
+            decode_dfl(bins.data(), dfl_len, want);
+            decode_dfl_table(t.e.data(), q.data(), 1, dfl_len, got);
+            table_checks++;
+            table_mismatches += std::memcmp(want, got, sizeof want) != 0;
+        }
+    }
+
+    std::vector<double> ms[4];  // scalar, NEON versions 1, 2 and 3
+    long identical[4] = {0, 0, 0, 0}, detections = 0;
+    Counts n[4], profiled;
     int64_t prof_total_ns = 0;
     std::atomic<bool> stop{false};
     int frames = 0;
@@ -332,9 +428,9 @@ int main(int argc, char** argv) {
             if (frames < max_frames) {
                 b->prepare(f, 0, 0);
                 b->bind(npu, 0, 0);
-                std::vector<Detection> got[3];
-                for (int pass = 0; pass < 3; pass++) {
-                    const int v = (pass + frames) % 3;
+                std::vector<Detection> got[4];
+                for (int pass = 0; pass < 4; pass++) {
+                    const int v = (pass + frames) % 4;
                     CHECK(rknn_run(npu.ctx[0], nullptr) == RKNN_SUCC, "rknn_run failed");
                     const auto ptrs = npu.output_ptrs(0);
                     const double t0 = thread_cpu_ms();
@@ -345,10 +441,10 @@ int main(int argc, char** argv) {
                     CHECK(rknn_run(npu.ctx[0], nullptr) == RKNN_SUCC, "rknn_run failed");
                     profiled.profile = true;
                     const int64_t t0 = now_ns();
-                    yolov8_post_neon(npu.output_ptrs(0), npu.outputs, mh, profiled, 2);
+                    yolov8_post_neon(npu.output_ptrs(0), npu.outputs, mh, profiled, 3);
                     prof_total_ns += now_ns() - t0;
                 }
-                for (int v = 0; v < 3; v++)
+                for (int v = 0; v < 4; v++)
                     identical[v] += same(got[0], got[v]);
                 detections += static_cast<long>(got[0].size());
                 if (++frames == max_frames)
@@ -380,18 +476,22 @@ int main(int argc, char** argv) {
         {"blocks_of_16_per_frame", f3(n[2].blocks / fr)},
         {"blocks_scanned_per_frame", f3(n[2].blocks_scanned / fr)},
         {"candidates_per_frame", f3(n[2].candidates / fr)},
+        {"exp_tables", std::to_string(g_exp_tables.size())},
+        {"exp_table_build_ms", f3(table_build_ms)},
+        {"exp_table_random_checks", std::to_string(table_checks)},
+        {"exp_table_random_mismatches", std::to_string(table_mismatches)},
     };
-    const char* names[3] = {"scalar", "neon1", "neon2"};
-    for (int v = 0; v < 3; v++) {
+    const char* names[4] = {"scalar", "neon1", "neon2", "neon3"};
+    for (int v = 0; v < 4; v++) {
         rows.push_back({std::string(names[v]) + "_identical_to_scalar", std::to_string(identical[v])});
         rows.push_back({std::string(names[v]) + "_cpu_ms_mean", f3(mean(ms[v]))});
         rows.push_back({std::string(names[v]) + "_cpu_ms_median", f3(nearest_rank(ms[v], 0.5))});
         rows.push_back({std::string(names[v]) + "_cpu_ms_p90", f3(nearest_rank(ms[v], 0.9))});
     }
-    rows.push_back({"profiled_neon2_ms_mean", f3(prof_total_ns / 1e6 / fr)});
-    rows.push_back({"profiled_neon2_scan_ms_mean", f3((profiled.branch_ns - profiled.decode_ns) / 1e6 / fr)});
-    rows.push_back({"profiled_neon2_box_decoding_ms_mean", f3(profiled.decode_ns / 1e6 / fr)});
-    rows.push_back({"profiled_neon2_sort_and_nms_ms_mean", f3(profiled.nms_ns / 1e6 / fr)});
+    rows.push_back({"profiled_neon3_ms_mean", f3(prof_total_ns / 1e6 / fr)});
+    rows.push_back({"profiled_neon3_scan_ms_mean", f3((profiled.branch_ns - profiled.decode_ns) / 1e6 / fr)});
+    rows.push_back({"profiled_neon3_box_decoding_ms_mean", f3(profiled.decode_ns / 1e6 / fr)});
+    rows.push_back({"profiled_neon3_sort_and_nms_ms_mean", f3(profiled.nms_ns / 1e6 / fr)});
     const std::string path = out_dir + "/post_probe.csv";
     FILE* csv = std::fopen(path.c_str(), "w");
     CHECK(csv, "cannot write %s", path.c_str());
@@ -403,5 +503,5 @@ int main(int argc, char** argv) {
         std::printf("%s: %s\n", k.c_str(), v.c_str());
     }
     CHECK(!std::ferror(csv) && std::fclose(csv) == 0, "writing %s failed", path.c_str());
-    return identical[1] == frames && identical[2] == frames ? 0 : 1;
+    return identical[1] == frames && identical[2] == frames && identical[3] == frames && table_mismatches == 0 ? 0 : 1;
 }
