@@ -16,11 +16,12 @@
 //      cached_pad                                 a cacheable input, all 114, every run
 //    Each run: whether the outputs equal rknn_outputs_get of a separate context on that input, else
 //    whether they equal the previous run's outputs, those of an all-zero input or of an all-114 input,
-//    and how many output bytes differ (and by how much at most); then the input memory is read back
-//    and the bytes that no longer hold what the CPU wrote are counted, and how many of them are 0.
+//    and how many output bytes differ (and by how much at most). The input memory is read back just
+//    before the run and after it: the bytes that no longer hold what the CPU wrote, and how many of
+//    them are 0.
 // B. C's path (zero_copy_rga, 2 slots), new NpuContexts: the first 10 decoded frames, each prepared
-//    by RGA and run on contexts 0, 1 and 2; each output compared with rknn_outputs_get on the slot as
-//    read back after the runs.
+//    by RGA, read back, then run on contexts 0, 1 and 2; each output compared with rknn_outputs_get on
+//    the slot as read back before the runs, and the slot read again after them.
 //
 // Usage: first_runs_probe <video.mp4> <model.rknn> <out_dir>   (as root)
 //   <out_dir>/first_runs.csv  "# key: value" header lines (PROTOCOL §1.4, run kind check), then one row
@@ -143,8 +144,8 @@ int main(int argc, char** argv) {
     CHECK(csv, "cannot write %s", path.c_str());
     for (const auto& [k, v] : header)
         std::fprintf(csv, "# %s: %s\n", k.c_str(), v.c_str());
-    std::fputs("part,case,run,context,frame,result,differing_bytes,largest_difference,input_changed_bytes,"
-               "input_changed_to_zero\n",
+    std::fputs("part,case,run,context,frame,result,differing_bytes,largest_difference,input_changed_before_run,"
+               "input_zero_before_run,input_changed_after_run,input_zero_after_run\n",
                csv);
     auto row = [&](const std::string& r) {
         std::fputs((r + "\n").c_str(), csv);
@@ -219,7 +220,7 @@ int main(int argc, char** argv) {
                 CHECK(rknn_run(ctx, nullptr) == RKNN_SUCC, "rknn_run failed");
                 Outputs got = read_outputs(out, ref);
                 row(std::string("A,") + c.name + ",warmup" + std::to_string(i) + ",0,pad," +
-                    compare(got, pad_out, prev, zero_out, pad_out) + input_check(pads));
+                    compare(got, pad_out, prev, zero_out, pad_out) + ",," + input_check(pads));
                 prev = std::move(got);
             }
         }
@@ -234,11 +235,13 @@ int main(int argc, char** argv) {
                 CHECK(rknn_mem_sync(ctx, in, RKNN_MEMORY_SYNC_TO_DEVICE) == RKNN_SUCC, "rknn_mem_sync failed");
             if (c.wait)
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            const std::string before = input_check(data);
             CHECK(rknn_run(ctx, nullptr) == RKNN_SUCC, "rknn_run failed");
             Outputs got = read_outputs(out, ref);
             row(std::string("A,") + c.name + "," + std::to_string(i) + ",0," +
                 (c.pad_only ? std::string("pad") : std::to_string(fi)) + "," +
-                compare(got, c.pad_only ? pad_out : expected[fi], prev, zero_out, pad_out) + input_check(data));
+                compare(got, c.pad_only ? pad_out : expected[fi], prev, zero_out, pad_out) + before +
+                input_check(data));
             prev = std::move(got);
         }
         for (auto* m : out)
@@ -253,7 +256,7 @@ int main(int argc, char** argv) {
         npu.open(model_path);
         auto c = make_zero_copy_rga(model_path, rga_interpolation());
         c->init(npu, 2);
-        std::vector<uint8_t> tensor(bytes);
+        std::vector<uint8_t> written(bytes), tensor(bytes);
         Outputs prev[NpuContexts::kCount];
         for (int k = 0; k < NpuContexts::kCount; k++)
             prev[k] = read_outputs(npu.out_mem[k], ref);
@@ -266,17 +269,24 @@ int main(int argc, char** argv) {
                 if (frames < 10) {
                     const int slot = frames % 2;
                     c->prepare(f, 0, slot);
+                    c->read_slot(slot, written.data());  // as RGA wrote it, before any run
                     Outputs got[NpuContexts::kCount];
                     for (int k = 0; k < NpuContexts::kCount; k++) {
                         c->bind(npu, k, slot);
                         got[k] = npu.run_bound(k);
                     }
                     c->read_slot(slot, tensor.data());
-                    const Outputs want = ref.reference_outputs(tensor, model_path);
+                    long changed = 0, zero = 0;
+                    for (size_t j = 0; j < bytes; j++)
+                        if (tensor[j] != written[j]) {
+                            changed++;
+                            zero += tensor[j] == 0;
+                        }
+                    const Outputs want = ref.reference_outputs(written, model_path);
                     for (int k = 0; k < NpuContexts::kCount; k++) {
                         row("B,c_rga," + std::to_string(frames) + "," + std::to_string(k) + "," +
                             std::to_string(frames) + "," + compare(got[k], want, prev[k], zero_out, pad_out) +
-                            ",,");
+                            ",0,0," + std::to_string(changed) + "," + std::to_string(zero));
                         prev[k] = got[k];
                     }
                     if (++frames == 10)
