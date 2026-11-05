@@ -1,0 +1,37 @@
+mpp[115762]: mpp_platform: client 18 driver is not ready!
+mpp[115762]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+frames: 300
+detections_per_frame: 16.2600
+cells_per_frame: 8400.0000
+cells_passing_score_sum_per_frame: 1995.5433
+blocks_of_16_per_frame: 525.0000
+blocks_scanned_per_frame: 194.7833
+candidates_per_frame: 107.2667
+exp_tables: 3
+exp_table_build_ms: 1.5861
+exp_table_random_checks: 600000
+exp_table_random_mismatches: 0
+scalar_identical_to_scalar: 300
+scalar_cpu_ms_mean: 0.3608
+scalar_cpu_ms_median: 0.3576
+scalar_cpu_ms_p90: 0.3879
+neon1_identical_to_scalar: 300
+neon1_cpu_ms_mean: 0.1987
+neon1_cpu_ms_median: 0.1960
+neon1_cpu_ms_p90: 0.2223
+neon2_identical_to_scalar: 300
+neon2_cpu_ms_mean: 0.1747
+neon2_cpu_ms_median: 0.1750
+neon2_cpu_ms_p90: 0.1969
+neon3_identical_to_scalar: 300
+neon3_cpu_ms_mean: 0.1409
+neon3_cpu_ms_median: 0.1397
+neon3_cpu_ms_p90: 0.1590
+neon4_identical_to_scalar: 300
+neon4_cpu_ms_mean: 0.1289
+neon4_cpu_ms_median: 0.1280
+neon4_cpu_ms_p90: 0.1473
+profiled_neon4_ms_mean: 0.1304
+profiled_neon4_scan_ms_mean: 0.0570
+profiled_neon4_box_decoding_ms_mean: 0.0574
+profiled_neon4_sort_and_nms_ms_mean: 0.0143
