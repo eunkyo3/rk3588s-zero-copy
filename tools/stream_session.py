@@ -24,6 +24,17 @@ Subcommands:
                channels; B and C on the A55 cores at 8 channels, one repetition; B-direct (Bd) against B
                and C at 8 channels main and at 5 channels aux, once tools/bdirect_check has passed.
                With three arms the order rotates.
+  sweep m2_main, m2_aux
+               M2's comparison of prereg/M2.md §5.2, run kind m2, after the M1.1 designs: C against Cp
+               (C with the NEON post-processing, --post neon) at 8 channels main with the staggered
+               sampler (--stagger on, both arms), then at 5 channels aux. Each run passes freeze-m2's
+               commit from docs/notes/env.md. A session starts only once freeze-m2 has its row there and
+               M2 §4's equivalence check, in results/check/<UTC>_m2_equivalence, has passed with the
+               SHA-256 of this build's post-processing objects.
+  m2-check     the check runs of prereg/M2.md §7 step 3, run kind check, before freeze-m2: one run of each
+               arm, C then Cp, at 8 channels main with the staggered sampler, once M2 §4's equivalence
+               check has passed with this build's post-processing objects. Its runs pass no freeze-m2
+               commit (bench_main's default, none).
   h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
@@ -38,8 +49,8 @@ Each session:
     under systemd-inhibit so the PC does not sleep, and stops it at the end, keeping its logs; records
     the PC's stream-server commit, the hashes of its configuration and the clock offset to the PC;
   - idles first for the soc-thermal baseline, then puts every run behind the cooldown gate (§9.2), and
-    stops if 30 minutes pass without a run (§2); a sweep also takes the idle baseline of system CPU
-    (§7.2) over the idle period's last 120 s;
+    stops if 30 minutes pass without a run (§2); a sweep or m2-check also takes the idle baseline of
+    system CPU (§7.2, and from /proc/schedstat for M2 §3.2) over the idle period's last 120 s;
   - records the environment before every run (§9.1), and the server's log lines and publisher output
     with every run (§3);
   - judges every run by §9.3 rules 1 to 4 where they apply, and repeats an invalid run once.
@@ -52,14 +63,15 @@ Which rules apply:
     the check's own criterion, so it does not make a thermal run invalid.
   - sweep runs: rules 1, 2 and 4, and rule 3 at unsaturated conditions (§6.2 with L = 32, A9): every
     count but 32 at the main condition, every auxiliary and every A count.
+  - m2-check runs: rules 1, 2, 3 and 4 (8 channels main is unsaturated, M2 §5.2).
   - h3 runs: rules 1, 2 and 4 (§10). A run sustains as HYPOTHESES H3 defines it; an invalid x2 run
     counts as not sustained.
 External failures (§9.3, last paragraph): an input that ends early, a server that is down before or
 after a run, or a log that cannot be read make the run invalid with the reason given; a log that cannot
 be read, a server that is
 down, or a PC clock more than 5 ms behind or 100 ms ahead of the board's, stops the session. SIGTERM
-or SIGHUP (the operator) stops the session too. In limit, loop-check and thermal sessions a run it cuts
-short is recorded with that reason and is neither repeated nor counted; a stopped limit search is kept
+or SIGHUP (the operator) stops the session too. In limit, loop-check, thermal and m2-check sessions a run
+it cuts short is recorded with that reason and is neither repeated nor counted; a stopped limit search is kept
 and flagged, and the search is run again from §10 step 1 in a new session. In sweep and h3 sessions,
 a run cut short by the operator, by an external failure or by the session's death (a reboot) is an
 invalid attempt (§9.3), and the next session goes on as docs/notes/comparison.md says.
@@ -82,7 +94,9 @@ from the login session (setsid nohup):
   COOLING=<text> AMBIENT_C=<°C> python3 tools/stream_session.py limit [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--set 4k] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py thermal --limit L [--out DIR]
-  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference,4k,k4,a55,bdirect_main,bdirect_aux}
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference,4k,k4,a55,bdirect_main,
+                                                                   bdirect_aux,m2_main,m2_aux}
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py m2-check [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
 --gate-s, for limit and h3 --start and --cap, and for sweep --counts. A sweep or h3 session with any of
@@ -138,6 +152,12 @@ GATE_MC, SESSION_END_S = 3000, 30 * 60 - 60  # a minute's margin for collect_env
 MAX_PC_AHEAD_S, MAX_PC_BEHIND_S = 0.1, 0.005
 PREREG_V1_COMMIT = "87fe874b4f196dafd48f6a175b2d7604625aedba"  # docs/notes/env.md
 FREEZE_M1_COMMIT = "2eec964d27545e081a44bc5ead01bbfcd2905a54"  # docs/notes/env.md; every run carries it
+PREREG_M2_COMMIT = "5d9d6d04e50f17d52980dc5b958c7071d7107176"  # docs/notes/env.md; M2's headers carry it (M2 §5.1)
+ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's commit (M2 §7 step 4)
+POST_OBJECTS = {  # M2 §4: the post-processing objects of libcore, by their key in m2_equivalence.csv
+    "sha256_yolov8_post_o": "build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o",
+    "sha256_yolov8_post_neon_o": "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o",
+}
 LIMIT = 32  # L (A9)
 SEED, REPETITIONS = 20261030, 3  # §9.1, §8
 SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, results/<kind>/<UTC>_<sweep>
@@ -150,14 +170,21 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     "a55": ((8,), "main", ("B", "C"), "m1.1"),
     "bdirect_main": ((8,), "main", ("B", "C", "Bd"), "m1.1"),
     "bdirect_aux": ((5,), "aux", ("B", "C", "Bd"), "m1.1"),
+    # prereg/M2.md §5.2: C against Cp, C with the NEON post-processing (§1)
+    "m2_main": ((8,), "main", ("C", "Cp"), "m2"),
+    "m2_aux": ((5,), "aux", ("C", "Cp"), "m2"),
 }
-ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"]}  # A12; else --variant <arm>
-SWEEP_OPTIONS = {"a55": ["--cores", "a55"]}  # A12: on every run of the sweep
+ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"],  # A12
+        "Cp": ["--variant", "C", "--post", "neon"]}  # M2 §1; else --variant <arm>
+SWEEP_OPTIONS = {"a55": ["--cores", "a55"],  # A12; on every run of the sweep or phase
+                 "m2_main": ["--stagger", "on"], "m2_check": ["--stagger", "on"]}  # M2 §3.1, both arms
+M2_CHECK = (8, "main", ("C", "Cp"))  # M2 §7 step 3: channels, condition, arms in run order, one run each
 SWEEP_REPETITIONS = {"a55": 1}  # A12 (§13: × 1); the other sweeps have REPETITIONS
 IDLE_BASELINE_S = 120  # §7.2
 H3_START, SUSTAIN_FPS = 8, 4.75  # §10 (min(8, L)), HYPOTHESES H3
 H3_PHASES = ("h3_search", "h3_confirm")
-ORDER = ("main", "aux", "h3", "reference", "4k", "k4", "a55", "bdirect_main", "bdirect_aux")  # comparison.md
+ORDER = ("main", "aux", "h3", "reference", "4k", "k4", "a55", "bdirect_main", "bdirect_aux",  # comparison.md
+         "m2_main", "m2_aux")  # M2 §5.3: main first
 SESSION_NAME = r"\d{8}T\d{6}Z_"  # results/<kind>/<UTC>_<sweep or h3>
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
@@ -339,8 +366,19 @@ def variant_order(variants, repetition):
 
 
 def bench_args(arm, phase):
-    """bench_main's options for an arm in a phase: --variant, then K or the cores where A12 changes them."""
+    """bench_main's options for an arm in a phase: --variant, then K, the post-processing, the cores or the
+    sampler where A12 or M2 change them."""
     return ARMS.get(arm, ["--variant", arm]) + SWEEP_OPTIONS.get(phase, [])
+
+
+def is_m2(name):
+    """Whether name is a sweep of M2 (run kind m2, M2 §5.1)."""
+    return name in SWEEPS and SWEEPS[name][3] == "m2"
+
+
+def m2_session(args):
+    """Whether a session is M2's, an m2 sweep or m2-check: its headers carry M2's commits (M2 §5.1)."""
+    return is_m2(getattr(args, "sweep", None)) or getattr(args, "command", None) == "m2-check"
 
 
 def sweep_plan(sweep, counts=None):
@@ -563,14 +601,52 @@ def proc_stat_nonidle(text):
     return out
 
 
-def idle_rows(before, after, tick_s):
-    """§7.2's idle baseline as rows named like bench_main's summary: per CPU, per cluster and total."""
+def schedstat_run_ns(text):
+    """(version, {cpu: rq_cpu_time in ns}) from /proc/schedstat: the 7th number after the label of each
+    cpu<N> line, as bench_main reads it (M2 §3.2). Domain lines and the others are skipped."""
+    version, out = "unknown", {}
+    for line in text.splitlines():
+        f = line.split()
+        if len(f) == 2 and f[0] == "version":
+            version = f[1]
+        elif len(f) >= 8 and re.fullmatch(r"cpu\d+", f[0]):
+            out[int(f[0][3:])] = int(f[7])
+    return version, out
+
+
+def idle_rows(before, after, tick_s, prefix="system"):
+    """§7.2's idle baseline as rows named like bench_main's summary: per CPU, per cluster and total.
+    tick_s: seconds per count; prefix "schedstat" for /proc/schedstat's ns (M2 §3.2)."""
     d = {c: (after[c] - before[c]) * tick_s for c in sorted(after) if c in before}
-    rows = [(f"system_cpu{c}_s", f"{v:.3f}") for c, v in d.items()]
+    rows = [(f"{prefix}_cpu{c}_s", f"{v:.3f}") for c, v in d.items()]
     for name, cpus in (("0-3", range(0, 4)), ("4-5", range(4, 6)), ("6-7", range(6, 8))):
-        rows.append((f"system_cpu{name}_s", f"{sum(d.get(c, 0.0) for c in cpus):.3f}"))
-    rows.append(("system_cpu_total_s", f"{sum(d.values()):.3f}"))
+        rows.append((f"{prefix}_cpu{name}_s", f"{sum(d.get(c, 0.0) for c in cpus):.3f}"))
+    rows.append((f"{prefix}_cpu_total_s", f"{sum(d.values()):.3f}"))
     return rows
+
+
+def schedstat_rows(before, after):
+    """M2 §3.2's idle baseline from /proc/schedstat's text at the two moments: the version, then rows as
+    idle_rows gives them. None for either text (no /proc/schedstat) gives no rows."""
+    if before is None or after is None:
+        return []
+    (version, b), (_, a) = schedstat_run_ns(before), schedstat_run_ns(after)
+    return [("schedstat_version", version)] + idle_rows(b, a, 1e-9, "schedstat")
+
+
+def registration_commits(text):
+    """{stage: tag commit} from the Registration table of docs/notes/env.md, for the rows that have both
+    a tag commit and a Release created_at."""
+    out, section = {}, None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
+        m = re.match(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*`([0-9a-f]{40})`\s*\|"
+                     r"\s*\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\s*\|\s*$", line)
+        if section == "Registration" and m:
+            out[m.group(1)] = m.group(2)
+    return out
 
 
 def loops_in_window(duration_s, warmup, window):
@@ -624,6 +700,14 @@ def video_problems(assignment_tsv, expected):
 
 def keyed(text):
     return {k: v for k, _, v in (line.partition(": ") for line in text.splitlines()) if v}
+
+
+def read_optional(path):
+    """The text of path, or None if it cannot be read (/proc/schedstat needs CONFIG_SCHED_INFO, M2 §3.2)."""
+    try:
+        return Path(path).read_text()
+    except OSError:
+        return None
 
 
 class Outcome:
@@ -780,17 +864,19 @@ class Session:
         if "soc-thermal" not in self.trips:
             raise Stop("env.txt has no trip point for soc-thermal")
         self.code_commit = build_commit()
+        self.freeze_m2 = freeze_m2_commit() if is_m2(a.sweep) else "none"  # m2-check runs before it (M2 §7)
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
         from_s = max(0, a.idle_s - IDLE_BASELINE_S)  # §7.2's idle baseline: the idle period's last 120 s
         for i in range(a.idle_s):
             if i == from_s:
-                self.idle = [dt.datetime.now(dt.timezone.utc), time.monotonic(), Path("/proc/stat").read_text()]
+                self.idle = [dt.datetime.now(dt.timezone.utc), time.monotonic(), Path("/proc/stat").read_text(),
+                             read_optional("/proc/schedstat")]  # M2 §3.2
             time.sleep(1)
             if i >= a.idle_s - 60:
                 temps.append(self.soc())
-        self.idle += [time.monotonic(), Path("/proc/stat").read_text()]
+        self.idle += [time.monotonic(), Path("/proc/stat").read_text(), read_optional("/proc/schedstat")]
         self.baseline = sum(temps) // len(temps)
         (self.out / "baseline.txt").write_text(f"idle_s: {a.idle_s}\nsoc_thermal_baseline_mc: {self.baseline}\n")
         self.say(f"soc-thermal baseline {self.baseline} m°C")
@@ -913,6 +999,7 @@ class Session:
         cmd = ["./build/bench_main", *bench_args(variant, phase), "--channels", str(channels), "--source", source,
                "--condition", condition, "--warmup", str(a.warmup), "--duration", str(a.duration),
                "--run-kind", run_kind, "--repetition", str(repetition), "--freeze-commit", FREEZE_M1_COMMIT,
+               *(["--freeze-m2-commit", self.freeze_m2] if is_m2(phase) else []),  # M2 §5.1; M1's as before
                "--out", str(run_dir)]
         start = dt.datetime.now(dt.timezone.utc)
         # Just before the bench, after the gate and the checks: if the session dies during the run,
@@ -989,7 +1076,7 @@ class Session:
             if phase != "thermal":  # rule 1; for the thermal check it is the criterion
                 o.reasons += [f"clock below fixed: {d}" for d in clocks_below(summary, self.fixed)]
             limit = a.limit if phase == "thermal" else LIMIT
-            if phase in ("thermal",) + tuple(SWEEPS) and unsaturated(channels, condition, limit):  # rule 3
+            if phase in ("thermal", "m2_check") + tuple(SWEEPS) and unsaturated(channels, condition, limit):  # rule 3
                 drops = sum(int(r["decoder_drops"]) for r in ch_rows)
                 if drops:
                     o.reasons.append(f"{drops} decoder drops at an unsaturated condition (rule 3)")
@@ -1044,8 +1131,10 @@ class Session:
         with open(self.out / "runs.tsv", encoding="utf-8") as f:
             starts = [r["start_utc"] for r in csv.DictReader(f, delimiter="\t")]
         h = self.run_header or {}
+        m2 = ("prereg_m2_commit", "freeze_m2_commit") if m2_session(a) else ()
         header = {"start_time_utc": min(starts) if starts else "", "ntp_synchronized": h.get("ntp_synchronized", ""),
                   "prereg_v1_commit": h.get("prereg_v1_commit", ""), "freeze_m1_commit": h.get("freeze_m1_commit", ""),
+                  **{k: h.get(k, "") for k in m2},  # M2 §5.1, from the first run's header
                   "run_kind": run_kind, "model_sha256": h.get("model_sha256", ""), "decoder": h.get("decoder", ""),
                   "code_commit": self.code_commit, "amendment": h.get("amendment", ""), "session": self.out.name,
                   "cooling": os.environ["COOLING"], "ambient_c": os.environ["AMBIENT_C"]}
@@ -1150,6 +1239,44 @@ def bdirect_check_done(commit):
     return False
 
 
+def freeze_m2_commit():
+    """freeze-m2's tag commit from the Registration table of docs/notes/env.md, or "none" before it
+    (M2 §5.1)."""
+    return registration_commits(Path(ENV_MD).read_text(encoding="utf-8")).get("freeze-m2", "none")
+
+
+def post_object_hashes():
+    """{key of POST_OBJECTS: SHA-256} of this build's post-processing objects; a missing one is left out."""
+    return {k: hashlib.sha256(Path(p).read_bytes()).hexdigest() for k, p in POST_OBJECTS.items() if Path(p).exists()}
+
+
+def m2_equivalence_done(hashes):
+    """Whether M2 §4's equivalence check has passed with these post-processing objects: results/check/
+    <UTC>_m2_equivalence whose m2_equivalence.csv says passed 1, with the SHA-256 of both objects equal
+    to hashes (post_object_hashes). Objects that differ need the check again with their build (M2 §4).
+    A failed check of the same objects stops Cp for good: the decoding is deterministic, so a later pass
+    of the same objects does not undo it (M2 §4, "On failure")."""
+    passed = False
+    for d in Path("results", "check").glob("*_m2_equivalence"):
+        check = d / "m2_equivalence.csv"
+        if re.fullmatch(SESSION_NAME + "m2_equivalence", d.name) and check.exists():
+            rows = {r["key"]: r["value"] for r in read_csv(check)[1]}
+            if all(k in hashes and rows.get(k) == hashes[k] for k in POST_OBJECTS):
+                if rows.get("passed") != "1":
+                    return False
+                passed = True
+    return passed
+
+
+def equivalence_problem():
+    """Why M2's runs and checks cannot start yet for want of M2 §4's equivalence check of this build's
+    post-processing objects (m2_equivalence_done), or None."""
+    if m2_equivalence_done(post_object_hashes()):
+        return None
+    return ("a passed equivalence check of this build's post-processing objects (their SHA-256), in "
+            "results/check/<UTC>_m2_equivalence, comes before M2's runs and checks (M2 §4, §7 step 3)")
+
+
 def order_problem(name):
     """Why a protocol session of name cannot start now (docs/notes/comparison.md), or None."""
     for earlier in ORDER[:ORDER.index(name)]:
@@ -1160,21 +1287,30 @@ def order_problem(name):
     if name.startswith("bdirect_") and not bdirect_check_done(build_commit()):
         return ("a passed tools/bdirect_check of this build, in results/check/<UTC>_bdirect_check, comes before "
                 "B-direct (A12)")
+    if is_m2(name) and freeze_m2_commit() == "none":
+        return f"freeze-m2 comes before M2's runs, and {ENV_MD} has no row for it with its commit and created_at " \
+               "(M2 §5.1)"
+    problem = equivalence_problem() if is_m2(name) else None
+    if problem:
+        return problem
     if progress(name) == "complete":
         return f"{name} is complete"
     return None
 
 
 def write_idle_baseline(s, run_kind):
-    """§7.2: system CPU over the idle period's last 120 s, with a results header (§1.4)."""
-    start, t0, stat0, t1, stat1 = s.idle
+    """§7.2: system CPU over the idle period's last 120 s, from /proc/stat and, where it can be read,
+    /proc/schedstat (M2 §3.2), with a results header (§1.4)."""
+    start, t0, stat0, sched0, t1, stat1, sched1 = s.idle
     rows = [("window_s", f"{t1 - t0:.1f}")] + idle_rows(proc_stat_nonidle(stat0), proc_stat_nonidle(stat1),
                                                        1.0 / os.sysconf("SC_CLK_TCK"))
+    rows += schedstat_rows(sched0, sched1)  # M2 §3.2; none without /proc/schedstat
     amendments = re.findall(r"^## (A\d+) ", Path("prereg/AMENDMENTS.md").read_text(encoding="utf-8"), re.M)
     ntp = subprocess.run(["timedatectl", "show", "-p", "NTPSynchronized", "--value"], capture_output=True,
                          text=True).stdout.strip()
+    m2 = {"prereg_m2_commit": PREREG_M2_COMMIT, "freeze_m2_commit": s.freeze_m2} if m2_session(s.args) else {}
     header = {"start_time_utc": f"{start:%Y-%m-%dT%H:%M:%SZ}", "ntp_synchronized": ntp,
-              "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, "run_kind": run_kind,
+              "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, **m2, "run_kind": run_kind,
               "measurement": "idle baseline of system CPU (PROTOCOL §7.2), not a run", "code_commit": s.code_commit,
               "amendment": amendments[-1] if amendments else "none"}
     text = "".join(f"# {k}: {v}\n" for k, v in header.items())
@@ -1209,7 +1345,22 @@ def cmd_sweep(s):
                         ("channel_order", " ".join(map(str, channel_order(a.counts or SWEEPS[a.sweep][0])))),
                         ("earlier_sessions", " ".join(d.name for d in earlier) or "none"),
                         ("repetitions_run_here", " ".join(done_here) or "none"),
-                        ("repetitions_left", " ".join(left) or "none")], s.run_kind)
+                        ("repetitions_left", " ".join(left) or "none")]
+                       + (list(post_object_hashes().items()) if is_m2(a.sweep) else []), s.run_kind)  # M2 §4
+
+
+def cmd_m2_check(s):
+    """M2 §7 step 3: one run of each arm at 8 channels, main condition, staggered, before freeze-m2."""
+    channels, condition, arms = M2_CHECK
+    write_idle_baseline(s, "check")
+    rows, status = [], "stopped"
+    try:
+        for arm in arms:
+            valid, run_dir = s.run("m2_check", arm, channels, condition, "check")
+            rows.append((f"{arm}_run", run_dir.name if valid else "invalid_x2"))
+        status = "completed"
+    finally:  # also when the session stops: what it ran, and the objects it ran with (M2 §4)
+        s.write_result([("session_status", status)] + rows + list(post_object_hashes().items()), "check")
 
 
 def cmd_h3(s):
@@ -1288,7 +1439,7 @@ def cmd_thermal(s):
 
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3"])
+    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3", "m2-check"])
     ap.add_argument("sweep", nargs="?", choices=list(SWEEPS), help="sweep: which one")
     ap.add_argument("--out")
     ap.add_argument("--limit", type=int, help="thermal: L, which gives the largest main count")
@@ -1330,8 +1481,8 @@ def main(argv):
             ap.error(f"a protocol session is named <UTC>_{name}, where the next one finds it")
         args.out = args.out or f"results/{run_kind}/{now}_{name}" + ("_smoke" if smoke else "")
     else:
-        kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal"}[args.command]
-        run_kind = "check" if kind == "loop" else "calibration"
+        kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal", "m2-check": "m2_check"}[args.command]
+        run_kind = "check" if kind in ("loop", "m2_check") else "calibration"
         args.out = args.out or f"results/{run_kind}/{now}_{kind}" + (f"_{video_set}" if video_set != "m1" else "")
 
     def on_signal(signum, _frame):
@@ -1349,6 +1500,9 @@ def main(argv):
             problem = order_problem(this)
             if problem:
                 raise Stop(f"not starting: {problem} (docs/notes/comparison.md)")
+        problem = equivalence_problem() if args.command == "m2-check" else None  # not freeze-m2: it comes later
+        if problem:
+            raise Stop(f"not starting: {problem}")
         s = Session(args)
         s.smoke, s.run_kind = smoke, run_kind
         if args.command == "loop-check":
@@ -1359,7 +1513,7 @@ def main(argv):
     try:
         s.start()
         {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal, "sweep": cmd_sweep,
-         "h3": cmd_h3}[args.command](s)
+         "h3": cmd_h3, "m2-check": cmd_m2_check}[args.command](s)
         status = 0
     except Stop as e:
         s.say(f"stopped: {e}")

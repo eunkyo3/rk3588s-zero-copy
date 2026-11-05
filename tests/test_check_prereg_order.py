@@ -16,6 +16,8 @@ import check_prereg_order as cpo  # noqa: E402
 
 PREREG = "2026-10-30T02:01:36Z"
 BEFORE, AFTER, LATER = "2026-10-30T01:00:00Z", "2026-11-02T07:00:00Z", "2026-11-20T00:00:00Z"
+PREREG_M2, BETWEEN, FREEZE_M2 = "2026-11-05T04:45:34Z", "2026-11-06T00:00:00Z", "2026-11-10T00:00:00Z"
+M2_ROWS = [f"| `prereg-m2` | `5d9d` | {PREREG_M2} |", f"| `freeze-m2` | `f2f2` | {FREEZE_M2} |"]
 
 
 def env_md(freeze="", amend=None, extra_rows=()):
@@ -48,8 +50,9 @@ class Case:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
 
-    def csv(self, rel, start, kind="calibration", amendment="A6"):
-        self.write(rel, f"# start_time_utc: {start}\n# run_kind: {kind}\n# amendment: {amendment}\nkey,value\n")
+    def csv(self, rel, start, kind="calibration", amendment="A6", prereg_m2=None):
+        m2 = f"# prereg_m2_commit: {prereg_m2}\n" if prereg_m2 is not None else ""
+        self.write(rel, f"# start_time_utc: {start}\n# run_kind: {kind}\n# amendment: {amendment}\n{m2}key,value\n")
 
     def run(self):
         out, err = io.StringIO(), io.StringIO()
@@ -188,6 +191,57 @@ class Check(unittest.TestCase):
         c = self.case()
         c.csv("calibration/s/summary.csv", AFTER, kind="calibration")
         self.assertEqual(c.run()[0], 0)
+
+    def test_m2_needs_freeze_m2(self):
+        # M2 §5.1: every m2 run starts after freeze-m2; without its reference time, every m2 file fails.
+        for rows in ([M2_ROWS[0]], [M2_ROWS[0], "| `freeze-m2` | not created yet | |"]):
+            with self.subTest(rows=rows):
+                c = self.case(extra_rows=rows)
+                c.csv("m2/s/r1/summary.csv", LATER, kind="m2")
+                c.write("m2/s/r1/frames.log", "x\n")  # inherits the m2 kind
+                code, out = c.run()
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out.count("a m2 run, and freeze-m2 has no reference time"), 2, out)
+        for start, expected in [(BETWEEN, 1), (FREEZE_M2, 1), (LATER, 0)]:
+            with self.subTest(start=start):
+                c = self.case(extra_rows=M2_ROWS)
+                c.csv("m2/s/r1/summary.csv", start, kind="m2")
+                code, out = c.run()
+                self.assertEqual(code, expected, out)
+                self.assertEqual(out.count("not after freeze-m2"), expected, out)
+
+    def test_a_header_that_names_prereg_m2(self):
+        # M2 §5.1: whatever its run kind, a file whose header names prereg-m2 starts after it.
+        for start, expected in [(AFTER, 1), (PREREG_M2, 1), (BETWEEN, 0)]:
+            with self.subTest(start=start):
+                c = self.case(extra_rows=M2_ROWS)
+                c.csv("check/x/summary.csv", start, kind="check", prereg_m2="5d9d")
+                c.write("check/x/x.log", "x\n")  # inherits it from summary.csv
+                code, out = c.run()
+                self.assertEqual(code, expected, out)
+                self.assertEqual(out.count("not after prereg-m2"), 2 * expected, out)
+        c = self.case(extra_rows=M2_ROWS)
+        c.write("check/y/env.json", json.dumps({"header_start_time_utc": AFTER, "header_run_kind": "check",
+                                                "header_prereg_m2_commit": "5d9d"}))
+        header = {"header": {"start_time_utc": AFTER, "run_kind": "check", "prereg_m2_commit": "5d9d"}}
+        c.write("check/z/t.jsonl", json.dumps(header) + "\n")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out.count("names prereg-m2 but starts 2026-11-02T07:00:00Z"), 2, out)
+
+    def test_prereg_m2_none_or_absent_sets_no_time(self):
+        c = self.case()  # no prereg-m2 row either
+        c.csv("check/x/a.csv", AFTER, kind="check", prereg_m2="none")
+        c.csv("check/x/b.csv", AFTER, kind="check", prereg_m2="")
+        c.csv("check/x/c.csv", AFTER, kind="check")
+        self.assertEqual(c.run()[0], 0)
+
+    def test_naming_prereg_m2_needs_its_reference_time(self):
+        c = self.case()
+        c.csv("check/x/a.csv", BETWEEN, kind="check", prereg_m2="5d9d")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("names prereg-m2, and prereg-m2 has no reference time", out)
 
     def test_amendment_release(self):
         for start, expected in [(AFTER, 1), (LATER, 0)]:

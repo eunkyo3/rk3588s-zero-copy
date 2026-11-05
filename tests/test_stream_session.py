@@ -11,8 +11,9 @@ import sys
 import tempfile
 import types
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import stream_session as ss  # noqa: E402
@@ -436,8 +437,9 @@ class Sweeps(unittest.TestCase):
 
     def test_the_m1_1_designs(self):
         # AMENDMENTS A12: after the 4K sweep, run kind m1.1, each design with its controls
-        self.assertEqual(ss.ORDER[ss.ORDER.index("4k") + 1:], ("k4", "a55", "bdirect_main", "bdirect_aux"))
-        self.assertEqual({ss.session_kind(n) for n in ss.ORDER[ss.ORDER.index("4k"):]}, {"m1.1"})
+        m1_1 = ss.ORDER[ss.ORDER.index("4k"):ss.ORDER.index("m2_main")]  # M2's sweeps come after them
+        self.assertEqual(m1_1[1:], ("k4", "a55", "bdirect_main", "bdirect_aux"))
+        self.assertEqual({ss.session_kind(n) for n in m1_1}, {"m1.1"})
         self.assertEqual(ss.sweep_plan("bdirect_main"), [(8, 1, ("B", "C", "Bd")), (8, 2, ("C", "Bd", "B")),
                                                          (8, 3, ("Bd", "B", "C"))])
         self.assertEqual([p[:2] for p in ss.sweep_plan("bdirect_aux")], [(5, 1), (5, 2), (5, 3)])
@@ -503,6 +505,271 @@ class Sweeps(unittest.TestCase):
         self.assertEqual((rows["system_cpu0-3_s"], rows["system_cpu4-5_s"], rows["system_cpu6-7_s"]),
                          ("0.140", "1.000", "0.000"))
         self.assertEqual(rows["system_cpu_total_s"], "1.140")
+
+
+SCHEDSTAT = ("version 15\ntimestamp 4295000000\ncpu0 0 0 100 50 60 30 {cpu0} 500 70\n"
+             "domain0 03 " + " ".join(["9"] * 36) + "\ncpu4 0 0 10 5 6 3 {cpu4} 50 7\ndomain0 30 1 2 3\ncpu7 1 2\n")
+FREEZE_M2_ROW = "| [`freeze-m2`](https://x/freeze-m2) | `" + "f2" * 20 + "` | 2026-11-10T00:00:00Z |"
+
+
+def env_md(*rows):
+    """docs/notes/env.md with prereg-m2's Registration row, then these rows."""
+    return ("# Environment\n\n## Registration\n\n| Stage | Tag commit | Release `created_at` |\n|---|---|---|\n"
+            f"| [`prereg-m2`](https://x/prereg-m2) | `{ss.PREREG_M2_COMMIT}` | 2026-11-05T04:45:34Z |\n"
+            + "".join(r + "\n" for r in rows)
+            + "\n## Board baseline\n\n| `freeze-m2` | `" + "a" * 40 + "` | 2026-11-10T00:00:00Z |\n")
+
+
+class M2(unittest.TestCase):
+    """prereg/M2.md: the sweeps of §5.2 and m2-check (§7 step 3), their bench options, the gates of §4 and
+    §5.1, and the idle baseline from /proc/schedstat (§3.2)."""
+
+    def setUp(self):
+        self.here = os.getcwd()
+        self.tmp = tempfile.TemporaryDirectory()
+        os.chdir(self.tmp.name)
+
+    def tearDown(self):
+        os.chdir(self.here)
+        self.tmp.cleanup()
+
+    def build(self, post, neon):
+        """Writes the build's post-processing objects; returns their SHA-256 as post_object_hashes gives them."""
+        for key, data in (("sha256_yolov8_post_o", post), ("sha256_yolov8_post_neon_o", neon)):
+            p = Path(ss.POST_OBJECTS[key])
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(data)
+        return {"sha256_yolov8_post_o": hashlib.sha256(post).hexdigest(),
+                "sha256_yolov8_post_neon_o": hashlib.sha256(neon).hexdigest()}
+
+    def equivalence(self, name, passed, hashes):
+        d = Path("results/check", name)
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "m2_equivalence.csv").write_text(
+            "# start_time_utc: 2026-11-06T00:00:00Z\n# run_kind: check\nkey,value\nsynthetic_sets,12500\n"
+            f"passed,{passed}\n" + "".join(f"{k},{v}\n" for k, v in hashes.items()), encoding="utf-8")
+
+    def test_the_m2_sweeps(self):
+        self.assertEqual(ss.ORDER[ss.ORDER.index("bdirect_aux") + 1:], ("m2_main", "m2_aux"))  # §5.3: main first
+        self.assertEqual({ss.session_kind(n) for n in ("m2_main", "m2_aux")}, {"m2"})
+        self.assertEqual([n for n in ss.SWEEPS if ss.is_m2(n)], ["m2_main", "m2_aux"])
+        self.assertFalse(ss.is_m2(None) or ss.is_m2("h3") or ss.is_m2("m2_check"))
+        self.assertEqual(ss.sweep_plan("m2_main"), [(8, 1, ("C", "Cp")), (8, 2, ("Cp", "C")), (8, 3, ("C", "Cp"))])
+        self.assertEqual(ss.sweep_plan("m2_aux"), [(5, 1, ("C", "Cp")), (5, 2, ("Cp", "C")), (5, 3, ("C", "Cp"))])
+        self.assertEqual((ss.SWEEPS["m2_main"][1], ss.SWEEPS["m2_aux"][1]), ("main", "aux"))
+        self.assertTrue(ss.unsaturated(8, "main", ss.LIMIT) and ss.unsaturated(5, "aux", ss.LIMIT))  # rule 3
+        for name in ("20261110T000000Z_m2_main", "20261110T010000Z_m2_aux"):
+            Path("results/m2", name).mkdir(parents=True)
+        Path("results/check/20261109T000000Z_m2_main_smoke").mkdir(parents=True)
+        self.assertEqual([p.name for p in ss.sweep_sessions("m2_main")], ["20261110T000000Z_m2_main"])
+        self.assertEqual(ss.progress("m2_aux"), "started")
+
+    def test_bench_args(self):
+        self.assertEqual(ss.bench_args("C", "m2_main"), ["--variant", "C", "--stagger", "on"])
+        self.assertEqual(ss.bench_args("Cp", "m2_main"), ["--variant", "C", "--post", "neon", "--stagger", "on"])
+        self.assertEqual(ss.bench_args("C", "m2_aux"), ["--variant", "C"])
+        self.assertEqual(ss.bench_args("Cp", "m2_aux"), ["--variant", "C", "--post", "neon"])
+        self.assertEqual(ss.bench_args("Cp", "m2_check"), ["--variant", "C", "--post", "neon", "--stagger", "on"])
+
+    def bench_command(self, phase, arm, channels, condition, run_kind):
+        """bench_main's command line for a run, as Session.attempt builds it, and the session's directory."""
+        d = Path(tempfile.mkdtemp(dir="."))
+        s = OperatorStop.session(None, d)
+        s.freeze_m2, cmds = "f2" * 20, []
+
+        def sh(cmd, out_file, timeout=120):
+            cmds.append(cmd)
+            if cmd[0] == "./build/bench_main":
+                raise ss.Interrupted("signal SIGTERM")  # the session stops at once
+            return 0
+
+        s.sh = sh
+        with redirect_stdout(io.StringIO()), self.assertRaises(ss.Stop):
+            s.run(phase, arm, channels, condition, run_kind)
+        for f in (s.runs, s.started, s.log):
+            f.close()
+        return [c for c in cmds if c[0] == "./build/bench_main"][0], d
+
+    def test_bench_commands(self):
+        source = ["--source", "rtsp://10.88.0.1:8554/ch{n}"]
+        times = ["--warmup", "1", "--duration", "1"]
+        # M1's runs as before: no option of M2
+        cmd, d = self.bench_command("main", "B", 8, "main", "comparison")
+        self.assertEqual(cmd, ["./build/bench_main", "--variant", "B", "--channels", "8", *source, "--condition",
+                               "main", *times, "--run-kind", "comparison", "--repetition", "1", "--freeze-commit",
+                               ss.FREEZE_M1_COMMIT, "--out", str(d / "01_main_B_8ch_r1")])
+        # m2_main: Cp's post-processing, the staggered sampler and freeze-m2's commit (§5.1)
+        cmd, d = self.bench_command("m2_main", "Cp", 8, "main", "m2")
+        self.assertEqual(cmd, ["./build/bench_main", "--variant", "C", "--post", "neon", "--stagger", "on",
+                               "--channels", "8", *source, "--condition", "main", *times, "--run-kind", "m2",
+                               "--repetition", "1", "--freeze-commit", ss.FREEZE_M1_COMMIT,
+                               "--freeze-m2-commit", "f2" * 20, "--out", str(d / "01_m2_main_Cp_8ch_r1")])
+        cmd, _ = self.bench_command("m2_aux", "C", 5, "aux", "m2")
+        self.assertEqual(cmd[1:3] + cmd[-4:-2], ["--variant", "C", "--freeze-m2-commit", "f2" * 20])
+        self.assertNotIn("--stagger", cmd)
+        # m2-check: staggered, run kind check, no freeze-m2 commit (bench_main's default, none)
+        for arm, args in (("C", ["--variant", "C"]), ("Cp", ["--variant", "C", "--post", "neon"])):
+            cmd, d = self.bench_command("m2_check", arm, 8, "main", "check")
+            self.assertEqual(cmd, ["./build/bench_main", *args, "--stagger", "on", "--channels", "8", *source,
+                                   "--condition", "main", *times, "--run-kind", "check", "--repetition", "1",
+                                   "--freeze-commit", ss.FREEZE_M1_COMMIT, "--out", str(d / f"01_m2_check_{arm}_8ch")])
+
+    def test_m2_check_runs_c_then_cp(self):
+        for stop_at, status in ((None, "completed"), ("Cp", "stopped")):
+            with self.subTest(stop_at=stop_at):
+                calls, results = [], []
+
+                def run(*a, stop_at=stop_at):
+                    calls.append(a)
+                    if a[1] == stop_at:
+                        raise ss.Stop("the server is down")
+                    return True, Path(f"{len(calls):02d}_m2_check_{a[1]}_8ch")
+
+                s = types.SimpleNamespace(run=run, write_result=lambda rows, kind: results.append((rows, kind)))
+                with mock.patch.object(ss, "write_idle_baseline") as idle, \
+                        mock.patch.object(ss, "post_object_hashes", return_value={"sha256_yolov8_post_o": "ab"}):
+                    try:
+                        ss.cmd_m2_check(s)
+                    except ss.Stop:
+                        pass
+                idle.assert_called_once_with(s, "check")
+                self.assertEqual(calls, [("m2_check", "C", 8, "main", "check"), ("m2_check", "Cp", 8, "main", "check")])
+                runs = [("C_run", "01_m2_check_C_8ch")] + ([("Cp_run", "02_m2_check_Cp_8ch")] if not stop_at else [])
+                self.assertEqual(results, [([("session_status", status)] + runs + [("sha256_yolov8_post_o", "ab")],
+                                            "check")])
+
+    def test_registration_commits(self):
+        self.assertEqual(ss.registration_commits(env_md()), {"prereg-m2": ss.PREREG_M2_COMMIT})  # not Board baseline's
+        self.assertEqual(ss.registration_commits(env_md(FREEZE_M2_ROW))["freeze-m2"], "f2" * 20)
+        for row in ("| `freeze-m2` | not created yet | |", "| `freeze-m2` | `" + "f2" * 20 + "` | |"):
+            self.assertNotIn("freeze-m2", ss.registration_commits(env_md(row)), row)
+        real = ss.registration_commits((Path(self.here) / ss.ENV_MD).read_text(encoding="utf-8"))
+        self.assertEqual((real["prereg-v1"], real["freeze-m1"], real["prereg-m2"]),
+                         (ss.PREREG_V1_COMMIT, ss.FREEZE_M1_COMMIT, ss.PREREG_M2_COMMIT))
+
+    def test_post_object_hashes(self):
+        self.assertEqual(ss.post_object_hashes(), {})
+        hashes = self.build(b"post", b"neon")
+        self.assertEqual(ss.post_object_hashes(), hashes)
+        Path(ss.POST_OBJECTS["sha256_yolov8_post_neon_o"]).unlink()
+        self.assertEqual(ss.post_object_hashes(), {"sha256_yolov8_post_o": hashes["sha256_yolov8_post_o"]})
+
+    def test_the_equivalence_check_of_these_objects(self):
+        hashes = {"sha256_yolov8_post_o": "a" * 64, "sha256_yolov8_post_neon_o": "b" * 64}
+        self.assertFalse(ss.m2_equivalence_done(hashes))
+        name = "20261106T000000Z_m2_equivalence"
+        for passed, rows, done in ((0, hashes, False), (1, dict(hashes, sha256_yolov8_post_neon_o="c" * 64), False),
+                                   (1, {"sha256_yolov8_post_o": "a" * 64}, False), (1, hashes, True)):
+            self.equivalence(name, passed, rows)
+            self.assertEqual(ss.m2_equivalence_done(hashes), done, (passed, rows))
+        # A build without Cp's object matches no check, not even one without its row.
+        self.equivalence(name, 1, {"sha256_yolov8_post_o": "a" * 64})
+        self.assertFalse(ss.m2_equivalence_done({"sha256_yolov8_post_o": "a" * 64}))
+        self.equivalence(name, 1, hashes)
+        Path("results/check", name).rename(Path("results/check", name + "_smoke"))
+        self.assertFalse(ss.m2_equivalence_done(hashes))
+
+    def test_a_failed_check_of_the_same_objects_stops_cp(self):
+        hashes = {"sha256_yolov8_post_o": "a" * 64, "sha256_yolov8_post_neon_o": "b" * 64}
+        self.equivalence("20261106T000000Z_m2_equivalence", 0, hashes)
+        self.equivalence("20261106T010000Z_m2_equivalence", 1, hashes)
+        self.assertFalse(ss.m2_equivalence_done(hashes))  # M2 §4: a fix needs objects that differ
+        other = dict(hashes, sha256_yolov8_post_neon_o="c" * 64)
+        self.equivalence("20261106T020000Z_m2_equivalence", 1, other)
+        self.assertTrue(ss.m2_equivalence_done(other))
+
+    def test_m2_sweeps_need_freeze_m2_and_the_equivalence_check(self):
+        Path("docs/notes").mkdir(parents=True)
+        Path(ss.ENV_MD).write_text(env_md(), encoding="utf-8")
+        with mock.patch.object(ss, "progress", lambda n: "new" if ss.is_m2(n) else "complete"):
+            self.assertEqual(ss.freeze_m2_commit(), "none")
+            self.assertIn("freeze-m2 comes before M2's runs", ss.order_problem("m2_main"))
+            Path(ss.ENV_MD).write_text(env_md(FREEZE_M2_ROW), encoding="utf-8")
+            self.assertEqual(ss.freeze_m2_commit(), "f2" * 20)
+            self.assertIn("a passed equivalence check", ss.order_problem("m2_main"))  # no objects, no check
+            hashes = self.build(b"post", b"neon")
+            self.assertIn("a passed equivalence check", ss.order_problem("m2_main"))  # no check
+            self.equivalence("20261106T000000Z_m2_equivalence", 1, hashes)
+            self.assertIsNone(ss.order_problem("m2_main"))
+            self.assertIn("m2_main comes before m2_aux", ss.order_problem("m2_aux"))
+            self.build(b"post", b"neon, rebuilt")  # M2 §4: objects that differ need the check again
+            self.assertIn("a passed equivalence check", ss.order_problem("m2_main"))
+
+    def test_m2_check_needs_the_equivalence_check_but_not_freeze_m2(self):
+        err = io.StringIO()
+        with mock.patch.object(ss.signal, "signal"), mock.patch.object(ss.signal, "SIGHUP", 1, create=True), \
+                mock.patch.object(ss, "Session", side_effect=ss.Stop("past the gates")) as session, \
+                redirect_stderr(err):
+            self.assertEqual(ss.main(["m2-check"]), 2)
+            self.assertIn("not starting: a passed equivalence check", err.getvalue())
+            session.assert_not_called()
+            self.equivalence("20261106T000000Z_m2_equivalence", 1, self.build(b"post", b"neon"))
+            self.assertEqual(ss.main(["m2-check"]), 2)  # no docs/notes/env.md, so no freeze-m2 row
+        self.assertIn("past the gates", err.getvalue())
+        self.assertRegex(session.call_args[0][0].out, r"^results/check/\d{8}T\d{6}Z_m2_check$")
+
+    def test_schedstat(self):
+        before = SCHEDSTAT.format(cpu0=2_000_000_000, cpu4=1_000_000)
+        after = SCHEDSTAT.format(cpu0=2_500_000_000, cpu4=1_001_000_000)
+        # The 7th number after cpu<N>; the domain lines and a cpu line with fewer numbers are skipped.
+        self.assertEqual(ss.schedstat_run_ns(before), ("15", {0: 2_000_000_000, 4: 1_000_000}))
+        rows = ss.schedstat_rows(before, after)
+        self.assertEqual(rows, [("schedstat_version", "15"), ("schedstat_cpu0_s", "0.500"),
+                                ("schedstat_cpu4_s", "1.000"), ("schedstat_cpu0-3_s", "0.500"),
+                                ("schedstat_cpu4-5_s", "1.000"), ("schedstat_cpu6-7_s", "0.000"),
+                                ("schedstat_cpu_total_s", "1.500")])
+        self.assertEqual((ss.schedstat_rows(None, after), ss.schedstat_rows(before, None)), ([], []))
+        self.assertIsNone(ss.read_optional(Path("schedstat")))
+        Path("schedstat").write_text(before)
+        self.assertEqual(ss.read_optional(Path("schedstat")), before)
+
+    def test_idle_baseline_header_and_schedstat_rows(self):
+        Path("prereg").mkdir()
+        Path("prereg/AMENDMENTS.md").write_text("## A12 — 2026-11-04 — title\n", encoding="utf-8")
+        stat = "cpu0 1 0 0 0 0 0 0 0 0 0\n"
+        before = SCHEDSTAT.format(cpu0=0, cpu4=0)
+        after = SCHEDSTAT.format(cpu0=1_000_000_000, cpu4=0)
+        start = dt.datetime(2026, 11, 10, 1, 0, 0, tzinfo=UTC)
+        for command, sweep, freeze_m2, sched, m2 in (("sweep", "m2_main", "f2" * 20, (before, after), True),
+                                                     ("m2-check", None, "none", (None, None), True),
+                                                     ("sweep", "main", "none", (before, after), False)):
+            with self.subTest(command=command, sweep=sweep):
+                s = types.SimpleNamespace(args=types.SimpleNamespace(command=command, sweep=sweep), out=Path("."),
+                                          code_commit="abc", freeze_m2=freeze_m2,
+                                          idle=[start, 0.0, stat, sched[0], 120.0, stat, sched[1]])
+                with mock.patch.object(ss.os, "sysconf", return_value=100, create=True), \
+                        mock.patch.object(ss.subprocess, "run", return_value=types.SimpleNamespace(stdout="yes\n")):
+                    ss.write_idle_baseline(s, "check")
+                header, rows = ss.read_csv(Path("idle_baseline.csv"))
+                rows = {r["key"]: r["value"] for r in rows}
+                self.assertEqual(list(header)[3:6], ["freeze_m1_commit", "prereg_m2_commit", "freeze_m2_commit"]
+                                 if m2 else ["freeze_m1_commit", "run_kind", "measurement"])
+                if m2:
+                    self.assertEqual((header["prereg_m2_commit"], header["freeze_m2_commit"]),
+                                     (ss.PREREG_M2_COMMIT, freeze_m2))
+                self.assertEqual(rows["system_cpu_total_s"], "0.000")
+                self.assertEqual(rows.get("schedstat_cpu_total_s"), "1.000" if sched[0] else None)
+                self.assertEqual("schedstat_version" in rows, sched[0] is not None)
+
+    def test_result_header(self):
+        d = Path(tempfile.mkdtemp(dir="."))
+        for sweep, m2 in (("m2_main", True), ("main", False)):
+            with self.subTest(sweep=sweep):
+                s = OperatorStop.session(None, d)
+                s.args = types.SimpleNamespace(command="sweep", sweep=sweep, **ss.PROTOCOL)
+                s.code_commit = "abc"
+                s.run_header = {"prereg_v1_commit": ss.PREREG_V1_COMMIT, "freeze_m1_commit": ss.FREEZE_M1_COMMIT,
+                                "prereg_m2_commit": ss.PREREG_M2_COMMIT, "freeze_m2_commit": "f2" * 20}
+                for f in (s.runs, s.started, s.log):
+                    f.close()
+                with mock.patch.dict(os.environ, {"COOLING": "fan", "AMBIENT_C": "25"}), redirect_stdout(io.StringIO()):
+                    s.write_result([("sweep", sweep)], "m2" if m2 else "comparison")
+                header = ss.read_csv(d / "result.csv")[0]
+                self.assertEqual(list(header)[2:6], ["prereg_v1_commit", "freeze_m1_commit", "prereg_m2_commit",
+                                                     "freeze_m2_commit"] if m2 else
+                                 ["prereg_v1_commit", "freeze_m1_commit", "run_kind", "model_sha256"])
+                if m2:
+                    self.assertEqual(header["freeze_m2_commit"], "f2" * 20)
 
 
 def drive(limit_b, limit_c, limit=32, start=8, noisy=None):
