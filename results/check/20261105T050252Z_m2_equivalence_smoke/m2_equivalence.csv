@@ -1,0 +1,25 @@
+# start_time_utc: 2026-11-05T05:03:13Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: 238de7e18f7137b4ce0c0e82dd9d457c183d0948-dirty
+# amendment: A12
+# purpose: equivalence of arm Cp before freeze-m2 (prereg/M2.md §4)
+key,value
+video1_path,/home/pi/media/bench/pexels_29130409.mp4
+video1_sha256,e560dd8481d5fe1c615f208fae192fc7fd583097d202e785dc026eae8fb75b41
+video1_frames,752
+video1_detections,10740
+video1_differing_frames,0
+synthetic_sets,12500
+synthetic_decodes,1000000
+synthetic_sets_short,0
+synthetic_differing_sets,0
+neon_tables,3
+sha256_yolov8_post_o,536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2
+sha256_yolov8_post_neon_o,3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555
+passed,1
