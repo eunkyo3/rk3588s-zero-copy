@@ -1,14 +1,20 @@
-// Unit tests for the pipeline's queue, slot pool, receive checks and percentile. Run: build/test_core
+// Unit tests for the pipeline's queue, slot pool, receive checks and percentile, the /proc/schedstat
+// parser, and arm Cp's post-processing against M1's on random outputs. Run: build/test_core
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cstring>
+#include <random>
 #include <thread>
 #include <vector>
 
+#include "core/metrics.h"
 #include "core/report.h"
 #include "core/slot_pool.h"
 #include "core/stage_queue.h"
 #include "core/stream_checks.h"
+#include "core/yolov8_post.h"
+#include "core/yolov8_post_neon.h"
 
 namespace {
 
@@ -103,6 +109,68 @@ void percentile_matches_numpy() {
     expect(percentile({7}, 99) == 7, "percentile: single value");
 }
 
+void schedstat_parse() {
+    int version = 0;
+    const auto run = parse_schedstat("version 15\ntimestamp 4296361390\n"
+                                     "cpu0 0 0 0 0 0 0 1500000000 200 30\n"
+                                     "domain0 ff 0 0 0 0 0 0 0 0\n"
+                                     "cpu1 0 0 0 0 0 0 250000000 0 0\n",
+                                     &version);
+    expect(version == 15, "schedstat: version line");
+    expect(run.size() == 2 && run[0] == 1.5 && run[1] == 0.25, "schedstat: 7th number of each cpu line, in s");
+    expect(parse_schedstat("", &version).empty() && version == -1, "schedstat: nothing to read");
+}
+
+// M1's three branches at 640x640, with quantization parameters like the model's.
+std::vector<rknn_tensor_attr> output_attrs() {
+    std::vector<rknn_tensor_attr> attrs;
+    for (int g : {80, 40, 20})
+        for (int ch : {64, 80, 1}) {
+            rknn_tensor_attr a;
+            std::memset(&a, 0, sizeof a);
+            a.n_dims = 4;
+            a.dims[0] = 1;
+            a.dims[1] = ch;
+            a.dims[2] = a.dims[3] = g;
+            a.fmt = RKNN_TENSOR_NCHW;
+            a.type = RKNN_TENSOR_INT8;
+            a.zp = ch == 64 ? -56 + g / 20 : -128;
+            a.scale = ch == 64 ? 0.09f + 0.01f * (g / 20) : 0.0039f;
+            attrs.push_back(a);
+        }
+    return attrs;
+}
+
+void neon_post_matches_m1() {
+    const auto attrs = output_attrs();
+    const NeonPost neon(attrs);
+    expect(neon.table_count() == 3 && neon.table_bytes() == 3 * 256 * 256 * sizeof(float),
+           "NeonPost: one table per box (zp, scale)");
+    std::mt19937 rng(1);
+    std::vector<std::vector<int8_t>> bufs;
+    std::vector<const int8_t*> ptrs;
+    for (const auto& a : attrs)
+        bufs.emplace_back(size_t(a.dims[1]) * a.dims[2] * a.dims[3]);
+    for (const auto& b : bufs)
+        ptrs.push_back(b.data());
+    // Dense random scores: many candidates, ties between classes, and NMS at work.
+    int same_sets = 0, detections = 0;
+    for (int set = 0; set < 20; set++) {
+        for (auto& b : bufs)
+            for (auto& v : b)
+                v = static_cast<int8_t>(static_cast<int>(rng() % 256) - 128);
+        const auto want = yolov8_post(ptrs, attrs, 640, 640);
+        const auto got = neon.run(ptrs, attrs, 640, 640);
+        bool same = want.size() == got.size();
+        for (size_t i = 0; same && i < want.size(); i++)
+            same = want[i].cls == got[i].cls && want[i].score == got[i].score && want[i].x1 == got[i].x1 &&
+                   want[i].y1 == got[i].y1 && want[i].x2 == got[i].x2 && want[i].y2 == got[i].y2;
+        same_sets += same;
+        detections += static_cast<int>(want.size());
+    }
+    expect(same_sets == 20 && detections > 0, "NeonPost: yolov8_post's detections on 20 random output sets");
+}
+
 }  // namespace
 
 int main() {
@@ -113,6 +181,8 @@ int main() {
     decoder_drop_rule();
     drift_formula();
     percentile_matches_numpy();
+    schedstat_parse();
+    neon_post_matches_m1();
     std::printf("%d failure(s)\n", failures);
     return failures ? 1 : 0;
 }

@@ -104,7 +104,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
                 }
                 if (pts != AV_NOPTS_VALUE)
                     c.last_pts = pts;
-                if (c.counter++ % cfg.sample_stride != 0) {  // sampler
+                if (c.counter++ % cfg.sample_stride != (cfg.stagger ? i % cfg.sample_stride : 0)) {  // sampler
                     av_frame_free(&f);
                     return;
                 }
@@ -191,7 +191,9 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
                     CHECK(rknn_run(npu->ctx[k], nullptr) == RKNN_SUCC, "rknn_run failed");
                     r.t3 = now_ns();
                     r.detections = static_cast<int>(
-                        yolov8_post(npu->output_ptrs(k), npu->outputs, npu->model_w(), npu->model_h()).size());
+                        cfg.neon_post
+                            ? cfg.neon_post->run(npu->output_ptrs(k), npu->outputs, npu->model_w(), npu->model_h()).size()
+                            : yolov8_post(npu->output_ptrs(k), npu->outputs, npu->model_w(), npu->model_h()).size());
                     r.t4 = now_ns();
                     slots.release(p->slot);
                     records[k].push_back(r);

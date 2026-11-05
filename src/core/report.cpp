@@ -56,6 +56,11 @@ std::string utc_now(const char* format) {
     return buf;
 }
 
+std::string file_sha256(const std::string& path) {
+    const std::string out = command_output("sha256sum '" + path + "' 2>/dev/null | cut -d' ' -f1");
+    return out.size() == 64 ? out : "";
+}
+
 std::string json_string(const std::string& s) {
     std::string out = "\"";
     for (char c : s) {
@@ -190,6 +195,21 @@ Header write_results(const std::string& dir, const Header& header, const Pipelin
     s.push_back({"system_cpu4-5_s", fmt(cl[1])});
     s.push_back({"system_cpu6-7_s", fmt(cl[2])});
     s.push_back({"system_cpu_total_s", fmt(sys_total)});
+    // M2 §3.2: /proc/schedstat, named like the /proc/stat rows above.
+    s.push_back({"schedstat_version", std::to_string(r.cpu_e.schedstat_version)});
+    if (!r.cpu_e.sched_run_s.empty() && r.cpu_e.sched_run_s.size() == r.cpu_w.sched_run_s.size()) {
+        double sched_total = 0, sc[3] = {0, 0, 0};
+        for (size_t c = 0; c < r.cpu_e.sched_run_s.size(); c++) {
+            const double d = r.cpu_e.sched_run_s[c] - r.cpu_w.sched_run_s[c];
+            s.push_back({"schedstat_cpu" + std::to_string(c) + "_s", fmt(d)});
+            sched_total += d;
+            sc[c < 4 ? 0 : c < 6 ? 1 : 2] += d;
+        }
+        s.push_back({"schedstat_cpu0-3_s", fmt(sc[0])});
+        s.push_back({"schedstat_cpu4-5_s", fmt(sc[1])});
+        s.push_back({"schedstat_cpu6-7_s", fmt(sc[2])});
+        s.push_back({"schedstat_cpu_total_s", fmt(sched_total)});
+    }
 
     s.push_back({"decode_fps_min", fmt(fps_min)});
     s.push_back({"decode_fps_max", fmt(fps_max)});

@@ -17,11 +17,19 @@ using Header = std::vector<std::pair<std::string, std::string>>;
 
 // Tag prereg-v1 (Release created_at 2026-10-30T02:01:36Z, docs/notes/env.md).
 constexpr const char* kPreregCommit = "87fe874b4f196dafd48f6a175b2d7604625aedba";
+// Tag prereg-m2 (Release created_at 2026-11-05T04:45:34Z, docs/notes/env.md).
+constexpr const char* kPreregM2Commit = "5d9d6d04e50f17d52980dc5b958c7071d7107176";
+// The compiled objects of the two post-processings, relative to the repository (M2 §4): the check
+// tool and bench_main link the same ones from libcore.
+constexpr const char* kPostObjects[2] = {"build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o",
+                                         "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o"};
 
 // The output of a shell command, trailing newlines and spaces removed.
 std::string command_output(const std::string& cmd);
 // The current UTC time, formatted with strftime.
 std::string utc_now(const char* format);
+// The SHA-256 of a file as hex, empty if it cannot be read.
+std::string file_sha256(const std::string& path);
 
 // numpy.percentile with linear interpolation (PROTOCOL §7.3). v must not be empty.
 double percentile(std::vector<double> v, double q);

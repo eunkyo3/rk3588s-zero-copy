@@ -103,7 +103,37 @@ CpuSnapshot take_cpu_snapshot() {
             s.sys_nonidle_s.resize(cpu + 1, 0.0);
         s.sys_nonidle_s[cpu] = (user + nice + system + irq + softirq + steal) * kTick;
     }
+    s.sched_run_s = parse_schedstat(read_text("/proc/schedstat"), &s.schedstat_version);
     return s;
+}
+
+std::vector<double> parse_schedstat(const std::string& text, int* version) {
+    std::vector<double> run_s;
+    *version = -1;
+    std::istringstream sched(text);
+    std::string line;
+    while (std::getline(sched, line)) {
+        std::istringstream ls(line);
+        std::string name;
+        ls >> name;
+        if (name == "version") {
+            ls >> *version;
+            continue;
+        }
+        if (name.rfind("cpu", 0) != 0 || name.size() < 4 || !std::isdigit(static_cast<unsigned char>(name[3])))
+            continue;  // timestamp and domain lines
+        unsigned long long v = 0;
+        int got = 0;
+        while (got < 7 && ls >> v)
+            got++;
+        if (got < 7)
+            continue;
+        const size_t cpu = std::stoul(name.substr(3));
+        if (run_s.size() <= cpu)
+            run_s.resize(cpu + 1, 0.0);
+        run_s[cpu] = v / 1e9;
+    }
+    return run_s;
 }
 
 std::vector<std::string> thermal_zone_names() {
