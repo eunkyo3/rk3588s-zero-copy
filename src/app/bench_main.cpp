@@ -20,6 +20,7 @@
 //   --cores a76|a55     the cores the pipeline runs on: cpu4-7 (default) or cpu0-3 (M1.1, A12); with a55
 //                       the metrics thread moves from cpu0 to cpu4
 // Run as root: the NPU load is read from debugfs (PROTOCOL §7.7).
+#include <exception>
 #include <filesystem>
 #include <map>
 #include <set>
@@ -99,6 +100,10 @@ int main(int argc, char** argv) {
     CHECK(a["post"] == "m1" || variant == "C", "post neon is arm Cp, variant C (M2 §1)");
     CHECK(a["stagger"] == "off" || a["stagger"] == "on", "stagger must be off or on");
     CHECK(a["stagger"] == "off" || a["condition"] == "main", "stagger is for the main condition (M2 §3.1)");
+    const std::string& freeze_m2 = a["freeze-m2-commit"];
+    CHECK(kind != "m2" || (variant == "C" && freeze_m2.size() == 40 &&
+                           freeze_m2.find_first_not_of("0123456789abcdef") == std::string::npos),
+          "run kind m2 is variant C with freeze-m2's commit (M2 §5.1)");
     const int channels = std::stoi(a["channels"]);
     CHECK(channels >= 1 && channels <= 32, "channels must be 1..32");
 
@@ -158,7 +163,11 @@ int main(int argc, char** argv) {
                                     : make_cpu_software();
         backend->init(npu, input_slots(cfg.preprocess_threads));
         if (a["post"] == "neon") {  // its tables are built here, before the warm-up (M2 §1)
-            neon_post = std::make_unique<NeonPost>(npu.outputs);
+            try {
+                neon_post = std::make_unique<NeonPost>(npu.outputs);
+            } catch (const std::exception& e) {
+                die("%s", e.what());
+            }
             cfg.neon_post = neon_post.get();
         }
     }

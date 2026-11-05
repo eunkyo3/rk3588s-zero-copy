@@ -129,7 +129,7 @@
 - **`freeze-m2` 전에**, 보드에서 root로, 저장소에서, `-dirty`가 아닌 구현 빌드로 다음 순서대로 한다(M2 §7 3단계). 동등성 검사가 맨 먼저이고, §4의 실패 규칙에 따라 고치면 모든 단계를 다시 한다.
   1. **동등성(§4):**
      - `mkdir -p results/check/<UTC>_m2_equivalence && tools/collect_env.sh >results/check/<UTC>_m2_equivalence/env.txt`
-     - `./build/m2_equivalence models/yolov8n_i8.rknn results/check/<UTC>_m2_equivalence /home/pi/media/bench/pexels_36330861.mp4 /home/pi/media/bench/pexels_29130409.mp4 /home/pi/media/bench/pexels_29969146.mp4 /home/pi/media/bench/pixabay_180386.mp4 >results/check/<UTC>_m2_equivalence/m2_equivalence.txt`. 그 `m2_equivalence.csv`에 `passed,1`이 있어야 한다.
+     - `./build/m2_equivalence models/yolov8n_i8.rknn results/check/<UTC>_m2_equivalence none /home/pi/media/bench/pexels_36330861.mp4 /home/pi/media/bench/pexels_29130409.mp4 /home/pi/media/bench/pexels_29969146.mp4 /home/pi/media/bench/pixabay_180386.mp4 >results/check/<UTC>_m2_equivalence/m2_equivalence.txt`. 그 `m2_equivalence.csv`에 `passed,1`이 있어야 한다.
   2. **기본 경로(§7 2단계):** `./build/bench_main --variant C --channels 2 --source /home/pi/media/bench/pexels_36330861.mp4 --warmup 2 --duration 6 --out results/check/<UTC>_default_c`
   3. **시차 표집과 `/proc/schedstat`(§3.1, §3.2):** `COOLING=... AMBIENT_C=... python3 tools/stream_session.py m2-check`. 본편 8채널, 시차 표집으로 C, 다음 Cp를 프로토콜의 워밍업, 측정 창, 냉각 대기, 유휴 기준값으로 돌려 `results/check/<UTC>_m2_check/`에 남긴다.
   4. **이 점검들의 판정:** `python3 tools/m2_checks.py --equivalence results/check/<UTC>_m2_equivalence --default results/check/<UTC>_default_c --c <m2_check의 C 실행> --cp <m2_check의 Cp 실행>`이 판정을 점검 실행의 CPU 값과 함께 출력한다(§7 3단계). 모두 통과하면 종료 코드 0이다. 그 출력은 `freeze-m2`가 가리키는 수정 항목에 들어간다.

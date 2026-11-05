@@ -542,12 +542,14 @@ class M2(unittest.TestCase):
         return {"sha256_yolov8_post_o": hashlib.sha256(post).hexdigest(),
                 "sha256_yolov8_post_neon_o": hashlib.sha256(neon).hexdigest()}
 
-    def equivalence(self, name, passed, hashes):
+    def equivalence(self, name, passed, hashes, differing=0, complete=None):
         d = Path("results/check", name)
         d.mkdir(parents=True, exist_ok=True)
+        complete = passed if complete is None else complete
         (d / "m2_equivalence.csv").write_text(
             "# start_time_utc: 2026-11-06T00:00:00Z\n# run_kind: check\nkey,value\nsynthetic_sets,12500\n"
-            f"passed,{passed}\n" + "".join(f"{k},{v}\n" for k, v in hashes.items()), encoding="utf-8")
+            + "".join(f"{k},{v}\n" for k, v in hashes.items())
+            + f"complete,{complete}\ndiffering_total,{differing}\npassed,{passed}\n", encoding="utf-8")
 
     def test_the_m2_sweeps(self):
         self.assertEqual(ss.ORDER[ss.ORDER.index("bdirect_aux") + 1:], ("m2_main", "m2_aux"))  # §5.3: main first
@@ -671,12 +673,18 @@ class M2(unittest.TestCase):
 
     def test_a_failed_check_of_the_same_objects_stops_cp(self):
         hashes = {"sha256_yolov8_post_o": "a" * 64, "sha256_yolov8_post_neon_o": "b" * 64}
-        self.equivalence("20261106T000000Z_m2_equivalence", 0, hashes)
+        self.equivalence("20261106T000000Z_m2_equivalence", 0, hashes, complete=0)  # the wrong videos, say
+        self.assertFalse(ss.m2_equivalence_done(hashes))
         self.equivalence("20261106T010000Z_m2_equivalence", 1, hashes)
+        self.assertTrue(ss.m2_equivalence_done(hashes))  # an incomplete check stops nothing
+        self.equivalence("20261106T020000Z_m2_equivalence", 0, hashes, differing=1, complete=1)
         self.assertFalse(ss.m2_equivalence_done(hashes))  # M2 §4: a fix needs objects that differ
         other = dict(hashes, sha256_yolov8_post_neon_o="c" * 64)
-        self.equivalence("20261106T020000Z_m2_equivalence", 1, other)
+        self.equivalence("20261106T030000Z_m2_equivalence", 1, other)
         self.assertTrue(ss.m2_equivalence_done(other))
+        third = dict(other, sha256_yolov8_post_o="d" * 64)
+        self.equivalence("20261106T040000Z_m2_equivalence", 1, third, complete=0)
+        self.assertFalse(ss.m2_equivalence_done(third))  # passed without complete does not count
 
     def test_m2_sweeps_need_freeze_m2_and_the_equivalence_check(self):
         Path("docs/notes").mkdir(parents=True)
@@ -748,8 +756,9 @@ class M2(unittest.TestCase):
                     self.assertEqual((header["prereg_m2_commit"], header["freeze_m2_commit"]),
                                      (ss.PREREG_M2_COMMIT, freeze_m2))
                 self.assertEqual(rows["system_cpu_total_s"], "0.000")
-                self.assertEqual(rows.get("schedstat_cpu_total_s"), "1.000" if sched[0] else None)
-                self.assertEqual("schedstat_version" in rows, sched[0] is not None)
+                # M2 sessions only; M1's sessions keep their rows
+                self.assertEqual(rows.get("schedstat_cpu_total_s"), "1.000" if m2 and sched[0] else None)
+                self.assertEqual("schedstat_version" in rows, m2 and sched[0] is not None)
 
     def test_result_header(self):
         d = Path(tempfile.mkdtemp(dir="."))

@@ -11,10 +11,16 @@
 // Both post-processings are the compiled objects of libcore that bench_main links; their SHA-256 is
 // recorded (M2 §4).
 //
-// Usage: m2_equivalence <model.rknn> <out_dir> <video.mp4>...   (as root, from the repository)
+// It passes only as the whole check of §4: the videos given are ① to ④, in that order, each with the
+// SHA-256 of docs/notes/preprocess/videos_manifest.tsv and its frame count, and no frame or set differs.
+// differing_total counts the frames and sets that differ: above 0, the objects are not equivalent.
+//
+// Usage: m2_equivalence <model.rknn> <out_dir> <freeze_m2_commit|none> <video.mp4>...
+//        (as root, from the repository; the videos are /home/pi/media/bench/<name>.mp4)
 //   <out_dir>/m2_equivalence.csv  "# key: value" header lines (PROTOCOL §1.4, run kind check), then
 //                                 key,value: per video its SHA-256, frames and differing frames; the
-//                                 synthetic sets; the objects' SHA-256; passed (1 or 0)
+//                                 synthetic sets; the objects' SHA-256; complete, differing_total and
+//                                 passed (1 or 0)
 // Exit code 0 when it passed.
 #include <algorithm>
 #include <atomic>
@@ -55,6 +61,18 @@ constexpr int kNumClasses = 80;
 constexpr int kSyntheticSets = 12500;
 constexpr int kPerBranch[3] = {27, 27, 26};
 
+struct Video {
+    const char* file;
+    long frames;
+    const char* sha256;  // docs/notes/preprocess/videos_manifest.tsv; ② to ④ are also in AMENDMENTS A8
+};
+const Video kVideos[4] = {
+    {"pexels_36330861.mp4", 1186, "435a6b05ffb60cf1f0bb4e60c86c8a2f5d5a56a5aa9ca145d845c9a5fffc37ce"},
+    {"pexels_29130409.mp4", 752, "e560dd8481d5fe1c615f208fae192fc7fd583097d202e785dc026eae8fb75b41"},
+    {"pexels_29969146.mp4", 714, "592b6847e2e63e07393af6f4a04b691be438c23eba2c73f79b021dca877c2772"},
+    {"pixabay_180386.mp4", 948, "2538f54d36e0d763ec3e13f9e606bf01e2d142fff82181eb156f792576b0555b"},
+};
+
 bool same(const std::vector<Detection>& a, const std::vector<Detection>& b) {
     if (a.size() != b.size())
         return false;
@@ -80,23 +98,23 @@ int elements(const rknn_tensor_attr& a) {
 int main(int argc, char** argv) {
     pin_current_thread({4, 5, 6, 7});
     cv::setNumThreads(1);  // PROTOCOL §8
-    if (argc < 4)
-        die("usage: m2_equivalence <model.rknn> <out_dir> <video.mp4>...");
-    const std::string model = argv[1], out_dir = argv[2];
-    const std::vector<std::string> videos(argv + 3, argv + argc);
+    if (argc < 5)
+        die("usage: m2_equivalence <model.rknn> <out_dir> <freeze_m2_commit|none> <video.mp4>...");
+    const std::string model = argv[1], out_dir = argv[2], freeze_m2 = argv[3];
+    const std::vector<std::string> videos(argv + 4, argv + argc);
     std::filesystem::create_directories(out_dir);
     const Header header = {
         {"start_time_utc", utc_now("%Y-%m-%dT%H:%M:%SZ")},
         {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
         {"prereg_v1_commit", kPreregCommit},
         {"prereg_m2_commit", kPreregM2Commit},
-        {"freeze_m2_commit", "none"},
+        {"freeze_m2_commit", freeze_m2},
         {"run_kind", "check"},
         {"model_sha256", file_sha256(model)},
         {"decoder", std::string("h264_rkmpp, ffmpeg ") + av_version_info()},
         {"code_commit", CODE_COMMIT},
         {"amendment", LATEST_AMENDMENT},
-        {"purpose", "equivalence of arm Cp before freeze-m2 (prereg/M2.md §4)"},
+        {"purpose", "equivalence of arm Cp (prereg/M2.md §4)"},
     };
 
     NpuContexts npu;
@@ -106,7 +124,8 @@ int main(int argc, char** argv) {
     const NeonPost neon(npu.outputs);
     const int mw = npu.model_w(), mh = npu.model_h();
     Header rows;
-    bool passed = true;
+    bool complete = videos.size() == 4;
+    long differing = 0;
 
     // ---- the videos ----
     for (size_t v = 0; v < videos.size(); v++) {
@@ -128,13 +147,16 @@ int main(int argc, char** argv) {
                 frames++;
             },
             [] { die("decoder error"); });
-        const std::string k = "video" + std::to_string(v + 1);
+        const std::string k = "video" + std::to_string(v + 1), sha = file_sha256(videos[v]);
         rows.push_back({k + "_path", videos[v]});
-        rows.push_back({k + "_sha256", file_sha256(videos[v])});
+        rows.push_back({k + "_sha256", sha});
         rows.push_back({k + "_frames", std::to_string(frames)});
         rows.push_back({k + "_detections", std::to_string(detections)});
         rows.push_back({k + "_differing_frames", std::to_string(differ)});
-        passed = passed && frames > 0 && differ == 0;
+        const std::string name = std::filesystem::path(videos[v]).filename().string();
+        complete = complete && v < 4 && name == kVideos[v].file && sha == kVideos[v].sha256 &&
+                   frames == kVideos[v].frames;
+        differing += differ;
     }
 
     // ---- the synthetic sets ----
@@ -196,14 +218,19 @@ int main(int argc, char** argv) {
     rows.push_back({"synthetic_decodes", std::to_string(decodes)});
     rows.push_back({"synthetic_sets_short", std::to_string(short_sets)});
     rows.push_back({"synthetic_differing_sets", std::to_string(set_differ)});
-    passed = passed && set_differ == 0 && short_sets == 0;
+    complete = complete && short_sets == 0;
+    differing += set_differ;
 
     c->shutdown(npu);
     npu.close();
+    const std::string sha_post = file_sha256(kPostObjects[0]), sha_neon = file_sha256(kPostObjects[1]);
+    complete = complete && sha_post.size() == 64 && sha_neon.size() == 64;
     rows.push_back({"neon_tables", std::to_string(neon.table_count())});
-    rows.push_back({"sha256_yolov8_post_o", file_sha256(kPostObjects[0])});
-    rows.push_back({"sha256_yolov8_post_neon_o", file_sha256(kPostObjects[1])});
-    passed = passed && rows[rows.size() - 1].second.size() == 64 && rows[rows.size() - 2].second.size() == 64;
+    rows.push_back({"sha256_yolov8_post_o", sha_post});
+    rows.push_back({"sha256_yolov8_post_neon_o", sha_neon});
+    rows.push_back({"complete", complete ? "1" : "0"});
+    rows.push_back({"differing_total", std::to_string(differing)});
+    const bool passed = complete && differing == 0;
     rows.push_back({"passed", passed ? "1" : "0"});
 
     const std::string path = out_dir + "/m2_equivalence.csv";

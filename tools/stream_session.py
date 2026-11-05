@@ -1254,17 +1254,18 @@ def m2_equivalence_done(hashes):
     """Whether M2 §4's equivalence check has passed with these post-processing objects: results/check/
     <UTC>_m2_equivalence whose m2_equivalence.csv says passed 1, with the SHA-256 of both objects equal
     to hashes (post_object_hashes). Objects that differ need the check again with their build (M2 §4).
-    A failed check of the same objects stops Cp for good: the decoding is deterministic, so a later pass
-    of the same objects does not undo it (M2 §4, "On failure")."""
+    A check of the same objects in which a frame or a set differed stops Cp for good: the decoding is
+    deterministic, so a later pass of the same objects does not undo it (M2 §4, "On failure"). A check
+    that is incomplete (the wrong videos, say) neither passes nor stops them."""
     passed = False
     for d in Path("results", "check").glob("*_m2_equivalence"):
         check = d / "m2_equivalence.csv"
         if re.fullmatch(SESSION_NAME + "m2_equivalence", d.name) and check.exists():
             rows = {r["key"]: r["value"] for r in read_csv(check)[1]}
             if all(k in hashes and rows.get(k) == hashes[k] for k in POST_OBJECTS):
-                if rows.get("passed") != "1":
+                if rows.get("differing_total", "0") != "0":
                     return False
-                passed = True
+                passed |= rows.get("passed") == "1" and rows.get("complete") == "1"
     return passed
 
 
@@ -1304,7 +1305,8 @@ def write_idle_baseline(s, run_kind):
     start, t0, stat0, sched0, t1, stat1, sched1 = s.idle
     rows = [("window_s", f"{t1 - t0:.1f}")] + idle_rows(proc_stat_nonidle(stat0), proc_stat_nonidle(stat1),
                                                        1.0 / os.sysconf("SC_CLK_TCK"))
-    rows += schedstat_rows(sched0, sched1)  # M2 §3.2; none without /proc/schedstat
+    if m2_session(s.args):  # M2 §3.2; none without /proc/schedstat. M1's sessions keep their rows.
+        rows += schedstat_rows(sched0, sched1)
     amendments = re.findall(r"^## (A\d+) ", Path("prereg/AMENDMENTS.md").read_text(encoding="utf-8"), re.M)
     ntp = subprocess.run(["timedatectl", "show", "-p", "NTPSynchronized", "--value"], capture_output=True,
                          text=True).stdout.strip()
