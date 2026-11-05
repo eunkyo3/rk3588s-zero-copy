@@ -438,3 +438,40 @@ Each entry has this form:
   - **Why the controls are rerun:** K and the cores change the shared core's code, so no comparison mixes binaries. A repetition's runs complete within one session (§9.1), so each comparison within a repetition is on one binary and one day.
 - Affected data: none, by the judgement above. M1's runs and A11's 4K runs are not rerun, and no M1.1 run of these designs is compared with them.
 - Release: `amend-A12`. Every run of these designs, B-direct's check included, starts after it.
+
+## A13 — 2026-11-05 — M2: the values fixed before `freeze-m2`
+- Change: fixes the values of the table in [M2.md](M2.md) §7, after the checks of §7 step 3. Nothing in M2.md changes.
+  - **Code:** commit `7104241`, the merge of PR #36, built on the board without `-dirty`.
+    - Arm C is `bench_main --variant C`. Arm Cp is `bench_main --variant C --post neon`.
+    - Every run of `m2_main` adds `--stagger on`.
+    - The session tool passes every M2 run `--run-kind m2` and `--freeze-m2-commit` with `freeze-m2`'s commit from the Registration table of `docs/notes/env.md`.
+  - **Post-processing objects (§4):** the SHA-256 of `build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o` is `536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2`. That of `…/yolov8_post_neon.cpp.o` is `3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555`. Both stayed the same through full rebuilds during the implementation.
+  - **Compiler, flags, libraries, model, clocks and cooling:** those of A10, A7 and A9; none differs.
+    - With this build, `tools/inventory.sh` matches `docs/notes/inventory_m1.txt`. The m2-check session checked it before its runs.
+    - The session fixed the clocks with `tools/set_perf_mode.sh`. The cooling is A9's heatsink and always-on mini fan.
+  - **Equivalence (§4):** [results/check/20261105T061858Z_m2_equivalence](../results/check/20261105T061858Z_m2_equivalence), passed.
+    - Videos ① to ④ had 1,186, 752, 714 and 948 frames, each with the SHA-256 of `docs/notes/preprocess/videos_manifest.tsv`, and none of their frames differed.
+    - 12,500 synthetic sets, with 1,000,000 box decodings, had none that differed.
+  - **Default path (§7 step 2):** [results/check/20261105T062050Z_default_c](../results/check/20261105T062050Z_default_c). This is C with the defaults, at 2 channels, main condition, from a file, with a 6 s window. Its 13 threads, their affinities and its `queues` equal those of M1's `32_main_C_2ch_r1`.
+  - **m2-check (§7 step 3):** [results/check/20261105T062145Z_m2_check](../results/check/20261105T062145Z_m2_check), 06:21 to 06:38 UTC, ambient 28 °C. Both runs were valid.
+
+    | Arm | Sampler rule | Stagger error | Phase spread | Process CPU | `/proc/schedstat` sum | Every CPU above 0 |
+    |---|---|---|---|---|---|---|
+    | C | held | 3.8 ms | 160.2 ms | 17.910 s | 21.665 s | yes |
+    | Cp | held | 6.0 ms | 160.7 ms | 18.280 s | 21.705 s | yes |
+
+    - `tools/m2_checks.py` passes all four checks.
+    - The schedstat sums are at least process CPU, so M2's secondary metric is `/proc/schedstat` (§3.2). There is no fallback.
+  - **The check runs' CPU (reported; §7 step 3; it changes nothing):** one run of each arm.
+    - Process CPU was 2.1% higher for Cp (17.910 s against 18.280 s).
+    - Cp's post-processing stage took 0.118 ms at the median, against 0.344 ms for C. Its NPU workers used 5.77 s against 6.69 s.
+    - The decoder's threads (`dec-*`, MPP's parser and hal threads) used 11.88 s against 10.66 s. They do the same work in both arms.
+- Reason:
+  - M2.md §7 fixes these values before `freeze-m2`.
+  - **Development runs**, all of run kind `check` and kept in `results/check/`:
+    - `20261105T050152Z_m2_smoke`: C and Cp, 2 channels, 6 s windows.
+    - `20261105T050252Z_m2_equivalence_smoke` and `20261105T060549Z_m2_equivalence_smoke`: the equivalence tool on video ② only. The second, with the revised tool, is recorded as incomplete.
+    - They checked the options and records; their CPU figures come from 6 s windows and are not used.
+  - **A board reset:** the board reset itself during a rebuild. Its journal's last entry is at 05:43:53 UTC, when the rebuild's ssh session opened, and it booted again at 05:44:15 (`boot_time_utc` in the checks' `env.txt`). No shutdown and no kernel warning were logged. Its cause is unknown. The checks above ran after it, and every session fixes the clocks again.
+- Affected data: none.
+- Release: `amend-A13`. `freeze-m2` tags the merge of the pull request that adds this entry. Its `created_at` is the reference time of M2's runs.
