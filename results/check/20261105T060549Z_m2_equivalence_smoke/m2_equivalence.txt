@@ -1,0 +1,17 @@
+mpp[2165]: mpp_platform: client 18 driver is not ready!
+mpp[2165]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+video1_path: /home/pi/media/bench/pexels_29130409.mp4
+video1_sha256: e560dd8481d5fe1c615f208fae192fc7fd583097d202e785dc026eae8fb75b41
+video1_frames: 752
+video1_detections: 10740
+video1_differing_frames: 0
+synthetic_sets: 12500
+synthetic_decodes: 1000000
+synthetic_sets_short: 0
+synthetic_differing_sets: 0
+neon_tables: 3
+sha256_yolov8_post_o: 536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2
+sha256_yolov8_post_neon_o: 3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555
+complete: 0
+differing_total: 0
+passed: 0
