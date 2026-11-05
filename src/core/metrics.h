@@ -17,8 +17,15 @@ struct CpuSnapshot {
     double process_s = 0;                 // utime + stime of the whole process, /proc/self/stat
     std::map<int, ThreadCpu> threads;     // by tid, /proc/self/task/<tid>/stat
     std::vector<double> sys_nonidle_s;    // per CPU, /proc/stat
+    // per CPU, /proc/schedstat: the 7th number after the cpu<N> label (rq_cpu_time, the time spent
+    // running tasks other than the idle task), in seconds (M2 §3.2)
+    std::vector<double> sched_run_s;
+    int schedstat_version = -1;           // -1 if /proc/schedstat could not be read
 };
 CpuSnapshot take_cpu_snapshot();
+// The cpu<N> lines of /proc/schedstat: rq_cpu_time per CPU in seconds; *version from its version line,
+// -1 if none.
+std::vector<double> parse_schedstat(const std::string& text, int* version);
 
 struct Sample {
     int64_t t_ns = 0;

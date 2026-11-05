@@ -8,9 +8,14 @@
 //   --duration S        measurement window seconds (default 120)
 //   --model PATH        RKNN model (default models/yolov8n_i8.rknn)
 //   --out DIR           result directory (default results/<run kind>/<UTC time>_<variant>_<N>ch)
-//   --run-kind KIND     check | calibration | equivalence | comparison | reference | m1.1 (default check)
+//   --run-kind KIND     check | calibration | equivalence | comparison | reference | m1.1 | m2 (default check)
 //   --repetition R      repetition index (default 1)
 //   --freeze-commit SHA freeze-m1 commit, "none" before the freeze (default none)
+//   --freeze-m2-commit SHA  freeze-m2 commit, "none" before it (default none; prereg/M2.md §5.1)
+//   --post m1|neon      post-processing: M1's yolov8_post (default) or arm Cp's NeonPost, with variant C
+//                       only (M2 §1)
+//   --stagger off|on    at the main condition, channel n samples the frames with counter % 6 == (n - 1) % 6
+//                       (M2 §3.1; default off)
 //   --prep-threads K    preprocessing threads (default 2, PROTOCOL §5.1; 4 for M1.1's B with K = 4, A12)
 //   --cores a76|a55     the cores the pipeline runs on: cpu4-7 (default) or cpu0-3 (M1.1, A12); with a55
 //                       the metrics thread moves from cpu0 to cpu4
@@ -33,6 +38,7 @@ extern "C" {
 #include "core/pipeline.h"
 #include "core/report.h"
 #include "core/util.h"
+#include "core/yolov8_post_neon.h"
 #include "preprocess/backend.h"
 #include "preprocess/cpu_common.h"
 
@@ -48,7 +54,7 @@ namespace {
 void usage() {
     die("usage: bench_main --variant none|A|B|C|Bd --channels N --source URL [--condition main|aux] [--warmup S] "
         "[--duration S] [--model PATH] [--out DIR] [--run-kind KIND] [--repetition R] [--freeze-commit SHA] "
-        "[--prep-threads K] [--cores a76|a55]");
+        "[--prep-threads K] [--cores a76|a55] [--freeze-m2-commit SHA] [--post m1|neon] [--stagger off|on]");
 }
 
 }  // namespace
@@ -57,7 +63,7 @@ int main(int argc, char** argv) {
     std::map<std::string, std::string> a = {
         {"condition", "main"}, {"warmup", "20"}, {"duration", "120"}, {"model", "models/yolov8n_i8.rknn"},
         {"run-kind", "check"}, {"repetition", "1"}, {"freeze-commit", "none"}, {"prep-threads", "2"},
-        {"cores", "a76"}};
+        {"cores", "a76"}, {"freeze-m2-commit", "none"}, {"post", "m1"}, {"stagger", "off"}};
     const std::set<std::string> known = {"variant", "channels", "source", "out"};
     std::string args_json = "[";
     for (int i = 1; i < argc; i++) {
@@ -87,8 +93,12 @@ int main(int argc, char** argv) {
     CHECK(a["condition"] == "main" || a["condition"] == "aux", "condition must be main or aux");
     const std::string kind = a["run-kind"];  // PROTOCOL §1: check_prereg_order relies on these
     CHECK(kind == "check" || kind == "calibration" || kind == "equivalence" || kind == "comparison" ||
-              kind == "reference" || kind == "m1.1",
+              kind == "reference" || kind == "m1.1" || kind == "m2",
           "unknown run kind %s", kind.c_str());
+    CHECK(a["post"] == "m1" || a["post"] == "neon", "post must be m1 or neon");
+    CHECK(a["post"] == "m1" || variant == "C", "post neon is arm Cp, variant C (M2 §1)");
+    CHECK(a["stagger"] == "off" || a["stagger"] == "on", "stagger must be off or on");
+    CHECK(a["stagger"] == "off" || a["condition"] == "main", "stagger is for the main condition (M2 §3.1)");
     const int channels = std::stoi(a["channels"]);
     CHECK(channels >= 1 && channels <= 32, "channels must be 1..32");
 
@@ -101,6 +111,7 @@ int main(int argc, char** argv) {
     cfg.preprocess_threads = std::stoi(a["prep-threads"]);
     CHECK(cfg.preprocess_threads >= 1 && cfg.preprocess_threads <= 8, "prep-threads must be 1..8");
     cfg.metrics_cpu = a55 ? 4 : 0;
+    cfg.stagger = a["stagger"] == "on";
     for (int i = 1; i <= channels; i++) {
         std::string url = a["source"];
         if (auto p = url.find("{n}"); p != std::string::npos)
@@ -117,6 +128,8 @@ int main(int argc, char** argv) {
         {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
         {"prereg_v1_commit", kPreregCommit},
         {"freeze_m1_commit", a["freeze-commit"]},
+        {"prereg_m2_commit", kPreregM2Commit},
+        {"freeze_m2_commit", a["freeze-m2-commit"]},
         {"run_kind", a["run-kind"]},
         {"model_sha256", command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1")},
         {"decoder", std::string(cfg.software_decode ? "h264 (software)" : "h264_rkmpp") + ", ffmpeg " +
@@ -124,6 +137,8 @@ int main(int argc, char** argv) {
         {"variant", variant},
         {"channels", std::to_string(channels)},
         {"condition", a["condition"]},
+        {"post", a["post"]},
+        {"stagger", a["stagger"]},
         {"repetition", a["repetition"]},
         {"code_commit", CODE_COMMIT},
         {"amendment", LATEST_AMENDMENT},
@@ -134,6 +149,7 @@ int main(int argc, char** argv) {
 
     NpuContexts npu;
     std::unique_ptr<Backend> backend;
+    std::unique_ptr<NeonPost> neon_post;
     if (variant != "none") {
         npu.open(a["model"]);
         backend = variant == "C"    ? make_zero_copy_rga(a["model"], rga_interpolation())
@@ -141,6 +157,10 @@ int main(int argc, char** argv) {
                   : variant == "Bd" ? make_cpu_direct(opencv_interpolation())
                                     : make_cpu_software();
         backend->init(npu, input_slots(cfg.preprocess_threads));
+        if (a["post"] == "neon") {  // its tables are built here, before the warm-up (M2 §1)
+            neon_post = std::make_unique<NeonPost>(npu.outputs);
+            cfg.neon_post = neon_post.get();
+        }
     }
 
     std::fprintf(stderr, "bench: %s, %d channels, warm-up %d s, window %d s -> %s\n", variant.c_str(), channels,
@@ -166,6 +186,14 @@ int main(int argc, char** argv) {
     env += "  \"opencv\": {\"version\": \"" CV_VERSION "\", \"threads\": " + std::to_string(cv::getNumThreads()) +
            "},\n";
     env += "  \"librga\": " + json_string(querystring(RGA_VERSION)) + ",\n";
+    env += "  \"sampler\": {\"stride\": " + std::to_string(cfg.sample_stride) +
+           ", \"stagger\": " + (cfg.stagger ? "true" : "false") + "},\n";
+    env += "  \"post\": {\"name\": " + json_string(a["post"]);
+    if (neon_post)
+        env += ", \"tables\": " + std::to_string(neon_post->table_count()) +
+               ", \"table_bytes\": " + std::to_string(neon_post->table_bytes());
+    env += ", \"objects_sha256\": {" + json_string(kPostObjects[0]) + ": " + json_string(file_sha256(kPostObjects[0])) +
+           ", " + json_string(kPostObjects[1]) + ": " + json_string(file_sha256(kPostObjects[1])) + "}},\n";
     if (backend) {
         env += "  \"rknn\": {\"init_flags\": " + std::to_string(NpuContexts::kInitFlags) +
                ", \"sdk\": " + json_string(npu.sdk_version) +

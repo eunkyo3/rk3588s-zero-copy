@@ -38,6 +38,7 @@ add_library(core STATIC
     src/core/slot_pool.cpp
     src/core/video_source.cpp
     src/core/yolov8_post.cpp
+    src/core/yolov8_post_neon.cpp
     src/preprocess/cpu_common.cpp
     src/preprocess/cpu_copy.cpp
     src/preprocess/cpu_direct.cpp
@@ -105,8 +106,13 @@ target_link_libraries(post_probe PRIVATE core)
 target_compile_definitions(post_probe PRIVATE
     CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
 
+add_executable(m2_equivalence tools/m2_equivalence.cpp)
+target_link_libraries(m2_equivalence PRIVATE core)
+target_compile_definitions(m2_equivalence PRIVATE
+    CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
+
 add_executable(test_core tests/test_core.cpp)
 target_link_libraries(test_core PRIVATE core)
 
 set_target_properties(bench_main spike_fd_chain compare_prepare rga_probe rga_kernel inputs_set_probe
-    equivalence_dump dump_tensor calib_npu demo_detect bdirect_check output_probe first_runs_probe post_probe test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
+    equivalence_dump dump_tensor calib_npu demo_detect bdirect_check output_probe first_runs_probe post_probe m2_equivalence test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
