@@ -1,0 +1,24 @@
+# start_time_utc: 2026-11-05T01:12:51Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: f9287ae131cc5ca277e40b5d793c9b20df6e169e
+# amendment: A12
+# source: /home/pi/media/bench/pexels_36330861.mp4
+# purpose: NEON prototype before M2's pre-registration; not a run that counts
+key,value
+frames,300
+identical_detections,300
+detections_per_frame,16.2600
+scalar_cpu_ms_mean,0.3605
+scalar_cpu_ms_median,0.3585
+scalar_cpu_ms_p90,0.3865
+neon_cpu_ms_mean,0.2055
+neon_cpu_ms_median,0.2039
+neon_cpu_ms_p90,0.2295
+cells_per_frame,8400.0000
+cells_passing_score_sum_per_frame,1995.5433
+blocks_of_16_per_frame,525.0000
+blocks_scanned_per_frame,194.7833
