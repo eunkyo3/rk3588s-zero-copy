@@ -142,7 +142,8 @@ def verdict(sweep, c, cp):
         out["practical"] = out["spec"]
     s_c = rep.stats([r["schedstat_total_minus_idle_s"] for r in c.values()])[1]
     s_cp = rep.stats([r["schedstat_total_minus_idle_s"] for r in cp.values()])[1]
-    out.update(system_C=s_c, system_Cp=s_cp, mixed=(m_c[1] - m_cp[1]) * (s_c - s_cp) < 0)
+    out.update(system_C=s_c, system_Cp=s_cp, system_saving=(s_c - s_cp) / s_c if s_c else math.nan,
+               mixed=(m_c[1] - m_cp[1]) * (s_c - s_cp) < 0)
     pairs = {r: (c[r]["process_cpu_s"] - cp[r]["process_cpu_s"]) / c[r]["process_cpu_s"] for r in sorted(c.keys() & cp.keys())}
     out["pairs"] = pairs
     out["interval"] = t_interval(list(pairs.values()))
@@ -213,8 +214,8 @@ def report(c):
              "From the sessions of `sweep m2_main` and `sweep m2_aux` ([prereg/M2.md](../../prereg/M2.md)). "
              "Values are the mean ± sample sd (valid runs) per 120 s window. Method: `tools/m2_report.py`.", "",
              "## Verdicts", "",
-             "| Hypothesis | C (s) | Cp (s) | (C − Cp) / C | Threshold | Spec-literal | Practical | Secondary: schedstat C / Cp (s) | Mixed |",
-             "|---|---|---|---|---|---|---|---|---|"]
+             "| Hypothesis | C (s) | Cp (s) | (C − Cp) / C | Threshold | Spec-literal | Practical | Secondary: schedstat C / Cp (s) | (C − Cp) / C on it | Mixed |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
     verdicts = {}
     for sweep in POINTS:
         p = c[sweep]["points"]
@@ -222,7 +223,7 @@ def report(c):
         practical = v["practical"] + (f" ({v['reason']})" if v.get("reason") else "")
         lines.append(f"| {v['hypothesis']} | {f(v.get('C'))} | {f(v.get('Cp'))} | {pct(v.get('saving'), 2)} | "
                      f"{pct(v['threshold'], 0)} | {v['spec']} | {practical} | {f(v.get('system_C'))} / "
-                     f"{f(v.get('system_Cp'))} | {'yes' if v.get('mixed') else 'no'} |")
+                     f"{f(v.get('system_Cp'))} | {pct(v.get('system_saving'), 2)} | {'yes' if v.get('mixed') else 'no'} |")
     lines.append("")
     for sweep in POINTS:
         v = verdicts[sweep]

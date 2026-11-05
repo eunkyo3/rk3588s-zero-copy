@@ -4,10 +4,10 @@ From the sessions of `sweep m2_main` and `sweep m2_aux` ([prereg/M2.md](../../pr
 
 ## Verdicts
 
-| Hypothesis | C (s) | Cp (s) | (C − Cp) / C | Threshold | Spec-literal | Practical | Secondary: schedstat C / Cp (s) | Mixed |
-|---|---|---|---|---|---|---|---|---|
-| M2-H1 | 18.737 | 17.600 | 6.07% | 3% | adopted | adopted | 20.639 / 19.361 | no |
-| M2-H2 | 37.280 | 31.790 | 14.73% | 5% | adopted | adopted | 40.389 / 35.004 | no |
+| Hypothesis | C (s) | Cp (s) | (C − Cp) / C | Threshold | Spec-literal | Practical | Secondary: schedstat C / Cp (s) | (C − Cp) / C on it | Mixed |
+|---|---|---|---|---|---|---|---|---|---|
+| M2-H1 | 18.737 | 17.600 | 6.07% | 3% | adopted | adopted | 20.639 / 19.361 | 6.19% | no |
+| M2-H2 | 37.280 | 31.790 | 14.73% | 5% | adopted | adopted | 40.389 / 35.004 | 13.33% | no |
 
 **M2-H1:** paired differences (C_r − Cp_r) / C_r: r1 8.76%, r2 6.23%, r3 3.21%; mean 6.07%, descriptive 95% t-interval -0.83% to 12.97%. CV of process CPU: C 0.91%, Cp 3.18%; flagged above 1.5%: Cp.
 
