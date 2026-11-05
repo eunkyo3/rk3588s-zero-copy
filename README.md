@@ -192,7 +192,7 @@ Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summar
 
 | Path | Content |
 |---|---|
-| `prereg/` | hypotheses, protocol and amendments. English governs; `*.ko.md` are translations. |
+| `prereg/` | hypotheses, protocol and amendments; M2's pre-registration in `M2.md`. English governs; `*.ko.md` are translations. |
 | `src/core/` | the shared pipeline: input, queues, slots, NPU contexts, post-processing, metrics, reports |
 | `src/preprocess/` | the variant-specific part: B (`cpu_copy`), C (`zero_copy_rga`), A (`cpu_sw`), and M1.1's B-direct (`cpu_direct`) |
 | `src/app/bench_main.cpp` | the benchmark binary: one run of one variant at one channel count |

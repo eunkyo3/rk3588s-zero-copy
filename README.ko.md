@@ -192,7 +192,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 | 경로 | 내용 |
 |---|---|
-| `prereg/` | 가설, 프로토콜, 수정 기록. 영어판이 기준이고 `*.ko.md`는 번역이다. |
+| `prereg/` | 가설, 프로토콜, 수정 기록. M2의 사전 등록은 `M2.md`다. 영어판이 기준이고 `*.ko.md`는 번역이다. |
 | `src/core/` | 공통 파이프라인: 입력, 큐, 슬롯, NPU 컨텍스트, 후처리, 지표, 결과 기록 |
 | `src/preprocess/` | 변형별 부분: B(`cpu_copy`), C(`zero_copy_rga`), A(`cpu_sw`), 그리고 M1.1의 B-direct(`cpu_direct`) |
 | `src/app/bench_main.cpp` | 벤치마크 실행 파일: 변형 하나를 채널 수 하나로 한 번 실행 |
