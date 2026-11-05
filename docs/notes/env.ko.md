@@ -13,6 +13,8 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 | [`amend-A8`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A8) | `07fe535eefff5d13b77c0ac38ee4e03aa257cac7` | 2026-11-03T01:38:47Z |
 | [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12) | `cdb309e4bbe9bf17646526a722e0a1fccb5e9d56` | 2026-11-04T05:30:51Z |
 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2) | `5d9d6d04e50f17d52980dc5b958c7071d7107176` | 2026-11-05T04:45:34Z |
+| `amend-A13` | 아직 만들지 않음 | |
+| `freeze-m2` | 아직 만들지 않음 | |
 
 기준 시각은 `created_at`이다(PROTOCOL §1). 태그가 가리키는 커밋은 PR #1의 머지 커밋이며, 그 커미터 날짜(2026-10-30T01:58:11Z)는 쓰지 않는다. `amend-A8`은 `freeze-m1` 전에 만든 수정 기록의 Release로, 그 항목이 등록하는 검사에 기준 시각을 주기 위한 것이다([A8](../../prereg/AMENDMENTS.ko.md)). 태그가 가리키는 커밋은 PR #12의 머지 커밋이다. GitHub는 그 커밋의 시각을 Release의 `created_at`으로 주며, Release는 2026-11-03T01:40:12Z에 공개됐다. 검사는 둘 다 지난 02:19:49Z에 시작했다.
 

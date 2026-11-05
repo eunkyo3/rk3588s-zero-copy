@@ -438,3 +438,40 @@
   - **대조군을 다시 돌리는 이유:** K와 코어 옵션이 공유 코어의 코드를 바꾸므로, 어떤 비교도 바이너리를 섞지 않게 한다. 한 반복의 실행은 한 세션 안에서 완료되므로(§9.1), 반복 안의 비교는 바이너리 하나, 하루 안에서 이루어진다.
 - Affected data: 위의 판단에 따라 없음. M1의 실행과 A11의 4K 실행은 다시 돌리지 않으며, 이 설계들의 어떤 M1.1 실행과도 비교하지 않는다.
 - Release: `amend-A12`. B-direct의 검사를 포함해, 이 설계들의 모든 실행은 그 뒤에 시작한다.
+
+## A13 — 2026-11-05 — M2: `freeze-m2` 전에 정하는 값
+- Change: §7 3단계의 점검을 마친 뒤 [M2.md](M2.ko.md) §7 표의 값을 정한다. M2.md는 바뀌지 않는다.
+  - **코드:** PR #36의 머지 커밋 `7104241`이고, 보드에서 `-dirty` 없이 빌드했다.
+    - 갈래 C는 `bench_main --variant C`, 갈래 Cp는 `bench_main --variant C --post neon`이다.
+    - `m2_main`의 모든 실행에 `--stagger on`을 더한다.
+    - 세션 도구는 모든 M2 실행에 `--run-kind m2`와, `docs/notes/env.md`의 Registration 표에서 읽은 `freeze-m2`의 커밋을 `--freeze-m2-commit`으로 넘긴다.
+  - **후처리 오브젝트(§4):** `build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o`의 SHA-256은 `536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2`이고, `…/yolov8_post_neon.cpp.o`의 것은 `3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555`다. 구현하는 동안 전체를 다시 빌드해도 둘 다 같았다.
+  - **컴파일러, 플래그, 라이브러리, 모델, 클럭, 냉각:** A10, A7, A9의 것이고 다른 것이 없다.
+    - 이 빌드에서 `tools/inventory.sh`는 `docs/notes/inventory_m1.txt`와 같다. m2-check 세션이 실행 전에 이를 확인했다.
+    - 세션은 `tools/set_perf_mode.sh`로 클럭을 고정했다. 냉각은 A9의 방열판과 상시 미니 팬이다.
+  - **동등성(§4):** [results/check/20261105T061858Z_m2_equivalence](../results/check/20261105T061858Z_m2_equivalence), 통과.
+    - 영상 ①~④는 `docs/notes/preprocess/videos_manifest.tsv`의 SHA-256과 함께 1,186, 752, 714, 948프레임이었고, 다른 프레임은 없었다.
+    - 합성 12,500세트의 박스 디코딩 1,000,000회에도 다른 것이 없었다.
+  - **기본 경로(§7 2단계):** [results/check/20261105T062050Z_default_c](../results/check/20261105T062050Z_default_c). 기본값의 C를 파일에서 2채널로, 측정 창 6초로 돌렸다. 스레드 13개와 그 affinity, `queues`가 M1의 `32_main_C_2ch_r1`과 같다.
+  - **m2-check(§7 3단계):** [results/check/20261105T062145Z_m2_check](../results/check/20261105T062145Z_m2_check), 06:21~06:38 UTC, 실내 온도 28 °C. 두 실행 모두 유효했다.
+
+    | 갈래 | 표집 규칙 | 시차 오차 | 위상 흩어짐 | 프로세스 CPU | `/proc/schedstat` 합 | 모든 CPU가 0보다 큼 |
+    |---|---|---|---|---|---|---|
+    | C | 지킴 | 3.8 ms | 160.2 ms | 17.910 s | 21.665 s | 예 |
+    | Cp | 지킴 | 6.0 ms | 160.7 ms | 18.280 s | 21.705 s | 예 |
+
+    - `tools/m2_checks.py`가 점검 네 가지를 모두 통과로 판정한다.
+    - schedstat 합이 프로세스 CPU 이상이므로, M2의 보조 지표는 `/proc/schedstat`이다(§3.2). 대체 지표로 넘어가지 않는다.
+  - **점검 실행의 CPU(§7 3단계에 따라 보고만 하며, 아무것도 바꾸지 않는다):** 갈래마다 1회씩이다.
+    - 프로세스 CPU는 Cp가 2.1% 높았다(17.910 s 대 18.280 s).
+    - Cp의 후처리 단계는 중앙값 0.118 ms로 C의 0.344 ms보다 짧았고, NPU 워커는 5.77 s로 C의 6.69 s보다 적게 썼다.
+    - 디코더 스레드(`dec-*`, MPP의 parser와 hal 스레드)는 C의 10.66 s보다 많은 11.88 s를 썼다. 이 스레드들은 두 갈래에서 같은 일을 한다.
+- Reason:
+  - M2.md §7이 이 값들을 `freeze-m2` 전에 정하라고 한다.
+  - **개발 중 실행:** 모두 실행 종류 `check`이고 `results/check/`에 보관했다.
+    - `20261105T050152Z_m2_smoke`: C와 Cp, 2채널, 6초 측정 창.
+    - `20261105T050252Z_m2_equivalence_smoke`, `20261105T060549Z_m2_equivalence_smoke`: 영상 ②만으로 돌린 동등성 도구. 고친 도구로 돌린 두 번째는 미완료로 기록됐다.
+    - 이 실행들은 옵션과 기록을 확인했다. CPU 값은 6초 측정 창에서 나온 것이라 쓰지 않는다.
+  - **보드 재부팅:** 05:44:16 UTC에 다시 빌드하던 중 약 20초 만에 보드가 저절로 재부팅됐다. 종료 기록도 커널 경고도 남지 않았고, 원인은 모른다. 위의 점검은 그 뒤에 했고, 세션마다 클럭을 다시 고정한다.
+- Affected data: 없음.
+- Release: `amend-A13`. `freeze-m2`는 이 항목을 더하는 PR의 머지 커밋에 붙인다. 그 `created_at`이 M2 실행의 기준 시각이다.
