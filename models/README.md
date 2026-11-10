@@ -48,6 +48,12 @@ MSYS_NO_PATHCONV=1 ROOT="$(pwd -W)" tools/model/convert_yolov10n.sh
 
 - **Source and conversion:** the YOLOv10n ONNX export and `examples/yolov10/python/convert.py` of rknn_model_zoo `v2.3.2`, target `rk3588`, INT8, with the same 20 calibration images.
 - **Checks before converting:** the host is x86_64, as for YOLOv8n; the image's `pip freeze` equals `tools/model/constraints.txt`; the calibration images match [coco_subset_20.sha256](coco_subset_20.sha256); and the ONNX file has the SHA-256 `4a925bcb01b261ab97955bfe6c0dd5ad2e638f6db13198d4b6602750870603f6`.
-- **Output:** `models/yolov10n.onnx`, `models/yolov10n_i8.rknn` and `models/yolov10n.sha256`. Since the conversion is not bit-reproducible, the `.rknn` file M4 uses is fixed by its SHA-256 once it has been converted, as for YOLOv8n.
+- **Output:** `models/yolov10n.onnx`, `models/yolov10n_i8.rknn` and `models/yolov10n.sha256`. Since the conversion is not bit-reproducible, the `.rknn` file M4 uses is the one with the SHA-256 below, as for YOLOv8n.
+- **The conversion M4 uses** ran on 2026-11-10 on this project's Windows PC, with the container's memory limited to 2 GB. Its use peaked at about 0.5 GB in samples taken every 2–4 s. The toolkit warned about outlier weights in two classification-head layers (`model.23.one2one_cv3.{0,1}.1.1.conv.weight`, about −11 against an absolute mean of 0.5–0.6), which may affect the quantization's accuracy.
+
+| File | SHA-256 |
+|---|---|
+| `yolov10n.onnx` | `4a925bcb01b261ab97955bfe6c0dd5ad2e638f6db13198d4b6602750870603f6` |
+| `yolov10n_i8.rknn` | `6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81` |
 
 YOLOv10 is published by THU-MIG under AGPL-3.0.
