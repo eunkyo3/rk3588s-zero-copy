@@ -35,3 +35,19 @@ This builds a Docker image with rknn-toolkit2 (the same version as the board's l
 **The conversion is not bit-reproducible.** Two conversions in the same pinned image gave two different `.rknn` files (about 1,200 bytes differ), while the ONNX input was identical. The benchmark uses the file with the SHA-256 above. A new conversion gives a different file and must not replace it.
 
 YOLOv8 is published by Ultralytics under AGPL-3.0. Both files are derived from it and are distributed under the same license; the release holds its text.
+
+## YOLOv10n (M4)
+
+M4 compares YOLOv8n with YOLOv10n, which needs no NMS. Its conversion uses the same pinned image:
+
+```sh
+tools/model/convert_yolov10n.sh
+# Windows (Git Bash + Docker Desktop):
+MSYS_NO_PATHCONV=1 ROOT="$(pwd -W)" tools/model/convert_yolov10n.sh
+```
+
+- **Source and conversion:** the YOLOv10n ONNX export and `examples/yolov10/python/convert.py` of rknn_model_zoo `v2.3.2`, target `rk3588`, INT8, with the same 20 calibration images.
+- **Checks before converting:** the host is x86_64, as for YOLOv8n; the image's `pip freeze` equals `tools/model/constraints.txt`; the calibration images match [coco_subset_20.sha256](coco_subset_20.sha256); and the ONNX file has the SHA-256 `4a925bcb01b261ab97955bfe6c0dd5ad2e638f6db13198d4b6602750870603f6`.
+- **Output:** `models/yolov10n.onnx`, `models/yolov10n_i8.rknn` and `models/yolov10n.sha256`. Since the conversion is not bit-reproducible, the `.rknn` file M4 uses is fixed by its SHA-256 once it has been converted, as for YOLOv8n.
+
+YOLOv10 is published by THU-MIG under AGPL-3.0.
