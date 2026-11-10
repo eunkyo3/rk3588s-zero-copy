@@ -35,3 +35,19 @@ MSYS_NO_PATHCONV=1 ROOT="$(pwd -W)" tools/model/convert_yolov8n.sh
 **변환 결과는 비트 단위로 재현되지 않는다.** 고정한 같은 이미지에서 두 번 변환하면 ONNX 입력이 같아도 서로 다른 `.rknn` 파일이 나온다(약 1,200바이트 차이). 벤치마크는 위 SHA-256의 파일을 쓴다. 새로 변환한 파일은 다른 파일이므로 이것을 대체하면 안 된다.
 
 YOLOv8은 Ultralytics가 AGPL-3.0으로 배포한다. 두 파일은 여기서 파생됐으므로 같은 라이선스로 배포하며, 라이선스 전문은 릴리스에 있다.
+
+## YOLOv10n (M4)
+
+M4는 YOLOv8n과, NMS가 필요 없는 YOLOv10n을 비교한다. 변환은 같은 고정 이미지에서 한다.
+
+```sh
+tools/model/convert_yolov10n.sh
+# Windows (Git Bash + Docker Desktop):
+MSYS_NO_PATHCONV=1 ROOT="$(pwd -W)" tools/model/convert_yolov10n.sh
+```
+
+- **원본과 변환:** rknn_model_zoo `v2.3.2`의 YOLOv10n ONNX와 `examples/yolov10/python/convert.py`, 대상 `rk3588`, INT8, 같은 양자화 이미지 20장.
+- **변환 전 확인:** 호스트가 YOLOv8n 때와 같은 x86_64인지, 이미지의 `pip freeze`가 `tools/model/constraints.txt`와 같은지, 양자화 이미지가 [coco_subset_20.sha256](coco_subset_20.sha256)과 맞는지, ONNX 파일의 SHA-256이 `4a925bcb01b261ab97955bfe6c0dd5ad2e638f6db13198d4b6602750870603f6`인지 확인한다.
+- **결과:** `models/yolov10n.onnx`, `models/yolov10n_i8.rknn`, `models/yolov10n.sha256`. 변환이 비트 단위로 재현되지 않으므로, M4가 쓸 `.rknn` 파일은 YOLOv8n처럼 변환한 뒤 SHA-256으로 고정한다.
+
+YOLOv10은 THU-MIG가 AGPL-3.0으로 배포한다.
