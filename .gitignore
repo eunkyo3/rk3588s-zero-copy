@@ -11,5 +11,6 @@ stream-server/mediamtx.pid
 stream-server/channels/
 stream-server/logs/
 results/**/*.u8
+results/**/*.i8
 stream-server/session_assignment.txt
 stream-server/publish.out
