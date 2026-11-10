@@ -48,6 +48,12 @@ MSYS_NO_PATHCONV=1 ROOT="$(pwd -W)" tools/model/convert_yolov10n.sh
 
 - **원본과 변환:** rknn_model_zoo `v2.3.2`의 YOLOv10n ONNX와 `examples/yolov10/python/convert.py`, 대상 `rk3588`, INT8, 같은 양자화 이미지 20장.
 - **변환 전 확인:** 호스트가 YOLOv8n 때와 같은 x86_64인지, 이미지의 `pip freeze`가 `tools/model/constraints.txt`와 같은지, 양자화 이미지가 [coco_subset_20.sha256](coco_subset_20.sha256)과 맞는지, ONNX 파일의 SHA-256이 `4a925bcb01b261ab97955bfe6c0dd5ad2e638f6db13198d4b6602750870603f6`인지 확인한다.
-- **결과:** `models/yolov10n.onnx`, `models/yolov10n_i8.rknn`, `models/yolov10n.sha256`. 변환이 비트 단위로 재현되지 않으므로, M4가 쓸 `.rknn` 파일은 YOLOv8n처럼 변환한 뒤 SHA-256으로 고정한다.
+- **결과:** `models/yolov10n.onnx`, `models/yolov10n_i8.rknn`, `models/yolov10n.sha256`. 변환이 비트 단위로 재현되지 않으므로, M4가 쓸 `.rknn` 파일은 YOLOv8n처럼 아래 SHA-256의 파일이다.
+- **M4가 쓰는 변환**은 2026-11-10 이 프로젝트의 Windows PC에서, 컨테이너 메모리를 2 GB로 제한하고 돌렸다. 2–4초마다 잰 사용량은 최대 약 0.5 GB였다. 툴킷은 분류 헤드의 두 층(`model.23.one2one_cv3.{0,1}.1.1.conv.weight`)에 이상치 가중치가 있다고 경고했다(절댓값 평균 0.5–0.6에 대해 약 −11). 양자화 정확도에 영향을 줄 수 있다.
+
+| 파일 | SHA-256 |
+|---|---|
+| `yolov10n.onnx` | `4a925bcb01b261ab97955bfe6c0dd5ad2e638f6db13198d4b6602750870603f6` |
+| `yolov10n_i8.rknn` | `6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81` |
 
 YOLOv10은 THU-MIG가 AGPL-3.0으로 배포한다.

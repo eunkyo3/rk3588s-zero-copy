@@ -1,0 +1,5 @@
+4a925bcb01b261ab97955bfe6c0dd5ad2e638f6db13198d4b6602750870603f6  yolov10n.onnx
+6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81  yolov10n_i8.rknn
+rknn-toolkit2 2.3.2
+rknn_model_zoo v2.3.2 bad6c7334531becaf90a561988519b7bec34d0ab
+host x86_64
