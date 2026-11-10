@@ -9,7 +9,7 @@ These runs are not registered and are not part of M4's results. They were made o
 | Does YOLOv10n convert with the pinned toolkit? | `tools/model/convert_yolov10n.sh` | Yes. The INT8 model is `6a6442e1…`. The toolkit warned about outlier weights in the class head. | M4's model ([`data-model-yolov10n_i8-6a6442e1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/data-model-yolov10n_i8-6a6442e1)) |
 | What does the INT8 model output? | `m4_probe` | Six int8 outputs. The class scores top out at 0.51, 0.89 and 0.97 for strides 8, 16 and 32. | Recorded. The mAP will show what it costs. |
 | How close are INT8 and FP32? | `m4_probe`, `m4_explore.py compare` | On 21 images at conf 0.25: 195 detections matched, 13 only in FP32, 11 only in INT8. | Recorded. 21 images do not estimate accuracy. |
-| Does it need NMS? | the same | 11 of 208 FP32 detections are same-class pairs with IoU > 0.45. | No NMS, as YOLOv10 is meant to run |
+| Does it need NMS? | the same | Among 208 FP32 detections, 11 same-class pairs overlap with IoU > 0.45. | No NMS, as YOLOv10 is meant to run |
 | Which post-processing? | the zoo's code, `yolov10_post` | The zoo's C++ demo misreads boxes when one cell has two classes. YOLOv10's own rule, ported, equals the zoo's Python. | YOLOv10's rule, ties in (branch, cell, class) order |
 | What does it cost? | `m4_probe` | 0.084 ms of CPU per call at conf 0.25, against 0.361 ms for M1's `yolov8_post` | Recorded |
 
@@ -57,16 +57,16 @@ From `m4_probe.csv`. Each output is int8, NCHW.
 | Score difference INT8 − FP32, median (range) | −0.014 (−0.347 to +0.340) |
 | Largest \|INT8 − FP32\| per output | 4.82, 0.141, 4.65, 0.537, 2.70, 0.595 |
 
-Of the 24 detections on one side only, 22 score between 0.25 and 0.36, so they cross the threshold. The score differences reach ±0.35, against scores that go up to 0.5–0.97.
+Of the 24 detections on one side only, 22 score between 0.25 and 0.36 (`one_side_scores` in `m4_explore.json`), so they cross the threshold. The score differences reach ±0.35, against scores that go up to 0.5–0.97.
 
 **NMS.** YOLOv10's one-to-one head is trained to give one box per object.
-- **Overlaps:** 11 of the 208 FP32 detections (9 of the 206 INT8) are same-class pairs with IoU > 0.45, which an NMS at 0.45 would remove. Whether they are duplicates or separate objects close together was not checked.
-- **Two classes at one cell:** 2 such pairs (1 in INT8).
+- **Overlaps:** among the 208 FP32 detections, 11 same-class pairs have IoU > 0.45 (9 pairs among the 206 INT8 ones). An NMS at 0.45 would remove one of each. Whether they are duplicates or separate objects close together was not checked.
+- **Two classes at one cell:** 2 pairs of detections have identical boxes, which happens when they come from one cell (1 pair in INT8).
 
 ## 4. Post-processing
 
 **The zoo's two versions** (rknn_model_zoo v2.3.2, `examples/yolov10`):
-- **C++ demo** (`cpp/postprocess.cc`): keeps every (cell, class) pair above 0.25, sorts by score and keeps 128, without NMS. Its `process_i8` advances the box offset inside the class loop. A second class above the threshold at the same cell therefore decodes the wrong bins. Section 3 found such cells, so the bug shows in real outputs.
+- **C++ demo** (`cpp/postprocess.cc`): keeps every (cell, class) pair above 0.25, sorts by score and keeps 128, without NMS. Its `process_i8` advances the box offset inside the class loop ([lines 323–334](https://github.com/airockchip/rknn_model_zoo/blob/v2.3.2/examples/yolov10/cpp/postprocess.cc#L323-L334)). A second class above the threshold at the same cell therefore decodes the wrong bins. Section 3 found such cells, so the bug shows in real outputs.
 - **Python demo** (`python/yolov10.py`, `post_process_yolov10`): YOLOv10's own rule. It takes the 300 cells with the highest best score, then the 300 highest (cell, class) pairs among them, then those above the threshold.
 
 **Chosen on 2026-11-10** (the user, from these options):
@@ -104,9 +104,9 @@ The run is in `results/check/`, with run kind `check`. Its raw outputs (`*.i8`, 
 
 | Run | What | Code |
 |---|---|---|
-| `20261110T073848Z_m4_probe` | the 21 images: outputs, checks, `yolov10_post` detections and times; `m4_explore.json` is the comparison | `d0989f6` |
+| `20261110T073848Z_m4_probe` | the 21 images: outputs, checks, `yolov10_post` detections and times; `m4_explore.json` is the comparison, written by `tools/m4_explore.py` as committed with this note | `d0989f6` |
 
-- **A first pass** earlier the same day used scratch versions of these tools, with the same inputs and model. It gave the same numbers in sections 2 to 4, and the choices of section 4 were made after it. That pass timed wall clock on repeated calls (0.070 and 6.2 ms), not thread CPU after each run.
+- **A first pass** earlier the same day used scratch versions of these tools, with the same inputs and model. It gave the same numbers in sections 2 to 4, and the choices of section 4 were made after it. Its times, wall clock of repeated calls on the same outputs, were not kept.
 - **The conversion** is recorded by `models/yolov10n.sha256`, not by a run here.
 
 **Reproducing.**

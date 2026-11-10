@@ -13,10 +13,11 @@ directory named rknn_model_zoo (the zoo's yolov10.py looks for that name in its 
         1. tensors: the largest |INT8 - FP32| per output, and the INT8 values at +127 (saturated);
         2. detections at conf 0.25, the zoo's post_process_yolov10 on dequantized INT8 against the same on
            FP32: matched (same class, IoU >= 0.5), only in one, IoU and score differences;
-        3. same-class pairs with IoU > 0.45 (what an NMS at 0.45 would remove), and pairs at one cell;
+        3. same-class pairs with IoU > 0.45 (what an NMS at 0.45 would remove), and pairs with identical
+           boxes (two classes at one cell);
         4. yolov10_post (C++, detections.csv) against post_process_yolov10 on the same INT8 outputs, at
-           conf 0.25 and 0.001: matched within 1e-6 in score and 1e-3 px, else whether the pair is tied
-           at the 300th score.
+           conf 0.25 and 0.001: matched within 1e-6 in score and 1e-3 px, else, where a side kept 300,
+           whether the pair is tied at the 300th score.
       Writes PROBE_DIR/m4_explore.json and prints a summary.
 """
 import hashlib
@@ -103,9 +104,9 @@ def compare(zoo, work, probe):
     worst = [0.0] * 6
     saturated = [0] * 6
     matched = only_fp32 = only_int8 = 0
-    ious, score_diff = [], []
+    ious, score_diff, one_side = [], [], []
     overlaps = {"fp32": 0, "int8": 0}
-    shared_cell = {"fp32": 0, "int8": 0}
+    identical_boxes = {"fp32": 0, "int8": 0}
     totals = {"fp32": 0, "int8": 0}
     port = {c: {"detections": 0, "matched": 0, "tied_at_cut": 0, "other": 0, "max_box_diff": 0.0}
             for c in ("0.25", "0.001")}
@@ -126,7 +127,7 @@ def compare(zoo, work, probe):
             for i in range(len(c)):
                 for j in range(i + 1, len(c)):
                     overlaps[name] += bool(c[i] == c[j] and iou(b[i], b[j]) > 0.45)
-                    shared_cell[name] += bool(np.array_equal(b[i], b[j]))
+                    identical_boxes[name] += bool(np.array_equal(b[i], b[j]))
         (fb, fc, fs), (ib, ic, is_) = res["fp32"], res["int8"]
         used = set()
         for i in range(len(fc)):
@@ -143,7 +144,9 @@ def compare(zoo, work, probe):
                 score_diff.append(float(is_[bj] - fs[i]))
             else:
                 only_fp32 += 1
+                one_side.append(float(fs[i]))
         only_int8 += len(ic) - len(used)
+        one_side += [float(is_[j]) for j in range(len(ic)) if j not in used]
 
         for conf in ("0.25", "0.001"):
             zy.OBJ_THRESH = float(conf)
@@ -152,8 +155,8 @@ def compare(zoo, work, probe):
             mine = cpp.get((stem, conf), [])
             st = port[conf]
             st["detections"] += len(mine)
-            if len(py) != len(mine):
-                st["other"] += abs(len(py) - len(mine))
+            # Ties can only differ where a side was cut at its 300th detection.
+            cut = 300 in (len(py), len(mine))
             low = min((t[1] for t in mine), default=0.0)
             free = [True] * len(py)
             for cc, cs, cb in mine:
@@ -163,11 +166,11 @@ def compare(zoo, work, probe):
                     free[hit] = False
                     st["matched"] += 1
                     st["max_box_diff"] = max(st["max_box_diff"], max(abs(x - y) for x, y in zip(py[hit][2], cb)))
-                elif abs(cs - low) < 1e-6:
+                elif cut and abs(cs - low) < 1e-6:
                     st["tied_at_cut"] += 1
                 else:
                     st["other"] += 1
-            st["other"] += sum(1 for j, p in enumerate(py) if free[j] and abs(p[1] - low) >= 1e-6)
+            st["other"] += sum(1 for j, p in enumerate(py) if free[j] and not (cut and abs(p[1] - low) < 1e-6))
 
     out = {
         "images": len(stems),
@@ -181,7 +184,8 @@ def compare(zoo, work, probe):
             "score_diff_median": round(float(np.median(score_diff)), 4) if score_diff else None,
             "score_diff_min": round(min(score_diff), 4) if score_diff else None,
             "score_diff_max": round(max(score_diff), 4) if score_diff else None,
-            "same_class_iou_over_0.45": overlaps, "pairs_at_one_cell": shared_cell},
+            "one_side_scores": sorted(round(v, 3) for v in one_side),
+            "same_class_iou_over_0.45": overlaps, "pairs_with_identical_boxes": identical_boxes},
         "yolov10_post_vs_zoo_python": port,
     }
     (probe / "m4_explore.json").write_text(json.dumps(out, indent=1) + "\n")

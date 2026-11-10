@@ -11,8 +11,9 @@
 //     call) on the outputs the runtime has just written, as post_probe timed yolov8_post.
 //
 // Usage: m4_probe <model.rknn> <out_dir> [runs=5] <input.png>...   (as root, clocks fixed)
-//   <out_dir>/m4_probe.csv        "# key: value" header lines, then key,value rows: the outputs'
-//                                 attributes (scales as %.9g), checks and times
+//   <out_dir>/m4_probe.csv        "# key: value" header lines (PROTOCOL §1.4, run kind check), then
+//                                 key,value rows: the outputs' attributes (scales as %.9g), checks
+//                                 and times
 //   <out_dir>/detections.csv      image,conf,rank,cls,score,x1,y1,x2,y2 (model input coordinates)
 //   <out_dir>/<image>_out<k>.i8   output k of the bound context (not committed)
 #include <algorithm>
@@ -59,7 +60,7 @@ std::string fmt(const char* f, double x) {
 int main(int argc, char** argv) {
     pin_current_thread({4, 5, 6, 7});
     cv::setNumThreads(1);  // PROTOCOL §8
-    if (argc < 5)
+    if (argc < 4)
         die("usage: m4_probe <model.rknn> <out_dir> [runs=5] <input.png>...");
     const std::string model = argv[1], out_dir = argv[2];
     int first = 3, runs = 5;
