@@ -43,7 +43,7 @@ From `m4_probe.csv`. Each output is int8, NCHW.
 ## 3. INT8 against FP32
 
 **Method.**
-- **Images:** the zoo's `bus.jpg` and the 20 calibration images. The calibration images are the ones the quantization was fitted to, so they favour INT8.
+- **Images:** the zoo's `bus.jpg` and the 20 calibration images. The calibration images are the ones the quantization was fitted to, so they favour INT8. They are also COCO val2017 images (all 20 are at `images.cocodataset.org/val2017/`), so they are among the images M4's mAP evaluates.
 - **Inputs:** each image letterboxed to 640×640 with pad 0, as the zoo's `yolov10.py` does, and written as PNG. The board ran on these pixels, and ONNX FP32 on RGB/255 of the same pixels (onnxruntime 1.23.2 in the converter image).
 - **Post-processing:** the zoo's `post_process_yolov10` at conf 0.25 on both, the INT8 outputs dequantized with their exact scales.
 - **Matching:** a detection is matched when the other side has one of the same class with IoU ≥ 0.5.
@@ -81,7 +81,7 @@ Of the 24 detections on one side only, 22 score between 0.25 and 0.36 (`one_side
 | 0.25 | 206 | 206 | 0 | 0 | 6.2e-5 px |
 | 0.001 | 6,300 | 3,154 | 3,146 | 0 | 9.2e-5 px |
 
-At conf 0.001 every image fills its 300. The 300th score is among the smallest an image has, from 0.0035 to 0.022, and about half of the kept pairs are tied with it. Which of them are kept depends only on the order of ties: here (branch, cell, class), and in the zoo's Python, torch's `topk`. Above that score, from 20 to 286 pairs per image (median 121), the two are the same. pycocotools uses the 100 best detections per image. So in images with fewer than 100 pairs above the cut, tied pairs enter the mAP, and the tie order can move it slightly. The plan fixes the order.
+At conf 0.001 every image fills its 300. The 300th score is among the smallest an image has, from 0.0035 to 0.022, and about half of the kept pairs are tied with it. Which of them are kept depends only on the order of ties: here (branch, cell, class), and in the zoo's Python, torch's `topk`. Above that score, from 20 to 286 pairs per image (median 121), the two are the same. pycocotools limits the detections per image and category (100 by default), not per image, so nearly all of the 300 kept pairs enter the evaluation, the tied ones included. Which tied pairs survive the cut can therefore move the mAP slightly, and the plan fixes the order.
 
 **Unit tests.** `tests/test_core.cpp` checks the rule against a plain implementation of it on 60 random cases, including ties and the model's three class scales, and the edge cases (`max_det` ≤ 0, two classes at one cell, the strict threshold).
 
