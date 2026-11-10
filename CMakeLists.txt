@@ -39,6 +39,7 @@ add_library(core STATIC
     src/core/video_source.cpp
     src/core/yolov8_post.cpp
     src/core/yolov8_post_neon.cpp
+    src/core/yolov10_post.cpp
     src/preprocess/cpu_common.cpp
     src/preprocess/cpu_copy.cpp
     src/preprocess/cpu_direct.cpp
