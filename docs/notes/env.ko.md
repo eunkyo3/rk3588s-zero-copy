@@ -15,6 +15,7 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2) | `5d9d6d04e50f17d52980dc5b958c7071d7107176` | 2026-11-05T04:45:34Z |
 | [`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13) | `3880af442b947f9f913578ed8fe00d13aca6b083` | 2026-11-05T07:04:00Z |
 | [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2) | `3880af442b947f9f913578ed8fe00d13aca6b083` | 2026-11-05T07:04:00Z |
+| [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4) | `8638685d9ef806a85e5042d7cc10febdd5ae93a9` | 2026-11-11T00:04:33Z |
 
 기준 시각은 `created_at`이다(PROTOCOL §1). 태그가 가리키는 커밋은 PR #1의 머지 커밋이며, 그 커미터 날짜(2026-10-30T01:58:11Z)는 쓰지 않는다. `amend-A8`은 `freeze-m1` 전에 만든 수정 기록의 Release로, 그 항목이 등록하는 검사에 기준 시각을 주기 위한 것이다([A8](../../prereg/AMENDMENTS.ko.md)). 태그가 가리키는 커밋은 PR #12의 머지 커밋이다. GitHub는 그 커밋의 시각을 Release의 `created_at`으로 주며, Release는 2026-11-03T01:40:12Z에 공개됐다. 검사는 둘 다 지난 02:19:49Z에 시작했다.
 
@@ -25,6 +26,8 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 `prereg-m2`는 M2 사전 등록의 1단계, [prereg/M2.md](../../prereg/M2.ko.md)의 Release다. 태그가 가리키는 커밋은 PR #35의 머지 커밋이다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-05T04:49:01Z에 공개됐다. 머리말에 `prereg-m2`를 적는 모든 M2 점검 실행과 모든 M2 실행은 둘 다 지난 뒤에 시작하며, `tools/check_prereg_order.py`가 이를 검사한다(M2 §5.1).
 
 `amend-A13`과 `freeze-m2`는 둘 다 PR #37의 머지 커밋을 가리키며, 그 커밋의 `prereg/AMENDMENTS.md`가 [prereg/M2.md](../../prereg/M2.ko.md) §7의 모든 값(A13)을 담는다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-05T07:07:41Z와 07:08:10Z에 공개됐다. 모든 M2 실행은 둘 다 지난 뒤에 시작하며, `tools/check_prereg_order.py`가 이를 검사하고, 세션 도구는 모든 M2 실행에 `freeze-m2`의 커밋을 넘긴다(M2 §5.1).
+
+`prereg-m4`는 M4 사전 등록의 1단계, [prereg/M4.md](../../prereg/M4.ko.md)의 Release다. 태그가 가리키는 커밋은 PR #45의 머지 커밋이며, 그 앞에 PR #44(이 계획이 공개하는 탐색)의 머지가 있다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-11T00:06:05Z에 공개됐다. 머리말에 `prereg-m4`를 적는 모든 M4 점검 실행은 둘 다 지난 뒤에 시작한다. `tools/check_prereg_order.py`는 아직 이를 검사하지 않으며, M4 구현 과정에서 검사하도록 확장된다(M4 §4, §8).
 
 ## 보드 기준선
 

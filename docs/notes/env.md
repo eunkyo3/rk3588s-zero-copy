@@ -15,6 +15,7 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2) | `5d9d6d04e50f17d52980dc5b958c7071d7107176` | 2026-11-05T04:45:34Z |
 | [`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13) | `3880af442b947f9f913578ed8fe00d13aca6b083` | 2026-11-05T07:04:00Z |
 | [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2) | `3880af442b947f9f913578ed8fe00d13aca6b083` | 2026-11-05T07:04:00Z |
+| [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4) | `8638685d9ef806a85e5042d7cc10febdd5ae93a9` | 2026-11-11T00:04:33Z |
 
 `created_at` is the reference time (PROTOCOL §1). The tagged commit is the merge of PR #1, whose committer date (2026-10-30T01:58:11Z) is not used. `amend-A8` is the Release of an amendment made before `freeze-m1`, so that the check it registers has a reference time ([A8](../../prereg/AMENDMENTS.md)). Its tagged commit is the merge of PR #12. GitHub gives that commit's time as the Release's `created_at`; the Release was published at 2026-11-03T01:40:12Z. The check started at 02:19:49Z, after both.
 
@@ -25,6 +26,8 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 `prereg-m2` is stage 1 of M2's pre-registration, [prereg/M2.md](../../prereg/M2.md). It tags the merge of PR #35. Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-05T04:49:01Z. Every M2 check run that names `prereg-m2` in its header, and every M2 run, starts after both, which `tools/check_prereg_order.py` checks (M2 §5.1).
 
 `amend-A13` and `freeze-m2` both tag the merge of PR #37, whose `prereg/AMENDMENTS.md` holds every value of [prereg/M2.md](../../prereg/M2.md) §7 (A13). Here too GitHub gives the commit's time as `created_at`; the Releases were published at 2026-11-05T07:07:41Z and 07:08:10Z. Every M2 run starts after both, which `tools/check_prereg_order.py` checks, and the session tool passes `freeze-m2`'s commit to every M2 run (M2 §5.1).
+
+`prereg-m4` is stage 1 of M4's pre-registration, [prereg/M4.md](../../prereg/M4.md). It tags the merge of PR #45, which follows the merge of PR #44 (the exploration it discloses). Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-11T00:06:05Z. Every M4 check run that names `prereg-m4` in its header starts after both. `tools/check_prereg_order.py` does not check this yet; it is extended to do so as part of M4's implementation (M4 §4, §8).
 
 ## Board baseline
 
