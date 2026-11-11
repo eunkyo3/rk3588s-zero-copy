@@ -1,0 +1,91 @@
+{
+ "images": 21,
+ "tensors": {
+  "max_abs_int8_minus_fp32": [
+   4.8238,
+   0.141,
+   4.6454,
+   0.5373,
+   2.6967,
+   0.5945
+  ],
+  "int8_max_value": [
+   18.9047,
+   0.5103,
+   17.4881,
+   0.8939,
+   11.3318,
+   0.967
+  ],
+  "values_at_127": [
+   0,
+   6,
+   1,
+   2,
+   7,
+   1
+  ]
+ },
+ "detections_conf_0.25": {
+  "fp32": 208,
+  "int8": 206,
+  "matched": 195,
+  "only_fp32": 13,
+  "only_int8": 11,
+  "iou_min": 0.652,
+  "iou_median": 0.986,
+  "score_diff_median": -0.0137,
+  "score_diff_min": -0.3469,
+  "score_diff_max": 0.3402,
+  "one_side_scores": [
+   0.25,
+   0.252,
+   0.252,
+   0.26,
+   0.263,
+   0.265,
+   0.268,
+   0.27,
+   0.276,
+   0.276,
+   0.28,
+   0.292,
+   0.296,
+   0.301,
+   0.322,
+   0.336,
+   0.343,
+   0.344,
+   0.344,
+   0.345,
+   0.346,
+   0.358,
+   0.423,
+   0.482
+  ],
+  "same_class_iou_over_0.45": {
+   "fp32": 11,
+   "int8": 9
+  },
+  "pairs_with_identical_boxes": {
+   "fp32": 2,
+   "int8": 1
+  }
+ },
+ "yolov10_post_vs_zoo_python": {
+  "0.25": {
+   "detections": 206,
+   "matched": 206,
+   "tied_at_cut": 0,
+   "other": 0,
+   "max_box_diff": 6.152929688596487e-05
+  },
+  "0.001": {
+   "detections": 6300,
+   "matched": 3154,
+   "tied_at_cut": 3146,
+   "other": 0,
+   "max_box_diff": 9.160742183667026e-05
+  }
+ }
+}
