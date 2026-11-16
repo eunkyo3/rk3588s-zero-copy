@@ -13,6 +13,8 @@
 //   --fixed-clocks FILE  the output of tools/set_perf_mode.sh: a one-second sample in the window
 //                        below one of its values makes the run invalid (PROTOCOL §9.3 rule 1)
 //   --with-post          post-process every output (P_cap)
+//   --post m1|neon|v10   with --with-post, the pipeline's post-processing to run, as bench_main's --post
+//                        (core/pipeline_post.h; default m1, M1-3's; prereg/M4.md §3.1)
 //   --cores N            workers on NPU cores 0..N-1 (default 3)
 //   --warmup S, --duration S, --model PATH, --out DIR, --repetition R, --freeze-commit SHA
 //                        as for bench_main
@@ -32,18 +34,20 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "core/metrics.h"
 #include "core/npu.h"
+#include "core/pipeline_post.h"
 #include "core/report.h"
 #include "core/util.h"
-#include "core/yolov8_post.h"
 
 #ifndef CODE_COMMIT
 #define CODE_COMMIT "unknown"
@@ -71,8 +75,8 @@ struct WorkerResult {
 };
 
 void usage() {
-    die("usage: calib_npu --tensors FILE --fixed-clocks FILE [--with-post] [--cores N] [--warmup S] "
-        "[--duration S] [--model PATH] [--out DIR] [--repetition R] [--freeze-commit SHA]");
+    die("usage: calib_npu --tensors FILE --fixed-clocks FILE [--with-post [--post m1|neon|v10]] [--cores N] "
+        "[--warmup S] [--duration S] [--model PATH] [--out DIR] [--repetition R] [--freeze-commit SHA]");
 }
 
 int to_int(const std::string& s, const char* what) {
@@ -153,7 +157,8 @@ int main(int argc, char** argv) {
             continue;
         }
         const std::string key = k.rfind("--", 0) == 0 ? k.substr(2) : "";
-        if (i + 1 >= argc || !(key == "tensors" || key == "fixed-clocks" || a.count(key) || key == "out"))
+        if (i + 1 >= argc ||
+            !(key == "tensors" || key == "fixed-clocks" || a.count(key) || key == "out" || key == "post"))
             usage();
         a[key] = argv[++i];
         args_json += ", " + json_string(argv[i]);
@@ -166,11 +171,13 @@ int main(int argc, char** argv) {
     const int warmup_s = to_int(a["warmup"], "warmup"), duration_s = to_int(a["duration"], "duration");
     CHECK(warmup_s >= 1 && duration_s >= 1, "warm-up and duration must be at least 1 s");
     to_int(a["repetition"], "repetition");
+    PostKind post_kind = PostKind::M1;
+    CHECK(!a.count("post") || with_post, "--post needs --with-post");
+    CHECK(!a.count("post") || parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
     const std::string measurement = with_post ? "p_cap" : "npu_raw";
     const std::string out =
         a.count("out") ? a["out"]
                        : "results/calibration/" + utc_now("%Y%m%dT%H%M%SZ") + "_" + measurement + "_" + a["cores"] + "c";
-    std::filesystem::create_directories(out);
     std::map<std::string, int64_t> fixed = read_fixed_clocks(a["fixed-clocks"]);
     const std::string start_time = utc_now("%Y-%m-%dT%H:%M:%SZ");
 
@@ -189,6 +196,15 @@ int main(int argc, char** argv) {
     in_attr.fmt = RKNN_TENSOR_NHWC;
     in_attr.pass_through = 0;
     const size_t size = std::max<size_t>(in_attr.size_with_stride, tensor_bytes);
+    std::unique_ptr<PipelinePost> post;
+    if (with_post) {
+        try {  // neon's tables are built here, before the warm-up (M2 §1)
+            post = std::make_unique<PipelinePost>(post_kind, npu.outputs);
+        } catch (const std::exception& e) {
+            die("%s", e.what());
+        }
+    }
+    std::filesystem::create_directories(out);  // after the checks that can reject the model
 
     const uintmax_t file_size = std::filesystem::file_size(a["tensors"]);
     CHECK(file_size % tensor_bytes == 0, "%s is not a whole number of %zu-byte tensors", a["tensors"].c_str(),
@@ -261,6 +277,7 @@ int main(int argc, char** argv) {
         {"code_commit", CODE_COMMIT},
         {"amendment", LATEST_AMENDMENT},
         {"measurement", measurement},
+        {"post", with_post ? post_kind_name(post_kind) : "none"},
         {"cores", a["cores"]},
         {"warmup_s", a["warmup"]},
         {"duration_s", a["duration"]},
@@ -295,8 +312,8 @@ int main(int argc, char** argv) {
                 CHECK(rknn_run(npu.ctx[w], nullptr) == RKNN_SUCC, "rknn_run failed");
                 const int64_t t2 = now_ns();
                 size_t dets = 0;
-                if (with_post)
-                    dets = yolov8_post(npu.output_ptrs(w), npu.outputs, mw, mh).size();
+                if (post)
+                    dets = post->run(npu.output_ptrs(w), npu.outputs, mw, mh).size();
                 const int64_t t3 = now_ns();
                 completed[w]++;
                 if (t3 >= t_w && t3 < t_e) {
@@ -450,6 +467,8 @@ int main(int argc, char** argv) {
           << ", \"core_masks\": [1, 2, 4], \"workers\": " << cores
           << ", \"input_binding\": \"UINT8 NHWC rknn_create_mem_from_fd per tensor, rknn_set_io_mem per step\""
           << ", \"output_binding\": \"NCHW INT8 rknn_create_mem + rknn_set_io_mem\"},\n"
+          << "  \"post\": {" << (post ? post->describe() : std::string("\"name\": \"none\""))
+          << ", \"objects_sha256\": " << post_objects_json() << "},\n"
           << "  \"tensors\": {\"heap\": " << json_string(heap) << ", \"count\": " << count
           << ", \"buffer_bytes\": " << size << "},\n"
           << "  \"bound_outputs_match_rknn_outputs_get\": {\"before_window\": " << (match_before ? "true" : "false")

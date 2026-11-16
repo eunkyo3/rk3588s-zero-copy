@@ -47,11 +47,8 @@ struct Candidate {
 
 }  // namespace
 
-std::vector<Detection> yolov10_post(const std::vector<const int8_t*>& outputs,
-                                    const std::vector<rknn_tensor_attr>& attrs,
-                                    int model_w, int model_h,
-                                    float conf_thresh, int max_det) {
-    if (outputs.size() != 6 || attrs.size() != 6)
+void yolov10_check_layout(const std::vector<rknn_tensor_attr>& attrs) {
+    if (attrs.size() != 6)
         throw std::runtime_error("yolov10_post: expected 6 outputs");
     for (const auto& a : attrs) {
         if (a.fmt != RKNN_TENSOR_NCHW || a.type != RKNN_TENSOR_INT8 || a.n_dims != 4)
@@ -69,6 +66,15 @@ std::vector<Detection> yolov10_post(const std::vector<const int8_t*>& outputs,
         if (cls.dims[2] != box.dims[2] || cls.dims[3] != box.dims[3])
             throw std::runtime_error("yolov10_post: branch grids differ");
     }
+}
+
+std::vector<Detection> yolov10_post(const std::vector<const int8_t*>& outputs,
+                                    const std::vector<rknn_tensor_attr>& attrs,
+                                    int model_w, int model_h,
+                                    float conf_thresh, int max_det) {
+    if (outputs.size() != 6)
+        throw std::runtime_error("yolov10_post: expected 6 outputs");
+    yolov10_check_layout(attrs);
     if (max_det <= 0)
         return {};
 

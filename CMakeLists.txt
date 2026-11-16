@@ -34,6 +34,7 @@ add_library(core STATIC
     src/core/metrics.cpp
     src/core/npu.cpp
     src/core/pipeline.cpp
+    src/core/pipeline_post.cpp
     src/core/report.cpp
     src/core/slot_pool.cpp
     src/core/video_source.cpp

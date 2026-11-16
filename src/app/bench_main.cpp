@@ -12,8 +12,9 @@
 //   --repetition R      repetition index (default 1)
 //   --freeze-commit SHA freeze-m1 commit, "none" before the freeze (default none)
 //   --freeze-m2-commit SHA  freeze-m2 commit, "none" before it (default none; prereg/M2.md §5.1)
-//   --post m1|neon      post-processing: M1's yolov8_post (default) or arm Cp's NeonPost, with variant C
-//                       only (M2 §1)
+//   --post m1|neon|v10  post-processing: M1's yolov8_post (default), arm Cp's NeonPost (M2 §1), or
+//                       yolov10_post for the YOLOv10n export (arm C10, prereg/M4.md §3.2); neon and v10
+//                       with variant C only (core/pipeline_post.h)
 //   --stagger off|on    at the main condition, channel n samples the frames with counter % 6 == (n - 1) % 6
 //                       (M2 §3.1; default off)
 //   --prep-threads K    preprocessing threads (default 2, PROTOCOL §5.1; 4 for M1.1's B with K = 4, A12)
@@ -37,9 +38,9 @@ extern "C" {
 #include "core/metrics.h"
 #include "core/npu.h"
 #include "core/pipeline.h"
+#include "core/pipeline_post.h"
 #include "core/report.h"
 #include "core/util.h"
-#include "core/yolov8_post_neon.h"
 #include "preprocess/backend.h"
 #include "preprocess/cpu_common.h"
 
@@ -55,7 +56,7 @@ namespace {
 void usage() {
     die("usage: bench_main --variant none|A|B|C|Bd --channels N --source URL [--condition main|aux] [--warmup S] "
         "[--duration S] [--model PATH] [--out DIR] [--run-kind KIND] [--repetition R] [--freeze-commit SHA] "
-        "[--prep-threads K] [--cores a76|a55] [--freeze-m2-commit SHA] [--post m1|neon] [--stagger off|on]");
+        "[--prep-threads K] [--cores a76|a55] [--freeze-m2-commit SHA] [--post m1|neon|v10] [--stagger off|on]");
 }
 
 }  // namespace
@@ -96,8 +97,10 @@ int main(int argc, char** argv) {
     CHECK(kind == "check" || kind == "calibration" || kind == "equivalence" || kind == "comparison" ||
               kind == "reference" || kind == "m1.1" || kind == "m2",
           "unknown run kind %s", kind.c_str());
-    CHECK(a["post"] == "m1" || a["post"] == "neon", "post must be m1 or neon");
-    CHECK(a["post"] == "m1" || variant == "C", "post neon is arm Cp, variant C (M2 §1)");
+    PostKind post_kind;
+    CHECK(parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
+    CHECK(post_kind == PostKind::M1 || variant == "C", "post neon and v10 are arms of variant C (M2 §1, M4 §3.2)");
+    CHECK(post_kind != PostKind::V10 || kind == "check", "post v10 is M4's: run kind check until run kind m4 exists");
     CHECK(a["stagger"] == "off" || a["stagger"] == "on", "stagger must be off or on");
     CHECK(a["stagger"] == "off" || a["condition"] == "main", "stagger is for the main condition (M2 §3.1)");
     const std::string& freeze_m2 = a["freeze-m2-commit"];
@@ -154,7 +157,7 @@ int main(int argc, char** argv) {
 
     NpuContexts npu;
     std::unique_ptr<Backend> backend;
-    std::unique_ptr<NeonPost> neon_post;
+    std::unique_ptr<PipelinePost> post;
     if (variant != "none") {
         npu.open(a["model"]);
         backend = variant == "C"    ? make_zero_copy_rga(a["model"], rga_interpolation())
@@ -162,14 +165,12 @@ int main(int argc, char** argv) {
                   : variant == "Bd" ? make_cpu_direct(opencv_interpolation())
                                     : make_cpu_software();
         backend->init(npu, input_slots(cfg.preprocess_threads));
-        if (a["post"] == "neon") {  // its tables are built here, before the warm-up (M2 §1)
-            try {
-                neon_post = std::make_unique<NeonPost>(npu.outputs);
-            } catch (const std::exception& e) {
-                die("%s", e.what());
-            }
-            cfg.neon_post = neon_post.get();
+        try {  // neon's tables are built here, before the warm-up (M2 §1)
+            post = std::make_unique<PipelinePost>(post_kind, npu.outputs);
+        } catch (const std::exception& e) {
+            die("%s", e.what());
         }
+        cfg.post = post.get();
     }
 
     std::fprintf(stderr, "bench: %s, %d channels, warm-up %d s, window %d s -> %s\n", variant.c_str(), channels,
@@ -197,12 +198,8 @@ int main(int argc, char** argv) {
     env += "  \"librga\": " + json_string(querystring(RGA_VERSION)) + ",\n";
     env += "  \"sampler\": {\"stride\": " + std::to_string(cfg.sample_stride) +
            ", \"stagger\": " + (cfg.stagger ? "true" : "false") + "},\n";
-    env += "  \"post\": {\"name\": " + json_string(a["post"]);
-    if (neon_post)
-        env += ", \"tables\": " + std::to_string(neon_post->table_count()) +
-               ", \"table_bytes\": " + std::to_string(neon_post->table_bytes());
-    env += ", \"objects_sha256\": {" + json_string(kPostObjects[0]) + ": " + json_string(file_sha256(kPostObjects[0])) +
-           ", " + json_string(kPostObjects[1]) + ": " + json_string(file_sha256(kPostObjects[1])) + "}},\n";
+    env += "  \"post\": {" + (post ? post->describe() : "\"name\": " + json_string(a["post"])) +
+           ", \"objects_sha256\": " + post_objects_json() + "},\n";
     if (backend) {
         env += "  \"rknn\": {\"init_flags\": " + std::to_string(NpuContexts::kInitFlags) +
                ", \"sdk\": " + json_string(npu.sdk_version) +

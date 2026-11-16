@@ -61,6 +61,14 @@ std::string file_sha256(const std::string& path) {
     return out.size() == 64 ? out : "";
 }
 
+std::string post_objects_json() {
+    std::string s = "{";
+    for (int i = 0; i < kPostObjectCount; i++)
+        s += std::string(i ? ", " : "") + json_string(kPostObjects[i]) + ": " +
+             json_string(file_sha256(kPostObjects[i]));
+    return s + "}";
+}
+
 std::string json_string(const std::string& s) {
     std::string out = "\"";
     for (char c : s) {
