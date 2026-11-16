@@ -18,9 +18,8 @@
 //                        (core/pipeline_post.h; default m1, M1-3's; prereg/M4.md §3.1)
 //   --cores N            workers on NPU cores 0..N-1 (default 3)
 //   --run-kind KIND      calibration (default, M1-3's), check or m4 (M4 §4); results/<KIND>/ by default.
-//                        neon and v10 are M4's: run kind check or m4. An m4 run needs --freeze-m4-commit,
-//                        and with --with-post the pipeline's post-processing of its model (M4 §1):
-//                        neon for YOLOv8n, v10 for YOLOv10n. Its model must be one of M4's two.
+//                        neon, v10 and the YOLOv10n model are M4's: run kind check or m4. What an m4
+//                        run may be is in core/run_rules.h (M4 §3.1).
 //   --freeze-m4-commit SHA  freeze-m4 commit, "none" before it (default none)
 //   --warmup S, --duration S, --model PATH, --out DIR, --repetition R, --freeze-commit SHA
 //                        as for bench_main
@@ -53,6 +52,7 @@
 #include "core/npu.h"
 #include "core/pipeline_post.h"
 #include "core/report.h"
+#include "core/run_rules.h"
 #include "core/util.h"
 
 #ifndef CODE_COMMIT
@@ -184,18 +184,17 @@ int main(int argc, char** argv) {
     CHECK(!a.count("post") || parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
     const std::string kind = a["run-kind"];  // check_prereg_order relies on these (PROTOCOL §1, M4 §4)
     CHECK(kind == "calibration" || kind == "check" || kind == "m4", "run kind must be calibration, check or m4");
-    CHECK(post_kind == PostKind::M1 || kind != "calibration", "post neon and v10 are M4's: run kind check or m4");
-    CHECK(a["freeze-m4-commit"] == "none" || is_commit_sha(a["freeze-m4-commit"]),
-          "freeze-m4-commit must be none or a full commit SHA");
-    CHECK(kind != "m4" || (is_commit_sha(a["freeze-m4-commit"]) && (!with_post || post_kind != PostKind::M1)),
-          "run kind m4 needs freeze-m4's commit, and P_cap the pipeline's post-processing, neon or v10 (M4 §3.1)");
     const std::string model_sha = command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1");
-    if (kind == "m4") {  // M4 §1: one of the two models; with --with-post, the one its post-processing is for
-        CHECK(model_sha == kYolov8nSha256 || model_sha == kYolov10nSha256, "run kind m4: %s is not one of M4's models",
-              a["model"].c_str());
-        CHECK(!with_post || model_sha == (post_kind == PostKind::V10 ? kYolov10nSha256 : kYolov8nSha256),
-              "run kind m4: %s is not the model of post %s (M4 §1)", a["model"].c_str(), post_kind_name(post_kind));
-    }
+    RunChoice choice;  // M4's rules (core/run_rules.h), before the output directory exists
+    choice.calib = true;
+    choice.kind = kind;
+    choice.post = post_kind;
+    choice.post_runs = with_post;
+    choice.freeze_m4 = a["freeze-m4-commit"];
+    choice.model_sha = model_sha;
+    choice.cores = cores;
+    if (const std::string problem = m4_rule_problem(choice); !problem.empty())
+        die("%s (model %s)", problem.c_str(), a["model"].c_str());
     const std::string measurement = with_post ? "p_cap" : "npu_raw";
     const std::string out = a.count("out") ? a["out"]
                                            : "results/" + kind + "/" + utc_now("%Y%m%dT%H%M%SZ") + "_" + measurement +

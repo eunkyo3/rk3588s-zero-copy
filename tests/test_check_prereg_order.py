@@ -52,10 +52,11 @@ class Case:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
 
-    def csv(self, rel, start, kind="calibration", amendment="A6", prereg_m2=None, prereg_m4=None):
+    def csv(self, rel, start, kind="calibration", amendment="A6", prereg_m2=None, prereg_m4=None, **fields):
         m2 = f"# prereg_m2_commit: {prereg_m2}\n" if prereg_m2 is not None else ""
         m4 = f"# prereg_m4_commit: {prereg_m4}\n" if prereg_m4 is not None else ""
-        self.write(rel, f"# start_time_utc: {start}\n# run_kind: {kind}\n# amendment: {amendment}\n{m2}{m4}"
+        more = "".join(f"# {k}: {v}\n" for k, v in fields.items())
+        self.write(rel, f"# start_time_utc: {start}\n# run_kind: {kind}\n# amendment: {amendment}\n{m2}{m4}{more}"
                         "key,value\n")
 
     def run(self):
@@ -301,6 +302,80 @@ class Check(unittest.TestCase):
         code, out = c.run()
         self.assertEqual(code, 1, out)
         self.assertIn("names prereg-m4, and prereg-m4 has no reference time", out)
+
+    def test_m4_fields_in_other_run_kinds(self):
+        # Every calib_npu and bench_main run now carries prereg_m4_commit, M1's run kinds included.
+        for start, expected in [(BETWEEN, 1), (BETWEEN_M4, 0)]:
+            with self.subTest(start=start):
+                c = self.case(extra_rows=M4_ROWS)
+                c.csv("calibration/s/r/summary.csv", start, prereg_m4="8638", freeze_m4_commit="none")
+                code, out = c.run()
+                self.assertEqual(code, expected, out)
+                self.assertEqual(out.count("names prereg-m4 but starts"), expected, out)
+        c = self.case()  # no prereg-m4 row
+        c.csv("calibration/s/r/summary.csv", BETWEEN_M4, prereg_m4="8638")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("names prereg-m4, and prereg-m4 has no reference time", out)
+        self.assertIn("gives a prereg-m4 commit, and prereg-m4 has no tag commit in the table", out)
+
+    def test_an_env_json_naming_two_stages(self):
+        # Only the stage it starts too early for fails.
+        c = self.case(extra_rows=M2_ROWS + M4_ROWS)
+        c.write("check/y/env.json", json.dumps({"header_start_time_utc": BETWEEN, "header_run_kind": "check",
+                                                "header_prereg_m2_commit": "5d9d", "header_prereg_m4_commit": "8638"}))
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out.count("names prereg-m4 but starts"), 1, out)
+        self.assertNotIn("names prereg-m2 but starts", out)
+
+    def test_m4_path_with_another_run_kind(self):
+        c = self.case(extra_rows=M4_ROWS)
+        c.csv("m4/s/r1/summary.csv", LATER, kind="check", prereg_m4="8638")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("header says run kind 'check', its path says 'm4'", out)
+
+    def test_stage_commits_match_the_table(self):
+        # PROTOCOL §1.4: a header's stage commits are the tags' commits in the Registration table.
+        c = self.case(extra_rows=M2_ROWS + M4_ROWS)
+        c.csv("check/x/a.csv", LATER, kind="check", prereg_v1_commit="87fe", prereg_m2="5d9d", prereg_m4="8638",
+              freeze_m2_commit="f2f2", freeze_m4_commit="f4f4")
+        self.assertEqual(c.run()[0], 0)
+        c.csv("check/x/b.csv", LATER, kind="check", prereg_m2="beef", freeze_m4_commit="f2f2")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("gives beef as prereg-m2's commit, the table has 5d9d", out)
+        self.assertIn("gives f2f2 as freeze-m4's commit, the table has f4f4", out)
+        self.assertEqual(out.count("FAIL"), 2, out)
+        # A freeze-m1 row without a commit yet ("not created yet"): no header may give one.
+        c = self.case()
+        c.csv("check/x/a.csv", AFTER, kind="check", freeze_m1_commit="none")
+        self.assertEqual(c.run()[0], 0)
+        c.csv("check/x/b.csv", AFTER, kind="check", freeze_m1_commit="abc")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("gives a freeze-m1 commit, and freeze-m1 has no tag commit in the table", out)
+        # A JSON value that is not a string gives no commit.
+        c = self.case()
+        c.write("check/y/env.json", json.dumps({"header_start_time_utc": AFTER, "header_run_kind": "check",
+                                                "header_prereg_m4_commit": 0, "header_freeze_m4_commit": False}))
+        self.assertEqual(c.run()[0], 0)
+
+    def test_a_header_that_names_freeze_m4(self):
+        # Before freeze-m4 exists no run can give its commit; after, a run that gives it starts after it.
+        c = self.case(extra_rows=[M4_ROWS[0]])
+        c.csv("check/x/a.csv", LATER, kind="check", freeze_m4_commit="f4f4")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("names freeze-m4, and freeze-m4 has no reference time", out)
+        for start, expected in [(BETWEEN_M4, 1), (LATER, 0)]:
+            with self.subTest(start=start):
+                c = self.case(extra_rows=M4_ROWS)
+                c.csv("check/x/a.csv", start, kind="check", freeze_m4_commit="f4f4")
+                code, out = c.run()
+                self.assertEqual(code, expected, out)
+                self.assertEqual(out.count("names freeze-m4 but starts"), expected, out)
 
     def test_amendment_release(self):
         for start, expected in [(AFTER, 1), (LATER, 0)]:

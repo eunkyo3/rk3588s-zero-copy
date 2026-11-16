@@ -9,14 +9,15 @@
 //   --model PATH        RKNN model (default models/yolov8n_i8.rknn)
 //   --out DIR           result directory (default results/<run kind>/<UTC time>_<variant>_<N>ch)
 //   --run-kind KIND     check | calibration | equivalence | comparison | reference | m1.1 | m2 | m4
-//                       (default check)
+//                       (default check). What an m4 run may be is in core/run_rules.h (M4 §3.2).
 //   --repetition R      repetition index (default 1)
 //   --freeze-commit SHA freeze-m1 commit, "none" before the freeze (default none)
 //   --freeze-m2-commit SHA  freeze-m2 commit, "none" before it (default none; prereg/M2.md §5.1)
 //   --freeze-m4-commit SHA  freeze-m4 commit, "none" before it (default none; prereg/M4.md §4)
 //   --post m1|neon|v10  post-processing: M1's yolov8_post (default), arm Cp's NeonPost (M2 §1), or
 //                       yolov10_post for the YOLOv10n export (arm C10, prereg/M4.md §3.2); neon and v10
-//                       with variant C only (core/pipeline_post.h)
+//                       with variant C only (core/pipeline_post.h). v10 and the YOLOv10n model are M4's:
+//                       run kind check or m4.
 //   --stagger off|on    at the main condition, channel n samples the frames with counter % 6 == (n - 1) % 6
 //                       (M2 §3.1; default off)
 //   --prep-threads K    preprocessing threads (default 2, PROTOCOL §5.1; 4 for M1.1's B with K = 4, A12)
@@ -42,6 +43,7 @@ extern "C" {
 #include "core/pipeline.h"
 #include "core/pipeline_post.h"
 #include "core/report.h"
+#include "core/run_rules.h"
 #include "core/util.h"
 #include "preprocess/backend.h"
 #include "preprocess/cpu_common.h"
@@ -103,16 +105,10 @@ int main(int argc, char** argv) {
           "unknown run kind %s", kind.c_str());
     PostKind post_kind;
     CHECK(parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
-    CHECK(post_kind == PostKind::M1 || variant == "C", "post neon and v10 are arms of variant C (M2 §1, M4 §3.2)");
-    CHECK(post_kind != PostKind::V10 || kind == "check" || kind == "m4", "post v10 is M4's: run kind check or m4");
     CHECK(a["stagger"] == "off" || a["stagger"] == "on", "stagger must be off or on");
     CHECK(a["stagger"] == "off" || a["condition"] == "main", "stagger is for the main condition (M2 §3.1)");
     CHECK(kind != "m2" || (variant == "C" && is_commit_sha(a["freeze-m2-commit"])),
           "run kind m2 is variant C with freeze-m2's commit (M2 §5.1)");
-    CHECK(kind != "m4" || (variant == "C" && post_kind != PostKind::M1 && is_commit_sha(a["freeze-m4-commit"])),
-          "run kind m4 is arm C8 or C10 (variant C, post neon or v10) with freeze-m4's commit (M4 §3.2, §4)");
-    CHECK(a["freeze-m4-commit"] == "none" || is_commit_sha(a["freeze-m4-commit"]),
-          "freeze-m4-commit must be none or a full commit SHA");
     const int channels = std::stoi(a["channels"]);
     CHECK(channels >= 1 && channels <= 32, "channels must be 1..32");
 
@@ -133,9 +129,20 @@ int main(int argc, char** argv) {
         cfg.sources.push_back(url);
     }
     const std::string model_sha = command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1");
-    // M4 §1: C8 runs YOLOv8n, C10 YOLOv10n.
-    CHECK(kind != "m4" || model_sha == (post_kind == PostKind::V10 ? kYolov10nSha256 : kYolov8nSha256),
-          "run kind m4: %s is not the arm's model (M4 §1)", a["model"].c_str());
+    RunChoice choice;  // M4's rules (core/run_rules.h), before the output directory exists
+    choice.kind = kind;
+    choice.post = post_kind;
+    choice.post_runs = variant != "none";
+    choice.variant = variant;
+    choice.freeze_m4 = a["freeze-m4-commit"];
+    choice.model_sha = model_sha;
+    choice.channels = channels;
+    choice.condition = a["condition"];
+    choice.stagger = cfg.stagger;
+    choice.a55 = a55;
+    choice.prep_threads = cfg.preprocess_threads;
+    if (const std::string problem = m4_rule_problem(choice); !problem.empty())
+        die("%s (model %s)", problem.c_str(), a["model"].c_str());
     const std::string out = a.count("out") ? a["out"]
                                            : "results/" + a["run-kind"] + "/" + utc_now("%Y%m%dT%H%M%SZ") + "_" +
                                                  variant + "_" + std::to_string(channels) + "ch";

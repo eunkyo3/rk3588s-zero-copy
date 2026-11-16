@@ -27,7 +27,7 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 
 `amend-A13` and `freeze-m2` both tag the merge of PR #37, whose `prereg/AMENDMENTS.md` holds every value of [prereg/M2.md](../../prereg/M2.md) §7 (A13). Here too GitHub gives the commit's time as `created_at`; the Releases were published at 2026-11-05T07:07:41Z and 07:08:10Z. Every M2 run starts after both, which `tools/check_prereg_order.py` checks, and the session tool passes `freeze-m2`'s commit to every M2 run (M2 §5.1).
 
-`prereg-m4` is stage 1 of M4's pre-registration, [prereg/M4.md](../../prereg/M4.md). It tags the merge of PR #45, which follows the merge of PR #44 (the exploration it discloses). Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-11T00:06:05Z. Every M4 check run that names `prereg-m4` in its header starts after both. `tools/check_prereg_order.py` does not check this yet; it is extended to do so as part of M4's implementation (M4 §4, §8).
+`prereg-m4` is stage 1 of M4's pre-registration, [prereg/M4.md](../../prereg/M4.md). It tags the merge of PR #45, which follows the merge of PR #44 (the exploration it discloses). Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-11T00:06:05Z. Every M4 check run that names `prereg-m4` in its header starts after both, which `tools/check_prereg_order.py` checks (M4 §4).
 
 ## Board baseline
 

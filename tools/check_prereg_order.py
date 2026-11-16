@@ -7,22 +7,26 @@ reference times.
   - every run of kind m2 starts after freeze-m2, and every run whose header names prereg-m2
     (prereg_m2_commit other than none) starts after prereg-m2 (prereg/M2.md §5.1);
   - every run or pass of kind m4 starts after freeze-m4, and every run whose header names prereg-m4
-    (prereg_m4_commit other than none) starts after prereg-m4 (prereg/M4.md §4);
-  - every run whose header names an amendment with a Release amend-A<n> starts after that Release.
+    or freeze-m4 (prereg_m4_commit or freeze_m4_commit other than none) starts after it
+    (prereg/M4.md §4);
+  - every run whose header names an amendment with a Release amend-A<n> starts after that Release;
+  - every commit a header gives for a stage (prereg_v1_commit, freeze_m1_commit, prereg_m2_commit,
+    freeze_m2_commit, prereg_m4_commit, freeze_m4_commit; "none" gives none) is that stage's tag commit
+    in the Registration table.
 
-The reference times are the Releases' created_at, as the Registration table of docs/notes/env.md
-records them (PROTOCOL §1.3). An amendment has a Release when its entry in prereg/AMENDMENTS.md says
-"Release: amend-A<n>"; each such Release needs a row in that table. File modification times are not
-used.
+The reference times are the Releases' created_at, and the tag commits the Releases' commits, as the
+Registration table of docs/notes/env.md records them (PROTOCOL §1.3). An amendment has a Release when
+its entry in prereg/AMENDMENTS.md says "Release: amend-A<n>"; each such Release needs a row in that
+table. File modification times are not used.
 
-A file's start time, run kind, amendment and prereg-m2 and prereg-m4 commits come from its own header:
+A file's start time, run kind, amendment and stage commits come from its own header:
   - a CSV must start with "# key: value" lines that include start_time_utc (PROTOCOL §1.4);
   - a JSONL whose first line is {"header": {...}};
   - a JSON object with "header_start_time_utc" (bench_main, calib_npu) or "start_time_utc";
   - a text file with a "time_utc: " line (tools/collect_env.sh).
 Any other file (logs, hashes, tables, a crashed run's leftovers) takes the earliest start time of the
 headers in its directory, or else in the nearest directory above it, and their run kinds, amendments
-and prereg commits. Every file's run kind also comes from its path, results/<run kind>/..., which is
+and stage commits. Every file's run kind also comes from its path, results/<run kind>/..., which is
 where bench_main and the other tools write; a header that names another kind is a problem.
 
 Usage: python3 tools/check_prereg_order.py [--results DIR] [--env-md FILE] [--amendments FILE]
@@ -38,9 +42,12 @@ from pathlib import Path
 KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m4"}  # PROTOCOL §1.4
 AFTER_FREEZE = {"comparison": "freeze-m1", "reference": "freeze-m1", "m1.1": "freeze-m1",
                 "m2": "freeze-m2", "m4": "freeze-m4"}  # run kind -> the stage its runs start after (M2 §5.1, M4 §4)
-# Header field -> the stage that a header naming it (any value other than none) starts after.
-NAMED = {"prereg_m2_commit": "prereg-m2", "prereg_m4_commit": "prereg-m4"}  # M2 §5.1, M4 §4
-TAG_ROW = re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|[^|]*\|\s*([^|]*?)\s*\|\s*$")
+# Header field -> the stage whose tag commit it gives (PROTOCOL §1.4, M2 §5.1, M4 §4).
+COMMITS = {"prereg_v1_commit": "prereg-v1", "freeze_m1_commit": "freeze-m1", "prereg_m2_commit": "prereg-m2",
+           "freeze_m2_commit": "freeze-m2", "prereg_m4_commit": "prereg-m4", "freeze_m4_commit": "freeze-m4"}
+# The stages that a header naming them (any commit other than none) starts after (M2 §5.1, M4 §4).
+NAMED = {"prereg-m2", "prereg-m4", "freeze-m4"}
+TAG_ROW = re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
 
 
 class InputError(Exception):
@@ -55,8 +62,9 @@ def parse_time(s, where):
 
 
 def reference_times(env_md):
-    """{tag: created_at or None} from the Registration table of docs/notes/env.md."""
-    refs, section = {}, None
+    """({tag: created_at or None}, {tag: tag commit or None}) from the Registration table of
+    docs/notes/env.md. A commit is the first `...` of its cell."""
+    refs, commits, section = {}, {}, None
     for n, line in enumerate(env_md.read_text(encoding="utf-8-sig").splitlines(), 1):
         if line.startswith("## "):
             section = line[3:].strip()
@@ -68,13 +76,15 @@ def reference_times(env_md):
         m = TAG_ROW.match(line)
         if not m:
             raise InputError(f"{env_md}:{n}: cannot read this row of the Registration table")
-        tag, value = m.group(1), m.group(2)
+        tag, commit, value = m.group(1), m.group(2), m.group(3)
         if tag in refs:
             raise InputError(f"{env_md}:{n}: a second row for {tag}")
         refs[tag] = parse_time(value, f"{env_md}:{n}, {tag}") if value else None
+        c = re.match(r"`([^`]+)`", commit)
+        commits[tag] = c.group(1) if c else None
     if refs.get("prereg-v1") is None:
         raise InputError(f"{env_md}: no created_at for prereg-v1 in the Registration table")
-    return refs
+    return refs, commits
 
 
 def amendments(amendments_md):
@@ -98,13 +108,19 @@ def amendments(amendments_md):
     return names, released
 
 
-def named_stages(get):
-    """The stages of NAMED whose commit a header names, get(field) giving the header's value."""
-    return tuple(stage for field, stage in NAMED.items() if get(field) not in (None, "", "none"))
+def stage_commits(get):
+    """((stage, commit), ...) for the stage commits of COMMITS that a header gives, get(field) giving the
+    header's value: a string other than "" and "none"."""
+    out = []
+    for field, stage in COMMITS.items():
+        v = get(field)
+        if isinstance(v, str) and v not in ("", "none"):
+            out.append((stage, v))
+    return tuple(out)
 
 
 def header_of(path):
-    """(start, run_kind, amendment, named stages) from the file's own header; (None, ...) for a
+    """(start, run_kind, amendment, stage commits) from the file's own header; (None, ...) for a
     header without a start time; None if the file has no header."""
     if path.suffix not in (".csv", ".jsonl", ".json", ".txt"):  # tensors and logs are not read
         return None
@@ -120,17 +136,17 @@ def header_of(path):
                     k, _, v = line[2:].rstrip("\n").partition(": ")
                     h[k] = v
                     line = f.readline()
-                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), named_stages(h.get)
+                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), stage_commits(h.get)
             if path.suffix == ".jsonl" and first.startswith('{"header"'):
                 h = json.loads(first)["header"]
-                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), named_stages(h.get)
+                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), stage_commits(h.get)
             if path.suffix == ".json":
                 h = json.loads(first + f.read())
                 if isinstance(h, dict) and ("header_start_time_utc" in h or "start_time_utc" in h):
                     return (h.get("header_start_time_utc") or h.get("start_time_utc"),
                             h.get("header_run_kind") or h.get("run_kind"),
                             h.get("header_amendment") or h.get("amendment"),
-                            named_stages(lambda k: h.get("header_" + k) or h.get(k)))
+                            stage_commits(lambda k: h.get("header_" + k) or h.get(k)))
                 return None
             if path.suffix == ".txt":
                 for line in [first] + f.readlines():
@@ -141,7 +157,7 @@ def header_of(path):
     return None
 
 
-def check(results, refs, names, released):
+def check(results, refs, commits, names, released):
     """Returns (number of files, list of problems)."""
     problems = []
     for tag in sorted(released):
@@ -180,6 +196,11 @@ def check(results, refs, names, released):
             start = min(h[0] for h in by_dir[d])
             own = [(start, kind, amendment, named) for _, kind, amendment, named in by_dir[d]]
         for start, kind, amendment, named in own:
+            for stage, commit in named:  # PROTOCOL §1.4
+                if commits.get(stage) is None:
+                    problems.append(f"{p}: gives a {stage} commit, and {stage} has no tag commit in the table")
+                elif commit != commits[stage]:
+                    problems.append(f"{p}: gives {commit} as {stage}'s commit, the table has {commits[stage]}")
             if kind is not None and kind != path_kind:
                 problems.append(f"{p}: header says run kind {kind!r}, its path says {path_kind!r}")
             if start <= refs["prereg-v1"]:
@@ -191,7 +212,7 @@ def check(results, refs, names, released):
                     problems.append(f"{p}: a {k} run, and {stage} has no reference time")
                 elif start <= freeze:
                     problems.append(f"{p}: a {k} run that starts {start:%Y-%m-%dT%H:%M:%SZ}, not after {stage}")
-            for stage in named:  # M2 §5.1, M4 §4
+            for stage in sorted({s for s, _ in named} & NAMED):  # M2 §5.1, M4 §4
                 ref = refs.get(stage)
                 if ref is None:
                     problems.append(f"{p}: names {stage}, and {stage} has no reference time")
@@ -215,11 +236,11 @@ def main(argv):
     ap.add_argument("--amendments", type=Path, default=root / "prereg" / "AMENDMENTS.md")
     args = ap.parse_args(argv)
     try:
-        refs = reference_times(args.env_md)
+        refs, commits = reference_times(args.env_md)
         names, released = amendments(args.amendments)
         if not args.results.is_dir():
             raise InputError(f"{args.results} is not a directory")
-        n, problems = check(args.results, refs, names, released)
+        n, problems = check(args.results, refs, commits, names, released)
     except (InputError, OSError) as e:
         print(f"check_prereg_order: {e}", file=sys.stderr)
         return 2
