@@ -8,10 +8,12 @@
 //   --duration S        measurement window seconds (default 120)
 //   --model PATH        RKNN model (default models/yolov8n_i8.rknn)
 //   --out DIR           result directory (default results/<run kind>/<UTC time>_<variant>_<N>ch)
-//   --run-kind KIND     check | calibration | equivalence | comparison | reference | m1.1 | m2 (default check)
+//   --run-kind KIND     check | calibration | equivalence | comparison | reference | m1.1 | m2 | m4
+//                       (default check)
 //   --repetition R      repetition index (default 1)
 //   --freeze-commit SHA freeze-m1 commit, "none" before the freeze (default none)
 //   --freeze-m2-commit SHA  freeze-m2 commit, "none" before it (default none; prereg/M2.md §5.1)
+//   --freeze-m4-commit SHA  freeze-m4 commit, "none" before it (default none; prereg/M4.md §4)
 //   --post m1|neon|v10  post-processing: M1's yolov8_post (default), arm Cp's NeonPost (M2 §1), or
 //                       yolov10_post for the YOLOv10n export (arm C10, prereg/M4.md §3.2); neon and v10
 //                       with variant C only (core/pipeline_post.h)
@@ -56,7 +58,8 @@ namespace {
 void usage() {
     die("usage: bench_main --variant none|A|B|C|Bd --channels N --source URL [--condition main|aux] [--warmup S] "
         "[--duration S] [--model PATH] [--out DIR] [--run-kind KIND] [--repetition R] [--freeze-commit SHA] "
-        "[--prep-threads K] [--cores a76|a55] [--freeze-m2-commit SHA] [--post m1|neon|v10] [--stagger off|on]");
+        "[--prep-threads K] [--cores a76|a55] [--freeze-m2-commit SHA] [--freeze-m4-commit SHA] "
+        "[--post m1|neon|v10] [--stagger off|on]");
 }
 
 }  // namespace
@@ -65,7 +68,8 @@ int main(int argc, char** argv) {
     std::map<std::string, std::string> a = {
         {"condition", "main"}, {"warmup", "20"}, {"duration", "120"}, {"model", "models/yolov8n_i8.rknn"},
         {"run-kind", "check"}, {"repetition", "1"}, {"freeze-commit", "none"}, {"prep-threads", "2"},
-        {"cores", "a76"}, {"freeze-m2-commit", "none"}, {"post", "m1"}, {"stagger", "off"}};
+        {"cores", "a76"}, {"freeze-m2-commit", "none"}, {"freeze-m4-commit", "none"}, {"post", "m1"},
+        {"stagger", "off"}};
     const std::set<std::string> known = {"variant", "channels", "source", "out"};
     std::string args_json = "[";
     for (int i = 1; i < argc; i++) {
@@ -95,18 +99,20 @@ int main(int argc, char** argv) {
     CHECK(a["condition"] == "main" || a["condition"] == "aux", "condition must be main or aux");
     const std::string kind = a["run-kind"];  // PROTOCOL §1: check_prereg_order relies on these
     CHECK(kind == "check" || kind == "calibration" || kind == "equivalence" || kind == "comparison" ||
-              kind == "reference" || kind == "m1.1" || kind == "m2",
+              kind == "reference" || kind == "m1.1" || kind == "m2" || kind == "m4",
           "unknown run kind %s", kind.c_str());
     PostKind post_kind;
     CHECK(parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
     CHECK(post_kind == PostKind::M1 || variant == "C", "post neon and v10 are arms of variant C (M2 §1, M4 §3.2)");
-    CHECK(post_kind != PostKind::V10 || kind == "check", "post v10 is M4's: run kind check until run kind m4 exists");
+    CHECK(post_kind != PostKind::V10 || kind == "check" || kind == "m4", "post v10 is M4's: run kind check or m4");
     CHECK(a["stagger"] == "off" || a["stagger"] == "on", "stagger must be off or on");
     CHECK(a["stagger"] == "off" || a["condition"] == "main", "stagger is for the main condition (M2 §3.1)");
-    const std::string& freeze_m2 = a["freeze-m2-commit"];
-    CHECK(kind != "m2" || (variant == "C" && freeze_m2.size() == 40 &&
-                           freeze_m2.find_first_not_of("0123456789abcdef") == std::string::npos),
+    CHECK(kind != "m2" || (variant == "C" && is_commit_sha(a["freeze-m2-commit"])),
           "run kind m2 is variant C with freeze-m2's commit (M2 §5.1)");
+    CHECK(kind != "m4" || (variant == "C" && post_kind != PostKind::M1 && is_commit_sha(a["freeze-m4-commit"])),
+          "run kind m4 is arm C8 or C10 (variant C, post neon or v10) with freeze-m4's commit (M4 §3.2, §4)");
+    CHECK(a["freeze-m4-commit"] == "none" || is_commit_sha(a["freeze-m4-commit"]),
+          "freeze-m4-commit must be none or a full commit SHA");
     const int channels = std::stoi(a["channels"]);
     CHECK(channels >= 1 && channels <= 32, "channels must be 1..32");
 
@@ -126,6 +132,10 @@ int main(int argc, char** argv) {
             url.replace(p, 3, std::to_string(i));
         cfg.sources.push_back(url);
     }
+    const std::string model_sha = command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1");
+    // M4 §1: C8 runs YOLOv8n, C10 YOLOv10n.
+    CHECK(kind != "m4" || model_sha == (post_kind == PostKind::V10 ? kYolov10nSha256 : kYolov8nSha256),
+          "run kind m4: %s is not the arm's model (M4 §1)", a["model"].c_str());
     const std::string out = a.count("out") ? a["out"]
                                            : "results/" + a["run-kind"] + "/" + utc_now("%Y%m%dT%H%M%SZ") + "_" +
                                                  variant + "_" + std::to_string(channels) + "ch";
@@ -138,8 +148,10 @@ int main(int argc, char** argv) {
         {"freeze_m1_commit", a["freeze-commit"]},
         {"prereg_m2_commit", kPreregM2Commit},
         {"freeze_m2_commit", a["freeze-m2-commit"]},
+        {"prereg_m4_commit", kPreregM4Commit},
+        {"freeze_m4_commit", a["freeze-m4-commit"]},
         {"run_kind", a["run-kind"]},
-        {"model_sha256", command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1")},
+        {"model_sha256", model_sha},
         {"decoder", std::string(cfg.software_decode ? "h264 (software)" : "h264_rkmpp") + ", ffmpeg " +
                         av_version_info()},
         {"variant", variant},

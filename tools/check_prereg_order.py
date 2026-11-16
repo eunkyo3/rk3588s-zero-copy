@@ -6,6 +6,8 @@ reference times.
   - every run of kind comparison, reference or m1.1 starts after freeze-m1;
   - every run of kind m2 starts after freeze-m2, and every run whose header names prereg-m2
     (prereg_m2_commit other than none) starts after prereg-m2 (prereg/M2.md §5.1);
+  - every run or pass of kind m4 starts after freeze-m4, and every run whose header names prereg-m4
+    (prereg_m4_commit other than none) starts after prereg-m4 (prereg/M4.md §4);
   - every run whose header names an amendment with a Release amend-A<n> starts after that Release.
 
 The reference times are the Releases' created_at, as the Registration table of docs/notes/env.md
@@ -13,14 +15,14 @@ records them (PROTOCOL §1.3). An amendment has a Release when its entry in prer
 "Release: amend-A<n>"; each such Release needs a row in that table. File modification times are not
 used.
 
-A file's start time, run kind, amendment and prereg-m2 commit come from its own header:
+A file's start time, run kind, amendment and prereg-m2 and prereg-m4 commits come from its own header:
   - a CSV must start with "# key: value" lines that include start_time_utc (PROTOCOL §1.4);
   - a JSONL whose first line is {"header": {...}};
   - a JSON object with "header_start_time_utc" (bench_main, calib_npu) or "start_time_utc";
   - a text file with a "time_utc: " line (tools/collect_env.sh).
 Any other file (logs, hashes, tables, a crashed run's leftovers) takes the earliest start time of the
 headers in its directory, or else in the nearest directory above it, and their run kinds, amendments
-and prereg-m2 commits. Every file's run kind also comes from its path, results/<run kind>/..., which is
+and prereg commits. Every file's run kind also comes from its path, results/<run kind>/..., which is
 where bench_main and the other tools write; a header that names another kind is a problem.
 
 Usage: python3 tools/check_prereg_order.py [--results DIR] [--env-md FILE] [--amendments FILE]
@@ -33,9 +35,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2"}  # PROTOCOL §1.4
+KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m4"}  # PROTOCOL §1.4
 AFTER_FREEZE = {"comparison": "freeze-m1", "reference": "freeze-m1", "m1.1": "freeze-m1",
-                "m2": "freeze-m2"}  # run kind -> the stage its runs start after (M2 §5.1 for m2)
+                "m2": "freeze-m2", "m4": "freeze-m4"}  # run kind -> the stage its runs start after (M2 §5.1, M4 §4)
+# Header field -> the stage that a header naming it (any value other than none) starts after.
+NAMED = {"prereg_m2_commit": "prereg-m2", "prereg_m4_commit": "prereg-m4"}  # M2 §5.1, M4 §4
 TAG_ROW = re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|[^|]*\|\s*([^|]*?)\s*\|\s*$")
 
 
@@ -94,8 +98,13 @@ def amendments(amendments_md):
     return names, released
 
 
+def named_stages(get):
+    """The stages of NAMED whose commit a header names, get(field) giving the header's value."""
+    return tuple(stage for field, stage in NAMED.items() if get(field) not in (None, "", "none"))
+
+
 def header_of(path):
-    """(start, run_kind, amendment, prereg_m2_commit) from the file's own header; (None, ...) for a
+    """(start, run_kind, amendment, named stages) from the file's own header; (None, ...) for a
     header without a start time; None if the file has no header."""
     if path.suffix not in (".csv", ".jsonl", ".json", ".txt"):  # tensors and logs are not read
         return None
@@ -111,22 +120,22 @@ def header_of(path):
                     k, _, v = line[2:].rstrip("\n").partition(": ")
                     h[k] = v
                     line = f.readline()
-                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), h.get("prereg_m2_commit")
+                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), named_stages(h.get)
             if path.suffix == ".jsonl" and first.startswith('{"header"'):
                 h = json.loads(first)["header"]
-                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), h.get("prereg_m2_commit")
+                return h.get("start_time_utc"), h.get("run_kind"), h.get("amendment"), named_stages(h.get)
             if path.suffix == ".json":
                 h = json.loads(first + f.read())
                 if isinstance(h, dict) and ("header_start_time_utc" in h or "start_time_utc" in h):
                     return (h.get("header_start_time_utc") or h.get("start_time_utc"),
                             h.get("header_run_kind") or h.get("run_kind"),
                             h.get("header_amendment") or h.get("amendment"),
-                            h.get("header_prereg_m2_commit") or h.get("prereg_m2_commit"))
+                            named_stages(lambda k: h.get("header_" + k) or h.get(k)))
                 return None
             if path.suffix == ".txt":
                 for line in [first] + f.readlines():
                     if line.startswith("time_utc: "):
-                        return line[len("time_utc: "):].strip(), None, None, None
+                        return line[len("time_utc: "):].strip(), None, None, ()
     except (UnicodeDecodeError, json.JSONDecodeError):
         return None
     return None
@@ -169,8 +178,8 @@ def check(results, refs, names, released):
                 problems.append(f"{p}: no start time in its directory or above")
                 continue
             start = min(h[0] for h in by_dir[d])
-            own = [(start, kind, amendment, m2) for _, kind, amendment, m2 in by_dir[d]]
-        for start, kind, amendment, m2 in own:
+            own = [(start, kind, amendment, named) for _, kind, amendment, named in by_dir[d]]
+        for start, kind, amendment, named in own:
             if kind is not None and kind != path_kind:
                 problems.append(f"{p}: header says run kind {kind!r}, its path says {path_kind!r}")
             if start <= refs["prereg-v1"]:
@@ -182,13 +191,12 @@ def check(results, refs, names, released):
                     problems.append(f"{p}: a {k} run, and {stage} has no reference time")
                 elif start <= freeze:
                     problems.append(f"{p}: a {k} run that starts {start:%Y-%m-%dT%H:%M:%SZ}, not after {stage}")
-            if m2 and m2 != "none":  # M2 §5.1
-                prereg_m2 = refs.get("prereg-m2")
-                if prereg_m2 is None:
-                    problems.append(f"{p}: names prereg-m2, and prereg-m2 has no reference time")
-                elif start <= prereg_m2:
-                    problems.append(f"{p}: names prereg-m2 but starts {start:%Y-%m-%dT%H:%M:%SZ}, "
-                                    "not after prereg-m2")
+            for stage in named:  # M2 §5.1, M4 §4
+                ref = refs.get(stage)
+                if ref is None:
+                    problems.append(f"{p}: names {stage}, and {stage} has no reference time")
+                elif start <= ref:
+                    problems.append(f"{p}: names {stage} but starts {start:%Y-%m-%dT%H:%M:%SZ}, not after {stage}")
             if amendment and amendment != "none":
                 if amendment not in names:
                     problems.append(f"{p}: names {amendment}, which AMENDMENTS does not have")

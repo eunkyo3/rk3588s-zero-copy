@@ -18,6 +18,8 @@ PREREG = "2026-10-30T02:01:36Z"
 BEFORE, AFTER, LATER = "2026-10-30T01:00:00Z", "2026-11-02T07:00:00Z", "2026-11-20T00:00:00Z"
 PREREG_M2, BETWEEN, FREEZE_M2 = "2026-11-05T04:45:34Z", "2026-11-06T00:00:00Z", "2026-11-10T00:00:00Z"
 M2_ROWS = [f"| `prereg-m2` | `5d9d` | {PREREG_M2} |", f"| `freeze-m2` | `f2f2` | {FREEZE_M2} |"]
+PREREG_M4, BETWEEN_M4, FREEZE_M4 = "2026-11-11T00:04:33Z", "2026-11-15T00:00:00Z", "2026-11-18T00:00:00Z"
+M4_ROWS = [f"| `prereg-m4` | `8638` | {PREREG_M4} |", f"| `freeze-m4` | `f4f4` | {FREEZE_M4} |"]
 
 
 def env_md(freeze="", amend=None, extra_rows=()):
@@ -50,9 +52,11 @@ class Case:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
 
-    def csv(self, rel, start, kind="calibration", amendment="A6", prereg_m2=None):
+    def csv(self, rel, start, kind="calibration", amendment="A6", prereg_m2=None, prereg_m4=None):
         m2 = f"# prereg_m2_commit: {prereg_m2}\n" if prereg_m2 is not None else ""
-        self.write(rel, f"# start_time_utc: {start}\n# run_kind: {kind}\n# amendment: {amendment}\n{m2}key,value\n")
+        m4 = f"# prereg_m4_commit: {prereg_m4}\n" if prereg_m4 is not None else ""
+        self.write(rel, f"# start_time_utc: {start}\n# run_kind: {kind}\n# amendment: {amendment}\n{m2}{m4}"
+                        "key,value\n")
 
     def run(self):
         out, err = io.StringIO(), io.StringIO()
@@ -242,6 +246,61 @@ class Check(unittest.TestCase):
         code, out = c.run()
         self.assertEqual(code, 1, out)
         self.assertIn("names prereg-m2, and prereg-m2 has no reference time", out)
+
+    def test_m4_needs_freeze_m4(self):
+        # M4 §4: every m4 run or pass starts after freeze-m4; without its reference time, every m4 file fails.
+        for rows in ([M4_ROWS[0]], [M4_ROWS[0], "| `freeze-m4` | not created yet | |"]):
+            with self.subTest(rows=rows):
+                c = self.case(extra_rows=rows)
+                c.csv("m4/s/r1/summary.csv", LATER, kind="m4", prereg_m4="8638")
+                c.write("m4/s/r1/frames.log", "x\n")  # inherits the m4 kind
+                code, out = c.run()
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out.count("a m4 run, and freeze-m4 has no reference time"), 2, out)
+        for start, expected in [(BETWEEN_M4, 1), (FREEZE_M4, 1), (LATER, 0)]:
+            with self.subTest(start=start):
+                c = self.case(extra_rows=M4_ROWS)
+                c.csv("m4/s/r1/summary.csv", start, kind="m4", prereg_m4="8638")
+                code, out = c.run()
+                self.assertEqual(code, expected, out)
+                self.assertEqual(out.count("not after freeze-m4"), expected, out)
+        # A pass on the PC writes a JSON header with start_time_utc (M4 §4); its directory's other files inherit it.
+        c = self.case(extra_rows=M4_ROWS)
+        c.write("m4/p/pass.json", json.dumps({"start_time_utc": BETWEEN_M4, "run_kind": "m4"}))
+        c.write("m4/p/detections.json.gz.sha256", "x\n")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out.count("a m4 run that starts 2026-11-15T00:00:00Z, not after freeze-m4"), 2, out)
+
+    def test_a_header_that_names_prereg_m4(self):
+        # M4 §4: whatever its run kind, a file whose header names prereg-m4 starts after it.
+        for start, expected in [(BETWEEN, 1), (PREREG_M4, 1), (BETWEEN_M4, 0)]:
+            with self.subTest(start=start):
+                c = self.case(extra_rows=M2_ROWS + M4_ROWS)
+                c.csv("check/x/summary.csv", start, kind="check", prereg_m2="5d9d", prereg_m4="8638")
+                c.write("check/x/x.log", "x\n")  # inherits it from summary.csv
+                code, out = c.run()
+                self.assertEqual(code, expected, out)
+                self.assertEqual(out.count("not after prereg-m4"), 2 * expected, out)
+                self.assertEqual(out.count("not after prereg-m2"), 0, out)
+        c = self.case(extra_rows=M4_ROWS)
+        c.write("check/y/env.json", json.dumps({"header_start_time_utc": BETWEEN, "header_run_kind": "check",
+                                                "header_prereg_m4_commit": "8638"}))
+        header = {"header": {"start_time_utc": BETWEEN, "run_kind": "check", "prereg_m4_commit": "8638"}}
+        c.write("check/z/t.jsonl", json.dumps(header) + "\n")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertEqual(out.count("names prereg-m4 but starts 2026-11-06T00:00:00Z"), 2, out)
+
+    def test_prereg_m4_none_absent_or_without_its_time(self):
+        c = self.case()  # no prereg-m4 row
+        c.csv("check/x/a.csv", BETWEEN_M4, kind="check", prereg_m4="none")
+        c.csv("check/x/b.csv", BETWEEN_M4, kind="check")
+        self.assertEqual(c.run()[0], 0)
+        c.csv("check/x/c.csv", BETWEEN_M4, kind="check", prereg_m4="8638")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("names prereg-m4, and prereg-m4 has no reference time", out)
 
     def test_amendment_release(self):
         for start, expected in [(AFTER, 1), (LATER, 0)]:

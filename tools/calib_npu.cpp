@@ -1,5 +1,6 @@
-// M1-3 NPU capacity (PROTOCOL §6.2). With --with-post: P_cap, the upper bound of the pipeline for
-// both variants. Without: the raw NPU limit on 1, 2 or 3 cores, for reference.
+// M1-3 NPU capacity (PROTOCOL §6.2), and M4's for both models (prereg/M4.md §3.1). With --with-post:
+// P_cap, the upper bound of the pipeline for both variants. Without: the raw NPU limit on 1, 2 or 3
+// cores, for reference.
 //
 // The tensor set of tools/dump_tensor is preloaded into dma-heap buffers. Worker w owns the context
 // on NPU core w and cycles over the tensors whose index ≡ w (mod workers), each registered with that
@@ -16,6 +17,11 @@
 //   --post m1|neon|v10   with --with-post, the pipeline's post-processing to run, as bench_main's --post
 //                        (core/pipeline_post.h; default m1, M1-3's; prereg/M4.md §3.1)
 //   --cores N            workers on NPU cores 0..N-1 (default 3)
+//   --run-kind KIND      calibration (default, M1-3's), check or m4 (M4 §4); results/<KIND>/ by default.
+//                        neon and v10 are M4's: run kind check or m4. An m4 run needs --freeze-m4-commit,
+//                        and with --with-post the pipeline's post-processing of its model (M4 §1):
+//                        neon for YOLOv8n, v10 for YOLOv10n. Its model must be one of M4's two.
+//   --freeze-m4-commit SHA  freeze-m4 commit, "none" before it (default none)
 //   --warmup S, --duration S, --model PATH, --out DIR, --repetition R, --freeze-commit SHA
 //                        as for bench_main
 // Writes <out>/summary.csv, samples.csv and env.json, and prints the summary.
@@ -76,7 +82,8 @@ struct WorkerResult {
 
 void usage() {
     die("usage: calib_npu --tensors FILE --fixed-clocks FILE [--with-post [--post m1|neon|v10]] [--cores N] "
-        "[--warmup S] [--duration S] [--model PATH] [--out DIR] [--repetition R] [--freeze-commit SHA]");
+        "[--warmup S] [--duration S] [--model PATH] [--out DIR] [--repetition R] [--freeze-commit SHA] "
+        "[--run-kind calibration|check|m4] [--freeze-m4-commit SHA]");
 }
 
 int to_int(const std::string& s, const char* what) {
@@ -146,7 +153,8 @@ int main(int argc, char** argv) {
 
     std::map<std::string, std::string> a = {{"cores", "3"},     {"warmup", "20"},
                                             {"duration", "120"}, {"model", "models/yolov8n_i8.rknn"},
-                                            {"repetition", "1"}, {"freeze-commit", "none"}};
+                                            {"repetition", "1"}, {"freeze-commit", "none"},
+                                            {"run-kind", "calibration"}, {"freeze-m4-commit", "none"}};
     bool with_post = false;
     std::string args_json = "[";
     for (int i = 1; i < argc; i++) {
@@ -174,10 +182,24 @@ int main(int argc, char** argv) {
     PostKind post_kind = PostKind::M1;
     CHECK(!a.count("post") || with_post, "--post needs --with-post");
     CHECK(!a.count("post") || parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
+    const std::string kind = a["run-kind"];  // check_prereg_order relies on these (PROTOCOL §1, M4 §4)
+    CHECK(kind == "calibration" || kind == "check" || kind == "m4", "run kind must be calibration, check or m4");
+    CHECK(post_kind == PostKind::M1 || kind != "calibration", "post neon and v10 are M4's: run kind check or m4");
+    CHECK(a["freeze-m4-commit"] == "none" || is_commit_sha(a["freeze-m4-commit"]),
+          "freeze-m4-commit must be none or a full commit SHA");
+    CHECK(kind != "m4" || (is_commit_sha(a["freeze-m4-commit"]) && (!with_post || post_kind != PostKind::M1)),
+          "run kind m4 needs freeze-m4's commit, and P_cap the pipeline's post-processing, neon or v10 (M4 §3.1)");
+    const std::string model_sha = command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1");
+    if (kind == "m4") {  // M4 §1: one of the two models; with --with-post, the one its post-processing is for
+        CHECK(model_sha == kYolov8nSha256 || model_sha == kYolov10nSha256, "run kind m4: %s is not one of M4's models",
+              a["model"].c_str());
+        CHECK(!with_post || model_sha == (post_kind == PostKind::V10 ? kYolov10nSha256 : kYolov8nSha256),
+              "run kind m4: %s is not the model of post %s (M4 §1)", a["model"].c_str(), post_kind_name(post_kind));
+    }
     const std::string measurement = with_post ? "p_cap" : "npu_raw";
-    const std::string out =
-        a.count("out") ? a["out"]
-                       : "results/calibration/" + utc_now("%Y%m%dT%H%M%SZ") + "_" + measurement + "_" + a["cores"] + "c";
+    const std::string out = a.count("out") ? a["out"]
+                                           : "results/" + kind + "/" + utc_now("%Y%m%dT%H%M%SZ") + "_" + measurement +
+                                                 "_" + a["cores"] + "c";
     std::map<std::string, int64_t> fixed = read_fixed_clocks(a["fixed-clocks"]);
     const std::string start_time = utc_now("%Y-%m-%dT%H:%M:%SZ");
 
@@ -268,8 +290,10 @@ int main(int argc, char** argv) {
         {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
         {"prereg_v1_commit", kPreregCommit},
         {"freeze_m1_commit", a["freeze-commit"]},
-        {"run_kind", "calibration"},
-        {"model_sha256", command_output("sha256sum '" + a["model"] + "' | cut -d' ' -f1")},
+        {"prereg_m4_commit", kPreregM4Commit},
+        {"freeze_m4_commit", a["freeze-m4-commit"]},
+        {"run_kind", kind},
+        {"model_sha256", model_sha},
         {"decoder", "none (preloaded tensors)"},
         {"variant", "n/a (PROTOCOL §6.2)"},
         {"channels", "n/a"},

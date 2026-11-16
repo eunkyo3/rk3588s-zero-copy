@@ -61,6 +61,10 @@ std::string file_sha256(const std::string& path) {
     return out.size() == 64 ? out : "";
 }
 
+bool is_commit_sha(const std::string& s) {
+    return s.size() == 40 && s.find_first_not_of("0123456789abcdef") == std::string::npos;
+}
+
 std::string post_objects_json() {
     std::string s = "{";
     for (int i = 0; i < kPostObjectCount; i++)
