@@ -1,6 +1,6 @@
 // Unit tests for the pipeline's queue, slot pool, receive checks and percentile, the /proc/schedstat
-// parser, arm Cp's post-processing against M1's on random outputs, M4's YOLOv10 selection, and the
-// shared choice of post-processing.
+// parser, arm Cp's post-processing against M1's on random outputs, M4's YOLOv10 selection, the
+// shared choice of post-processing, and M4's run rules.
 // Run: build/test_core
 #include <algorithm>
 #include <atomic>
@@ -17,6 +17,7 @@
 #include "core/metrics.h"
 #include "core/pipeline_post.h"
 #include "core/report.h"
+#include "core/run_rules.h"
 #include "core/slot_pool.h"
 #include "core/stage_queue.h"
 #include "core/stream_checks.h"
@@ -467,6 +468,169 @@ void pipeline_post_dispatches() {
            "pipeline_post: env.json fields");
 }
 
+void commit_sha_form() {
+    expect(is_commit_sha("8638685d9ef806a85e5042d7cc10febdd5ae93a9"), "is_commit_sha: 40 lowercase hex digits");
+    expect(!is_commit_sha("8638685D9EF806A85E5042D7CC10FEBDD5AE93A9") && !is_commit_sha("none") &&
+               !is_commit_sha("8638685d9ef806a85e5042d7cc10febdd5ae93a") &&
+               !is_commit_sha("8638685d9ef806a85e5042d7cc10febdd5ae93a90") &&
+               !is_commit_sha("8638685d9ef806a85e5042d7cc10febdd5ae93ag") && !is_commit_sha(""),
+           "is_commit_sha: not uppercase, none, 39 or 41 digits, a non-hex digit, empty");
+}
+
+void m4_run_rules() {
+    const std::string freeze = "0123456789abcdef0123456789abcdef01234567";
+    const std::string other_model(64, 'a');
+    // The two m4 arms at the main point, and calib_npu's two m4 measurements per model.
+    RunChoice c8;
+    c8.kind = "m4";
+    c8.post = PostKind::Neon;
+    c8.variant = "C";
+    c8.freeze_m4 = freeze;
+    c8.model_sha = kYolov8nSha256;
+    c8.channels = 8;
+    c8.condition = "main";
+    c8.stagger = true;
+    RunChoice c10 = c8;
+    c10.post = PostKind::V10;
+    c10.model_sha = kYolov10nSha256;
+    RunChoice cap8;
+    cap8.calib = true;
+    cap8.kind = "m4";
+    cap8.post = PostKind::Neon;
+    cap8.freeze_m4 = freeze;
+    cap8.model_sha = kYolov8nSha256;
+    cap8.cores = 3;
+    RunChoice cap10 = cap8;
+    cap10.post = PostKind::V10;
+    cap10.model_sha = kYolov10nSha256;
+    RunChoice raw10 = cap10;
+    raw10.post = PostKind::M1;
+    raw10.post_runs = false;
+    raw10.cores = 1;
+    RunChoice raw8 = raw10;
+    raw8.model_sha = kYolov8nSha256;
+
+    struct Case {
+        const char* what;
+        RunChoice c;
+        bool ok;
+    };
+    std::vector<Case> cases;
+    auto add = [&](const char* what, RunChoice c, bool ok) { cases.push_back({what, c, ok}); };
+    add("C8 main", c8, true);
+    add("C10 main", c10, true);
+    {
+        RunChoice x = c8;
+        x.condition = "aux";
+        x.channels = 5;
+        x.stagger = false;
+        add("C8 aux", x, true);
+        x.post = PostKind::V10;
+        x.model_sha = kYolov10nSha256;
+        add("C10 aux", x, true);
+    }
+    add("P_cap YOLOv8n neon", cap8, true);
+    add("P_cap YOLOv10n v10", cap10, true);
+    add("raw YOLOv10n 1 core", raw10, true);
+    add("raw YOLOv8n 1 core", raw8, true);
+    auto with = [](RunChoice c, auto f) {
+        f(c);
+        return c;
+    };
+    // bench_main, m4
+    add("m4 without freeze-m4", with(c10, [](RunChoice& c) { c.freeze_m4 = "none"; }), false);
+    add("m4 freeze-m4 not a SHA", with(c10, [](RunChoice& c) { c.freeze_m4 = "abc"; }), false);
+    add("m4 with m1", with(c8, [](RunChoice& c) { c.post = PostKind::M1; }), false);
+    add("m4 C8 with YOLOv10n", with(c8, [](RunChoice& c) { c.model_sha = kYolov10nSha256; }), false);
+    add("m4 C10 with YOLOv8n", with(c10, [](RunChoice& c) { c.model_sha = kYolov8nSha256; }), false);
+    add("m4 with another model", with(c8, [&](RunChoice& c) { c.model_sha = other_model; }), false);
+    add("m4 variant B", with(c8, [](RunChoice& c) { c.variant = "B"; }), false);
+    add("m4 main without stagger", with(c8, [](RunChoice& c) { c.stagger = false; }), false);
+    add("m4 main at 5 channels", with(c8, [](RunChoice& c) { c.channels = 5; }), false);
+    add("m4 aux at 8 channels", with(c8, [](RunChoice& c) {
+            c.condition = "aux";
+            c.stagger = false;
+        }), false);
+    add("m4 on the A55 cores", with(c8, [](RunChoice& c) { c.a55 = true; }), false);
+    add("m4 with K = 4", with(c8, [](RunChoice& c) { c.prep_threads = 4; }), false);
+    // calib_npu, m4
+    add("calib m4 without freeze-m4", with(cap10, [](RunChoice& c) { c.freeze_m4 = "none"; }), false);
+    add("calib m4 P_cap with m1", with(cap8, [](RunChoice& c) { c.post = PostKind::M1; }), false);
+    add("calib m4 P_cap neon on YOLOv10n", with(cap10, [](RunChoice& c) { c.post = PostKind::Neon; }), false);
+    add("calib m4 P_cap v10 on YOLOv8n", with(cap8, [](RunChoice& c) { c.post = PostKind::V10; }), false);
+    add("calib m4 P_cap on 1 core", with(cap10, [](RunChoice& c) { c.cores = 1; }), false);
+    add("calib m4 raw on 3 cores", with(raw10, [](RunChoice& c) { c.cores = 3; }), false);
+    add("calib m4 raw with another model", with(raw10, [&](RunChoice& c) { c.model_sha = other_model; }), false);
+    // Other run kinds
+    RunChoice m1_default;  // bench_main's defaults: variant C, M1's post-processing and model
+    m1_default.kind = "check";
+    m1_default.variant = "C";
+    m1_default.model_sha = kYolov8nSha256;
+    add("default C, check", m1_default, true);
+    add("comparison with another model", with(m1_default, [&](RunChoice& c) {
+            c.kind = "comparison";
+            c.model_sha = other_model;
+        }), true);
+    add("m2 Cp", with(m1_default, [&](RunChoice& c) {
+            c.kind = "m2";
+            c.post = PostKind::Neon;
+        }), true);
+    add("check C10", with(c10, [](RunChoice& c) {
+            c.kind = "check";
+            c.freeze_m4 = "none";
+            c.channels = 2;
+        }), true);
+    add("v10 with run kind m2", with(c10, [](RunChoice& c) { c.kind = "m2"; }), false);
+    add("v10 with YOLOv8n, check", with(c10, [](RunChoice& c) {
+            c.kind = "check";
+            c.model_sha = kYolov8nSha256;
+        }), false);
+    add("YOLOv10n with m1, comparison", with(m1_default, [](RunChoice& c) {
+            c.kind = "comparison";
+            c.model_sha = kYolov10nSha256;
+        }), false);
+    add("neon with variant B, m2", with(m1_default, [](RunChoice& c) {
+            c.kind = "m2";
+            c.post = PostKind::Neon;
+            c.variant = "B";
+        }), false);
+    add("freeze-m4 not a SHA, check", with(m1_default, [](RunChoice& c) { c.freeze_m4 = "abc"; }), false);
+    add("calib calibration, M1-3", with(raw8, [](RunChoice& c) {
+            c.kind = "calibration";
+            c.freeze_m4 = "none";
+            c.cores = 2;
+        }), true);
+    add("calib calibration P_cap m1", with(cap8, [](RunChoice& c) {
+            c.kind = "calibration";
+            c.post = PostKind::M1;
+            c.freeze_m4 = "none";
+        }), true);
+    add("calib calibration with neon", with(cap8, [](RunChoice& c) {
+            c.kind = "calibration";
+            c.freeze_m4 = "none";
+        }), false);
+    add("calib calibration raw on YOLOv10n", with(raw10, [](RunChoice& c) {
+            c.kind = "calibration";
+            c.freeze_m4 = "none";
+        }), false);
+    add("calib check P_cap neon", with(cap8, [](RunChoice& c) {
+            c.kind = "check";
+            c.freeze_m4 = "none";
+            c.cores = 2;
+        }), true);
+    int right = 0;
+    for (const auto& k : cases) {
+        const std::string problem = m4_rule_problem(k.c);
+        if (problem.empty() == k.ok)
+            right++;
+        else
+            std::printf("     %s: %s\n", k.what, problem.empty() ? "accepted" : problem.c_str());
+    }
+    char what[96];
+    std::snprintf(what, sizeof what, "run_rules: %zu combinations accepted or rejected as M4 says", cases.size());
+    expect(right == static_cast<int>(cases.size()), what);
+}
+
 }  // namespace
 
 int main() {
@@ -482,6 +646,8 @@ int main() {
     yolov10_post_selects();
     yolov10_post_matches_reference();
     pipeline_post_dispatches();
+    commit_sha_form();
+    m4_run_rules();
     std::printf("%d failure(s)\n", failures);
     return failures ? 1 : 0;
 }

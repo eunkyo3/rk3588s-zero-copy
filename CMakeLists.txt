@@ -36,6 +36,7 @@ add_library(core STATIC
     src/core/pipeline.cpp
     src/core/pipeline_post.cpp
     src/core/report.cpp
+    src/core/run_rules.cpp
     src/core/slot_pool.cpp
     src/core/video_source.cpp
     src/core/yolov8_post.cpp
