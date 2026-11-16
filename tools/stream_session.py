@@ -35,7 +35,22 @@ Subcommands:
                arm, C then Cp, at 8 channels main with the staggered sampler, once M2 §4's equivalence
                check has passed with this build's post-processing objects. Its runs pass no freeze-m2
                commit (bench_main's default, none).
-  h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
+  sweep m4_main, m4_aux
+               M4's pipeline comparison of prereg/M4.md §3.2, run kind m4, after M2's sweeps: C8 (YOLOv8n with
+               Cp's post-processing, --post neon) against C10 (YOLOv10n with yolov10_post, --post v10), both
+               variant C, at 8 channels main with the staggered sampler (--stagger on, both arms), then at 5
+               channels aux. Each run passes freeze-m4's commit from docs/notes/env.md. A session starts only
+               once freeze-m4 has its row there, M2 §4's equivalence check has passed with this build's two
+               objects of A13 (M4 §8 step 3), and M4's calib_npu session (tools/m4_calib.sh, in
+               results/m4/<UTC>_m4_calib) is complete, with M4's settings and freeze-m4's commit. The latest
+               such session gives each arm's saturation label at the sweep's point (M4 §3.2).
+  m4-check     the arms check of prereg/M4.md §8 step 3, run kind check, before freeze-m4: one run of each
+               arm, C8 then C10, at 8 channels main with the staggered sampler, once M2 §4's equivalence check
+               has passed with this build's two objects of A13. Its runs pass freeze-m4 none. With --calib DIR
+               (a tools/m4_calib.sh session), that session's labels decide rule 3; without it, rule 3 does not
+               judge its runs, as for an unknown label (M4 §5).
+               Both M4 commands first check the two models' SHA-256 against M4 §1.
+  h3          the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
 
@@ -64,6 +79,8 @@ Which rules apply:
   - sweep runs: rules 1, 2 and 4, and rule 3 at unsaturated conditions (§6.2 with L = 32, A9): every
     count but 32 at the main condition, every auxiliary and every A count.
   - m2-check runs: rules 1, 2, 3 and 4 (8 channels main is unsaturated, M2 §5.2).
+  - m4 sweep and m4-check runs: rules 1, 2 and 4, and rule 3 only for an arm whose label at the point is
+    unsaturated (M4 §3.2). A saturated or unknown label leaves rule 3 out, and the runs are still made.
   - h3 runs: rules 1, 2 and 4 (§10). A run sustains as HYPOTHESES H3 defines it; an invalid x2 run
     counts as not sustained.
 External failures (§9.3, last paragraph): an input that ends early, a server that is down before or
@@ -95,11 +112,14 @@ from the login session (setsid nohup):
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--set 4k] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py thermal --limit L [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference,4k,k4,a55,bdirect_main,
-                                                                   bdirect_aux,m2_main,m2_aux}
+                                                                   bdirect_aux,m2_main,m2_aux,m4_main,m4_aux}
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py m2-check [--out DIR]
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py m4-check [--calib DIR] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
---gate-s, for limit and h3 --start and --cap, and for sweep --counts. A sweep or h3 session with any of
+--gate-s, for limit and h3 --start and --cap, for sweep --counts, and for an m4 sweep --calib DIR, the
+tools/m4_calib.sh session whose labels it takes (without it, a smoke test takes the protocol's session if
+there is one, and otherwise the label unknown). A sweep or h3 session with any of
 them is a smoke test: its runs are of kind check, it goes to results/check/<UTC>_<sweep or h3>_smoke, and
 it neither reads nor counts toward the protocol sessions.
 Writes <out>/runs.tsv, one directory per run with the server's log lines, server/ (the whole server
@@ -153,11 +173,23 @@ MAX_PC_AHEAD_S, MAX_PC_BEHIND_S = 0.1, 0.005
 PREREG_V1_COMMIT = "87fe874b4f196dafd48f6a175b2d7604625aedba"  # docs/notes/env.md
 FREEZE_M1_COMMIT = "2eec964d27545e081a44bc5ead01bbfcd2905a54"  # docs/notes/env.md; every run carries it
 PREREG_M2_COMMIT = "5d9d6d04e50f17d52980dc5b958c7071d7107176"  # docs/notes/env.md; M2's headers carry it (M2 §5.1)
-ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's commit (M2 §7 step 4)
+PREREG_M4_COMMIT = "8638685d9ef806a85e5042d7cc10febdd5ae93a9"  # docs/notes/env.md; M4's headers carry it (M4 §4)
+ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's and freeze-m4's commits
 POST_OBJECTS = {  # M2 §4: the post-processing objects of libcore, by their key in m2_equivalence.csv
     "sha256_yolov8_post_o": "build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o",
     "sha256_yolov8_post_neon_o": "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o",
 }
+M4_POST_OBJECTS = {  # M4 §8 step 3: also yolov10_post and the shared function (kPostObjects of src/core/report.h)
+    **POST_OBJECTS,
+    "sha256_yolov10_post_o": "build/CMakeFiles/core.dir/src/core/yolov10_post.cpp.o",
+    "sha256_pipeline_post_o": "build/CMakeFiles/core.dir/src/core/pipeline_post.cpp.o",
+}
+M4_MODELS = {  # M4 §1: arm -> (model, its SHA-256, its name in tools/m4_calib_summary.py)
+    "C8": ("models/yolov8n_i8.rknn", "04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee", "yolov8n"),
+    "C10": ("models/yolov10n_i8.rknn", "6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81", "yolov10n"),
+}
+M4_CALIB = "m4_calib"  # results/m4/<UTC>_m4_calib: a session of tools/m4_calib.sh (M4 §3.1)
+LABELS = ("unsaturated", "saturated", "unknown")  # M4 §3.2 and §5, as tools/m4_calib_summary.py writes them
 LIMIT = 32  # L (A9)
 SEED, REPETITIONS = 20261030, 3  # §9.1, §8
 SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, results/<kind>/<UTC>_<sweep>
@@ -173,18 +205,27 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     # prereg/M2.md §5.2: C against Cp, C with the NEON post-processing (§1)
     "m2_main": ((8,), "main", ("C", "Cp"), "m2"),
     "m2_aux": ((5,), "aux", ("C", "Cp"), "m2"),
+    # prereg/M4.md §3.2: C8 (YOLOv8n, Cp's post-processing) against C10 (YOLOv10n, yolov10_post)
+    "m4_main": ((8,), "main", ("C8", "C10"), "m4"),
+    "m4_aux": ((5,), "aux", ("C8", "C10"), "m4"),
 }
 ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"],  # A12
-        "Cp": ["--variant", "C", "--post", "neon"]}  # M2 §1; else --variant <arm>
+        "Cp": ["--variant", "C", "--post", "neon"],  # M2 §1
+        "C8": ["--variant", "C", "--post", "neon", "--model", M4_MODELS["C8"][0]],  # M4 §3.2
+        "C10": ["--variant", "C", "--post", "v10", "--model", M4_MODELS["C10"][0]]}  # else --variant <arm>
 SWEEP_OPTIONS = {"a55": ["--cores", "a55"],  # A12; on every run of the sweep or phase
-                 "m2_main": ["--stagger", "on"], "m2_check": ["--stagger", "on"]}  # M2 §3.1, both arms
+                 "m2_main": ["--stagger", "on"], "m2_check": ["--stagger", "on"],  # M2 §3.1, both arms
+                 "m4_main": ["--stagger", "on"], "m4_check": ["--stagger", "on"]}  # M4 §3.2, both arms
 M2_CHECK = (8, "main", ("C", "Cp"))  # M2 §7 step 3: channels, condition, arms in run order, one run each
+M4_CHECK = (8, "main", ("C8", "C10"))  # M4 §8 step 3, "Arms": the same
+M4_POINTS = {"m4_main": "main", "m4_aux": "aux", "m4_check": "main"}  # M4 §3.2: the point of each M4 phase
 SWEEP_REPETITIONS = {"a55": 1}  # A12 (§13: × 1); the other sweeps have REPETITIONS
 IDLE_BASELINE_S = 120  # §7.2
 H3_START, SUSTAIN_FPS = 8, 4.75  # §10 (min(8, L)), HYPOTHESES H3
 H3_PHASES = ("h3_search", "h3_confirm")
 ORDER = ("main", "aux", "h3", "reference", "4k", "k4", "a55", "bdirect_main", "bdirect_aux",  # comparison.md
-         "m2_main", "m2_aux")  # M2 §5.3: main first
+         "m2_main", "m2_aux",  # M2 §5.3: main first
+         "m4_main", "m4_aux")  # M4 §3.3: main first
 SESSION_NAME = r"\d{8}T\d{6}Z_"  # results/<kind>/<UTC>_<sweep or h3>
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
@@ -379,6 +420,75 @@ def is_m2(name):
 def m2_session(args):
     """Whether a session is M2's, an m2 sweep or m2-check: its headers carry M2's commits (M2 §5.1)."""
     return is_m2(getattr(args, "sweep", None)) or getattr(args, "command", None) == "m2-check"
+
+
+def is_m4(name):
+    """Whether name is a sweep of M4 (run kind m4, M4 §4)."""
+    return name in SWEEPS and SWEEPS[name][3] == "m4"
+
+
+def m4_phase(phase):
+    """Whether a run's phase is M4's, an m4 sweep or m4-check: its runs carry freeze-m4's commit, and its
+    arms' saturation labels decide rule 3 (M4 §3.2, §4)."""
+    return is_m4(phase) or phase == "m4_check"
+
+
+def m4_session(args):
+    """Whether a session is M4's, an m4 sweep or m4-check: its headers carry M4's commits (M4 §4)."""
+    return is_m4(getattr(args, "sweep", None)) or getattr(args, "command", None) == "m4-check"
+
+
+def rule3_applies(phase, variant, channels, condition, limit, labels):
+    """Whether §9.3 rule 3 judges a run, which it does at unsaturated conditions. For M4's runs that is the
+    arm's saturation label at the point (M4 §3.2): only "unsaturated" applies it. For the others, §6.2."""
+    if m4_phase(phase):
+        return labels.get(variant) == "unsaturated"
+    return phase in ("thermal", "m2_check") + tuple(SWEEPS) and unsaturated(channels, condition, limit)
+
+
+def m4_labels(calibration_csv, point):
+    """{arm: saturation label} at a point (main or aux), from tools/m4_calib_summary.py's
+    m4_calibration.csv (M4 §3.2). Stop for any other label: "incomplete" means that session stopped, and
+    M4 §3.1 then has a new one run in full."""
+    rows = {r["key"]: r["value"] for r in read_csv(calibration_csv)[1]}
+    out = {}
+    for arm, (_, _, model) in M4_MODELS.items():
+        label = rows.get(f"{model}_{point}_point")
+        if label not in LABELS:
+            raise Stop(f"{calibration_csv}: {model}_{point}_point is {label!r}, not one of {', '.join(LABELS)}")
+        out[arm] = label
+    return out
+
+
+def m4_calib_session(freeze_m4):
+    """M4 §3.2: the calib_npu session whose medians decide, the latest results/m4/<UTC>_m4_calib whose
+    m4_calibration.csv says complete 1 and m4_settings yes, with freeze-m4's commit in its header; or None.
+    After an amendment, the session rerun whole (M4 §9) is the latest."""
+    found = None
+    for d in sorted(Path("results", "m4").glob("*_" + M4_CALIB)):
+        summary = d / "m4_calibration.csv"
+        if re.fullmatch(SESSION_NAME + M4_CALIB, d.name) and summary.exists():
+            header, rows = read_csv(summary)
+            v = {r["key"]: r["value"] for r in rows}
+            if v.get("complete") == "1" and v.get("m4_settings") == "yes" and header.get("freeze_m4_commit") == freeze_m4:
+                found = d
+    return found
+
+
+def m4_model_problems():
+    """The models of M4's arms whose SHA-256 is not M4 §1's."""
+    out = []
+    for arm, (path, sha, model) in M4_MODELS.items():
+        got = hashlib.sha256(Path(path).read_bytes()).hexdigest() if Path(path).exists() else "none (no file)"
+        if got != sha:
+            out.append(f"{path} ({arm}) is not M4's {model}: SHA-256 {got}, M4 §1 fixes {sha}")
+    return out
+
+
+def arm_post(arm):
+    """The post-processing an arm passes to bench_main (--post), or m1, bench_main's default."""
+    args = ARMS.get(arm, [])
+    return args[args.index("--post") + 1] if "--post" in args else "m1"
 
 
 def sweep_plan(sweep, counts=None):
@@ -743,6 +853,8 @@ class Session:
         self.last_end = None
         self.invalid_x2 = []
         self.run_header = None  # the first run's header, for result.csv
+        self.freeze_m2 = self.freeze_m4 = "none"  # start() reads them for M2's and M4's sweeps
+        self.labels, self.calib = {}, None  # M4 §3.2: {arm: saturation label}, and the session they come from
         self.runs = open(self.out / "runs.tsv", "w", encoding="utf-8")
         self.runs.write("seq\tname\tphase\tvariant\tchannels\tcondition\trepetition\tattempt\texit\tvalid\t"
                         "passed\treasons\twarnings\ttrip_samples\tgate_soc_mc\tclock_offset_ms\tstart_utc\tend_utc\t"
@@ -865,6 +977,7 @@ class Session:
             raise Stop("env.txt has no trip point for soc-thermal")
         self.code_commit = build_commit()
         self.freeze_m2 = freeze_m2_commit() if is_m2(a.sweep) else "none"  # m2-check runs before it (M2 §7)
+        self.freeze_m4 = freeze_m4_commit() if is_m4(a.sweep) else "none"  # m4-check runs before it (M4 §8)
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
@@ -1000,6 +1113,7 @@ class Session:
                "--condition", condition, "--warmup", str(a.warmup), "--duration", str(a.duration),
                "--run-kind", run_kind, "--repetition", str(repetition), "--freeze-commit", FREEZE_M1_COMMIT,
                *(["--freeze-m2-commit", self.freeze_m2] if is_m2(phase) else []),  # M2 §5.1; M1's as before
+               *(["--freeze-m4-commit", self.freeze_m4] if m4_phase(phase) else []),  # M4 §4
                "--out", str(run_dir)]
         start = dt.datetime.now(dt.timezone.utc)
         # Just before the bench, after the gate and the checks: if the session dies during the run,
@@ -1021,13 +1135,13 @@ class Session:
         self.last_end = time.monotonic()
         end = dt.datetime.now(dt.timezone.utc)
         try:
-            self.judge(o, run_dir, phase, channels, condition, start, end, console_before)
+            self.judge(o, run_dir, phase, variant, channels, condition, start, end, console_before)
         except Interrupted as e:
             o.reasons.append(f"stopped by the operator before the run was judged ({e})")
             o.external = "stopped by the operator"
         return o, run_dir, temp, start, end
 
-    def judge(self, o, run_dir, phase, channels, condition, start, end, console_before):
+    def judge(self, o, run_dir, phase, variant, channels, condition, start, end, console_before):
         """Fills o for a finished bench run (§9.3)."""
         a = self.args
         # The server's side: alive, its log lines and its publishers' output, kept with every run.
@@ -1076,7 +1190,7 @@ class Session:
             if phase != "thermal":  # rule 1; for the thermal check it is the criterion
                 o.reasons += [f"clock below fixed: {d}" for d in clocks_below(summary, self.fixed)]
             limit = a.limit if phase == "thermal" else LIMIT
-            if phase in ("thermal", "m2_check") + tuple(SWEEPS) and unsaturated(channels, condition, limit):  # rule 3
+            if rule3_applies(phase, variant, channels, condition, limit, self.labels):
                 drops = sum(int(r["decoder_drops"]) for r in ch_rows)
                 if drops:
                     o.reasons.append(f"{drops} decoder drops at an unsaturated condition (rule 3)")
@@ -1128,14 +1242,22 @@ class Session:
         off = [f"{k} {getattr(a, k)} (protocol {v})" for k, v in PROTOCOL.items() if getattr(a, k) != v]
         if getattr(a, "counts", None):
             off.append(f"counts {' '.join(map(str, a.counts))} (protocol: all of the sweep)")
+        if getattr(a, "calib", None) and getattr(a, "command", None) == "sweep":
+            off.append(f"calib {a.calib} (protocol: the latest complete M4 calib_npu session in results/m4/)")
         with open(self.out / "runs.tsv", encoding="utf-8") as f:
             starts = [r["start_utc"] for r in csv.DictReader(f, delimiter="\t")]
         h = self.run_header or {}
         m2 = ("prereg_m2_commit", "freeze_m2_commit") if m2_session(a) else ()
+        if m4_session(a):  # M4 §4: its commits, and each arm's model and post-processing (checked at the start)
+            m4 = {"prereg_m4_commit": PREREG_M4_COMMIT, "freeze_m4_commit": self.freeze_m4}
+            models = {f"{k}_{arm}": v for arm, (_, sha, _) in M4_MODELS.items()
+                      for k, v in (("model_sha256", sha), ("post", arm_post(arm)))}
+        else:
+            m4, models = {}, {"model_sha256": h.get("model_sha256", "")}
         header = {"start_time_utc": min(starts) if starts else "", "ntp_synchronized": h.get("ntp_synchronized", ""),
                   "prereg_v1_commit": h.get("prereg_v1_commit", ""), "freeze_m1_commit": h.get("freeze_m1_commit", ""),
                   **{k: h.get(k, "") for k in m2},  # M2 §5.1, from the first run's header
-                  "run_kind": run_kind, "model_sha256": h.get("model_sha256", ""), "decoder": h.get("decoder", ""),
+                  **m4, "run_kind": run_kind, **models, "decoder": h.get("decoder", ""),
                   "code_commit": self.code_commit, "amendment": h.get("amendment", ""), "session": self.out.name,
                   "cooling": os.environ["COOLING"], "ambient_c": os.environ["AMBIENT_C"]}
         rows = rows + [("invalid_x2_runs", " ".join(self.invalid_x2) or "none"),
@@ -1245,9 +1367,16 @@ def freeze_m2_commit():
     return registration_commits(Path(ENV_MD).read_text(encoding="utf-8")).get("freeze-m2", "none")
 
 
-def post_object_hashes():
-    """{key of POST_OBJECTS: SHA-256} of this build's post-processing objects; a missing one is left out."""
-    return {k: hashlib.sha256(Path(p).read_bytes()).hexdigest() for k, p in POST_OBJECTS.items() if Path(p).exists()}
+def freeze_m4_commit():
+    """freeze-m4's tag commit from the Registration table of docs/notes/env.md, or "none" before it
+    (M4 §4)."""
+    return registration_commits(Path(ENV_MD).read_text(encoding="utf-8")).get("freeze-m4", "none")
+
+
+def post_object_hashes(objects=POST_OBJECTS):
+    """{key: SHA-256} of this build's post-processing objects (POST_OBJECTS, or M4_POST_OBJECTS); a missing
+    one is left out."""
+    return {k: hashlib.sha256(Path(p).read_bytes()).hexdigest() for k, p in objects.items() if Path(p).exists()}
 
 
 def m2_equivalence_done(hashes):
@@ -1270,12 +1399,14 @@ def m2_equivalence_done(hashes):
 
 
 def equivalence_problem():
-    """Why M2's runs and checks cannot start yet for want of M2 §4's equivalence check of this build's
-    post-processing objects (m2_equivalence_done), or None."""
+    """Why M2's or M4's runs and checks cannot start yet for want of M2 §4's equivalence check of this
+    build's two objects of A13 (m2_equivalence_done), or None. M4 §8 step 3: they equal A13's, which M2's
+    check passed with, or the check is repeated with M4's build."""
     if m2_equivalence_done(post_object_hashes()):
         return None
     return ("a passed equivalence check of this build's post-processing objects (their SHA-256), in "
-            "results/check/<UTC>_m2_equivalence, comes before M2's runs and checks (M2 §4, §7 step 3)")
+            "results/check/<UTC>_m2_equivalence, comes before M2's and M4's runs and checks (M2 §4, §7 step 3; "
+            "M4 §8 step 3)")
 
 
 def order_problem(name):
@@ -1291,9 +1422,15 @@ def order_problem(name):
     if is_m2(name) and freeze_m2_commit() == "none":
         return f"freeze-m2 comes before M2's runs, and {ENV_MD} has no row for it with its commit and created_at " \
                "(M2 §5.1)"
-    problem = equivalence_problem() if is_m2(name) else None
+    if is_m4(name) and freeze_m4_commit() == "none":
+        return f"freeze-m4 comes before M4's runs, and {ENV_MD} has no row for it with its commit and created_at " \
+               "(M4 §4)"
+    problem = equivalence_problem() if is_m2(name) or is_m4(name) else None
     if problem:
         return problem
+    if is_m4(name) and m4_calib_session(freeze_m4_commit()) is None:
+        return ("M4's calib_npu session (tools/m4_calib.sh), complete in results/m4/<UTC>_m4_calib with M4's settings "
+                "and freeze-m4's commit, comes before its pipeline sessions (M4 §3.2, §8 step 5)")
     if progress(name) == "complete":
         return f"{name} is complete"
     return None
@@ -1305,14 +1442,16 @@ def write_idle_baseline(s, run_kind):
     start, t0, stat0, sched0, t1, stat1, sched1 = s.idle
     rows = [("window_s", f"{t1 - t0:.1f}")] + idle_rows(proc_stat_nonidle(stat0), proc_stat_nonidle(stat1),
                                                        1.0 / os.sysconf("SC_CLK_TCK"))
-    if m2_session(s.args):  # M2 §3.2; none without /proc/schedstat. M1's sessions keep their rows.
-        rows += schedstat_rows(sched0, sched1)
+    if m2_session(s.args) or m4_session(s.args):  # M2 §3.2, M4 §3.3; none without /proc/schedstat.
+        rows += schedstat_rows(sched0, sched1)  # M1's sessions keep their rows.
     amendments = re.findall(r"^## (A\d+) ", Path("prereg/AMENDMENTS.md").read_text(encoding="utf-8"), re.M)
     ntp = subprocess.run(["timedatectl", "show", "-p", "NTPSynchronized", "--value"], capture_output=True,
                          text=True).stdout.strip()
     m2 = {"prereg_m2_commit": PREREG_M2_COMMIT, "freeze_m2_commit": s.freeze_m2} if m2_session(s.args) else {}
+    m4 = {"prereg_m4_commit": PREREG_M4_COMMIT, "freeze_m4_commit": s.freeze_m4} if m4_session(s.args) else {}
     header = {"start_time_utc": f"{start:%Y-%m-%dT%H:%M:%SZ}", "ntp_synchronized": ntp,
-              "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, **m2, "run_kind": run_kind,
+              "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, **m2, **m4,
+              "run_kind": run_kind,
               "measurement": "idle baseline of system CPU (PROTOCOL §7.2), not a run", "code_commit": s.code_commit,
               "amendment": amendments[-1] if amendments else "none"}
     text = "".join(f"# {k}: {v}\n" for k, v in header.items())
@@ -1348,7 +1487,16 @@ def cmd_sweep(s):
                         ("earlier_sessions", " ".join(d.name for d in earlier) or "none"),
                         ("repetitions_run_here", " ".join(done_here) or "none"),
                         ("repetitions_left", " ".join(left) or "none")]
-                       + (list(post_object_hashes().items()) if is_m2(a.sweep) else []), s.run_kind)  # M2 §4
+                       + (list(post_object_hashes().items()) if is_m2(a.sweep) else [])  # M2 §4
+                       + (m4_rows(s) if is_m4(a.sweep) else []), s.run_kind)
+
+
+def m4_rows(s):
+    """M4's rows of result.csv: the calib_npu session that gave the labels, each arm's label at the point
+    (M4 §3.2), and the SHA-256 of the build's four post-processing objects (M4 §8 step 3)."""
+    return ([("calib_npu_session", str(s.calib) if s.calib else "none")]
+            + [(f"saturation_{arm}", s.labels[arm]) for arm in M4_MODELS]
+            + list(post_object_hashes(M4_POST_OBJECTS).items()))
 
 
 def cmd_m2_check(s):
@@ -1363,6 +1511,21 @@ def cmd_m2_check(s):
         status = "completed"
     finally:  # also when the session stops: what it ran, and the objects it ran with (M2 §4)
         s.write_result([("session_status", status)] + rows + list(post_object_hashes().items()), "check")
+
+
+def cmd_m4_check(s):
+    """M4 §8 step 3, "Arms": one run of each arm, C8 then C10, at 8 channels, main condition, staggered,
+    before freeze-m4."""
+    channels, condition, arms = M4_CHECK
+    write_idle_baseline(s, "check")
+    rows, status = [], "stopped"
+    try:
+        for arm in arms:
+            valid, run_dir = s.run("m4_check", arm, channels, condition, "check")
+            rows.append((f"{arm}_run", run_dir.name if valid else "invalid_x2"))
+        status = "completed"
+    finally:  # also when the session stops: what it ran, its labels and its objects
+        s.write_result([("session_status", status)] + rows + m4_rows(s), "check")
 
 
 def cmd_h3(s):
@@ -1441,7 +1604,7 @@ def cmd_thermal(s):
 
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3", "m2-check"])
+    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3", "m2-check", "m4-check"])
     ap.add_argument("sweep", nargs="?", choices=list(SWEEPS), help="sweep: which one")
     ap.add_argument("--out")
     ap.add_argument("--limit", type=int, help="thermal: L, which gives the largest main count")
@@ -1453,6 +1616,8 @@ def main(argv):
     ap.add_argument("--cap", type=int, default=PROTOCOL["cap"])
     ap.add_argument("--counts", type=int, nargs="+", help="sweep, smoke tests only: these counts of the sweep")
     ap.add_argument("--set", choices=list(VIDEO_SETS), help="loop-check: the video set (default m1)")
+    ap.add_argument("--calib", help="m4-check, and an m4 sweep as a smoke test: the tools/m4_calib.sh session whose "
+                                    "saturation labels decide rule 3 (M4 §3.2)")
     args = ap.parse_args(argv)
     if (args.command == "sweep") != (args.sweep is not None):
         ap.error(f"sweep needs one of {', '.join(SWEEPS)}; the other commands take none")
@@ -1463,6 +1628,11 @@ def main(argv):
         ap.error("--limit is for thermal")
     if args.set and args.command != "loop-check":
         ap.error("--set is for loop-check; sweep 4k uses the 4K set by itself")
+    m4 = args.command == "m4-check" or is_m4(args.sweep)
+    if args.calib and not m4:
+        ap.error("--calib is for m4-check and the m4 sweeps")
+    if args.calib and not (Path(args.calib) / "m4_calibration.csv").exists():
+        ap.error(f"{args.calib} has no m4_calibration.csv (tools/m4_calib_summary.py)")
     video_set = args.set or ("4k" if args.sweep == "4k" else "m1")
     global ASSIGNMENT, PC_VIDEOS, MANIFEST, VIDEO_SHA256
     ASSIGNMENT, PC_VIDEOS, MANIFEST, VIDEO_SHA256 = VIDEO_SETS[video_set]
@@ -1473,7 +1643,8 @@ def main(argv):
     if not 1 <= args.start <= args.cap <= 32:
         ap.error("need 1 <= --start <= --cap <= 32 (the assignment has 32 channels)")
     now = f"{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%SZ}"
-    smoke = any(getattr(args, k) != v for k, v in PROTOCOL.items()) or bool(args.counts)
+    smoke = any(getattr(args, k) != v for k, v in PROTOCOL.items()) or bool(args.counts) \
+        or (bool(args.calib) and args.command == "sweep")
     if args.command in ("sweep", "h3"):
         name = args.sweep or "h3"
         run_kind = "check" if smoke else session_kind(name)
@@ -1483,8 +1654,9 @@ def main(argv):
             ap.error(f"a protocol session is named <UTC>_{name}, where the next one finds it")
         args.out = args.out or f"results/{run_kind}/{now}_{name}" + ("_smoke" if smoke else "")
     else:
-        kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal", "m2-check": "m2_check"}[args.command]
-        run_kind = "check" if kind in ("loop", "m2_check") else "calibration"
+        kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal", "m2-check": "m2_check",
+                "m4-check": "m4_check"}[args.command]
+        run_kind = "check" if kind in ("loop", "m2_check", "m4_check") else "calibration"
         args.out = args.out or f"results/{run_kind}/{now}_{kind}" + (f"_{video_set}" if video_set != "m1" else "")
 
     def on_signal(signum, _frame):
@@ -1502,11 +1674,25 @@ def main(argv):
             problem = order_problem(this)
             if problem:
                 raise Stop(f"not starting: {problem} (docs/notes/comparison.md)")
-        problem = equivalence_problem() if args.command == "m2-check" else None  # not freeze-m2: it comes later
+        # Not freeze-m2 or freeze-m4: the checks come before them.
+        problem = equivalence_problem() if args.command in ("m2-check", "m4-check") else None
         if problem:
             raise Stop(f"not starting: {problem}")
+        if m4:
+            problems = m4_model_problems()
+            if problems:
+                raise Stop("not starting: " + "; ".join(problems))
+            # M4 §3.2: the labels at the point. A protocol sweep has its calib_npu session (order_problem).
+            point = M4_POINTS[args.sweep or "m4_check"]
+            calib = Path(args.calib) if args.calib else \
+                m4_calib_session(freeze_m4_commit()) if args.command == "sweep" else None
+            labels = m4_labels(calib / "m4_calibration.csv", point) if calib else dict.fromkeys(M4_MODELS, "unknown")
         s = Session(args)
         s.smoke, s.run_kind = smoke, run_kind
+        if m4:
+            s.labels, s.calib = labels, calib
+            s.say(f"saturation at the {point} point: " + ", ".join(f"{k} {v}" for k, v in labels.items())
+                  + f" (from {calib or 'no calib_npu session'}; rule 3 only where unsaturated, M4 §3.2)")
         if args.command == "loop-check":
             s.loops = loop_channels()  # before the idle period, so a bad input fails at once
     except Stop as e:
@@ -1515,7 +1701,7 @@ def main(argv):
     try:
         s.start()
         {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal, "sweep": cmd_sweep,
-         "h3": cmd_h3, "m2-check": cmd_m2_check}[args.command](s)
+         "h3": cmd_h3, "m2-check": cmd_m2_check, "m4-check": cmd_m4_check}[args.command](s)
         status = 0
     except Stop as e:
         s.say(f"stopped: {e}")
