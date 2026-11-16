@@ -21,7 +21,8 @@ Then the start time from the host clock goes with the rest to <record>/pc.json, 
     Docker VM.
 Its output goes to the console and to <record>/<tool>.log.
 
-Usage, on the PC from the repository:
+Usage, on the PC from the repository (from Git Bash, with MSYS_NO_PATHCONV=1, which it checks: Git Bash
+would turn the container's /data/... into Windows paths):
   python tools/eval/pc_run.py --kind check --name m4_inputs [--data D:/m4data] -- tools/m4_prep.py ARGS...
 The record directory is results/<kind>/<UTC>_<name>. Exit: the tool's code, or 2 when a check stops the
 run before the tool starts.
@@ -29,6 +30,7 @@ run before the tool starts.
 import argparse
 import datetime as dt
 import json
+import os
 import queue
 import re
 import subprocess
@@ -171,6 +173,10 @@ def main(argv):
     ap.add_argument("--allow-dirty", action="store_true", help="development only: run from a tree that differs")
     a = ap.parse_args(argv[:split])
     tool = argv[split + 1:]
+    if os.environ.get("MSYSTEM") and os.environ.get("MSYS_NO_PATHCONV") != "1":
+        print("pc_run: from Git Bash, run with MSYS_NO_PATHCONV=1: it would turn /data/... into a Windows path",
+              file=sys.stderr)
+        return 2
     if not tool or not re.fullmatch(r"[\w-]+", a.name) or not (REPO / tool[0]).is_file():
         print("pc_run: name a tool of the repository, e.g. tools/m4_prep.py, and a name of word characters",
               file=sys.stderr)

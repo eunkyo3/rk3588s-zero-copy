@@ -87,6 +87,20 @@ class Checks(unittest.TestCase):
         pc, _ = self.checks(status=" M tools/m4_prep.py\n", allow_dirty=True)  # development: recorded
         self.assertEqual(pc["code_status"], "differs: M tools/m4_prep.py")
 
+    def test_git_bash_needs_its_path_conversion_off(self):
+        argv = ["--kind", "check", "--name", "x", "--", "tools/m4_prep.py", "--coco", "/data/coco"]
+        with mock.patch.dict(pr.os.environ, {"MSYSTEM": "MINGW64"}), mock.patch.object(pr, "checks") as checks:
+            pr.os.environ.pop("MSYS_NO_PATHCONV", None)
+            with redirect_stderr(io.StringIO()) as err:
+                self.assertEqual(pr.main(argv), 2)
+            self.assertIn("MSYS_NO_PATHCONV=1", err.getvalue())
+            checks.assert_not_called()
+            pr.os.environ["MSYS_NO_PATHCONV"] = "1"
+            checks.side_effect = pr.Refused("stop here")
+            with redirect_stderr(io.StringIO()) as err:
+                self.assertEqual(pr.main(argv), 2)
+            self.assertIn("stop here", err.getvalue())
+
     def test_main_needs_a_tool_and_a_name(self):
         for argv in (["--kind", "check", "--name", "x"], ["--kind", "check", "--name", "a/b", "--", "tools/m4_prep.py"],
                      ["--kind", "check", "--name", "x", "--", "tools/nothing.py"]):
