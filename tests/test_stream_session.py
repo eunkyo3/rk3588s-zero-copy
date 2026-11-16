@@ -7,6 +7,7 @@ import datetime as dt
 import hashlib
 import io
 import os
+import shutil
 import sys
 import tempfile
 import types
@@ -789,13 +790,39 @@ FAKE_MODELS = {"C8": ("models/v8.rknn", hashlib.sha256(b"v8").hexdigest(), "yolo
                "C10": ("models/v10.rknn", hashlib.sha256(b"v10").hexdigest(), "yolov10n")}
 
 
-def m4_calibration(d, labels, complete=1, settings="yes", freeze="f4" * 20):
-    """Writes tools/m4_calib_summary.py's m4_calibration.csv into d; labels: {(model, point): label}."""
+def m4_calibration(d, labels, complete=1, settings="yes", freeze="f4" * 20, amendment="A14",
+                   start="2026-11-21T00:00:00Z"):
+    """Writes a tools/m4_calib.sh session's runs.tsv and m4_calibration.csv into d (labels: {(model, point):
+    label}), as tools/m4_calib_summary.py writes the csv's fields that stream_session reads."""
     d.mkdir(parents=True, exist_ok=True)
+    (d / "runs.tsv").write_text("repetition\tmodel\n", encoding="utf-8")
     (d / "m4_calibration.csv").write_text(
-        f"# run_kind: m4\n# freeze_m4_commit: {freeze}\nkey,value\nyolov8n_p_cap_inf_per_s,192.3333\n"
-        + "".join(f"{m}_{p}_point,{v}\n" for (m, p), v in labels.items())
+        f"# freeze_m4_commit: {freeze}\n# run_kind: m4\n# amendment: {amendment}\n# start_time_utc: {start}\n"
+        "key,value\nyolov8n_p_cap_inf_per_s,192.3333\n" + "".join(f"{m}_{p}_point,{v}\n" for (m, p), v in labels.items())
         + f"complete,{complete}\nm4_settings,{settings}\n", encoding="utf-8")
+    return d
+
+
+def stopped_calib(d, amendment="A15"):
+    """A calib_npu session that stopped before its summary: runs.tsv and, with an amendment, one run's
+    summary.csv."""
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "runs.tsv").write_text("repetition\tmodel\n1\tyolov8n\n", encoding="utf-8")
+    if amendment:
+        (d / "yolov8n_p_cap_3c_r1").mkdir()
+        (d / "yolov8n_p_cap_3c_r1" / "summary.csv").write_text(f"# amendment: {amendment}\nkey,value\nvalid,1\n",
+                                                                encoding="utf-8")
+    return d
+
+
+def pipeline_session(name, calib=None, attempts=1):
+    """An M4 pipeline session in results/m4/ with its saturation.txt (calib None: none written), and
+    attempts in started.tsv."""
+    d = Path("results/m4", name)
+    d.mkdir(parents=True)
+    if calib is not None:
+        (d / "saturation.txt").write_text(f"calib_npu_session: {calib}\npoint: main\n", encoding="utf-8")
+    (d / "started.tsv").write_text("seq\tname\n" + "".join(f"{i}\tx\n" for i in range(attempts)), encoding="utf-8")
     return d
 
 
@@ -928,47 +955,121 @@ class M4(unittest.TestCase):
         self.assertTrue(ss.rule3_applies("main", "B", 16, "main", ss.LIMIT, {}))
         self.assertFalse(ss.rule3_applies("main", "B", 32, "main", ss.LIMIT, {}))
         self.assertFalse(ss.rule3_applies("search", "none", 8, "main", ss.LIMIT, {}))
+        # The label alone decides M4's runs, not M1's budget (A7's P_cap): with a budget of 1/s, M1's sweep
+        # at 8 channels main would be saturated, and C8's unsaturated label still applies rule 3.
+        with mock.patch.object(ss, "P_CAP_BUDGET", ss.Fraction(1)):
+            self.assertFalse(ss.rule3_applies("main", "B", 8, "main", ss.LIMIT, {}))
+            self.assertTrue(ss.rule3_applies("m4_main", "C8", 8, "main", ss.LIMIT, labels))
 
-    def test_judge_takes_rule_3_from_the_label(self):
+    def judged(self, arm, model=None, post=None, labels=None):
+        """judge() on a finished m4_main run of arm whose summary.csv names model and post (default: the arm's)."""
         d = Path(tempfile.mkdtemp(dir="."))
         s = OperatorStop.session(None, d)
         s.clock_offset = lambda: (0.0, 0.001)
         s.pc = lambda command, **kw: ""
         s.trips, s.fixed = {"soc-thermal": 85000}, dict.fromkeys(ss.DOMAINS, 0)
-        s.labels = {"C8": "unsaturated", "C10": "saturated"}
+        s.labels = labels or {"C8": "unsaturated", "C10": "saturated"}
         run_dir = d / "run"
         run_dir.mkdir()
+        model, post = model or ss.M4_MODELS[arm][1], post or ss.arm_post(arm)
         (run_dir / "summary.csv").write_text(
-            "key,value\n" + "".join(f"freq_min_{k},1\n" for k in ss.DOMAINS)
+            f"# model_sha256: {model}\n# post: {post}\nkey,value\n" + "".join(f"freq_min_{k},1\n" for k in ss.DOMAINS)
             + "warmup_start_utc,2026-11-21T00:00:10Z\nwindow_end_utc,2026-11-21T00:02:30Z\n", encoding="utf-8")
         (run_dir / "channels.csv").write_text("channel,decoder_drops,ended_early\n1,3,0\n2,0,0\n", encoding="utf-8")
         (run_dir / "samples.csv").write_text("t_s,temp_mc_soc-thermal\n1,40000\n", encoding="utf-8")
         start, end = dt.datetime(2026, 11, 21, 0, 0, 0, tzinfo=UTC), dt.datetime(2026, 11, 21, 0, 2, 31, tzinfo=UTC)
-        for arm, reasons in (("C8", ["3 decoder drops at an unsaturated condition (rule 3)"]), ("C10", [])):
-            o = ss.Outcome()
-            o.code = 0
-            s.judge(o, run_dir, "m4_main", arm, 8, "main", start, end, 0)
-            self.assertEqual(o.reasons, reasons, arm)
+        o = ss.Outcome()
+        o.code = 0
+        s.judge(o, run_dir, "m4_main", arm, 8, "main", start, end, 0)
         for f in (s.runs, s.started, s.log):
             f.close()
+        return o, s
+
+    def test_judge_takes_rule_3_from_the_label(self):
+        for arm, reasons in (("C8", ["3 decoder drops at an unsaturated condition (rule 3)"]), ("C10", [])):
+            o, s = self.judged(arm)
+            self.assertEqual((o.reasons, o.external), (reasons, None), arm)
+            self.assertEqual(s.arm_headers[arm]["post"], ss.arm_post(arm))  # for result.csv
+
+    def test_judge_stops_at_a_run_that_is_not_its_arms(self):
+        for model, post in ((ss.M4_MODELS["C10"][1], "neon"), (ss.M4_MODELS["C8"][1], "m1")):
+            o, s = self.judged("C8", model, post)
+            self.assertEqual(o.external, "a run's model or post-processing is not its arm's")
+            self.assertIn("not arm C8's", o.reasons[0])
+            self.assertEqual(s.arm_headers, {})
 
     def test_the_calib_npu_session(self):
-        self.assertIsNone(ss.m4_calib_session("f4" * 20))
+        f4, created = "f4" * 20, "2026-11-20T00:00:00Z"
+        self.assertEqual(ss.m4_calib_choice(f4, created), (None, "there is no calib_npu session in results/m4/"))
         root = Path("results/m4")
-        m4_calibration(root / "20261121T000000Z_m4_calib", DRY_RUN)
-        self.assertEqual(ss.m4_calib_session("f4" * 20).name, "20261121T000000Z_m4_calib")
-        self.assertIsNone(ss.m4_calib_session("e4" * 20))  # another freeze-m4
-        # Later ones that do not count: stopped, other settings, another freeze-m4, a smoke test, a check,
-        # no summary.
-        m4_calibration(root / "20261122T000000Z_m4_calib", ALL_UNSATURATED, complete=0)
-        m4_calibration(root / "20261122T010000Z_m4_calib", ALL_UNSATURATED, settings="no: warmup_s 1 (M4 20)")
-        m4_calibration(root / "20261122T020000Z_m4_calib", ALL_UNSATURATED, freeze="e4" * 20)
-        m4_calibration(root / "x20261122T030000Z_m4_calib", ALL_UNSATURATED)
-        m4_calibration(Path("results/check/20261122T040000Z_m4_calib"), ALL_UNSATURATED)
+        a = m4_calibration(root / "20261121T000000Z_m4_calib", DRY_RUN)
+        self.assertEqual(ss.m4_calib_choice(f4, created), (a, None))
+        self.assertIn("is complete with M4's settings", ss.m4_calib_choice("e4" * 20, created)[1])  # another freeze
+        self.assertIn("not after freeze-m4's created_at", ss.m4_calib_choice(f4, "2026-11-21T00:00:00Z")[1])
+        # Later ones of the same amendment do not replace it (§3.1: one session), complete or not; nor do a
+        # smoke test's name, a check, or a directory with nothing in it.
+        m4_calibration(root / "20261122T000000Z_m4_calib", ALL_UNSATURATED)
+        m4_calibration(root / "20261122T010000Z_m4_calib", ALL_UNSATURATED, complete=0)
+        stopped_calib(root / "20261122T020000Z_m4_calib", "A14")
+        m4_calibration(root / "x20261122T030000Z_m4_calib", ALL_UNSATURATED, amendment="A16")
+        m4_calibration(Path("results/check/20261122T040000Z_m4_calib"), ALL_UNSATURATED, amendment="A16")
         (root / "20261122T050000Z_m4_calib").mkdir()
-        self.assertEqual(ss.m4_calib_session("f4" * 20).name, "20261121T000000Z_m4_calib")
-        m4_calibration(root / "20261123T000000Z_m4_calib", ALL_UNSATURATED)  # rerun whole after an amendment
-        self.assertEqual(ss.m4_calib_session("f4" * 20).name, "20261123T000000Z_m4_calib")
+        self.assertEqual(ss.m4_calib_choice(f4, created), (a, None))
+        # A rerun under a later amendment (§9) replaces it; until it is complete, none decides.
+        stopped_calib(root / "20261123T000000Z_m4_calib", "A15")
+        self.assertEqual(ss.m4_calib_choice(f4, created)[1], "no calib_npu session of A15, the latest session's "
+                         "amendment, is complete with M4's settings and freeze-m4's commit")
+        stopped_calib(root / "20261123T010000Z_m4_calib", None)  # stopped before any run wrote its summary
+        self.assertIn("20261123T010000Z_m4_calib, stopped before any run wrote its summary",
+                      ss.m4_calib_choice(f4, created)[1])
+        m4_calibration(root / "20261123T020000Z_m4_calib", DRY_RUN, settings="no: warmup_s 1 (M4 20)", amendment="A15")
+        self.assertIsNone(ss.m4_calib_choice(f4, created)[0])
+        b = m4_calibration(root / "20261123T030000Z_m4_calib", ALL_UNSATURATED, amendment="A15")
+        self.assertEqual(ss.m4_calib_choice(f4, created), (b, None))
+        m4_calibration(root / "20261123T040000Z_m4_calib", DRY_RUN, amendment="A15")
+        self.assertEqual(ss.m4_calib_choice(f4, created), (b, None))
+
+    def test_the_summary_tools_m4_calib_summary_writes(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import test_m4_calib_summary as tm
+        d = Path("results/m4/20261121T000000Z_m4_calib")
+        d.mkdir(parents=True)
+        session = tm.Session(d, freeze_m4_commit="f4" * 20, start_time_utc="2026-11-21T00:00:00Z")
+        session.fill({("yolov10n", "p_cap", r): 161 * 120 for r in (1, 2, 3)})  # 161/s: aux saturated
+        code, out, values, header = session.run()
+        self.assertEqual((code, values["complete"], values["m4_settings"]), (0, "1", "yes"), out)
+        self.assertEqual(ss.m4_calib_choice("f4" * 20, "2026-11-20T00:00:00Z"), (d, None))
+        self.assertEqual(ss.m4_labels(d / "m4_calibration.csv", "aux"), {"C8": "unsaturated", "C10": "saturated"})
+        self.assertEqual(ss.m4_labels(d / "m4_calibration.csv", "main"), {"C8": "unsaturated", "C10": "unsaturated"})
+
+    def test_labels_are_pinned_across_the_pipeline_sessions(self):
+        a = m4_calibration(Path("results/m4/20261121T000000Z_m4_calib"), DRY_RUN)
+        self.assertEqual(ss.m4_pinned_calib(), set())
+        pipeline_session("20261121T010000Z_m4_main", str(a))
+        pipeline_session("20261121T020000Z_m4_main", attempts=0)  # it stopped before a run: it took nothing
+        self.assertEqual(ss.m4_pinned_calib(), {a.name})
+        pipeline_session("20261121T030000Z_m4_aux", "results/m4/20261122T000000Z_m4_calib")
+        self.assertEqual(ss.m4_pinned_calib(), {a.name, "20261122T000000Z_m4_calib"})
+        pipeline_session("20261121T040000Z_m4_aux", None)
+        self.assertIn("unknown", ss.m4_pinned_calib())
+        pipeline_session("20261121T050000Z_m4_main_smoke", "elsewhere")  # not a protocol session
+        self.assertNotIn("elsewhere", ss.m4_pinned_calib())
+
+    def test_session_freezes(self):
+        Path("docs/notes").mkdir(parents=True)
+        Path(ss.ENV_MD).write_text(env_md(FREEZE_M2_ROW, FREEZE_M4_ROW), encoding="utf-8")
+        for command, sweep, freezes in (("sweep", "m4_main", ("none", "f4" * 20)), ("sweep", "m4_aux", ("none", "f4" * 20)),
+                                        ("m4-check", None, ("none", "f4" * 20)),  # §5: a check repeated after it
+                                        ("sweep", "m2_main", ("f2" * 20, "none")), ("m2-check", None, ("none", "none")),
+                                        ("sweep", "main", ("none", "none"))):
+            self.assertEqual(ss.session_freezes(types.SimpleNamespace(command=command, sweep=sweep)), freezes,
+                             (command, sweep))
+        Path(ss.ENV_MD).write_text(env_md(), encoding="utf-8")
+        self.assertEqual(ss.session_freezes(types.SimpleNamespace(command="m4-check", sweep=None)), ("none", "none"))
+        self.assertEqual(ss.freeze_m4_registration(), ("none", None))
+        Path(ss.ENV_MD).unlink()
+        with self.assertRaisesRegex(ss.Stop, "cannot read docs/notes/env.md"):
+            ss.freeze_m4_commit()
 
     def test_the_models(self):
         with mock.patch.dict(ss.M4_MODELS, FAKE_MODELS):
@@ -995,15 +1096,27 @@ class M4(unittest.TestCase):
             self.assertIn("M4's calib_npu session", ss.order_problem("m4_main"))
             m4_calibration(Path("results/m4/20261121T000000Z_m4_calib"), DRY_RUN, freeze="e4" * 20)
             self.assertIn("M4's calib_npu session", ss.order_problem("m4_main"))
-            m4_calibration(Path("results/m4/20261121T010000Z_m4_calib"), DRY_RUN)
-            self.assertIsNone(ss.order_problem("m4_main"))
-            self.assertIn("m4_main comes before m4_aux", ss.order_problem("m4_aux"))
-            M2.build(self, b"post", b"neon, rebuilt")  # objects that differ from A13's need the check again
-            self.assertIn("a passed equivalence check", ss.order_problem("m4_main"))
+            a = m4_calibration(Path("results/m4/20261121T010000Z_m4_calib"), DRY_RUN)
+            # Until the gates on the accuracy passes and the wiring check exist, no protocol session starts.
+            self.assertIn("are not in tools/stream_session.py yet", ss.order_problem("m4_main"))
+            with mock.patch.object(ss, "m4_pending_gates", return_value=None):
+                self.assertIsNone(ss.order_problem("m4_main"))
+                self.assertIn("m4_main comes before m4_aux", ss.order_problem("m4_aux"))
+                # §3.2: the session the earlier pipeline sessions took decides for the later ones too
+                pipeline_session("20261121T020000Z_m4_main", str(a))
+                self.assertIsNone(ss.order_problem("m4_main"))
+                m4_calibration(Path("results/m4/20261121T030000Z_m4_calib"), ALL_UNSATURATED, amendment="A15")
+                self.assertIn("took their labels from 20261121T010000Z_m4_calib, and the calib_npu session that "
+                              "decides now is 20261121T030000Z_m4_calib", ss.order_problem("m4_main"))
+                shutil.rmtree("results/m4/20261121T030000Z_m4_calib")
+                self.assertIsNone(ss.order_problem("m4_main"))
+                M2.build(self, b"post", b"neon, rebuilt")  # objects that differ from A13's need the check again
+                self.assertIn("a passed equivalence check", ss.order_problem("m4_main"))
 
     def main_with(self, argv, err):
         """ss.main(argv) up to the session: (exit code, the session it made, or None)."""
         made = mock.MagicMock()
+        made.out = Path(tempfile.mkdtemp(dir="."))
         with mock.patch.object(ss.signal, "signal"), mock.patch.object(ss.signal, "SIGHUP", 1, create=True), \
                 mock.patch.object(ss, "Session", return_value=made) as session, \
                 mock.patch.object(ss, "cmd_m4_check"), mock.patch.object(ss, "cmd_sweep"), \
@@ -1025,6 +1138,8 @@ class M4(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertRegex(session.call_args[0][0].out, r"^results/check/\d{8}T\d{6}Z_m4_check$")
         self.assertEqual((made.labels, made.calib, made.run_kind), ({"C8": "unknown", "C10": "unknown"}, None, "check"))
+        self.assertEqual((made.out / "saturation.txt").read_text(encoding="utf-8"),
+                         "calib_npu_session: none\npoint: main\nlabel_C8: unknown\nlabel_C10: unknown\n")
 
     def test_the_labels_of_a_session(self):
         err = io.StringIO()
@@ -1044,14 +1159,24 @@ class M4(unittest.TestCase):
         # without --calib, a smoke test takes the protocol's session if there is one, else unknown
         code, made, _ = self.main_with(["sweep", "m4_aux", "--idle-s", "60"], err)
         self.assertEqual((code, made.labels, made.calib), (0, {"C8": "unknown", "C10": "unknown"}, None))
-        # the protocol sweep: the latest complete session in results/m4/ with freeze-m4's commit
+        # the protocol sweep: the session that m4_calib_choice gives, written to saturation.txt
         Path(ss.ENV_MD).write_text(env_md(FREEZE_M4_ROW), encoding="utf-8")
         calib = m4_calibration(Path("results/m4/20261121T000000Z_m4_calib"), ALL_UNSATURATED)
-        with mock.patch.object(ss, "progress", lambda n: "new" if n == "m4_aux" else "complete"):
+        with mock.patch.object(ss, "progress", lambda n: "new" if n == "m4_aux" else "complete"),                 mock.patch.object(ss, "m4_pending_gates", return_value=None):
             code, made, session = self.main_with(["sweep", "m4_aux"], err)
-        self.assertEqual((code, made.labels, made.calib, made.smoke, made.run_kind),
-                         (0, {"C8": "unsaturated", "C10": "unsaturated"}, calib, False, "m4"))
-        self.assertRegex(session.call_args[0][0].out, r"^results/m4/\d{8}T\d{6}Z_m4_aux$")
+            self.assertEqual((code, made.labels, made.calib, made.smoke, made.run_kind),
+                             (0, {"C8": "unsaturated", "C10": "unsaturated"}, calib, False, "m4"))
+            self.assertRegex(session.call_args[0][0].out, r"^results/m4/\d{8}T\d{6}Z_m4_aux$")
+            self.assertEqual(ss.keyed((made.out / "saturation.txt").read_text(encoding="utf-8")),
+                             {"calib_npu_session": str(calib), "point": "aux", "label_C8": "unsaturated",
+                              "label_C10": "unsaturated"})
+            # Should order_problem pass while no session decides (it does not), main still refuses.
+            with mock.patch.object(ss, "order_problem", return_value=None):
+                shutil.rmtree(calib)
+                code, made, _ = self.main_with(["sweep", "m4_aux"], err)
+                self.assertEqual((code, made), (2, None))
+                self.assertIn("not starting: there is no calib_npu session in results/m4/", err.getvalue())
+            calib = m4_calibration(Path("results/m4/20261121T000000Z_m4_calib"), ALL_UNSATURATED)
         code, made, _ = self.main_with(["sweep", "m4_aux", "--idle-s", "60"], err)
         self.assertEqual(made.calib, calib)
         # a stopped calib session's labels stop it before the session exists
@@ -1104,6 +1229,7 @@ class M4(unittest.TestCase):
                                 "prereg_m2_commit": ss.PREREG_M2_COMMIT, "freeze_m2_commit": "none",
                                 "model_sha256": ss.M4_MODELS["C10"][1]}
                 s.labels, s.calib = {"C8": "unsaturated", "C10": "saturated"}, Path("results/m4/x_m4_calib")
+                s.arm_headers = {"C8": {"model_sha256": "m8", "post": "neon"}}  # C10 has not run yet
                 for f in (s.runs, s.started, s.log):
                     f.close()
                 with mock.patch.dict(os.environ, {"COOLING": "fan", "AMBIENT_C": "24"}), redirect_stdout(io.StringIO()):
@@ -1114,8 +1240,7 @@ class M4(unittest.TestCase):
                     "model_sha256_C8", "post_C8", "model_sha256_C10", "post_C10", "decoder"])
                 self.assertEqual([header[k] for k in ("prereg_m4_commit", "freeze_m4_commit", "model_sha256_C8",
                                                       "post_C8", "model_sha256_C10", "post_C10")],
-                                 [ss.PREREG_M4_COMMIT, "f4" * 20, ss.M4_MODELS["C8"][1], "neon", ss.M4_MODELS["C10"][1],
-                                  "v10"])
+                                 [ss.PREREG_M4_COMMIT, "f4" * 20, "m8", "neon", "", ""])
                 values = {r["key"]: r["value"] for r in rows}
                 self.assertEqual([values[k] for k in ("calib_npu_session", "saturation_C8", "saturation_C10")],
                                  [str(Path("results/m4/x_m4_calib")), "unsaturated", "saturated"])
@@ -1306,7 +1431,7 @@ class OperatorStop(unittest.TestCase):
         s.args = types.SimpleNamespace(warmup=1, duration=1, gate_s=0, limit=None)
         s.out, s.seq, s.invalid_x2, s.server_dir, s.run_header = d, 0, [], "/logs", None
         s.freeze_m2 = s.freeze_m4 = "none"
-        s.labels, s.calib = {}, None
+        s.labels, s.calib, s.arm_headers = {}, None, {}
         s.log = open(d / "session.log", "w", encoding="utf-8")
         s.runs = open(d / "runs.tsv", "w", encoding="utf-8")
         s.started = open(d / "started.tsv", "w", encoding="utf-8")

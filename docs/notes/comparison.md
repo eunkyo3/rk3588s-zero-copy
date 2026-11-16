@@ -147,8 +147,8 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 - **Before `freeze-m4`** (§8 step 3), on the board as root from the repository, with a build that is not `-dirty`:
   - **Arms check:** `COOLING=... AMBIENT_C=... python3 tools/stream_session.py m4-check`. It runs C8, then C10, at 8 channels main, staggered, into `results/check/<UTC>_m4_check/`.
     - It needs a passed equivalence check of this build's two objects of A13 in `results/check/`. M2's check counts while those objects are unchanged.
-    - It does not need `freeze-m4`; its runs pass `--freeze-m4-commit none`.
-    - No `calib_npu` session of run kind `m4` exists yet. So rule 3 does not judge these runs, unless `--calib <dir>` names a `tools/m4_calib.sh` session whose labels it takes.
+    - It does not need `freeze-m4`. Its runs pass `--freeze-m4-commit` with `freeze-m4`'s commit, which is `none` before it (§4). A check that §5 repeats after `freeze-m4` names it.
+    - No `calib_npu` session of run kind `m4` exists yet. So rule 3 does not judge these runs, unless `--calib <dir>` names a `tools/m4_calib.sh` session whose labels it takes. A session whose label is `incomplete` is refused.
   - The other checks of step 3 come with their own tools.
 - **Runs, after `freeze-m4`** (§8 step 5): the accuracy passes, then the `calib_npu` session, then the pipeline sessions.
   - **The `calib_npu` session (§3.1):** `COOLING=... AMBIENT_C=... FREEZE_M4_COMMIT=<freeze-m4's commit> tools/m4_calib.sh /home/pi/calib/tensors_c.u8`.
@@ -157,21 +157,26 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
   - **The pipeline sessions (§3.2, §3.3):** `sweep m4_main`, then `sweep m4_aux`, run kind `m4`, into `results/m4/<UTC>_<sweep>/`.
     - **Options:** `--stagger on` on every run of `m4_main`, and `--freeze-m4-commit` with `freeze-m4`'s commit from the Registration table of [env.md](env.md).
     - **Order:** C8→C10, C10→C8, C8→C10 in the three repetitions. Blocks, gate, validity, sessions and resuming are those of the sweeps above.
-    - **Gates:** no M4 session starts until all three hold:
+    - **Gates:** no M4 session starts until all of these hold:
       - `freeze-m4` has its row in env.md;
       - a passed equivalence check of this build's two objects of A13 is in `results/check/`;
-      - a `calib_npu` session in `results/m4/` says `complete,1` and `m4_settings,yes`, with `freeze-m4`'s commit in its header.
-    - **Not checked yet:** that the accuracy passes came first. That check comes with the accuracy tools.
-    - **Models:** both M4 commands first check the two models' SHA-256 against §1.
-  - **Saturation (§3.2):** the latest such `calib_npu` session gives each arm's label at the sweep's point.
+      - a `calib_npu` session decides (below);
+      - it is the session that the earlier M4 pipeline sessions took.
+    - **Not gated yet:** that the accuracy passes came first, and the wiring check of this build's `yolov10_post` and shared-function objects. Until both gates exist, the session tool starts no protocol M4 session. They come with the accuracy tools.
+    - **Models:** both M4 commands first check the two models' SHA-256 against §1. Every M4 run's header must name its arm's model and post-processing; a run that does not stops the session.
+  - **Saturation (§3.2): the `calib_npu` session that decides.**
+    - **Candidates:** the sessions in `results/m4/<UTC>_m4_calib/` with a `runs.tsv`, in UTC order.
+    - **Amendment:** the latest session's. A session rerun whole after an amendment (§9) is made with a later one, and replaces those of earlier ones. If the latest session stopped before any run wrote its summary, none decides until a new one is run in full (§3.1).
+    - **Of that amendment,** the first session decides whose `m4_calibration.csv` says `complete,1` and `m4_settings,yes`, with `freeze-m4`'s commit. It must have started after `freeze-m4`'s `created_at`. A later session of the same amendment does not replace it: §3.1 has one session.
+    - **Pinned:** every M4 pipeline session writes the session it took to `saturation.txt` before its first run. No M4 session starts with another one than the earlier ones took. A rerun under an amendment needs that amendment's own procedure.
+  - **Labels:** that session gives each arm's label at the sweep's point.
     - Rule 3 judges an arm's runs only where its label is `unsaturated`.
     - A `saturated` or `unknown` arm is still run, and rule 3 does not judge it.
-    - A label of `incomplete` stops the session before it starts.
   - **Records:**
     - Each session's idle baseline has `/proc/schedstat`'s rows, as M2's do.
-    - Its `result.csv` header has M4's two commits, and each arm's model SHA-256 and post-processing.
+    - Its `result.csv` header has M4's two commits, and each arm's model SHA-256 and post-processing, from the arm's first run.
     - Its rows give the `calib_npu` session, both labels, and the SHA-256 of the build's four post-processing objects.
-  - **Smoke tests:** `--calib <dir>` makes an M4 sweep a smoke test that takes that session's labels.
+  - **Smoke tests:** `--calib <dir>` makes an M4 sweep a smoke test that takes that session's labels. Without it, a smoke test takes the session that decides if there is one, and otherwise the label `unknown`.
 
 ### Time
 

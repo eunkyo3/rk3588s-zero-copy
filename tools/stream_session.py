@@ -42,15 +42,19 @@ Subcommands:
                channels aux. Each run passes freeze-m4's commit from docs/notes/env.md. A session starts only
                once freeze-m4 has its row there, M2 §4's equivalence check has passed with this build's two
                objects of A13 (M4 §8 step 3), and M4's calib_npu session (tools/m4_calib.sh, in
-               results/m4/<UTC>_m4_calib) is complete, with M4's settings and freeze-m4's commit. The latest
-               such session gives each arm's saturation label at the sweep's point (M4 §3.2).
-  m4-check     the arms check of prereg/M4.md §8 step 3, run kind check, before freeze-m4: one run of each
-               arm, C8 then C10, at 8 channels main with the staggered sampler, once M2 §4's equivalence check
-               has passed with this build's two objects of A13. Its runs pass freeze-m4 none. With --calib DIR
-               (a tools/m4_calib.sh session), that session's labels decide rule 3; without it, rule 3 does not
-               judge its runs, as for an unknown label (M4 §5).
-               Both M4 commands first check the two models' SHA-256 against M4 §1.
-  h3          the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
+               results/m4/<UTC>_m4_calib) decides (m4_calib_choice). That session gives each arm's
+               saturation label at the sweep's point (M4 §3.2). Every M4 pipeline session writes the session
+               it took to saturation.txt, and none starts with another one than the earlier ones took.
+               Until the gates on the accuracy passes and the wiring check exist, no protocol M4 session
+               starts (m4_pending_gates).
+  m4-check     the arms check of prereg/M4.md §8 step 3, run kind check: one run of each arm, C8 then C10,
+               at 8 channels main with the staggered sampler, once M2 §4's equivalence check has passed with
+               this build's two objects of A13. Its runs pass freeze-m4's commit, none before freeze-m4
+               (M4 §4). With --calib DIR (a tools/m4_calib.sh session), that session's labels decide rule 3;
+               without it, rule 3 does not judge its runs, as for an unknown label (M4 §5).
+               Both M4 commands first check the two models' SHA-256 against M4 §1, and every M4 run's header
+               against its arm's model and post-processing.
+  h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
 
@@ -450,7 +454,7 @@ def m4_labels(calibration_csv, point):
     """{arm: saturation label} at a point (main or aux), from tools/m4_calib_summary.py's
     m4_calibration.csv (M4 §3.2). Stop for any other label: "incomplete" means that session stopped, and
     M4 §3.1 then has a new one run in full."""
-    rows = {r["key"]: r["value"] for r in read_csv(calibration_csv)[1]}
+    rows = summary_values(calibration_csv)[1]
     out = {}
     for arm, (_, _, model) in M4_MODELS.items():
         label = rows.get(f"{model}_{point}_point")
@@ -460,19 +464,78 @@ def m4_labels(calibration_csv, point):
     return out
 
 
-def m4_calib_session(freeze_m4):
-    """M4 §3.2: the calib_npu session whose medians decide, the latest results/m4/<UTC>_m4_calib whose
-    m4_calibration.csv says complete 1 and m4_settings yes, with freeze-m4's commit in its header; or None.
-    After an amendment, the session rerun whole (M4 §9) is the latest."""
-    found = None
-    for d in sorted(Path("results", "m4").glob("*_" + M4_CALIB)):
+def summary_values(path):
+    """(header, {key: value}) of a results CSV with a key,value table. Stop if it cannot be read."""
+    try:
+        header, rows = read_csv(path)
+        return header, {r["key"]: r["value"] for r in rows}
+    except (OSError, KeyError, UnicodeDecodeError, csv.Error) as e:
+        raise Stop(f"cannot read {path}: {e!r}") from None
+
+
+def calib_amendment(d):
+    """The amendment of a calib_npu session: its m4_calibration.csv's header, else the first of its runs'
+    summary.csv headers; None when it has neither (it stopped before a run wrote one)."""
+    for path in [d / "m4_calibration.csv"] + sorted(d.glob("*/summary.csv")):
+        if path.exists():
+            return summary_values(path)[0].get("amendment") or None
+    return None
+
+
+def m4_calib_choice(freeze_m4, freeze_created):
+    """M4 §3.2: the calib_npu session whose medians decide, as (directory, None), or (None, why none does).
+    The sessions are results/m4/<UTC>_m4_calib with a runs.tsv or an m4_calibration.csv, in UTC order.
+      - Their amendment is the latest session's: a session rerun whole after an amendment (§9) is made with
+        a later one, and replaces those of earlier ones. If the latest session has none (it stopped before a
+        run wrote its summary), none decides: a new one is run in full (§3.1).
+      - Of that amendment, the first session whose m4_calibration.csv says complete 1 and m4_settings yes,
+        with freeze-m4's commit, decides: §3.1 has one session, so a later one does not replace it. It must
+        have started after freeze-m4's created_at (§8 step 5)."""
+    sessions = [d for d in sorted(Path("results", "m4").glob("*_" + M4_CALIB))
+                if re.fullmatch(SESSION_NAME + M4_CALIB, d.name)
+                and ((d / "runs.tsv").exists() or (d / "m4_calibration.csv").exists())]
+    if not sessions:
+        return None, "there is no calib_npu session in results/m4/"
+    amendment = calib_amendment(sessions[-1])
+    if amendment is None:
+        return None, (f"the latest calib_npu session, {sessions[-1].name}, stopped before any run wrote its summary: "
+                      "a new one is run in full (M4 §3.1)")
+    for d in sessions:
         summary = d / "m4_calibration.csv"
-        if re.fullmatch(SESSION_NAME + M4_CALIB, d.name) and summary.exists():
-            header, rows = read_csv(summary)
-            v = {r["key"]: r["value"] for r in rows}
-            if v.get("complete") == "1" and v.get("m4_settings") == "yes" and header.get("freeze_m4_commit") == freeze_m4:
-                found = d
-    return found
+        if not summary.exists() or calib_amendment(d) != amendment:
+            continue
+        header, v = summary_values(summary)
+        if v.get("complete") == "1" and v.get("m4_settings") == "yes" and header.get("freeze_m4_commit") == freeze_m4:
+            start = header.get("start_time_utc", "")
+            if freeze_created and not (start and parse_utc(start) > parse_utc(freeze_created)):
+                return None, (f"{d.name} started at {start or 'an unknown time'}, not after freeze-m4's created_at "
+                              f"{freeze_created} (M4 §8 step 5)")
+            return d, None
+    return None, (f"no calib_npu session of {amendment}, the latest session's amendment, is complete with M4's "
+                  "settings and freeze-m4's commit")
+
+
+def m4_pinned_calib():
+    """The calib_npu sessions (by directory name) that M4's protocol pipeline sessions took their labels
+    from, from their saturation.txt. A session with an attempt in started.tsv and no saturation.txt counts
+    as "unknown"."""
+    names = set()
+    for sweep in ("m4_main", "m4_aux"):
+        for d in sweep_sessions(sweep):
+            f = d / "saturation.txt"
+            if f.exists():
+                names.add(Path(keyed(f.read_text(encoding="utf-8")).get("calib_npu_session", "unknown")).name)
+            elif (d / "started.tsv").exists() and len((d / "started.tsv").read_text(encoding="utf-8").splitlines()) > 1:
+                names.add("unknown")
+    return names
+
+
+def m4_pending_gates():
+    """What is not gated yet before M4's protocol pipeline sessions, or None. They start only once both
+    gates exist: they are part of the code freeze-m4 fixes (§8 step 4)."""
+    return ("the gates on the accuracy passes coming first (M4 §8 step 5) and on the wiring check of this build's "
+            "yolov10_post and shared-function objects (§5, §8 step 3) are not in tools/stream_session.py yet; they "
+            "come with the accuracy tools")
 
 
 def m4_model_problems():
@@ -744,19 +807,24 @@ def schedstat_rows(before, after):
     return [("schedstat_version", version)] + idle_rows(b, a, 1e-9, "schedstat")
 
 
-def registration_commits(text):
-    """{stage: tag commit} from the Registration table of docs/notes/env.md, for the rows that have both
-    a tag commit and a Release created_at."""
+def registration_rows(text):
+    """{stage: (tag commit, Release created_at)} from the Registration table of docs/notes/env.md, for the
+    rows that have both."""
     out, section = {}, None
     for line in text.splitlines():
         if line.startswith("## "):
             section = line[3:].strip()
             continue
         m = re.match(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*`([0-9a-f]{40})`\s*\|"
-                     r"\s*\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\s*\|\s*$", line)
+                     r"\s*(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)\s*\|\s*$", line)
         if section == "Registration" and m:
-            out[m.group(1)] = m.group(2)
+            out[m.group(1)] = (m.group(2), m.group(3))
     return out
+
+
+def registration_commits(text):
+    """{stage: tag commit} of registration_rows."""
+    return {k: commit for k, (commit, _) in registration_rows(text).items()}
 
 
 def loops_in_window(duration_s, warmup, window):
@@ -853,8 +921,9 @@ class Session:
         self.last_end = None
         self.invalid_x2 = []
         self.run_header = None  # the first run's header, for result.csv
-        self.freeze_m2 = self.freeze_m4 = "none"  # start() reads them for M2's and M4's sweeps
+        self.freeze_m2 = self.freeze_m4 = "none"  # start() reads them (session_freezes)
         self.labels, self.calib = {}, None  # M4 §3.2: {arm: saturation label}, and the session they come from
+        self.arm_headers = {}  # M4: each arm's first run header, for result.csv
         self.runs = open(self.out / "runs.tsv", "w", encoding="utf-8")
         self.runs.write("seq\tname\tphase\tvariant\tchannels\tcondition\trepetition\tattempt\texit\tvalid\t"
                         "passed\treasons\twarnings\ttrip_samples\tgate_soc_mc\tclock_offset_ms\tstart_utc\tend_utc\t"
@@ -976,8 +1045,7 @@ class Session:
         if "soc-thermal" not in self.trips:
             raise Stop("env.txt has no trip point for soc-thermal")
         self.code_commit = build_commit()
-        self.freeze_m2 = freeze_m2_commit() if is_m2(a.sweep) else "none"  # m2-check runs before it (M2 §7)
-        self.freeze_m4 = freeze_m4_commit() if is_m4(a.sweep) else "none"  # m4-check runs before it (M4 §8)
+        self.freeze_m2, self.freeze_m4 = session_freezes(a)
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
@@ -1178,6 +1246,15 @@ class Session:
         else:
             header, rows = read_csv(summary_path)
             self.run_header = self.run_header or header
+            if m4_phase(phase):  # M4 §1, §3.2: the run is its arm's; anything else is the setup's fault
+                want = (M4_MODELS[variant][1], arm_post(variant))
+                got = (header.get("model_sha256"), header.get("post"))
+                if got != want:
+                    o.reasons.append(f"the run has model {got[0]} with post-processing {got[1]}, not arm {variant}'s "
+                                     f"{want[0]} with {want[1]} (M4 §1)")
+                    o.external = "a run's model or post-processing is not its arm's"
+                    return
+                self.arm_headers.setdefault(variant, header)
             summary = {r["key"]: r["value"] for r in rows}
             ch_rows = read_csv(channels_path)[1]
             samples = read_csv(run_dir / "samples.csv")[1]
@@ -1248,10 +1325,10 @@ class Session:
             starts = [r["start_utc"] for r in csv.DictReader(f, delimiter="\t")]
         h = self.run_header or {}
         m2 = ("prereg_m2_commit", "freeze_m2_commit") if m2_session(a) else ()
-        if m4_session(a):  # M4 §4: its commits, and each arm's model and post-processing (checked at the start)
+        if m4_session(a):  # M4 §4: its commits, and each arm's model and post-processing, from its first run
             m4 = {"prereg_m4_commit": PREREG_M4_COMMIT, "freeze_m4_commit": self.freeze_m4}
-            models = {f"{k}_{arm}": v for arm, (_, sha, _) in M4_MODELS.items()
-                      for k, v in (("model_sha256", sha), ("post", arm_post(arm)))}
+            models = {f"{k}_{arm}": self.arm_headers.get(arm, {}).get(k, "")
+                      for arm in M4_MODELS for k in ("model_sha256", "post")}
         else:
             m4, models = {}, {"model_sha256": h.get("model_sha256", "")}
         header = {"start_time_utc": min(starts) if starts else "", "ntp_synchronized": h.get("ntp_synchronized", ""),
@@ -1367,10 +1444,26 @@ def freeze_m2_commit():
     return registration_commits(Path(ENV_MD).read_text(encoding="utf-8")).get("freeze-m2", "none")
 
 
+def freeze_m4_registration():
+    """(freeze-m4's tag commit, its Release created_at) from the Registration table of docs/notes/env.md, or
+    ("none", None) before it (M4 §4)."""
+    try:
+        text = Path(ENV_MD).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        raise Stop(f"cannot read {ENV_MD}: {e!r}") from None
+    return registration_rows(text).get("freeze-m4", ("none", None))
+
+
 def freeze_m4_commit():
-    """freeze-m4's tag commit from the Registration table of docs/notes/env.md, or "none" before it
-    (M4 §4)."""
-    return registration_commits(Path(ENV_MD).read_text(encoding="utf-8")).get("freeze-m4", "none")
+    return freeze_m4_registration()[0]
+
+
+def session_freezes(args):
+    """(freeze-m2's commit, freeze-m4's commit) that a session's runs pass. M2's sweeps take freeze-m2's;
+    m2-check runs before it and passes none (M2 §7). M4's sessions, m4-check too, take freeze-m4's, which is
+    none before it (M4 §4): a check that §5 repeats after freeze-m4 names it."""
+    return (freeze_m2_commit() if is_m2(args.sweep) else "none",
+            freeze_m4_commit() if m4_session(args) else "none")
 
 
 def post_object_hashes(objects=POST_OBJECTS):
@@ -1428,9 +1521,19 @@ def order_problem(name):
     problem = equivalence_problem() if is_m2(name) or is_m4(name) else None
     if problem:
         return problem
-    if is_m4(name) and m4_calib_session(freeze_m4_commit()) is None:
-        return ("M4's calib_npu session (tools/m4_calib.sh), complete in results/m4/<UTC>_m4_calib with M4's settings "
-                "and freeze-m4's commit, comes before its pipeline sessions (M4 §3.2, §8 step 5)")
+    if is_m4(name):
+        calib, why = m4_calib_choice(*freeze_m4_registration())
+        if calib is None:
+            return f"M4's calib_npu session (tools/m4_calib.sh) comes before its pipeline sessions, and {why} " \
+                   "(M4 §3.2, §8 step 5)"
+        pinned = m4_pinned_calib()
+        if pinned and pinned != {calib.name}:
+            return (f"M4's earlier pipeline sessions took their labels from {', '.join(sorted(pinned))}, and the "
+                    f"calib_npu session that decides now is {calib.name}: one session decides (M4 §3.2). A rerun "
+                    "under an amendment (§9) needs that amendment's own procedure")
+        problem = m4_pending_gates()
+        if problem:
+            return problem
     if progress(name) == "complete":
         return f"{name} is complete"
     return None
@@ -1682,15 +1785,21 @@ def main(argv):
             problems = m4_model_problems()
             if problems:
                 raise Stop("not starting: " + "; ".join(problems))
-            # M4 §3.2: the labels at the point. A protocol sweep has its calib_npu session (order_problem).
+            # M4 §3.2: the labels at the point. order_problem has checked a protocol sweep's calib_npu session.
             point = M4_POINTS[args.sweep or "m4_check"]
-            calib = Path(args.calib) if args.calib else \
-                m4_calib_session(freeze_m4_commit()) if args.command == "sweep" else None
+            calib, why = (Path(args.calib), None) if args.calib else \
+                m4_calib_choice(*freeze_m4_registration()) if args.command == "sweep" else (None, "m4-check")
+            if calib is None and args.command == "sweep" and not smoke:
+                raise Stop(f"not starting: {why}")
             labels = m4_labels(calib / "m4_calibration.csv", point) if calib else dict.fromkeys(M4_MODELS, "unknown")
         s = Session(args)
         s.smoke, s.run_kind = smoke, run_kind
         if m4:
             s.labels, s.calib = labels, calib
+            with open(s.out / "saturation.txt", "w", encoding="utf-8") as f:  # before any run (m4_pinned_calib)
+                f.write(f"calib_npu_session: {calib or 'none'}\npoint: {point}\n"
+                        + "".join(f"label_{k}: {v}\n" for k, v in labels.items()))
+                durable(f)
             s.say(f"saturation at the {point} point: " + ", ".join(f"{k} {v}" for k, v in labels.items())
                   + f" (from {calib or 'no calib_npu session'}; rule 3 only where unsaturated, M4 §3.2)")
         if args.command == "loop-check":
