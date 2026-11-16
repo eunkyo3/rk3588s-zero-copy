@@ -1,0 +1,38 @@
+# start_time_utc: 2026-11-16T06:49:17Z
+# run_kind: check
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# amendment: A13
+# code_commit: 9dbf81491cc758203ec28ca85c7c83a45c8dc089
+# code_status: clean
+# eval_image: rk3588s-zero-copy/m4-eval:1
+# eval_image_id: sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+# cpu_model: Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz
+# ntp_offset_s: +0.5821
+# ntp_samples: 1 answered, 2 did not
+# w32tm_status: 윤초 조정: 0(경고 없음) | 계층: 5(보조 참조 - (S)NTP로 동기화됨) | 정밀도: -23(틱당 119.209ns) | 루트 지연: 0.0032653s | 루트 분산: 8.5531894s | 참조 ID: 0x34E772B7(원본 IP:  52.231.114.183) | 마지막으로 동기화한 시간: 2026-11-16 오후 3:14:56 | 원본: time.windows.com,0x9 | 폴링 간격: 10(1024s)
+# container_clock_offset_s: -0.0033
+# opencv: 4.11.0 (optimized 1)
+key,value
+seconds,2216
+sha256_val2017.zip,4f7e2ccb2866ec5041993c9cf2a952bbed69647b115d0f74da7ce8f4bef82f05
+sha256_annotations_trainval2017.zip,113a836d90195ee1f884e704da6304dfaaecff1f023f49b6ca93c4aaae470268
+annotation_images,5000
+zip_images,5000
+missing_jpegs,0
+jpegs_without_annotation,0
+size_mismatches,0
+resized,903
+unresized,4097
+png_mismatches,0
+unreadable,0
+quantization_images,20
+quantization_in_val2017,20
+quantization_sha256_equal,20
+manifest_images,5000
+manifest_sha256,b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+manifest_rows_sha256,5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+problems,none
+passed,1
