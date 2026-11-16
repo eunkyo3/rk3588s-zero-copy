@@ -10,8 +10,10 @@
 #   - An invalid run (calib_npu exit code other than 0: PROTOCOL §9.3 rules 1 and 2, or its output
 #     check, A7) is repeated once, after the gate (M4 §5); both are kept.
 #   - tools/m4_calib_summary.py then takes the medians and the saturation labels (M4 §3.2).
+#   - Every run's header carries freeze-m1's commit (PROTOCOL §1.4) and freeze-m4's (M4 §4).
 # If the gate holds a run back until 30 minutes have passed since the previous run, the session has
-# ended (PROTOCOL §2): the script stops, and the missing runs need a new session.
+# ended (PROTOCOL §2): the script stops. M4 §3.1 has all 12 runs in one session, so the stopped session
+# is kept and a new one is run in full.
 # Usage, on the board as root from the repository:
 #   COOLING=<text> AMBIENT_C=<°C> FREEZE_M4_COMMIT=<sha> tools/m4_calib.sh <tensors.u8> [out_dir]
 #   (env: RUN_KIND, default m4, or check with FREEZE_M4_COMMIT=none for a check before freeze-m4;
@@ -25,6 +27,7 @@ V8=models/yolov8n_i8.rknn
 V8_SHA256=04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee  # M4 §1
 V10=models/yolov10n_i8.rknn
 V10_SHA256=6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+FREEZE_M1_COMMIT=2eec964d27545e081a44bc5ead01bbfcd2905a54  # docs/notes/env.md, Registration
 
 fail() {
     echo "m4_calib.sh: $1" >&2
@@ -41,7 +44,12 @@ DURATION_S=${DURATION_S:-120}
 [ -n "${COOLING:-}" ] && [ -n "${AMBIENT_C:-}" ] || fail "set COOLING and AMBIENT_C (PROTOCOL §2)"
 [ -n "${FREEZE_M4_COMMIT:-}" ] || fail "set FREEZE_M4_COMMIT (none before freeze-m4)"
 case $RUN_KIND in
-    m4) ;;
+    m4)
+        case $FREEZE_M4_COMMIT in
+            *[!0-9a-f]*) fail "FREEZE_M4_COMMIT must be freeze-m4's full commit SHA for run kind m4" ;;
+        esac
+        [ ${#FREEZE_M4_COMMIT} -eq 40 ] || fail "FREEZE_M4_COMMIT must be freeze-m4's full commit SHA for run kind m4"
+        ;;
     check) [ "$FREEZE_M4_COMMIT" = none ] || fail "run kind check is for before freeze-m4: FREEZE_M4_COMMIT=none" ;;
     *) fail "RUN_KIND must be m4 or check" ;;
 esac
@@ -59,22 +67,25 @@ record=${TENSORS%.u8}.json
 if [ -e "$OUT" ] && [ -n "$(ls -A "$OUT")" ]; then
     fail "$OUT is not empty: every earlier run is kept (PROTOCOL §9.3)"
 fi
+# The files are checked before the session directory exists, so a wrong one leaves nothing behind.
+tensors_line=$(cd "$(dirname "$TENSORS")" && sha256sum "$(basename "$TENSORS")") || fail "sha256sum failed"
+sha=${tensors_line%% *}
+[ "$sha" = "$TENSORS_SHA256" ] || fail "$TENSORS is not M1-3's tensor set (SHA-256 $sha, A7)"
+grep -q "\"tensors_sha256\": \"$sha\"" "$record" || fail "$TENSORS does not match the SHA-256 in $record"
+models_lines=$(sha256sum "$V8" "$V10") || fail "sha256sum of the models failed"
+echo "$models_lines" | grep -q "^$V8_SHA256  $V8\$" || fail "$V8 is not M4's YOLOv8n (M4 §1)"
+echo "$models_lines" | grep -q "^$V10_SHA256  $V10\$" || fail "$V10 is not M4's YOLOv10n (M4 §1)"
 
 mkdir -p "$OUT" || fail "cannot create $OUT"
 printf 'run_kind: %s\nfreeze_m4_commit: %s\ncooling: %s\nambient_c: %s\nwarmup_s: %s\nduration_s: %s\n' \
     "$RUN_KIND" "$FREEZE_M4_COMMIT" "$COOLING" "$AMBIENT_C" "$WARMUP_S" "$DURATION_S" >"$OUT/session.txt"
-tools/set_perf_mode.sh >"$OUT/perf_mode.txt" || fail "set_perf_mode.sh failed"
-tools/collect_env.sh >"$OUT/env.txt" || fail "collect_env.sh failed"
+echo "$tensors_line" >"$OUT/tensors.sha256"
+echo "$models_lines" >"$OUT/models.sha256"
 # Not as .json: the record's start_time_utc is the set's dump time (2026-11-02), which
 # tools/check_prereg_order.py would read as this session's start.
 cp "$record" "$OUT/tensor_set.record" || fail "cannot copy $record"
-(cd "$(dirname "$TENSORS")" && sha256sum "$(basename "$TENSORS")") >"$OUT/tensors.sha256" || fail "sha256sum failed"
-sha=$(cut -d' ' -f1 "$OUT/tensors.sha256")
-[ "$sha" = "$TENSORS_SHA256" ] || fail "$TENSORS is not M1-3's tensor set (SHA-256 $sha, A7)"
-grep -q "\"tensors_sha256\": \"$sha\"" "$OUT/tensor_set.record" || fail "$TENSORS does not match the SHA-256 in $record"
-sha256sum "$V8" "$V10" >"$OUT/models.sha256" || fail "sha256sum of the models failed"
-grep -q "^$V8_SHA256  $V8\$" "$OUT/models.sha256" || fail "$V8 is not M4's YOLOv8n (M4 §1)"
-grep -q "^$V10_SHA256  $V10\$" "$OUT/models.sha256" || fail "$V10 is not M4's YOLOv10n (M4 §1)"
+tools/set_perf_mode.sh >"$OUT/perf_mode.txt" || fail "set_perf_mode.sh failed"
+tools/collect_env.sh >"$OUT/env.txt" || fail "collect_env.sh failed"
 
 soc=
 for z in /sys/class/thermal/thermal_zone*; do
@@ -135,10 +146,12 @@ run() {
         [ "$attempt" -eq 1 ] || name=${name}_repeat
         tools/collect_env.sh >"$OUT/$name.env.txt" || fail "collect_env.sh failed"
         start=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-        # $flags is unquoted on purpose: it is empty or three words. A run takes about 150 s.
+        # $flags is unquoted on purpose: it is empty or three words. A run takes about 150 s; the limit
+        # is calib_npu.sh's 600 s at M4's warm-up and window.
         # shellcheck disable=SC2086
-        timeout -k 30 600 ./build/calib_npu --tensors "$TENSORS" $flags --cores "$cores" --model "$model" \
-            --repetition "$1" --run-kind "$RUN_KIND" --freeze-m4-commit "$FREEZE_M4_COMMIT" \
+        timeout -k 30 $((WARMUP_S + DURATION_S + 460)) ./build/calib_npu --tensors "$TENSORS" $flags \
+            --cores "$cores" --model "$model" --repetition "$1" --run-kind "$RUN_KIND" \
+            --freeze-commit "$FREEZE_M1_COMMIT" --freeze-m4-commit "$FREEZE_M4_COMMIT" \
             --warmup "$WARMUP_S" --duration "$DURATION_S" --fixed-clocks "$OUT/perf_mode.txt" --out "$OUT/$name" \
             >"$OUT/$name.log" 2>&1
         status=$?
