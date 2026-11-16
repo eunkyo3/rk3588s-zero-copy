@@ -139,6 +139,45 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
   - No M2 session starts until `freeze-m2` has its row in env.md and a passed equivalence check of this build's two post-processing objects (their SHA-256) is in `results/check/`. A failed check of the same objects stops Cp for good (M2 §4). `m2-check` needs the equivalence check but not `freeze-m2`.
   - Each session's idle baseline also has `/proc/schedstat`'s rows (M2 §3.2), and its `result.csv` records the two objects' SHA-256.
 
+### M4: C8 against C10 ([prereg/M4.md](../../prereg/M4.md))
+
+- **Arms (§3.2):** both are variant C from the same binary.
+  - **C8:** YOLOv8n with Cp's post-processing. The session tool passes `--variant C --post neon --model models/yolov8n_i8.rknn`.
+  - **C10:** YOLOv10n with `yolov10_post`. The session tool passes `--variant C --post v10 --model models/yolov10n_i8.rknn`.
+- **Before `freeze-m4`** (§8 step 3), on the board as root from the repository, with a build that is not `-dirty`:
+  - **Arms check:** `COOLING=... AMBIENT_C=... python3 tools/stream_session.py m4-check`. It runs C8, then C10, at 8 channels main, staggered, into `results/check/<UTC>_m4_check/`.
+    - It needs a passed equivalence check of this build's two objects of A13 in `results/check/`. M2's check counts while those objects are unchanged.
+    - It does not need `freeze-m4`. Its runs pass `--freeze-m4-commit` with `freeze-m4`'s commit, which is `none` before it (§4). A check that §5 repeats after `freeze-m4` names it.
+    - No `calib_npu` session of run kind `m4` exists yet. So rule 3 does not judge these runs, unless `--calib <dir>` names a `tools/m4_calib.sh` session whose labels it takes. A session whose label is `incomplete` is refused.
+  - The other checks of step 3 come with their own tools.
+- **Runs, after `freeze-m4`** (§8 step 5): the accuracy passes, then the `calib_npu` session, then the pipeline sessions.
+  - **The `calib_npu` session (§3.1):** `COOLING=... AMBIENT_C=... FREEZE_M4_COMMIT=<freeze-m4's commit> tools/m4_calib.sh /home/pi/calib/tensors_c.u8`.
+    - It makes 12 runs in one session, into `results/m4/<UTC>_m4_calib/`, and ends with `tools/m4_calib_summary.py`'s `m4_calibration.csv`.
+    - A stopped session is kept, and a new one is run in full.
+  - **The pipeline sessions (§3.2, §3.3):** `sweep m4_main`, then `sweep m4_aux`, run kind `m4`, into `results/m4/<UTC>_<sweep>/`.
+    - **Options:** `--stagger on` on every run of `m4_main`, and `--freeze-m4-commit` with `freeze-m4`'s commit from the Registration table of [env.md](env.md).
+    - **Order:** C8→C10, C10→C8, C8→C10 in the three repetitions. Blocks, gate, validity, sessions and resuming are those of the sweeps above.
+    - **Gates:** no M4 session starts until all of these hold:
+      - `freeze-m4` has its row in env.md;
+      - a passed equivalence check of this build's two objects of A13 is in `results/check/`;
+      - a `calib_npu` session decides (below);
+      - it is the session that the earlier M4 pipeline sessions took.
+    - **Not gated yet:** that the accuracy passes came first, and the wiring check of this build's `yolov10_post` and shared-function objects. Until both gates exist, the session tool starts no protocol M4 session. They come with the accuracy tools.
+    - **Models:** both M4 commands first check the two models' SHA-256 against §1. Every M4 run's header must name its arm's model and post-processing. A run that does not, or that `bench_main` refuses before it makes the run's directory, stops the session.
+  - **Saturation (§3.2): the `calib_npu` session that decides.**
+    - **Candidates:** the sessions in `results/m4/<UTC>_m4_calib/` that made at least one attempt (`runs.tsv`), with M4's settings and `freeze-m4`'s commit in `session.txt` and 10 minutes idle in `baseline.txt`, in UTC order. Smoke tests do not count.
+    - **Amendment:** the latest candidate's. A session rerun whole after an amendment (§9) is made with a later one, and replaces those of earlier ones. None decides while the latest candidate stopped before any run wrote its summary (a new one is run in full, §3.1), or was made with an older amendment than an earlier one.
+    - **Of that amendment,** the first session decides whose `m4_calibration.csv` says `complete,1` and `m4_settings,yes`, with `freeze-m4`'s commit, and which started after `freeze-m4`'s `created_at` (its earliest record, as `tools/check_prereg_order.py` takes it). A later session of the same amendment does not replace it: §3.1 has one session.
+    - **Pinned:** every M4 pipeline session writes the session it took, with its `m4_calibration.csv`'s SHA-256, to `saturation.txt` before its first run. No protocol M4 pipeline session starts with another session, or another summary, than the earlier ones that made an attempt took. A rerun under an amendment needs that amendment's own procedure. `m4-check` and smoke tests are not pinned.
+  - **Labels:** that session gives each arm's label at the sweep's point.
+    - Rule 3 judges an arm's runs only where its label is `unsaturated`.
+    - A `saturated` or `unknown` arm is still run, and rule 3 does not judge it.
+  - **Records:**
+    - Each session's idle baseline has `/proc/schedstat`'s rows, as M2's do.
+    - Its `result.csv` header has M4's two commits, and each arm's model SHA-256 and post-processing, from the arm's first run.
+    - Its rows give the `calib_npu` session, both labels, and the SHA-256 of the build's four post-processing objects.
+  - **Smoke tests:** `--calib <dir>` makes an M4 sweep a smoke test that takes that session's labels. Without it, a smoke test takes the session that decides if there is one, and otherwise the label `unknown`.
+
 ### Time
 
 - A protocol run takes about 2.5 minutes, and the gate adds at least 60 s.
@@ -146,6 +185,10 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 - Each session adds 10 minutes of idling.
 - The M1.1 designs of A12 have 26 runs in 4 sessions, about 2 to 2.5 hours.
 - M2's `m2-check` has 2 runs, about 20 minutes; its sweeps have 12 runs in 2 sessions, about 1 to 1.25 hours.
+- M4's:
+  - `m4-check` has 2 runs, about 20 minutes;
+  - the `calib_npu` session has 12 runs of about 150 s, about 50 to 60 minutes;
+  - the sweeps have 12 runs in 2 sessions, about 1 to 1.25 hours.
 
 ## Files and tools
 
@@ -162,4 +205,8 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 | `results/check/<UTC>_m2_equivalence/`, `…_default_c/`, `…_m2_check/` | M2's checks before `freeze-m2` (M2 §7 step 3) |
 | `results/m2/<UTC>_m2_main/`, `…_m2_aux/` | one M2 session each, the files of a sweep |
 | `tools/m2_equivalence.cpp`, `tools/m2_checks.py` | M2's equivalence check (§4), and the verdicts of the checks before `freeze-m2` ([tests](../../tests/test_m2_checks.py)) |
+| `results/check/<UTC>_m4_check/` | M4's arms check before `freeze-m4` (M4 §8 step 3) |
+| `results/m4/<UTC>_m4_calib/` | M4's `calib_npu` session: `runs.tsv`, the runs, `m4_calibration.csv` (M4 §3.1) |
+| `results/m4/<UTC>_m4_main/`, `…_m4_aux/` | one M4 session each, the files of a sweep |
+| `tools/m4_calib.sh`, `tools/m4_calib_summary.py` | M4's `calib_npu` session and its summary ([tests](../../tests/test_m4_calib_summary.py)) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |
