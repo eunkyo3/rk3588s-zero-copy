@@ -1,0 +1,26 @@
+{
+ "start_time_utc": "2026-11-16T05:40:25Z",
+ "code_commit": "b6b9b886dfa62109c1f635db8fec41ddd73fa107",
+ "code_status": "clean",
+ "eval_image": "rk3588s-zero-copy/m4-eval:1",
+ "eval_image_id": "sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a",
+ "host": {
+  "cpu_model": "Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz",
+  "ntp_server": "time.windows.com",
+  "ntp_offset_s": "+0.7601",
+  "ntp_samples": "3 answered, 0 did not",
+  "ntp_stripchart": "time.windows.com[52.231.114.183:123] 추적 중 | 3개 샘플 수집 중 | 현재 시간은 2026-11-16 오후 2:40:20입니다. | 14:40:20, +00.7596203s | 14:40:22, +00.7598950s | 14:40:24, +00.7600857s",
+  "w32tm_status": "다음 오류가 발생했습니다. 서비스가 시작되지 않았습니다. (0x80070426)",
+  "w32tm_status_exit": 2147943462
+ },
+ "container_clock_offset_s": "-0.0026",
+ "container_clock_rtt_s": "0.0071",
+ "data": "D:/m4data",
+ "tool": [
+  "tools/m4_prep.py",
+  "--coco",
+  "/data/coco",
+  "--out",
+  "/data/inputs"
+ ]
+}

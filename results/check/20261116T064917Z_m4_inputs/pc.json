@@ -1,0 +1,32 @@
+{
+ "start_time_utc": "2026-11-16T06:49:17Z",
+ "run_kind": "check",
+ "prereg_v1_commit": "87fe874b4f196dafd48f6a175b2d7604625aedba",
+ "freeze_m1_commit": "2eec964d27545e081a44bc5ead01bbfcd2905a54",
+ "prereg_m4_commit": "8638685d9ef806a85e5042d7cc10febdd5ae93a9",
+ "freeze_m4_commit": "none",
+ "amendment": "A13",
+ "code_commit": "9dbf81491cc758203ec28ca85c7c83a45c8dc089",
+ "code_status": "clean",
+ "eval_image": "rk3588s-zero-copy/m4-eval:1",
+ "eval_image_id": "sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a",
+ "host": {
+  "cpu_model": "Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz",
+  "ntp_server": "time.windows.com",
+  "ntp_offset_s": "+0.5821",
+  "ntp_samples": "1 answered, 2 did not",
+  "ntp_stripchart": "time.windows.com[52.231.114.183:123] 추적 중 | 3개 샘플 수집 중 | 현재 시간은 2026-11-16 오후 3:49:08입니다. | 15:49:08, 오류: 0x800705B4 | 15:49:11, 오류: 0x800705B4 | 15:49:14, +00.5820855s",
+  "w32tm_status": "윤초 조정: 0(경고 없음) | 계층: 5(보조 참조 - (S)NTP로 동기화됨) | 정밀도: -23(틱당 119.209ns) | 루트 지연: 0.0032653s | 루트 분산: 8.5531894s | 참조 ID: 0x34E772B7(원본 IP:  52.231.114.183) | 마지막으로 동기화한 시간: 2026-11-16 오후 3:14:56 | 원본: time.windows.com,0x9 | 폴링 간격: 10(1024s)",
+  "w32tm_status_exit": 0
+ },
+ "container_clock_offset_s": "-0.0033",
+ "container_clock_rtt_s": "0.0049",
+ "data": "D:/m4data",
+ "tool": [
+  "tools/m4_prep.py",
+  "--coco",
+  "/data/coco",
+  "--out",
+  "/data/inputs2"
+ ]
+}

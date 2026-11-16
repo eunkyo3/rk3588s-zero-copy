@@ -141,6 +141,8 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
 
 ### M4: C8 against C10 ([prereg/M4.md](../../prereg/M4.md))
 
+M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
+
 - **Arms (§3.2):** both are variant C from the same binary.
   - **C8:** YOLOv8n with Cp's post-processing. The session tool passes `--variant C --post neon --model models/yolov8n_i8.rknn`.
   - **C10:** YOLOv10n with `yolov10_post`. The session tool passes `--variant C --post v10 --model models/yolov10n_i8.rknn`.

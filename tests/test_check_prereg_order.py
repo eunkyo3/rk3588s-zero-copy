@@ -92,6 +92,21 @@ class Check(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("7 files, 0 problems", out)
 
+    def test_a_tsv_with_a_header_is_read_like_a_csv(self):
+        c = self.case()
+        c.csv("calibration/s/summary.csv", AFTER)
+        c.write("calibration/s/manifest.tsv", f"# start_time_utc: {BEFORE}\n# run_kind: calibration\nimage_id\n1\n")
+        c.write("calibration/s/runs.tsv", "repetition\n1\n")  # no "# " line: it inherits, as before
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        # The manifest's own start counts, and runs.tsv inherits the directory's earliest, which is now it.
+        self.assertIn("manifest.tsv: starts 2026-10-30T01:00:00Z", out)
+        self.assertEqual(out.count("not after prereg-v1"), 2)
+        c.write("calibration/s/manifest.tsv", f"# start_time_utc: {AFTER}\n# run_kind: comparison\nimage_id\n")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("manifest.tsv", out)  # its run kind is not its path's
+
     def test_a_file_before_prereg_fails(self):
         c = self.case()
         c.csv("calibration/s/summary.csv", BEFORE)
