@@ -141,6 +141,8 @@
 
 ### M4: C8 대 C10([prereg/M4.md](../../prereg/M4.ko.md))
 
+M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko.md).
+
 - **두 팔(§3.2):** 둘 다 같은 바이너리의 변형 C다.
   - **C8:** Cp의 후처리를 쓰는 YOLOv8n. 세션 도구는 `--variant C --post neon --model models/yolov8n_i8.rknn`을 넘긴다.
   - **C10:** `yolov10_post`를 쓰는 YOLOv10n. 세션 도구는 `--variant C --post v10 --model models/yolov10n_i8.rknn`을 넘긴다.

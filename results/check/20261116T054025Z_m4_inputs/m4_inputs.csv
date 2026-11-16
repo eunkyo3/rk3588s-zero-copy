@@ -1,0 +1,35 @@
+# start_time_utc: 2026-11-16T05:40:25Z
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# run_kind: check
+# code_commit: b6b9b886dfa62109c1f635db8fec41ddd73fa107
+# code_status: clean
+# amendment: A13
+# eval_image: rk3588s-zero-copy/m4-eval:1
+# eval_image_id: sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+# cpu_model: Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz
+# ntp_offset_s: +0.7601
+# ntp_samples: 3 answered, 0 did not
+# w32tm_status: 다음 오류가 발생했습니다. 서비스가 시작되지 않았습니다. (0x80070426)
+# container_clock_offset_s: -0.0026
+key,value
+seconds,2300
+sha256_val2017.zip,4f7e2ccb2866ec5041993c9cf2a952bbed69647b115d0f74da7ce8f4bef82f05
+sha256_annotations_trainval2017.zip,113a836d90195ee1f884e704da6304dfaaecff1f023f49b6ca93c4aaae470268
+annotation_images,5000
+zip_images,5000
+missing_jpegs,0
+jpegs_without_annotation,0
+size_mismatches,0
+resized,903
+unresized,4097
+png_mismatches,0
+unreadable,0
+quantization_images,20
+quantization_in_val2017,20
+quantization_sha256_equal,20
+manifest_images,5000
+manifest_sha256,f3ad1dbee36fd6109637374a75c16ff7a6bb150d0e266b2df02d6f8215e1d766
+problems,none
+passed,1
