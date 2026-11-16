@@ -1,0 +1,11 @@
+time_utc: 2026-11-16T06:44:30Z
+base: rk3588s-zero-copy/rknn-toolkit2:2.3.2 sha256:3ea3796529342281fdb543b8911261112e5ab942798c2fea4363edf3eca67f8f
+base_from: python:3.10-slim-bookworm@sha256:5be5aaecb962a41567bc8041f1e9e3432cb085b037fe057f9a562630b2e4b370
+image: rk3588s-zero-copy/m4-eval:1 sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+repo_digests: rk3588s-zero-copy/m4-eval@sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+created: 2026-11-16T05:31:15.776729109Z
+layers_start_with_the_base: yes
+pip_freeze_equals_constraints: yes (25 packages)
+pip_check: No broken requirements found.
+cocoeval_import: ok
+docker: 29.6.1

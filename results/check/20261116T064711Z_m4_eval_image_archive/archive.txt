@@ -1,0 +1,5 @@
+time_utc: 2026-11-16T06:47:11Z
+image: rk3588s-zero-copy/m4-eval:1 sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+archive: D:/m4data/images/m4-eval_c676e76f95356ea1.tar
+bytes: 583230976
+sha256: ae9a7dcfd59672e8573cda16c7985c99542c0e8f0c4c2543ca9f38d3f53d71ab

@@ -26,9 +26,12 @@ cd "$DATA/coco"
 for f in zips/val2017.zip annotations/annotations_trainval2017.zip; do
     name=$(basename "$f")
     if [ ! -f "$name" ]; then
-        # -f: an HTTP error is an error; the partial file is not kept under the final name.
-        curl -fL --retry 3 --retry-delay 10 -o "$name.part" "$URL/$f" || fail "cannot download $URL/$f"
+        # -f: an HTTP error is an error; the partial file is not kept under the final name. HTTPS only,
+        # redirects included.
+        curl -fL --proto =https --proto-redir =https --retry 3 --retry-delay 10 -o "$name.part" "$URL/$f" ||
+            fail "cannot download $URL/$f"
         mv "$name.part" "$name"
     fi
 done
-sha256sum -c "$ROOT/tools/eval/coco.sha256" || fail "a file differs from tools/eval/coco.sha256 (M4 §2.1)"
+sha256sum -c "$ROOT/tools/eval/coco.sha256" ||
+    fail "a file differs from tools/eval/coco.sha256 (M4 §2.1); a file already here is never downloaded again, so delete a bad one first"

@@ -122,12 +122,12 @@ def stage_commits(get):
 def header_of(path):
     """(start, run_kind, amendment, stage commits) from the file's own header; (None, ...) for a
     header without a start time; None if the file has no header."""
-    if path.suffix not in (".csv", ".jsonl", ".json", ".txt"):  # tensors and logs are not read
+    if path.suffix not in (".csv", ".tsv", ".jsonl", ".json", ".txt"):  # tensors and logs are not read
         return None
     try:
         with open(path, encoding="utf-8-sig") as f:
             first = f.readline()
-            if path.suffix == ".csv":
+            if path.suffix in (".csv", ".tsv"):  # a .tsv without "# " lines (runs.tsv) has none
                 if not first.startswith("# "):
                     return None
                 h = {}
