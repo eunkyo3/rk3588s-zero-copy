@@ -84,7 +84,9 @@ Which rules apply:
     count but 32 at the main condition, every auxiliary and every A count.
   - m2-check runs: rules 1, 2, 3 and 4 (8 channels main is unsaturated, M2 §5.2).
   - m4 sweep and m4-check runs: rules 1, 2 and 4, and rule 3 only for an arm whose label at the point is
-    unsaturated (M4 §3.2). A saturated or unknown label leaves rule 3 out, and the runs are still made.
+    unsaturated (M4 §3.2). A saturated or unknown label leaves rule 3 out, and the runs are still made. A run
+    whose header is not its arm's, or that bench_main refuses before it makes the run's directory, stops the
+    session: the setup is wrong, and a repeat would fail the same way.
   - h3 runs: rules 1, 2 and 4 (§10). A run sustains as HYPOTHESES H3 defines it; an invalid x2 run
     counts as not sustained.
 External failures (§9.3, last paragraph): an input that ends early, a server that is down before or
@@ -193,6 +195,7 @@ M4_MODELS = {  # M4 §1: arm -> (model, its SHA-256, its name in tools/m4_calib_
     "C10": ("models/yolov10n_i8.rknn", "6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81", "yolov10n"),
 }
 M4_CALIB = "m4_calib"  # results/m4/<UTC>_m4_calib: a session of tools/m4_calib.sh (M4 §3.1)
+M4_CALIB_SETTINGS = {"run_kind": "m4", "warmup_s": "20", "duration_s": "120"}  # its session.txt (M4 §3.1)
 LABELS = ("unsaturated", "saturated", "unknown")  # M4 §3.2 and §5, as tools/m4_calib_summary.py writes them
 LIMIT = 32  # L (A9)
 SEED, REPETITIONS = 20261030, 3  # §9.1, §8
@@ -473,61 +476,125 @@ def summary_values(path):
         raise Stop(f"cannot read {path}: {e!r}") from None
 
 
+def read_text(path):
+    """The text of path. Stop if it cannot be read."""
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        raise Stop(f"cannot read {path}: {e!r}") from None
+
+
+def read_header(path):
+    """The "# key: value" lines at the top of a results CSV, without its table (a crashed run can leave a
+    table cut short). Stop if it cannot be read."""
+    header = {}
+    for line in read_text(path).splitlines():
+        if not line.startswith("# "):
+            break
+        k, _, v = line[2:].partition(": ")
+        header[k] = v
+    return header
+
+
+def has_rows(path):
+    """Whether a TSV with a header line has a row after it."""
+    return Path(path).exists() and len(read_text(path).splitlines()) > 1
+
+
 def calib_amendment(d):
     """The amendment of a calib_npu session: its m4_calibration.csv's header, else the first of its runs'
     summary.csv headers; None when it has neither (it stopped before a run wrote one)."""
     for path in [d / "m4_calibration.csv"] + sorted(d.glob("*/summary.csv")):
         if path.exists():
-            return summary_values(path)[0].get("amendment") or None
+            return read_header(path).get("amendment") or None
     return None
+
+
+def amendment_number(amendment):
+    m = re.fullmatch(r"A(\d+)", amendment or "")
+    return int(m[1]) if m else None
+
+
+def calib_candidate(d, freeze_m4):
+    """Whether d can be M4's calib_npu session: a tools/m4_calib.sh session (results/m4/<UTC>_m4_calib) with
+    M4's settings and freeze-m4's commit in its session.txt, 10 minutes idle in its baseline.txt once that
+    exists, and at least one attempt in runs.tsv. Smoke tests and sessions that ran nothing do not count."""
+    if not re.fullmatch(SESSION_NAME + M4_CALIB, d.name) or not (d / "session.txt").exists():
+        return False
+    s = keyed(read_text(d / "session.txt"))
+    if any(s.get(k) != v for k, v in M4_CALIB_SETTINGS.items()) or s.get("freeze_m4_commit") != freeze_m4:
+        return False
+    if (d / "baseline.txt").exists() and keyed(read_text(d / "baseline.txt")).get("idle_s") != "600":
+        return False
+    return has_rows(d / "runs.tsv")
+
+
+def calib_start(d, header):
+    """When a calib_npu session started: the earliest of its summary's start_time_utc and env.txt's
+    time_utc, the earliest record in it (tools/check_prereg_order.py takes the directory's earliest)."""
+    times = [header.get("start_time_utc", "")]
+    if (d / "env.txt").exists():
+        times.append(keyed(read_text(d / "env.txt")).get("time_utc", ""))
+    parsed = [parse_utc(t) for t in times if t]
+    return min(parsed) if parsed else None
 
 
 def m4_calib_choice(freeze_m4, freeze_created):
     """M4 §3.2: the calib_npu session whose medians decide, as (directory, None), or (None, why none does).
-    The sessions are results/m4/<UTC>_m4_calib with a runs.tsv or an m4_calibration.csv, in UTC order.
-      - Their amendment is the latest session's: a session rerun whole after an amendment (§9) is made with
-        a later one, and replaces those of earlier ones. If the latest session has none (it stopped before a
-        run wrote its summary), none decides: a new one is run in full (§3.1).
+    The candidates are the sessions of calib_candidate, in UTC order.
+      - Their amendment is the latest candidate's: a session rerun whole after an amendment (§9) is made with
+        a later one, and replaces those of earlier ones. None decides if the latest candidate stopped before
+        a run wrote its summary (a new one is run in full, §3.1), or was made with an older amendment than an
+        earlier one.
       - Of that amendment, the first session whose m4_calibration.csv says complete 1 and m4_settings yes,
-        with freeze-m4's commit, decides: §3.1 has one session, so a later one does not replace it. It must
-        have started after freeze-m4's created_at (§8 step 5)."""
-    sessions = [d for d in sorted(Path("results", "m4").glob("*_" + M4_CALIB))
-                if re.fullmatch(SESSION_NAME + M4_CALIB, d.name)
-                and ((d / "runs.tsv").exists() or (d / "m4_calibration.csv").exists())]
+        with freeze-m4's commit, and which started after freeze-m4's created_at (§8 step 5), decides. §3.1
+        has one session, so a later one does not replace it."""
+    sessions = [d for d in sorted(Path("results", "m4").glob("*_" + M4_CALIB)) if calib_candidate(d, freeze_m4)]
     if not sessions:
-        return None, "there is no calib_npu session in results/m4/"
-    amendment = calib_amendment(sessions[-1])
-    if amendment is None:
-        return None, (f"the latest calib_npu session, {sessions[-1].name}, stopped before any run wrote its summary: "
-                      "a new one is run in full (M4 §3.1)")
+        return None, "there is no calib_npu session with M4's settings and freeze-m4's commit in results/m4/"
+    amendments = {d: calib_amendment(d) for d in sessions}
+    latest = sessions[-1]
+    amendment = amendments[latest]
+    if amendment_number(amendment) is None:
+        return None, (f"the latest calib_npu session, {latest.name}, stopped before any run wrote its summary "
+                      f"(amendment {amendment}): a new one is run in full (M4 §3.1)")
+    newest = max(n for n in map(amendment_number, amendments.values()) if n is not None)
+    if amendment_number(amendment) < newest:
+        return None, (f"the latest calib_npu session, {latest.name}, was made with {amendment}, after one made with "
+                      f"A{newest}")
     for d in sessions:
         summary = d / "m4_calibration.csv"
-        if not summary.exists() or calib_amendment(d) != amendment:
+        if amendments[d] != amendment or not summary.exists():
             continue
         header, v = summary_values(summary)
-        if v.get("complete") == "1" and v.get("m4_settings") == "yes" and header.get("freeze_m4_commit") == freeze_m4:
-            start = header.get("start_time_utc", "")
-            if freeze_created and not (start and parse_utc(start) > parse_utc(freeze_created)):
-                return None, (f"{d.name} started at {start or 'an unknown time'}, not after freeze-m4's created_at "
-                              f"{freeze_created} (M4 §8 step 5)")
-            return d, None
+        if v.get("complete") != "1" or v.get("m4_settings") != "yes" or header.get("freeze_m4_commit") != freeze_m4:
+            continue
+        start = calib_start(d, header)
+        if freeze_created and not (start and start > parse_utc(freeze_created)):
+            continue  # not §8 step 5's session; tools/check_prereg_order.py reports it
+        return d, None
     return None, (f"no calib_npu session of {amendment}, the latest session's amendment, is complete with M4's "
-                  "settings and freeze-m4's commit")
+                  "settings and freeze-m4's commit, after freeze-m4's created_at")
 
 
-def m4_pinned_calib():
-    """The calib_npu sessions (by directory name) that M4's protocol pipeline sessions took their labels
-    from, from their saturation.txt. A session with an attempt in started.tsv and no saturation.txt counts
-    as "unknown"."""
-    names = set()
+def m4_pins():
+    """[(session name, its saturation.txt)] of M4's protocol pipeline sessions that made an attempt (in
+    started.tsv); one without saturation.txt gives {}. A session that stopped before its first run took
+    nothing."""
+    out = []
     for sweep in ("m4_main", "m4_aux"):
         for d in sweep_sessions(sweep):
-            f = d / "saturation.txt"
-            if f.exists():
-                names.add(Path(keyed(f.read_text(encoding="utf-8")).get("calib_npu_session", "unknown")).name)
-            elif (d / "started.tsv").exists() and len((d / "started.tsv").read_text(encoding="utf-8").splitlines()) > 1:
-                names.add("unknown")
-    return names
+            if has_rows(d / "started.tsv"):
+                f = d / "saturation.txt"
+                out.append((d.name, keyed(read_text(f)) if f.exists() else {}))
+    return out
+
+
+def file_sha256(path):
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError as e:
+        raise Stop(f"cannot read {path}: {e!r}") from None
 
 
 def m4_pending_gates():
@@ -1212,6 +1279,7 @@ class Session:
     def judge(self, o, run_dir, phase, variant, channels, condition, start, end, console_before):
         """Fills o for a finished bench run (§9.3)."""
         a = self.args
+        made = run_dir.exists()  # bench_main makes it once its options pass (M4: m4_rule_problem)
         # The server's side: alive, its log lines and its publishers' output, kept with every run.
         alive = self.server_alive()
         lines = None
@@ -1243,6 +1311,9 @@ class Session:
         summary_path, channels_path = run_dir / "summary.csv", run_dir / "channels.csv"
         if o.code != 0 or not summary_path.exists() or not channels_path.exists():  # rule 2
             o.reasons.append(f"bench exit {o.code}")
+            if m4_phase(phase) and not made and o.code != 0:  # it refused the run: the setup, not the run
+                o.reasons[-1] += " before it made its directory: it refused the run's options (see its log)"
+                o.external = o.external or "bench_main refused an M4 run's options"
         else:
             header, rows = read_csv(summary_path)
             self.run_header = self.run_header or header
@@ -1526,11 +1597,14 @@ def order_problem(name):
         if calib is None:
             return f"M4's calib_npu session (tools/m4_calib.sh) comes before its pipeline sessions, and {why} " \
                    "(M4 §3.2, §8 step 5)"
-        pinned = m4_pinned_calib()
-        if pinned and pinned != {calib.name}:
-            return (f"M4's earlier pipeline sessions took their labels from {', '.join(sorted(pinned))}, and the "
-                    f"calib_npu session that decides now is {calib.name}: one session decides (M4 §3.2). A rerun "
-                    "under an amendment (§9) needs that amendment's own procedure")
+        sha = file_sha256(calib / "m4_calibration.csv")
+        for session, pin in m4_pins():
+            took = (Path(pin.get("calib_npu_session", "unknown")).name, pin.get("calib_npu_csv_sha256", "unknown"))
+            if took != (calib.name, sha):
+                return (f"M4's pipeline session {session} took its labels from {took[0]} (m4_calibration.csv "
+                        f"SHA-256 {took[1]}), and the calib_npu session that decides now is {calib.name} ({sha}): one "
+                        "session decides (M4 §3.2). A rerun under an amendment (§9) needs that amendment's own "
+                        "procedure")
         problem = m4_pending_gates()
         if problem:
             return problem
@@ -1792,12 +1866,13 @@ def main(argv):
             if calib is None and args.command == "sweep" and not smoke:
                 raise Stop(f"not starting: {why}")
             labels = m4_labels(calib / "m4_calibration.csv", point) if calib else dict.fromkeys(M4_MODELS, "unknown")
+            calib_sha = file_sha256(calib / "m4_calibration.csv") if calib else "none"
         s = Session(args)
         s.smoke, s.run_kind = smoke, run_kind
         if m4:
             s.labels, s.calib = labels, calib
             with open(s.out / "saturation.txt", "w", encoding="utf-8") as f:  # before any run (m4_pinned_calib)
-                f.write(f"calib_npu_session: {calib or 'none'}\npoint: {point}\n"
+                f.write(f"calib_npu_session: {calib or 'none'}\ncalib_npu_csv_sha256: {calib_sha}\npoint: {point}\n"
                         + "".join(f"label_{k}: {v}\n" for k, v in labels.items()))
                 durable(f)
             s.say(f"saturation at the {point} point: " + ", ".join(f"{k} {v}" for k, v in labels.items())

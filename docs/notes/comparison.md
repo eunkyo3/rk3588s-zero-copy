@@ -163,12 +163,12 @@ This section fixes how the tool carries out §12 where PROTOCOL leaves a choice.
       - a `calib_npu` session decides (below);
       - it is the session that the earlier M4 pipeline sessions took.
     - **Not gated yet:** that the accuracy passes came first, and the wiring check of this build's `yolov10_post` and shared-function objects. Until both gates exist, the session tool starts no protocol M4 session. They come with the accuracy tools.
-    - **Models:** both M4 commands first check the two models' SHA-256 against §1. Every M4 run's header must name its arm's model and post-processing; a run that does not stops the session.
+    - **Models:** both M4 commands first check the two models' SHA-256 against §1. Every M4 run's header must name its arm's model and post-processing. A run that does not, or that `bench_main` refuses before it makes the run's directory, stops the session.
   - **Saturation (§3.2): the `calib_npu` session that decides.**
-    - **Candidates:** the sessions in `results/m4/<UTC>_m4_calib/` with a `runs.tsv`, in UTC order.
-    - **Amendment:** the latest session's. A session rerun whole after an amendment (§9) is made with a later one, and replaces those of earlier ones. If the latest session stopped before any run wrote its summary, none decides until a new one is run in full (§3.1).
-    - **Of that amendment,** the first session decides whose `m4_calibration.csv` says `complete,1` and `m4_settings,yes`, with `freeze-m4`'s commit. It must have started after `freeze-m4`'s `created_at`. A later session of the same amendment does not replace it: §3.1 has one session.
-    - **Pinned:** every M4 pipeline session writes the session it took to `saturation.txt` before its first run. No M4 session starts with another one than the earlier ones took. A rerun under an amendment needs that amendment's own procedure.
+    - **Candidates:** the sessions in `results/m4/<UTC>_m4_calib/` that made at least one attempt (`runs.tsv`), with M4's settings and `freeze-m4`'s commit in `session.txt` and 10 minutes idle in `baseline.txt`, in UTC order. Smoke tests do not count.
+    - **Amendment:** the latest candidate's. A session rerun whole after an amendment (§9) is made with a later one, and replaces those of earlier ones. None decides while the latest candidate stopped before any run wrote its summary (a new one is run in full, §3.1), or was made with an older amendment than an earlier one.
+    - **Of that amendment,** the first session decides whose `m4_calibration.csv` says `complete,1` and `m4_settings,yes`, with `freeze-m4`'s commit, and which started after `freeze-m4`'s `created_at` (its earliest record, as `tools/check_prereg_order.py` takes it). A later session of the same amendment does not replace it: §3.1 has one session.
+    - **Pinned:** every M4 pipeline session writes the session it took, with its `m4_calibration.csv`'s SHA-256, to `saturation.txt` before its first run. No protocol M4 pipeline session starts with another session, or another summary, than the earlier ones that made an attempt took. A rerun under an amendment needs that amendment's own procedure. `m4-check` and smoke tests are not pinned.
   - **Labels:** that session gives each arm's label at the sweep's point.
     - Rule 3 judges an arm's runs only where its label is `unsaturated`.
     - A `saturated` or `unknown` arm is still run, and rule 3 does not judge it.
