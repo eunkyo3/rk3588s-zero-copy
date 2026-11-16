@@ -162,6 +162,10 @@ def code_state(tool, allow_dirty):
         code, out = run(["git", "-C", str(REPO), "ls-files", "--error-unmatch", "--", tool])
         if code:
             raise Refused(f"{tool} is not tracked by git: commit it first")
+    code, flags = run(["git", "-C", str(REPO), "ls-files", "-v"])  # files git status does not show
+    hidden = [line for line in flags.splitlines() if line[:1].islower() or line[:1] == "S"]
+    if code or hidden:
+        raise Refused("tracked files marked assume-unchanged or skip-worktree: " + one_line("\n".join(hidden[:5])))
     untracked = "\n".join(line for line in untracked.splitlines() if line.startswith("??"))
     differs = one_line(status + "\n" + untracked)
     if differs and not allow_dirty:
@@ -173,11 +177,10 @@ def checks(image, tool, allow_dirty):
     """§4's checks and records, as pc.json's fields without its start time and stage fields."""
     commit, status = code_state(tool, allow_dirty)
     expected = IMAGE_ID_FILE.read_text(encoding="utf-8").strip()
-    code, image_id = run(["docker", "image", "inspect", "--format", "{{.Id}}", image])
-    if code:
-        raise Refused(f"no {image}: run tools/eval/build.sh")
-    if image_id.strip() != expected:
-        raise Refused(f"{image} is {image_id.strip()}, not the evaluation image {expected} of {IMAGE_ID_FILE.name}")
+    code, image_id = run(["docker", "image", "inspect", "--format", "{{.Id}}", expected])  # by ID, not the tag
+    if code or image_id.strip() != expected:
+        raise Refused(f"no image {expected} ({IMAGE_ID_FILE.name}): docker load -i D:/m4data/images/m4-eval_<ID>.tar "
+                      "(tools/eval/save_image.sh)")
     _, cpu = run(["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_Processor).Name"])
     _, chart = run(["w32tm", "/stripchart", f"/computer:{NTP_SERVER}", "/samples:3", "/dataonly"])
     offsets, failed = parse_stripchart(chart)
@@ -230,16 +233,18 @@ def main(argv):
         problem = f"no {tool[0]} in the repository"
     elif a.allow_dirty and a.kind == "m4":
         problem = "--allow-dirty is for development checks, never a run of kind m4"
-    elif sys.platform == "win32" and a.data.startswith("/"):
+    elif tool and sys.platform == "win32" and a.data.startswith("/"):
         problem = f"--data {a.data} is a Git Bash path; give D:/... instead"
-    elif not Path(a.data).is_dir():
+    elif tool and not Path(a.data).is_dir():
         problem = f"--data {a.data} is not a directory"
     if problem:
         print(f"pc_run: {problem}", file=sys.stderr)
         return 2
     try:
-        pc = checks(a.image, tool[0] if tool else None, a.allow_dirty)
         stage = stage_fields(a.kind)
+        if a.kind == "m4" and stage["freeze_m4_commit"] == "none":
+            raise Refused("run kind m4 comes after freeze-m4, which has no row in docs/notes/env.md yet (M4 §4)")
+        pc = checks(a.image, tool[0] if tool else None, a.allow_dirty)
     except (Refused, OSError, ss.Stop) as e:
         print(f"pc_run: not starting: {e}", file=sys.stderr)
         return 2

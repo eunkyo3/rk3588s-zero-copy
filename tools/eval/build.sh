@@ -7,9 +7,11 @@
 #   - its `pip freeze` equals tools/eval/constraints.txt (the converter's tools/model/constraints.txt plus
 #     pycocotools), `pip check` finds nothing broken, and pycocotools' COCOeval imports.
 # An image that exists is checked, not rebuilt: a rebuild may give a new image ID, and freeze-m4 fixes the
-# ID the runs used (§8). --rebuild builds it again; its new ID then has to go to image_id.txt, by a commit,
-# before pc_run.py runs anything with it.
-# The ID is the image's content digest in Docker Desktop's containerd image store (its RepoDigests).
+# ID the runs used (§8). A missing image is not built either: `docker load -i` of tools/eval/save_image.sh's
+# archive brings it back with its ID. --rebuild builds it anyway; its new ID then has to go to
+# image_id.txt, by a commit, before pc_run.py runs anything with it.
+# The ID is the image index's digest in Docker Desktop's containerd image store (its RepoDigests), which
+# must stay on: without it, an image's ID is its config's digest.
 # Usage, on the PC (Windows Git Bash): MSYS_NO_PATHCONV=1 tools/eval/build.sh [--rebuild]
 set -eu
 
@@ -27,8 +29,10 @@ fail() {
 
 id=$(docker image inspect --format '{{.Id}}' "$BASE") || fail "no $BASE: build it with tools/model/Dockerfile"
 [ "$id" = "$BASE_ID" ] || fail "$BASE is $id, not the converter image $BASE_ID"
-if [ "${1:-}" = --rebuild ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+if [ "${1:-}" = --rebuild ]; then
     docker build --build-arg BASE="$BASE" -t "$IMAGE" "$ROOT/tools/eval" >&2
+elif ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    fail "no $IMAGE: docker load -i D:/m4data/images/m4-eval_<ID>.tar (tools/eval/save_image.sh), or --rebuild"
 fi
 image_id=$(docker image inspect --format '{{.Id}}' "$IMAGE")
 expected=$(tr -d '\r\n' <"$ROOT/tools/eval/image_id.txt")
@@ -43,9 +47,12 @@ esac
 freeze=$($RUN "$image_id" pip freeze) || fail "pip freeze failed"
 printf '%s\n' "$freeze" | tr -d '\r' | diff - "$ROOT/tools/eval/constraints.txt" >&2 ||
     fail "the image's pip freeze differs from tools/eval/constraints.txt"
-pip_check=$($RUN "$image_id" pip check | tr -d '\r') || fail "pip check: $pip_check"
-cocoeval=$($RUN "$image_id" python3 -c "from pycocotools.cocoeval import COCOeval; import pycocotools; print('ok')" |
-    tr -d '\r') || fail "pycocotools does not import"
+# No pipe after docker run: the exit status must be the command's (sh has no pipefail).
+pip_check=$($RUN "$image_id" pip check 2>&1) || fail "pip check: $pip_check"
+pip_check=$(printf '%s' "$pip_check" | tr -d '\r')
+cocoeval=$($RUN "$image_id" python3 -c "from pycocotools.cocoeval import COCOeval; print('ok')" 2>&1) ||
+    fail "pycocotools does not import: $cocoeval"
+[ "$(printf '%s' "$cocoeval" | tr -d '\r')" = ok ] || fail "pycocotools' COCOeval: $cocoeval"
 
 record="$ROOT/results/check/$(date -u +%Y%m%dT%H%M%SZ)_m4_eval_image"
 mkdir -p "$record"
@@ -55,11 +62,13 @@ mkdir -p "$record"
     echo "base_from: $(sed -n 's/^FROM //p' "$ROOT/tools/model/Dockerfile")"
     echo "image: $IMAGE $image_id"
     echo "repo_digests: $(docker image inspect --format '{{join .RepoDigests " "}}' "$IMAGE")"
+    echo "manifest_linux_amd64: $(docker image inspect --platform linux/amd64 --format '{{.Id}}' "$IMAGE")"
+    echo "image_store: $(docker info --format '{{.DriverStatus}}')"
     echo "created: $(docker image inspect --format '{{.Created}}' "$IMAGE")"
     echo "layers_start_with_the_base: yes"
     echo "pip_freeze_equals_constraints: yes ($(printf '%s\n' "$freeze" | wc -l | tr -d ' ') packages)"
     echo "pip_check: $pip_check"
-    echo "cocoeval_import: $cocoeval"
+    echo "cocoeval_import: ok"
     echo "docker: $(docker version --format '{{.Server.Version}}')"
 } >"$record/image.txt"
 echo "$image_id"

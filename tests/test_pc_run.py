@@ -72,16 +72,20 @@ class FakeContainer:
 
 
 class Checks(unittest.TestCase):
-    def fake_run(self, status="", untracked="", tracked=True, offsets=STRIPCHART, image=IMAGE_ID):
+    def fake_run(self, status="", untracked="", tracked=True, flags="H tools/m4_prep.py\n", offsets=STRIPCHART,
+                 image=True):
         def run(cmd, timeout=120):
             if cmd[0] == "git":
                 if "rev-parse" in cmd:
                     return 0, "c" * 40 + "\n"
-                if "ls-files" in cmd:
+                if "--error-unmatch" in cmd:
                     return (0, cmd[-1]) if tracked else (1, "did not match")
+                if "ls-files" in cmd:
+                    return 0, flags
                 return 0, untracked if "--untracked-files=all" in cmd else status
             if cmd[:3] == ["docker", "image", "inspect"]:
-                return (0, image + "\n") if image else (1, "no such image")
+                self.assertEqual(cmd[-1], IMAGE_ID)  # inspected by the fixed ID, not the tag
+                return (0, IMAGE_ID + "\n") if image else (1, "no such image")
             if cmd[0] == "powershell":
                 return 0, "Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz\r\n"
             if "/stripchart" in cmd:
@@ -110,8 +114,9 @@ class Checks(unittest.TestCase):
         for kw, message in (({"status": " M tools/m4_prep.py\n"}, "the tree differs from HEAD: M tools/m4_prep.py"),
                             ({"untracked": "?? tools/numpy.py\n"}, "?? tools/numpy.py"),
                             ({"tracked": False}, "tools/m4_prep.py is not tracked by git"),
-                            ({"image": ""}, "run tools/eval/build.sh"),
-                            ({"image": "sha256:" + "0" * 64}, "not the evaluation image"),
+                            ({"flags": "H a\nh tools/m4_prep.py\n"}, "assume-unchanged or skip-worktree: h tools/m4_prep.py"),
+                            ({"flags": "S tools/x.py\n"}, "skip-worktree: S tools/x.py"),
+                            ({"image": False}, "docker load -i"),
                             ({"offsets": "14:30:28, 오류: 0x800705B4\n"}, "no sample"),
                             ({"offsets": "14:30:31, +01.2000000s\n"}, "+1.200 s off"),
                             ({"container": (-1.5, 0.01)}, "container's clock is -1.500 s off")):
@@ -119,6 +124,8 @@ class Checks(unittest.TestCase):
                 self.checks(**kw)
         pc, _ = self.checks(status=" M tools/m4_prep.py\n", untracked="?? tests/x.py\n", allow_dirty=True)
         self.assertEqual(pc["code_status"], "differs: M tools/m4_prep.py | ?? tests/x.py")  # development: recorded
+        with self.assertRaisesRegex(pr.Refused, "not tracked"):  # --allow-dirty never runs an untracked tool
+            self.checks(tracked=False, allow_dirty=True)
 
     def test_the_container_clock(self):
         times = iter([100.0, 100.4, 101.0, 101.2, 102.0, 102.02, 103.0, 103.5, 104.0, 104.1, 105.0, 105.3])
@@ -129,7 +136,7 @@ class Checks(unittest.TestCase):
         cmd = popen.call_args[0][0]
         self.assertEqual(cmd[:3], ["docker", "run", "-i"])
         self.assertIn(IMAGE_ID, cmd)
-        self.assertIn("none", cmd)  # no network
+        self.assertEqual(cmd[cmd.index("--network") + 1], "none")  # no network
         self.assertAlmostEqual(rtt, 0.02)  # the first exchange (the container's start) is left out
         self.assertAlmostEqual(offset, 1000.0 - 102.01)
         self.assertTrue(fake.closed and not fake.killed)  # its input ended, so it ended
@@ -171,9 +178,25 @@ class Main(unittest.TestCase):
 
     def test_a_git_bash_path_is_refused_on_windows(self):
         with mock.patch.object(pr.sys, "platform", "win32"):
-            code, err, _ = self.main(["--kind", "check", "--name", "x", "--data", "/d/m4data", "--checks-only"])
-        self.assertEqual(code, 2)
-        self.assertIn("Git Bash path", err)
+            code, err, _ = self.main(["--kind", "check", "--name", "x", "--data", "/d/m4data", "--", "tools/m4_prep.py"])
+            self.assertEqual(code, 2)
+            self.assertIn("Git Bash path", err)
+            # --checks-only mounts no data: it needs none
+            code, err, checks = self.main(["--kind", "check", "--name", "x", "--data", "/d/nothing", "--checks-only"])
+            self.assertEqual((code, checks.call_count), (2, 1))
+            self.assertIn("stop here", err)
+
+    def test_kind_m4_waits_for_freeze_m4(self):
+        with tempfile.TemporaryDirectory() as data:
+            argv = ["--kind", "m4", "--name", "x", "--data", data, "--", "tools/m4_prep.py"]
+            with mock.patch.object(pr, "stage_fields", return_value={"run_kind": "m4", "freeze_m4_commit": "none"}):
+                code, err, checks = self.main(argv)
+            self.assertEqual(code, 2)
+            self.assertIn("comes after freeze-m4", err)
+            checks.assert_not_called()  # nothing checked, no record made
+            with mock.patch.object(pr, "stage_fields", return_value={"run_kind": "m4", "freeze_m4_commit": "f4" * 20}):
+                code, err, checks = self.main(argv)
+            self.assertEqual((code, checks.call_count), (2, 1))
 
     def test_the_record_and_the_container(self):
         pc = {"code_commit": "c" * 40, "code_status": "clean", "eval_image": pr.IMAGE, "eval_image_id": IMAGE_ID,
