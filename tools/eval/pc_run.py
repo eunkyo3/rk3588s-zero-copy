@@ -190,7 +190,8 @@ def main(argv):
     record = REPO / "results" / a.kind / f"{now:%Y%m%dT%H%M%SZ}_{a.name}"
     record.mkdir(parents=True)
     pc = {"start_time_utc": f"{now:%Y-%m-%dT%H:%M:%SZ}", **pc, "data": a.data, "tool": tool}
-    (record / "pc.json").write_text(json.dumps(pc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    (record / "pc.json").write_text(json.dumps(pc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8",
+                                    newline="\n")
     print(f"pc_run: {record.relative_to(REPO)}, host clock {pc['host']['ntp_offset_s']} s off NTP "
           f"({pc['host']['ntp_samples']}), container {pc['container_clock_offset_s']} s", flush=True)
     cmd = ["docker", "run", "--rm", *MEMORY,
@@ -198,7 +199,7 @@ def main(argv):
            "--mount", f"type=bind,source={record},target=/record",
            "--mount", f"type=bind,source={Path(a.data).resolve()},target=/data",
            "-w", "/repo", a.image, "python3", "-I", f"/repo/{tool[0]}", *tool[1:]]
-    with open(record / f"{Path(tool[0]).stem}.log", "w", encoding="utf-8") as log:
+    with open(record / f"{Path(tool[0]).stem}.log", "w", encoding="utf-8", newline="") as log:  # LF, as the tool's
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for raw in p.stdout:
             line = raw.decode("utf-8", errors="replace")
