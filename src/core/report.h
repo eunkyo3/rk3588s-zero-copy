@@ -19,10 +19,15 @@ using Header = std::vector<std::pair<std::string, std::string>>;
 constexpr const char* kPreregCommit = "87fe874b4f196dafd48f6a175b2d7604625aedba";
 // Tag prereg-m2 (Release created_at 2026-11-05T04:45:34Z, docs/notes/env.md).
 constexpr const char* kPreregM2Commit = "5d9d6d04e50f17d52980dc5b958c7071d7107176";
-// The compiled objects of the two post-processings, relative to the repository (M2 §4): the check
-// tool and bench_main link the same ones from libcore.
-constexpr const char* kPostObjects[2] = {"build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o",
-                                         "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o"};
+// The compiled objects of the pipeline's post-processings, relative to the repository: M1's and arm
+// Cp's (M2 §4), then yolov10_post and the shared choice (M4 §8). The check tools, bench_main and
+// calib_npu link the same ones from libcore.
+constexpr int kPostObjectCount = 4;
+constexpr const char* kPostObjects[kPostObjectCount] = {
+    "build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o", "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o",
+    "build/CMakeFiles/core.dir/src/core/yolov10_post.cpp.o", "build/CMakeFiles/core.dir/src/core/pipeline_post.cpp.o"};
+// env.json's "objects_sha256": {"<path>": "<SHA-256>", ...} for kPostObjects, braces included.
+std::string post_objects_json();
 
 // The output of a shell command, trailing newlines and spaces removed.
 std::string command_output(const std::string& cmd);

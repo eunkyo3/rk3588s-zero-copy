@@ -11,7 +11,7 @@
 
 #include "core/metrics.h"
 #include "core/npu.h"
-#include "core/yolov8_post_neon.h"
+#include "core/pipeline_post.h"
 #include "preprocess/backend.h"
 
 constexpr int kQ2Depth = 6;
@@ -27,7 +27,7 @@ struct PipelineConfig {
     int preprocess_threads = 2;        // K; 4 for M1.1's B with K = 4 (AMENDMENTS A12)
     int metrics_cpu = 0;               // 4 when the pipeline runs on the A55 cores (A12)
     bool stagger = false;              // M2 §3.1: channel i samples the frames with counter % stride == i % stride
-    const NeonPost* neon_post = nullptr;  // arm Cp (M2 §1): its post-processing in place of yolov8_post
+    const PipelinePost* post = nullptr;   // required with a backend: M1's, arm Cp's (M2 §1) or C10's (M4 §1)
 };
 
 struct FrameRecord {

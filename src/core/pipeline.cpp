@@ -16,7 +16,6 @@
 #include "core/stream_checks.h"
 #include "core/util.h"
 #include "core/video_source.h"
-#include "core/yolov8_post.h"
 
 namespace {
 
@@ -145,6 +144,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
     std::vector<std::thread> pre, workers;
     std::vector<std::vector<FrameRecord>> records(NpuContexts::kCount);
     if (backend) {
+        CHECK(cfg.post, "no post-processing chosen");
         // Room for every frame the run can sample, so the records do not grow (and show up as
         // RSS growth) during the window.
         const size_t expected = size_t(n) * kNominalFps / cfg.sample_stride * (cfg.warmup_s + cfg.duration_s + 10);
@@ -191,9 +191,7 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
                     CHECK(rknn_run(npu->ctx[k], nullptr) == RKNN_SUCC, "rknn_run failed");
                     r.t3 = now_ns();
                     r.detections = static_cast<int>(
-                        cfg.neon_post
-                            ? cfg.neon_post->run(npu->output_ptrs(k), npu->outputs, npu->model_w(), npu->model_h()).size()
-                            : yolov8_post(npu->output_ptrs(k), npu->outputs, npu->model_w(), npu->model_h()).size());
+                        cfg.post->run(npu->output_ptrs(k), npu->outputs, npu->model_w(), npu->model_h()).size());
                     r.t4 = now_ns();
                     slots.release(p->slot);
                     records[k].push_back(r);

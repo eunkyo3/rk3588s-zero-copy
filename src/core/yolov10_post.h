@@ -19,3 +19,6 @@ std::vector<Detection> yolov10_post(const std::vector<const int8_t*>& outputs,
                                     const std::vector<rknn_tensor_attr>& attrs,
                                     int model_w, int model_h,
                                     float conf_thresh = 0.25f, int max_det = 300);
+
+// Throws std::runtime_error unless attrs is the layout above. yolov10_post checks it on every call.
+void yolov10_check_layout(const std::vector<rknn_tensor_attr>& attrs);

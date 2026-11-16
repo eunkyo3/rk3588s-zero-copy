@@ -1,5 +1,6 @@
 // Unit tests for the pipeline's queue, slot pool, receive checks and percentile, the /proc/schedstat
-// parser, arm Cp's post-processing against M1's on random outputs, and M4's YOLOv10 selection.
+// parser, arm Cp's post-processing against M1's on random outputs, M4's YOLOv10 selection, and the
+// shared choice of post-processing.
 // Run: build/test_core
 #include <algorithm>
 #include <atomic>
@@ -9,10 +10,12 @@
 #include <cstring>
 #include <random>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <vector>
 
 #include "core/metrics.h"
+#include "core/pipeline_post.h"
 #include "core/report.h"
 #include "core/slot_pool.h"
 #include "core/stage_queue.h"
@@ -336,6 +339,77 @@ void yolov10_post_matches_reference() {
     expect(same_cases == cases, "yolov10_post: the plain specification on 60 random cases");
 }
 
+bool same_detections(const std::vector<Detection>& a, const std::vector<Detection>& b) {
+    if (a.size() != b.size())
+        return false;
+    for (size_t i = 0; i < a.size(); i++)
+        if (a[i].cls != b[i].cls || a[i].score != b[i].score || a[i].x1 != b[i].x1 || a[i].y1 != b[i].y1 ||
+            a[i].x2 != b[i].x2 || a[i].y2 != b[i].y2)
+            return false;
+    return true;
+}
+
+// Random int8 outputs for attrs, and pointers to them.
+struct RandomOutputs {
+    std::vector<std::vector<int8_t>> bufs;
+    std::vector<const int8_t*> ptrs;
+    RandomOutputs(const std::vector<rknn_tensor_attr>& attrs, std::mt19937& rng) {
+        for (const auto& a : attrs) {
+            bufs.emplace_back(size_t(a.dims[1]) * a.dims[2] * a.dims[3]);
+            for (auto& v : bufs.back())
+                v = static_cast<int8_t>(static_cast<int>(rng() % 256) - 128);
+        }
+        for (const auto& b : bufs)
+            ptrs.push_back(b.data());
+    }
+};
+
+void pipeline_post_dispatches() {
+    PostKind k = PostKind::V10;
+    expect(parse_post_kind("m1", &k) && k == PostKind::M1 && parse_post_kind("neon", &k) && k == PostKind::Neon &&
+               parse_post_kind("v10", &k) && k == PostKind::V10 && !parse_post_kind("M1", &k) &&
+               !parse_post_kind("", &k) && !parse_post_kind("v8", &k) && k == PostKind::V10,
+           "pipeline_post: the names m1, neon and v10 only");
+    expect(std::string(post_kind_name(PostKind::M1)) == "m1" && std::string(post_kind_name(PostKind::Neon)) == "neon" &&
+               std::string(post_kind_name(PostKind::V10)) == "v10",
+           "pipeline_post: names back");
+
+    const auto v8 = output_attrs(), v10 = v10_attrs();
+    const PipelinePost m1(PostKind::M1, v8), neon(PostKind::Neon, v8), c10(PostKind::V10, v10);
+    const NeonPost neon_direct(v8);
+    std::mt19937 rng(2);
+    int same_m1 = 0, same_neon = 0, same_v10 = 0, v10_count = 0;
+    for (int set = 0; set < 5; set++) {
+        const RandomOutputs o8(v8, rng), o10(v10, rng);
+        same_m1 += same_detections(m1.run(o8.ptrs, v8, 640, 640), yolov8_post(o8.ptrs, v8, 640, 640, 0.25f, 0.45f));
+        same_neon +=
+            same_detections(neon.run(o8.ptrs, v8, 640, 640), neon_direct.run(o8.ptrs, v8, 640, 640, 0.25f, 0.45f));
+        const auto want = yolov10_post(o10.ptrs, v10, 640, 640, 0.25f, 300);
+        same_v10 += same_detections(c10.run(o10.ptrs, v10, 640, 640), want);
+        v10_count += want.size() == 300;
+    }
+    expect(same_m1 == 5, "pipeline_post: m1 is yolov8_post at conf 0.25, NMS 0.45");
+    expect(same_neon == 5, "pipeline_post: neon is NeonPost at conf 0.25, NMS 0.45");
+    expect(same_v10 == 5 && v10_count == 5, "pipeline_post: v10 is yolov10_post at conf 0.25, max_det 300");
+
+    auto throws = [](PostKind kind, const std::vector<rknn_tensor_attr>& attrs) {
+        try {
+            PipelinePost p(kind, attrs);
+        } catch (const std::runtime_error&) {
+            return true;
+        }
+        return false;
+    };
+    expect(throws(PostKind::V10, v8) && throws(PostKind::Neon, v10) && !throws(PostKind::M1, v10) &&
+               !throws(PostKind::V10, v10),
+           "pipeline_post: neon and v10 check the layout when built, m1 does not");
+    expect(m1.describe() == "\"name\": \"m1\", \"conf_thresh\": 0.25, \"nms_thresh\": 0.45" &&
+               c10.describe() == "\"name\": \"v10\", \"conf_thresh\": 0.25, \"max_det\": 300" &&
+               neon.describe() == "\"name\": \"neon\", \"conf_thresh\": 0.25, \"nms_thresh\": 0.45, \"tables\": 3, "
+                                  "\"table_bytes\": 786432",
+           "pipeline_post: env.json fields");
+}
+
 }  // namespace
 
 int main() {
@@ -350,6 +424,7 @@ int main() {
     neon_post_matches_m1();
     yolov10_post_selects();
     yolov10_post_matches_reference();
+    pipeline_post_dispatches();
     std::printf("%d failure(s)\n", failures);
     return failures ? 1 : 0;
 }
