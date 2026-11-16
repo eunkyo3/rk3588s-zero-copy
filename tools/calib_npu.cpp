@@ -178,7 +178,6 @@ int main(int argc, char** argv) {
     const std::string out =
         a.count("out") ? a["out"]
                        : "results/calibration/" + utc_now("%Y%m%dT%H%M%SZ") + "_" + measurement + "_" + a["cores"] + "c";
-    std::filesystem::create_directories(out);
     std::map<std::string, int64_t> fixed = read_fixed_clocks(a["fixed-clocks"]);
     const std::string start_time = utc_now("%Y-%m-%dT%H:%M:%SZ");
 
@@ -205,6 +204,7 @@ int main(int argc, char** argv) {
             die("%s", e.what());
         }
     }
+    std::filesystem::create_directories(out);  // after the checks that can reject the model
 
     const uintmax_t file_size = std::filesystem::file_size(a["tensors"]);
     CHECK(file_size % tensor_bytes == 0, "%s is not a whole number of %zu-byte tensors", a["tensors"].c_str(),

@@ -100,6 +100,7 @@ int main(int argc, char** argv) {
     PostKind post_kind;
     CHECK(parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
     CHECK(post_kind == PostKind::M1 || variant == "C", "post neon and v10 are arms of variant C (M2 §1, M4 §3.2)");
+    CHECK(post_kind != PostKind::V10 || kind == "check", "post v10 is M4's: run kind check until run kind m4 exists");
     CHECK(a["stagger"] == "off" || a["stagger"] == "on", "stagger must be off or on");
     CHECK(a["stagger"] == "off" || a["condition"] == "main", "stagger is for the main condition (M2 §3.1)");
     const std::string& freeze_m2 = a["freeze-m2-commit"];

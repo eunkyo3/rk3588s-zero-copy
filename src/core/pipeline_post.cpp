@@ -52,10 +52,10 @@ std::vector<Detection> PipelinePost::run(const std::vector<const int8_t*>& outpu
 std::string PipelinePost::describe() const {
     char b[160];
     if (kind_ == PostKind::V10)
-        std::snprintf(b, sizeof b, "\"name\": \"%s\", \"conf_thresh\": %.2f, \"max_det\": %d", post_kind_name(kind_),
+        std::snprintf(b, sizeof b, "\"name\": \"%s\", \"conf_thresh\": %g, \"max_det\": %d", post_kind_name(kind_),
                       kConfThresh, kMaxDet);
     else
-        std::snprintf(b, sizeof b, "\"name\": \"%s\", \"conf_thresh\": %.2f, \"nms_thresh\": %.2f",
+        std::snprintf(b, sizeof b, "\"name\": \"%s\", \"conf_thresh\": %g, \"nms_thresh\": %g",
                       post_kind_name(kind_), kConfThresh, kNmsThresh);
     std::string s = b;
     if (neon_)

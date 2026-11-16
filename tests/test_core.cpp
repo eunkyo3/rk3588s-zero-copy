@@ -389,6 +389,25 @@ void pipeline_post_dispatches() {
         v10_count += want.size() == 300;
     }
     expect(same_m1 == 5, "pipeline_post: m1 is yolov8_post at conf 0.25, NMS 0.45");
+    // NeonPost's detections equal yolov8_post's by design, so neon is told apart by what only NeonPost
+    // does: it looks up the table built for each box output's (zp, scale), and throws without one.
+    {
+        auto other = v8;
+        other[0].zp += 1;
+        const RandomOutputs o8(v8, rng);
+        bool neon_threw = false, m1_threw = false;
+        try {
+            neon.run(o8.ptrs, other, 640, 640);
+        } catch (const std::runtime_error&) {
+            neon_threw = true;
+        }
+        try {
+            m1.run(o8.ptrs, other, 640, 640);
+        } catch (const std::runtime_error&) {
+            m1_threw = true;
+        }
+        expect(neon_threw && !m1_threw, "pipeline_post: neon runs NeonPost (its tables), m1 does not");
+    }
     expect(same_neon == 5, "pipeline_post: neon is NeonPost at conf 0.25, NMS 0.45");
     expect(same_v10 == 5 && v10_count == 5, "pipeline_post: v10 is yolov10_post at conf 0.25, max_det 300");
 
@@ -400,9 +419,47 @@ void pipeline_post_dispatches() {
         }
         return false;
     };
-    expect(throws(PostKind::V10, v8) && throws(PostKind::Neon, v10) && !throws(PostKind::M1, v10) &&
+    auto v10_classes = v10, v10_grid = v10, v10_nhwc = v10;
+    v10_classes[3].dims[1] = 79;
+    v10_grid[5].dims[2] = 21;
+    v10_nhwc[0].fmt = RKNN_TENSOR_NHWC;
+    expect(throws(PostKind::V10, v8) && throws(PostKind::V10, v10_classes) && throws(PostKind::V10, v10_grid) &&
+               throws(PostKind::V10, v10_nhwc) && throws(PostKind::Neon, v10) && !throws(PostKind::M1, v10) &&
                !throws(PostKind::V10, v10),
            "pipeline_post: neon and v10 check the layout when built, m1 does not");
+    bool five_attrs = false;
+    try {
+        const RandomOutputs o10(v10, rng);
+        c10.run(o10.ptrs, {v10.begin(), v10.begin() + 5}, 640, 640);
+    } catch (const std::runtime_error&) {
+        five_attrs = true;
+    }
+    expect(five_attrs, "yolov10_post: rejects 6 outputs with 5 attrs");
+
+    // The pipeline's three NPU workers share one PipelinePost: each thread's results equal a serial run.
+    for (const PipelinePost* p : {&m1, &neon, &c10}) {
+        const auto& attrs = p == &c10 ? v10 : v8;
+        std::vector<RandomOutputs> sets;
+        sets.reserve(3);  // ptrs point into each set's buffers
+        std::vector<std::vector<Detection>> serial;
+        for (int t = 0; t < 3; t++) {
+            sets.emplace_back(attrs, rng);
+            serial.push_back(p->run(sets.back().ptrs, attrs, 640, 640));
+        }
+        std::atomic<int> same{0};
+        std::vector<std::thread> threads;
+        for (int t = 0; t < 3; t++)
+            threads.emplace_back([&, t] {
+                bool ok = true;
+                for (int i = 0; i < 4; i++)
+                    ok &= same_detections(p->run(sets[t].ptrs, attrs, 640, 640), serial[t]);
+                same += ok;
+            });
+        for (auto& th : threads)
+            th.join();
+        expect(same == 3, (std::string("pipeline_post: ") + post_kind_name(p->kind()) +
+                           " from 3 threads at once equals a serial run").c_str());
+    }
     expect(m1.describe() == "\"name\": \"m1\", \"conf_thresh\": 0.25, \"nms_thresh\": 0.45" &&
                c10.describe() == "\"name\": \"v10\", \"conf_thresh\": 0.25, \"max_det\": 300" &&
                neon.describe() == "\"name\": \"neon\", \"conf_thresh\": 0.25, \"nms_thresh\": 0.45, \"tables\": 3, "
