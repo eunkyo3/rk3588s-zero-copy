@@ -180,6 +180,10 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - 2,500장: 최고 2.5 GB, 스왑 없는 6 GB에서 종료 코드 0;
   - 장 수에 비례해 늘어나므로 5,000장은 약 4.9 GB로, 6 GB 한도 안에 든다.
 - **2 GB 한도로는 모자란다:** 2 GB에 스왑 2 GB를 더한 한도에서 5,000장은 34분 동안 스왑을 쓰다 메모리 초과로 강제 종료됐다.
+- **5,000장 확인, [tools/eval/m4_coco_memory.py](../../tools/eval/m4_coco_memory.py):** 매니페스트의 처음 N장에 합성 검출을 쓰고, `pc_run.py`처럼 스왑 없는 6 GB 아래에서 `tools/m4_coco.py`를 돌린다. 시간과 최고 메모리를 알려 준다.
+  - **다른 PC에서 돌려도 된다:** M4의 측정이 아니라 도구를 점검하는 것이고, 최고 메모리는 PC가 아니라 이미지와 데이터가 정한다. PC는 amd64여야 하고, Docker가 돌아야 하며, 컨테이너에 6 GB를 줄 수 있어야 한다(Docker VM 7 GB 이상).
+  - **필요한 것:** 저장소, 이미지 보관본(`D:/m4data/images/m4-eval_c676e76f95356ea1.tar`, `docker load`로 불러 ID로 확인), `annotations_trainval2017.zip`. `m4_coco.py`가 zip을 `coco.sha256`과 대조한다. COCO 이미지는 필요 없다.
+  - **실행 방법:** 명령은 도구의 docstring에 있다. 요약은 작업 폴더의 `m4_coco_memory.txt`에 남고, 어느 PC에서 돌렸는지도 적힌다.
 
 ## 파일
 
@@ -188,6 +192,7 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
 | `tools/m4_rules.py` | Python 규칙 두 개([테스트](../../tests/test_m4_rules.py)) |
 | `tools/m4_fp32.py` | PC의 FP32 패스([테스트](../../tests/test_m4_fp32.py)) |
 | `tools/m4_coco.py` | 검출 파일, 그 COCO 변환과 평가([테스트](../../tests/test_m4_coco.py)) |
+| `tools/eval/m4_coco_memory.py` | 합성 검출에서 평가의 시간과 최고 메모리 |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | 평가 이미지, 그 ID, 확인, 보관본 |
 | `tools/eval/fetch_coco.sh`, `coco.sha256` | COCO의 두 파일과 그 SHA-256 |
 | `tools/eval/pc_run.py` | §4의 확인을 거친 PC 실행([테스트](../../tests/test_pc_run.py)) |
