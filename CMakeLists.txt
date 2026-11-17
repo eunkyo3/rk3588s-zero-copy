@@ -119,8 +119,20 @@ target_link_libraries(m4_probe PRIVATE core)
 target_compile_definitions(m4_probe PRIVATE
     CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
 
+# M4's accuracy tool (prereg/M4.md §2.2 to §2.5): its mAP rules and the SHA-256 of its inputs. The rules
+# are compiled without floating-point contraction, so the IoU is computed as written (src/m4/map_rules.h).
+add_library(m4map STATIC src/m4/map_rules.cpp src/m4/sha256.cpp)
+target_include_directories(m4map PUBLIC src)
+target_link_libraries(m4map PUBLIC core)
+set_source_files_properties(src/m4/map_rules.cpp PROPERTIES COMPILE_OPTIONS -ffp-contract=off)
+
+add_executable(m4_accuracy tools/m4_accuracy.cpp)
+target_link_libraries(m4_accuracy PRIVATE m4map core)
+target_compile_definitions(m4_accuracy PRIVATE
+    CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
+
 add_executable(test_core tests/test_core.cpp)
-target_link_libraries(test_core PRIVATE core)
+target_link_libraries(test_core PRIVATE m4map core)
 
 set_target_properties(bench_main spike_fd_chain compare_prepare rga_probe rga_kernel inputs_set_probe
-    equivalence_dump dump_tensor calib_npu demo_detect bdirect_check output_probe first_runs_probe post_probe m2_equivalence m4_probe test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
+    equivalence_dump dump_tensor calib_npu demo_detect bdirect_check output_probe first_runs_probe post_probe m2_equivalence m4_probe m4_accuracy test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)

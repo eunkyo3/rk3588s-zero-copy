@@ -138,16 +138,24 @@ def yolov10_rule(outputs, conf=CONF, max_det=MAX_DET):
     return Result(cls, score, boxes_of(br, branch, cell), total, bool(tied))
 
 
-def yolov8_rule(outputs, conf=CONF, max_det=MAX_DET, max_nms=MAX_NMS, iou_thresh=NMS_IOU):
+def yolov8_rule(outputs, conf=CONF, max_det=MAX_DET, max_nms=MAX_NMS, iou_thresh=NMS_IOU, near=None):
     """§2.3's YOLOv8n rule: multi-label candidates above conf, the first max_nms of them, greedy NMS per class
-    at iou_thresh going down their order, and the first max_det kept. The score sums are not used."""
+    at iou_thresh going down their order, and the first max_det kept. The score sums are not used.
+    near, a list, gets (rank of the candidate, IoU) for every IoU the NMS compares that is within 1e-6 of
+    iou_thresh: §2.3 excepts differences between the two implementations caused by these."""
     br = branches(outputs, 3)
     (score, branch, cell, cls), total = ordered_candidates(br, conf, max_nms)
     box = boxes_of(br, branch, cell)
     kept, per_class = [], {}
     for k in range(score.size):
         prior = per_class.get(cls[k])
-        if prior and (iou_with(box[prior], box[k]) > iou_thresh).any():
+        if not prior:
+            ious = None
+        else:
+            ious = iou_with(box[prior], box[k])
+            if near is not None:
+                near.extend((k, float(v)) for v in ious[np.abs(ious - iou_thresh) <= 1e-6])
+        if ious is not None and (ious > iou_thresh).any():
             continue
         kept.append(k)
         per_class.setdefault(cls[k], []).append(k)

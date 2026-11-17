@@ -24,6 +24,8 @@
 #include "core/yolov8_post.h"
 #include "core/yolov8_post_neon.h"
 #include "core/yolov10_post.h"
+#include "m4/map_rules.h"
+#include "m4/sha256.h"
 
 namespace {
 
@@ -468,6 +470,156 @@ void pipeline_post_dispatches() {
            "pipeline_post: env.json fields");
 }
 
+void sha256_known_values() {
+    expect(sha256_hex("") == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" &&
+               sha256_hex("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" &&
+               sha256_hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") ==
+                   "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1" &&
+               sha256_hex(std::string(1000000, 'a')) ==
+                   "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0",
+           "sha256: FIPS 180-4's examples");
+    // Every length around the padding's edges, against sha256sum.
+    std::mt19937 rng(7);
+    std::string bytes(1300, '\0');
+    for (auto& c : bytes)
+        c = static_cast<char>(rng());
+    bool same = true;
+    for (size_t n : {size_t(55), size_t(56), size_t(63), size_t(64), size_t(65), size_t(119), size_t(120), size_t(1300)}) {
+        const std::string path = "/tmp/test_core_sha256_" + std::to_string(n);
+        FILE* f = std::fopen(path.c_str(), "wb");
+        same = same && f && std::fwrite(bytes.data(), 1, n, f) == n && std::fclose(f) == 0 &&
+               sha256_hex(bytes.substr(0, n)) == file_sha256(path);
+        std::remove(path.c_str());
+    }
+    expect(same, "sha256: lengths 55 to 1300 as sha256sum");
+}
+
+// M4's YOLOv8n outputs at 640x640: three branches of {box, class scores, score sum}, class scale 1/256 so
+// that int8 -64 is exactly 0.25.
+std::vector<rknn_tensor_attr> v8_map_attrs() {
+    std::vector<rknn_tensor_attr> attrs;
+    for (int g : {80, 40, 20})
+        for (int ch : {64, 80, 1}) {
+            rknn_tensor_attr a;
+            std::memset(&a, 0, sizeof a);
+            a.n_dims = 4;
+            a.dims[0] = 1;
+            a.dims[1] = ch;
+            a.dims[2] = a.dims[3] = g;
+            a.fmt = RKNN_TENSOR_NCHW;
+            a.type = RKNN_TENSOR_INT8;
+            a.zp = -128;
+            a.scale = ch == 64 ? 0.1f : 1.0f / 256;
+            attrs.push_back(a);
+        }
+    return attrs;
+}
+
+void yolov8_map_rule() {
+    const auto attrs = v8_map_attrs();
+    std::vector<std::vector<int8_t>> bufs;
+    std::vector<const int8_t*> ptrs;
+    for (const auto& a : attrs)
+        bufs.emplace_back(size_t(a.dims[1]) * a.dims[2] * a.dims[3], int8_t(-128));
+    for (const auto& b : bufs)
+        ptrs.push_back(b.data());
+    const int len0 = 80 * 80;
+    // Box bins one-hot at 4 on every side: a 64 × 64 px box centred on its cell.
+    const auto peaked = [&](int branch, int cell) {
+        const int len = attrs[branch * 3].dims[2] * attrs[branch * 3].dims[3];
+        for (int side = 0; side < 4; side++)
+            bufs[branch * 3][(side * 16 + 4) * len + cell] = 127;
+    };
+    // Cells 0 and 1 of stride 8 have boxes 8 px apart (IoU 0.78); cell 300 is far away.
+    for (int cell : {0, 1, 300})
+        peaked(0, cell);
+    bufs[1][3 * len0 + 0] = 102;    // class 3 at cell 0: 0.9
+    bufs[1][3 * len0 + 1] = 76;     // class 3 at cell 1: 0.8, overlaps cell 0's: dropped
+    bufs[1][4 * len0 + 1] = 51;     // class 4 at cell 1: 0.7, another class: kept
+    bufs[1][3 * len0 + 300] = 25;   // class 3 at cell 300: 0.6, far: kept. Every other score is 0.
+    MapResult r = yolov8_map(ptrs, attrs, 640, 640);
+    expect(r.dets.size() == 3 && r.candidates == 4 && r.dets[0].cls == 3 && r.dets[1].cls == 4 &&
+               r.dets[2].cls == 3 && r.dets[2].score == (25.0f + 128) / 256 && !r.tied,
+           "yolov8_map: class-wise greedy NMS at IoU 0.7");
+    // The score sums are not read: yolov8_post would drop cells whose sum is below conf.
+    for (int b = 0; b < 3; b++)
+        std::fill(bufs[b * 3 + 2].begin(), bufs[b * 3 + 2].end(), int8_t(-128));
+    expect(yolov8_map(ptrs, attrs, 640, 640).dets.size() == 3, "yolov8_map: the score sums are not used");
+    const float lowest = (25.0f + 128) / 256;
+    expect(yolov8_map(ptrs, attrs, 640, 640, std::nextafter(lowest, 0.0f)).dets.size() == 3 &&
+               yolov8_map(ptrs, attrs, 640, 640, lowest).dets.size() == 2,
+           "yolov8_map: conf is strict");
+
+    // 402 equal scores of 0.75, 134 per branch, the k-th of a branch at cell k × step with class k % 80:
+    // ties in branch, cell, class order; max_det, its tie, and max_nms. A class's boxes in one branch are
+    // at least 7 rows apart (k and k + 80), and boxes of two branches differ in size (64, 128, 256 px):
+    // no IoU reaches 0.7, so nothing is dropped.
+    for (auto& b : bufs)
+        std::fill(b.begin(), b.end(), int8_t(-128));
+    for (int b = 0; b < 3; b++) {
+        const int g = attrs[b * 3].dims[2], step = b == 2 ? 2 : 7;
+        for (int k = 0; k < 134; k++) {
+            peaked(b, k * step);
+            bufs[b * 3 + 1][(k % 80) * g * g + k * step] = 64;
+        }
+    }
+    r = yolov8_map(ptrs, attrs, 640, 640, 0.25f);
+    bool order_ok = r.dets.size() == 300 && r.tied && r.candidates == 402;
+    for (size_t i = 0; order_ok && i < r.dets.size(); i++)
+        order_ok = r.dets[i].score == 0.75f;
+    // The 300 kept: branch 0's 134, branch 1's 134 and branch 2's first 32, in that order.
+    expect(order_ok && r.dets[133].cls == 133 % 80 && r.dets[134].cls == 0 && r.dets[299].cls == 31 &&
+               std::fabs(r.dets[299].x1 - ((62 % 20) + 0.5f - 4) * 32) < 0.01f,
+           "yolov8_map: equal scores in branch, cell, class order, 300 kept, the 301st tied");
+    expect(yolov8_map(ptrs, attrs, 640, 640, 0.25f, 300, 250).dets.size() == 250,
+           "yolov8_map: only the first max_nms go to the NMS");
+    for (int k = 32; k < 134; k++)  // branch 2's from the 33rd on are lower now: no tie at the 300th
+        bufs[7][(k % 80) * 400 + k * 2] = 63;
+    r = yolov8_map(ptrs, attrs, 640, 640, 0.25f);
+    expect(r.dets.size() == 300 && !r.tied && r.candidates == 402, "yolov8_map: no tie when the 301st is lower");
+
+    bool threw = false;
+    try {
+        yolov8_map({ptrs.begin(), ptrs.begin() + 6}, {attrs.begin(), attrs.begin() + 6}, 640, 640);
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+    auto swapped = attrs;
+    std::swap_ranges(swapped.begin(), swapped.begin() + 3, swapped.begin() + 3);
+    bool threw_order = false;
+    try {
+        yolov8_map_check_layout(swapped);
+    } catch (const std::runtime_error&) {
+        threw_order = true;
+    }
+    expect(threw && threw_order, "yolov8_map: rejects 6 outputs and branches out of stride order");
+}
+
+void yolov10_map_rule() {
+    const auto attrs = v10_attrs();
+    std::vector<std::vector<int8_t>> bufs;
+    std::vector<const int8_t*> ptrs;
+    for (const auto& a : attrs)
+        bufs.emplace_back(size_t(a.dims[1]) * a.dims[2] * a.dims[3], int8_t(-128));
+    for (const auto& b : bufs)
+        ptrs.push_back(b.data());
+    for (int b = 0; b < 3; b++)
+        for (int k = 0; k < 134; k++)
+            bufs[b * 2 + 1][(k % 80) * attrs[b * 2 + 1].dims[2] * attrs[b * 2 + 1].dims[3] + k] = 64;
+    MapResult r = yolov10_map(ptrs, attrs, 640, 640, 0.25f);
+    const auto want = yolov10_post(ptrs, attrs, 640, 640, 0.25f, 300);
+    bool same = r.dets.size() == want.size();
+    for (size_t i = 0; same && i < want.size(); i++)
+        same = r.dets[i].cls == want[i].cls && r.dets[i].score == want[i].score && r.dets[i].x1 == want[i].x1 &&
+               r.dets[i].y2 == want[i].y2;
+    expect(same && r.candidates == 402 && r.tied, "yolov10_map: yolov10_post's 300, the candidates and the tie");
+    // Branch 2 keeps its first 32 at 0.75 and one lower candidate: 301 candidates, the 301st not tied.
+    for (int k = 32; k < 134; k++)
+        bufs[5][(k % 80) * 400 + k] = k == 133 ? 63 : -128;
+    r = yolov10_map(ptrs, attrs, 640, 640, 0.25f);
+    expect(r.dets.size() == 300 && r.candidates == 301 && !r.tied, "yolov10_map: no tie when the 301st is lower");
+}
+
 void commit_sha_form() {
     expect(is_commit_sha("8638685d9ef806a85e5042d7cc10febdd5ae93a9"), "is_commit_sha: 40 lowercase hex digits");
     expect(!is_commit_sha("8638685D9EF806A85E5042D7CC10FEBDD5AE93A9") && !is_commit_sha("none") &&
@@ -646,6 +798,9 @@ int main() {
     yolov10_post_selects();
     yolov10_post_matches_reference();
     pipeline_post_dispatches();
+    sha256_known_values();
+    yolov8_map_rule();
+    yolov10_map_rule();
     commit_sha_form();
     m4_run_rules();
     std::printf("%d failure(s)\n", failures);
