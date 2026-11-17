@@ -1,0 +1,6 @@
+time_utc: 2026-11-17T05:33:38Z
+script: tools/m4_board_pass.py pass --model yolov8n --kind check --name trial2_old_dump --limit 50 --dets-in-record --compare-dump results/check/20261117T045751Z_trial_rules_yolov8n/dump
+pc_head: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+board_build: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+outcome: the board tool exited 2
+seconds: 8

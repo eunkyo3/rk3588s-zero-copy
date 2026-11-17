@@ -1,0 +1,33 @@
+# start_time_utc: 2026-11-17T05:35:17Z
+# run_kind: check
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# amendment: A13
+# code_commit: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+# code_status: clean
+# eval_image: rk3588s-zero-copy/m4-eval:1
+# eval_image_id: sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+# board_record: 20261117T053423Z_trial2_rules_yolov10n
+# board_code_commit: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+# model: yolov10n
+# model_sha256: 6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+# rule_python: tools/m4_rules.py
+# rule_cpp: yolov10_map: yolov10_post, conf 0.001, max 300, no NMS
+# map_rule_object_sha256: 94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e
+key,value
+board_record,20261117T053423Z_trial2_rules_yolov10n
+model,yolov10n
+images,50
+lists_equal,50
+lists_differing,0
+lists_excepted_near_0.7,0
+largest_score_difference,0
+largest_box_difference_px,0
+values_equal_bit_for_bit,75000
+values,75000
+ious_within_1e-6_of_0.7,0
+ious_within_1e-6_of_0.7_list,none
+problems,none
+valid,1

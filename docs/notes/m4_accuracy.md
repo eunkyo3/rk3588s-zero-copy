@@ -176,7 +176,12 @@ How M4's accuracy (prereg/M4.md §2) is run.
   - **Invalid runs:** a PNG swapped for another made the pass invalid at that image, with its reason and exit 1. Run kind `m4` without its conditions, run kind `check` with a freeze-m4 commit, `--limit 0`, and a file that is not one of M4's models were each refused with exit 2.
   - **The first trial** stopped at once (`…T045612Z`): the board's tree has no `results/`, so the script now sends the manifest.
   - **Objects:** `yolov8_post.cpp.o` and `yolov8_post_neon.cpp.o` have A13's SHA-256.
-  - **Speed per image:** decoding 50 ms, NPU 16 ms, mAP's rule 12 ms (YOLOv8n). A pass of 5,000 images takes about 7 minutes, plus sending 2.6 GB of PNGs.
+  - **Speed per image** (the waits for inputs timed apart after the review): decoding 22 ms, NPU 16 to 18 ms, mAP's rule 12 ms (YOLOv8n) or 6 ms (YOLOv10n). A pass of 5,000 images takes about 5 minutes, plus sending 2.6 GB of PNGs.
+- **After the review** (the board built at `a2890a8`, records `results/check/20261117T053*_trial2_*`):
+  - **Rules:** the same results on the first 50 images.
+  - **Wiring:** 10 of 10 frames equal for both settings, with their detections recorded.
+  - **Determinism:** the second YOLOv8n dump equals the first, after its files were checked against the first record's `dump.sha256`.
+  - **A dump without `dump.sha256`** (the first trials') was refused as a dump to compare with, with exit 2.
 - **The independent review** found nothing that changes the results. Its points are in: the driver's robustness, the m4 pass's conditions, the narrower exception, `m4_coco`'s check of the files' SHA-256, and the smaller items above.
 - **A dependency to know:** `yolov10_post` fuses `acc += e × i` because GCC contracts by default in this build. The Python rule and `yolov8_map` assume it does. Were a flag or compiler to change that, the pinned objects' SHA-256 and the bit-for-bit YOLOv10n check would show it.
 - **Still to come, §8 step 3 at the code to be frozen:**
