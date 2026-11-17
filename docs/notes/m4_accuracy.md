@@ -245,6 +245,13 @@ The four passes come before the `calib_npu` session, and that before the pipelin
     - **A pass whose `pc_run.py` died** (a crash, a reboot) has no `exit.txt`. `--ended` writes one, with `exit_code: none` and the time then, once docker shows that its container does not run.
   - **The `calib_npu` session that decides** must also have started once the passes were done ([comparison.md](comparison.md)).
   - **Afterwards, on the PC:** `tools/check_prereg_order.py` reports every calib_npu or pipeline session in `results/m4/` that starts before the passes that started before it were done and had ended. It also reports a pipeline session that starts before the last record of its `calib_npu` session.
+- **Trials of 2026-11-17** on the board (built at `bad15c9`, then `eeaa97d`), with nothing written under `results/m4/`:
+  - **Before `freeze-m4`:** the gate and `RUN_KIND=m4 tools/m4_calib.sh` refused, and the script made nothing.
+  - **Wiring:** the build's four objects had the SHA-256 of the board tool's trials, and the wiring gate took their `trial2` wiring records.
+  - **The changed `m4_board_run.sh`:** a wiring check (`results/check/20261117T074956Z_trial3_wiring_yolov10n`) gave 10 of 10 frames equal, exit 0, and `tool_pid` in `run.txt`.
+  - **Killing the script:** a TERM to the script alone, during a run, stopped its tool too. `exit_code` became 143, and both the alive check and the scan of running tools then found nothing.
+  - **`m4_send_record.py`:** a trial copy of an FP32 record, sent to a trial directory, arrived as root's 0644 files with equal SHA-256. A second send changed nothing, and a record of kind `check` was refused.
+  - **Real formats:** the board tool's and the PC's trial records, relabelled as kind `m4`, read as four valid passes with their ends.
 
 ## Evaluation (§2.3, §6)
 
