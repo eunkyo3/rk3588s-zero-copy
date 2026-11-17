@@ -4,8 +4,8 @@
 
 How M4's accuracy (prereg/M4.md §2) is run.
 - **Normative:** [prereg/M4.md](../../prereg/M4.md). This note says how the tools apply it.
-- **Covered so far:** the evaluation image, COCO's files and the inputs.
-- **Not yet:** the board's pass, the PC's passes and the evaluation. They are added here with their tools.
+- **Covered so far:** the evaluation image, COCO's files, the inputs, the Python rules, the PC's FP32 pass and the evaluation.
+- **Not yet:** the board's INT8 pass, the C++ YOLOv8n rule and the check of §8 step 3 between the two implementations. They are added here with their tools.
 
 ## The evaluation image (§8 step 2)
 
@@ -63,6 +63,7 @@ How M4's accuracy (prereg/M4.md §2) is run.
   - **Record:** `results/<kind>/<UTC>_<name>/`. Its `pc.json` holds the above, the start time from the host clock, the run kind, M4's stage commits and the amendment in force (PROTOCOL §1.4, M4 §4). So even a tool that stops early leaves a header that `tools/check_prereg_order.py` checks.
   - **Container:** run by the image's ID. The repository is mounted read-only at `/repo`, the record at `/record`, and the data at `/data`. It has no network and no new privileges.
   - **Limits:** 2 GB of memory (4 GB with swap), as for the conversion. Other projects' containers share the Docker VM.
+  - **The evaluation's limit:** `tools/m4_coco.py` gets 6 GB without swap (see Evaluation below). Without swap, a run that needs more fails at once instead of thrashing the disk. It does not start while another container runs, or when the Docker VM has less than 7 GB. `pc.json` records the limit as `container_memory`.
   - **Python:** `python3 -I`, since the inputs are downloaded data.
   - **`--checks-only`:** records `pc.json` and runs no tool, to record the PC's clock, say.
 - **The PC:** Intel Core i7-6500U.
@@ -103,10 +104,74 @@ How M4's accuracy (prereg/M4.md §2) is run.
     - **Before it:** NTP offset +0.582 s (1 of 3 samples answered), the container −0.003 s. The Windows Time service was running.
     - **OpenCV:** 4.11.0, optimized.
 
+## The rules in Python (§2.3)
+
+[tools/m4_rules.py](../../tools/m4_rules.py) holds both rules. They run on float32 outputs. INT8 outputs are made float32 by `dequantize`, the C++ expression `(q − zp) × scale`.
+- **Arithmetic:** float32, in the C++'s order (`src/core/yolov10_post.cpp`, `yolov8_post.cpp`).
+  - A candidate is a (cell, class) pair whose score is above 0.001.
+  - Candidates are ordered by score; equal scores by branch, then cell, then class.
+  - Each box is decoded from its own cell: per side, the softmax's expectation over the 16 DFL bins, summed bin by bin; then `(x + 0.5 − d) × stride`.
+- **`yolov10_rule`:** the 300 best candidates, no NMS.
+- **`yolov8_rule`:** the first 30,000 candidates, then a greedy NMS per class going down their order. A candidate is dropped when its IoU (computed as `yolov8_post` does) with an earlier kept candidate of its class is above 0.7. The first 300 kept are the result. The score sums are not used.
+- **Ties (§6):** each rule also says whether its 301st detection has the 300th's score.
+- **Against the board:** on the exploration's board dumps (21 images, YOLOv10n INT8), `yolov10_rule` gives `yolov10_post`'s lists at conf 0.25 and 0.001: all 42 with the same count, order and classes.
+  - **Largest differences:** 4.9e-10 in score and 6.2e-5 px in box, against §2.3's 1e-6 and 1e-3 px.
+  - **Test:** a test repeats this wherever the dumps are (they are not committed).
+  - **Still to come:** the check of §8 step 3, on the first 50 images and for both rules, comes with the board tool.
+
+## Detections files
+
+A pass writes two tables to a directory of its own, outside the repository: `D:/m4data/passes/<record>/`. Each has a `# key: value` header (`pc.json`'s fields, the pass, the model and its SHA-256, the precision, the rule, the manifest's SHA-256s).
+- **`detections.tsv`:** `image_id, rank, class, score, x1, y1, x2, y2`.
+  - **Order:** one row per detection, the images in the manifest's order, each image's detections in the rule's order.
+  - **Values:** the score and the box (model input coordinates) are float32 printed with 9 significant digits, as the board's C++ prints them.
+- **`images.tsv`:** `image_id, candidates, detections, tied`.
+- **Both precisions:** the board's INT8 pass will write the same two files.
+
+## The FP32 pass on the PC (§2.2, §2.5)
+
+`MSYS_NO_PATHCONV=1 python tools/eval/pc_run.py --kind m4 --name fp32_<model> -- tools/m4_fp32.py --model <yolov8n|yolov10n> --manifest results/check/20261116T064917Z_m4_inputs/manifest.tsv --inputs /data/inputs2`
+
+- **The model:** its SHA-256 must be §1's (`models/<model>.sha256`) before anything runs.
+- **onnxruntime:** the CPU execution provider, 1 intra-op and 1 inter-op thread, the default graph optimization.
+- **Each image:**
+  - in the manifest's order, the PNG is decoded and made RGB;
+  - its bytes must be the manifest's; otherwise the pass is invalid (§5) and stops;
+  - the model sees RGB / 255 in float32, NCHW;
+  - the model's rule gives the detections.
+- **Records:** the detections files go to `D:/m4data/passes/<record>/`. `pass.csv` in the record directory has the counts, both files' SHA-256, and `valid`.
+- **Scope:** a pass of kind `m4` runs all 5,000 images. `--limit N` runs the first N, for a check only.
+- **Speed:** on this PC, one image takes about 0.8 s in onnxruntime for either model, so a pass takes over an hour.
+
+## Evaluation (§2.3, §6)
+
+`MSYS_NO_PATHCONV=1 python tools/eval/pc_run.py --kind <check|m4> --name eval_<pass> -- tools/m4_coco.py --dets /data/passes/<pass record> --manifest <manifest.tsv> --annotations /data/coco/annotations_trainval2017.zip`
+
+- **Conversion ([tools/m4_coco.py](../../tools/m4_coco.py)), one function for both precisions:**
+  - each box goes back to the image: minus `left` or `top`, divided by `r`, clipped to the image, as `[x, y, width, height]`;
+  - the values are float32 printed with 9 significant digits;
+  - class k becomes the k-th smallest category id;
+  - each image's detections keep their order.
+- **COCOeval:** `iouType` bbox, default parameters, over the pass's images, and again without the 20 quantization images.
+- **`coco_eval.csv`:** COCOeval's 12 stats for both image sets; the detections per image; how many images reached 300 and how many of those were tied; the SHA-256 of the files.
+- **The annotations:** checked against `coco.sha256`, and read from their zip.
+- **Size:** a pass has about 1.5 million detections. Most of the memory goes to two places:
+  - COCOeval's records per image, category and area range (`evaluate`);
+  - the loaded results (`loadRes`).
+- **Saving memory:** the tool frees the detections table before COCOeval, and loads the results once for both image sets.
+- **Measured:** synthetic detections (random boxes and classes, 300 per image; no model's), in the image:
+  - 500 images: peak 0.64 GB;
+  - 2,500 images: peak 2.5 GB, exit 0 at 6 GB without swap;
+  - growth is linear, so 5,000 images need about 4.9 GB, under the 6 GB limit.
+- **A 2 GB limit is too small:** with 2 GB plus 2 GB of swap, 5,000 images were killed for memory after 34 minutes of swapping.
+
 ## Files
 
 | File | Content |
 |---|---|
+| `tools/m4_rules.py` | the two rules in Python ([tests](../../tests/test_m4_rules.py)) |
+| `tools/m4_fp32.py` | the PC's FP32 pass ([tests](../../tests/test_m4_fp32.py)) |
+| `tools/m4_coco.py` | the detections files, their COCO conversion and their evaluation ([tests](../../tests/test_m4_coco.py)) |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | the evaluation image, its ID, its checks and its archive |
 | `tools/eval/fetch_coco.sh`, `coco.sha256` | COCO's two files and their SHA-256 |
 | `tools/eval/pc_run.py` | a run on the PC after §4's checks ([tests](../../tests/test_pc_run.py)) |

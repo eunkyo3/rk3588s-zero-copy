@@ -73,8 +73,12 @@ class FakeContainer:
 
 class Checks(unittest.TestCase):
     def fake_run(self, status="", untracked="", tracked=True, flags="H tools/m4_prep.py\n", offsets=STRIPCHART,
-                 image=True):
+                 image=True, running="", vm="8273903616\n"):
         def run(cmd, timeout=120):
+            if cmd[:2] == ["docker", "ps"]:
+                return 0, running
+            if cmd[:2] == ["docker", "info"]:
+                return 0, vm
             if cmd[0] == "git":
                 if "rev-parse" in cmd:
                     return 0, "c" * 40 + "\n"
@@ -109,6 +113,22 @@ class Checks(unittest.TestCase):
                           "ntp_samples": "1 answered, 2 did not", "w32tm_status_exit": -2147023834})
         self.assertIn("0x80070426", pc["host"]["w32tm_status"])
         self.assertEqual(pc["container_clock_offset_s"], "+0.0012")
+        self.assertEqual(pc["container_memory"], "2g, 4g with swap")
+        # the other containers and the VM's size do not matter at 2 GB
+        pc, _ = self.checks(running="other\n", vm="4000000000\n")
+        self.assertEqual(pc["container_memory"], "2g, 4g with swap")
+
+    def test_the_evaluations_memory(self):
+        self.assertEqual(pr.memory("tools/m4_coco.py"), (["--memory=6g", "--memory-swap=6g"], "6g, no swap"))
+        self.assertEqual(pr.memory("./tools/m4_coco.py")[1], "6g, no swap")
+        self.assertEqual(pr.memory("tools/m4_fp32.py"), (["--memory=2g", "--memory-swap=4g"], "2g, 4g with swap"))
+        self.assertEqual(pr.memory(None)[1], "2g, 4g with swap")
+        pc, _ = self.checks(tool="tools/m4_coco.py", flags="H tools/m4_coco.py\n")
+        self.assertEqual(pc["container_memory"], "6g, no swap")
+        for kw, message in (({"running": "uwb-n8n\nta0q-db\n"}, "other containers run: uwb-n8n | ta0q-db"),
+                            ({"vm": "6900000000\n"}, "the Docker VM has 6.4 GB (at least 7 GB)")):
+            with self.subTest(kw=kw), self.assertRaisesRegex(pr.Refused, re.escape(message)):
+                self.checks(tool="tools/m4_coco.py", flags="H tools/m4_coco.py\n", **kw)
 
     def test_what_stops_a_run(self):
         for kw, message in (({"status": " M tools/m4_prep.py\n"}, "the tree differs from HEAD: M tools/m4_prep.py"),
@@ -218,11 +238,18 @@ class Main(unittest.TestCase):
                 written = json.loads((record / "pc.json").read_text(encoding="utf-8"))
                 self.assertEqual(list(written)[:3], ["start_time_utc", "run_kind", "amendment"])
                 self.assertEqual(written["tool"], ["tools/x.py", "--a", "/data"])
+                self.assertEqual(written["record"], record.name)  # the tool names its outputs after it
                 self.assertEqual((record / "x.log").read_bytes(), b"line\n")
                 cmd = popen.call_args[0][0]
                 self.assertEqual(cmd[cmd.index(IMAGE_ID):], [IMAGE_ID, "python3", "-I", "/repo/tools/x.py", "--a", "/data"])
                 self.assertIn(f"type=bind,source={repo},target=/repo,readonly", cmd)
-                self.assertTrue({"--network", "none", "no-new-privileges", "--memory=2g"} <= set(cmd))
+                self.assertTrue({"--network", "none", "no-new-privileges", "--memory=2g", "--memory-swap=4g"} <= set(cmd))
+                # the COCO evaluation: 6 GB without swap
+                (repo / "tools/m4_coco.py").write_text("")
+                self.main(["--kind", "check", "--name", "e", "--data", t, "--", "tools/m4_coco.py"], checks=lambda *a: pc)
+                cmd = popen.call_args[0][0]
+                self.assertTrue({"--memory=6g", "--memory-swap=6g"} <= set(cmd))
+                self.assertNotIn("--memory=2g", cmd)
                 # --checks-only: the record, and no container
                 popen.reset_mock()
                 code, _, _ = self.main(["--kind", "check", "--name", "clock", "--data", t, "--checks-only"],
