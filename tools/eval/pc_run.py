@@ -21,7 +21,7 @@ data:
     --data (default D:/m4data) at /data;
   - no network, no new privileges, and memory limited to 2 GB (4 GB with swap), as for the conversion:
     other projects' containers share the Docker VM. COCOeval of a pass (tools/m4_coco.py, about 1.5
-    million detections) needs about 4.5 GB: that tool gets 6 GB without swap, which fails at once rather
+    million detections) needs about 4.9 GB: that tool gets 6 GB without swap, which fails at once rather
     than thrash the disk, and it does not start while another container runs or in a Docker VM with less
     than 1 GB more than that.
 Its output goes to the console and to <record>/<tool>.log. With --checks-only, no tool runs: pc.json
@@ -116,8 +116,14 @@ def run(cmd, timeout=120):
 
 
 def large_memory_gb(tool):
-    """The tool's large memory limit in GB, or None."""
-    return LARGE_MEMORY_GB.get(Path(tool).as_posix().removeprefix("./")) if tool else None
+    """The tool's large memory limit in GB, or None: by its path in the repository, however it is written."""
+    if not tool:
+        return None
+    try:
+        key = (REPO / tool).resolve().relative_to(REPO.resolve()).as_posix()
+    except (OSError, ValueError):
+        return None
+    return LARGE_MEMORY_GB.get(key)
 
 
 def memory(tool):

@@ -101,20 +101,25 @@ class Evaluation(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def pass_dir(self, dets):
+    def pass_dir(self, dets, **header):
         d = self.t / "pass"
         d.mkdir(exist_ok=True)
-        mc.write_table(d / "detections.tsv", {"pass": "fp32_yolov8n", "model": "yolov8n"}, mc.DET_COLUMNS, dets)
+        rows = mp.rows_sha256((self.t / "manifest.tsv").read_text(encoding="utf-8"))
+        header = {"pass": "synthetic", "manifest_rows_sha256": rows, **header}
+        mc.write_table(d / "detections.tsv", header, mc.DET_COLUMNS, dets)
         per_image = [[i, 5, sum(1 for x in dets if x[0] == i), 0] for i in (1, 2)]
-        mc.write_table(d / "images.tsv", {}, mc.IMAGE_COLUMNS, per_image)
+        mc.write_table(d / "images.tsv", header, mc.IMAGE_COLUMNS, per_image)
         return d
 
-    def run_main(self, dets):
-        d = self.pass_dir(dets)
+    def run_main(self, dets, kind="check", **header):
+        d = self.pass_dir(dets, **header)
+        (self.t / "record/pc.json").write_text(json.dumps(dict(PC, run_kind=kind)))
         argv = ["--dets", str(d), "--manifest", str(self.t / "manifest.tsv"), "--annotations", str(self.zip),
                 "--record", str(self.t / "record")]
         with mock.patch.object(mc, "COCO_SHA256", self.t / "coco.sha256"), \
                 mock.patch.object(mc, "QUANTIZATION", self.t / "quant.sha256"), \
+                mock.patch.object(mc, "REPO", self.t), mock.patch.object(mc, "IMAGES", 2), \
+                mock.patch.object(mc, "QUANTIZATION_IMAGES", 1), \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
             code = mc.main(argv)
         rows = {}
@@ -145,6 +150,50 @@ class Evaluation(unittest.TestCase):
         code, _, err = self.run_main([[1, 0, 0, "0.9", "1", "1", "2", "2"]])
         self.assertEqual(code, 2)
         self.assertIn("is not the file", err)
+
+    def test_what_is_refused(self):
+        ok = [1, 0, 0, "0.9", "12.8", "92.8", "140.8", "195.2"]
+        for dets, header, message in (
+                ([ok], {"manifest_rows_sha256": "0" * 64}, "is not the pass's manifest"),
+                ([], {}, "no detections"),
+                ([[1, 0, 80, "0.9", "1", "1", "2", "2"]], {}, "class 80"),
+                ([[1, 0, 0, "nan", "1", "1", "2", "2"]], {}, "out of range"),
+                ([[3, 0, 0, "0.9", "1", "1", "2", "2"]], {}, "not the manifest's first images")):
+            with self.subTest(message=message):
+                code, rows, err = self.run_main(dets, **header)
+                self.assertEqual((code, rows), (2, {}), err)
+                self.assertIn(message, err)
+
+    def a_models_pass(self, kind="m4", valid="1"):
+        """A model's pass of this kind, whose own record says valid."""
+        rec = self.t / f"results/{kind}/20261201T000000Z_fp32_yolov8n"
+        rec.mkdir(parents=True, exist_ok=True)
+        (rec / "pass.csv").write_text(f"# pass: fp32_yolov8n\nkey,value\nimages,2\nvalid,{valid}\nreason,none\n")
+        return {"model_sha256": "0c871670" + "0" * 56, "run_kind": kind, "record": rec.name}
+
+    def test_a_models_detections_wait_for_freeze_m4(self):
+        dets = [[1, 0, 0, "0.9", "12.8", "92.8", "140.8", "195.2"], [2, 0, 1, "0.8", "200", "180", "250", "230"]]
+        # in a check run, or a pass of kind check: refused, so that no AP is seen before freeze-m4
+        for kind, pass_kind in (("check", "check"), ("check", "m4"), ("m4", "check")):
+            with self.subTest(kind=kind, pass_kind=pass_kind):
+                code, rows, err = self.run_main(dets, kind=kind, **self.a_models_pass(pass_kind))
+                self.assertEqual((code, rows), (2, {}))
+                self.assertIn("in a run of kind m4 only", err)
+        # kind m4: the pass's record must say valid,1, and the pass cover the whole manifest
+        code, rows, err = self.run_main(dets, kind="m4", **self.a_models_pass(valid="0"))
+        self.assertEqual(code, 2)
+        self.assertIn("does not say valid,1", err)
+        code, rows, err = self.run_main(dets, kind="m4", **self.a_models_pass())
+        self.assertEqual(code, 0, err)
+        self.assertEqual((rows["pass_valid"], rows["all_ap"]), ("1", "1.000000"))
+        # without a model, kind m4 has nothing to evaluate
+        code, _, err = self.run_main(dets, kind="m4")
+        self.assertEqual(code, 2)
+        self.assertIn("evaluates a model's pass", err)
+
+    def test_a_check_reports_the_passes_validity(self):
+        code, rows, _ = self.run_main([[1, 0, 0, "0.9", "12.8", "92.8", "140.8", "195.2"]])
+        self.assertEqual((code, rows["pass_valid"]), (0, "no record"))
 
 
 if __name__ == "__main__":

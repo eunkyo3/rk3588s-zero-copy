@@ -12,7 +12,10 @@ Arithmetic follows the C++ of src/core/yolov10_post.cpp and yolov8_post.cpp, in 
   - candidates are ordered by score, highest first; equal scores by branch (stride 8, 16, 32), then cell
     (row-major), then class;
   - a box is decoded from its own cell: per side, the softmax's expectation over the DFL bins, summed bin
-    by bin; then x1 = (x + 0.5 − d_left) × stride, y1, x2, y2 likewise, in model input coordinates.
+    by bin; then x1 = (x + 0.5 − d_left) × stride, y1, x2, y2 likewise, in model input coordinates. To give
+    the board's float32 values bit for bit, exp is computed in float64 and rounded once (the board's
+    expf; numpy's float32 exp is off by up to 2 ulp), and acc += e × i is one rounding of the exact value,
+    as the fused multiply-add GCC makes of it on the board.
 The rules:
   - yolov10_rule: the max_det (300) best candidates. No NMS.
   - yolov8_rule: of the first 30,000 candidates, going down the order, a candidate is dropped when its
@@ -61,6 +64,8 @@ def branches(outputs, per_branch):
             raise ValueError(f"branch {b}: unexpected channels {box.shape[1]} and {cls.shape[1]}")
         if per_branch == 3 and outputs[b * 3 + 2].shape[1] != 1:
             raise ValueError(f"branch {b}: the score sum must have 1 channel")
+        if out and not all(g < h for g, h in zip(box.shape[2:], out[-1][0].shape[2:])):
+            raise ValueError("the branches must come in stride 8, 16, 32 order (the tie order follows it)")
         out.append((box, cls))
     return out
 
@@ -70,12 +75,15 @@ def decode_cells(box, model_w=MODEL_W, model_h=MODEL_H):
     _, channels, grid_h, grid_w = box.shape
     dfl = channels // 4
     bins = box[0].reshape(4, dfl, grid_h * grid_w).transpose(2, 0, 1)  # (cells, side, bin)
-    e = np.exp(bins - bins.max(axis=2, keepdims=True))
+    e = np.exp((bins - bins.max(axis=2, keepdims=True)).astype(np.float64)).astype(np.float32)
     total = np.zeros(bins.shape[:2], np.float32)
     acc = np.zeros(bins.shape[:2], np.float32)
     for i in range(dfl):  # bin by bin, as the C++ loop sums
         total = total + e[:, :, i]
-        acc = acc + e[:, :, i] * np.float32(i)
+        # e × i is exact in float64. Its float64 sum with acc, rounded to float32, is the FMA's one rounding:
+        # with nonnegative terms of at most 28 and 24 significant bits, the float64 sum is exact, or the
+        # smaller term is too small to bring it onto a float32 midpoint
+        acc = (e[:, :, i].astype(np.float64) * i + acc).astype(np.float32)
     d = acc / total
     stride_x = np.float32(model_w) / np.float32(grid_w)
     stride_y = np.float32(model_h) / np.float32(grid_h)

@@ -82,6 +82,10 @@ class Basics(unittest.TestCase):
         bad[1] = bad[1][:, :79]
         with self.assertRaisesRegex(ValueError, "channels"):
             mr.yolov10_rule(bad)
+        swapped = outputs(2)
+        swapped[0:2], swapped[2:4] = swapped[2:4], swapped[0:2]  # stride 16 first
+        with self.assertRaisesRegex(ValueError, "stride 8, 16, 32 order"):
+            mr.yolov10_rule(swapped)
 
 
 class Order(unittest.TestCase):
@@ -143,7 +147,8 @@ class Yolov8(unittest.TestCase):
 @unittest.skipUnless((PROBE / "000000005001_out0.i8").exists(), "needs the exploration's board dumps (not committed)")
 class AgainstTheBoard(unittest.TestCase):
     """yolov10_rule on the board's INT8 outputs of the exploration's 21 images, against C++ yolov10_post's
-    detections.csv at conf 0.25 and 0.001: §2.3's tolerances, score within 1e-6 and box within 1e-3 px."""
+    detections.csv at conf 0.25 and 0.001: §2.3's tolerances, score within 1e-6 and box within 1e-3 px, and
+    also bit for bit (the C++ prints float32 with 9 significant digits, which reads back exactly)."""
 
     def test_yolov10_rule_equals_yolov10_post(self):
         attrs = dict(line.split(",", 1) for line in (PROBE / "m4_probe.csv").read_text().splitlines()
@@ -154,6 +159,7 @@ class AgainstTheBoard(unittest.TestCase):
             for row in csv.DictReader(line for line in f if not line.startswith("#")):
                 cpp.setdefault((row["image"], row["conf"]), []).append(row)
         self.assertEqual(len(cpp), 42)
+        values = differ = 0
         for (image, conf), rows in sorted(cpp.items()):
             outs = [mr.dequantize(np.fromfile(PROBE / f"{image}_out{k}.i8", np.int8).reshape(dims[k]),
                                   int(attrs[f"output{k}_zp"]), np.float32(attrs[f"output{k}_scale"]))
@@ -166,6 +172,10 @@ class AgainstTheBoard(unittest.TestCase):
                                        atol=1e-3, rtol=0)
             for row in rows:  # and the C++'s printed values are what g9 prints
                 self.assertEqual(mr.g9(np.float32(row["score"])), row["score"])
+            got = np.concatenate([r.score[:, None], r.box], axis=1)
+            want = np.array([[row[k] for k in ("score", "x1", "y1", "x2", "y2")] for row in rows], np.float32)
+            values, differ = values + want.size, differ + int((got != want).sum())
+        self.assertEqual(differ, 0, f"{differ} of {values} values differ from the board's in some bit")
 
 
 if __name__ == "__main__":

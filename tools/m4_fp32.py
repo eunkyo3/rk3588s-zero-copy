@@ -17,7 +17,7 @@ tools/eval/pc_run.py (which records the PC, its clocks and the run kind in <reco
     only (run kind check).
 Writes detections.tsv and images.tsv (tools/m4_coco.py) to --out (default /data/passes/<record name>), a
 new directory outside the repository, and pass.csv to the record directory: the header, the counts, the
-SHA-256 of both files, and valid 1, or valid 0 with the reason.
+SHA-256 of both files, and valid 1, or valid 0 with the reason (any error once the pass has started).
 Exit 0 for a valid pass, 1 for an invalid one, 2 when it cannot start.
 """
 import argparse
@@ -95,23 +95,26 @@ def main(argv):
         pc = json.loads((record / "pc.json").read_text(encoding="utf-8"))
         if pc["run_kind"] not in ("check", "m4") or (a.limit is not None and pc["run_kind"] != "check"):
             raise InputError(f"run kind {pc['run_kind']}: m4 runs every image; --limit is for a check")
+        if a.limit is not None and a.limit < 1:
+            raise InputError("--limit is a number of images, at least 1")
         out = Path(a.out or f"/data/passes/{pc['record']}")
         if out.exists():
             raise InputError(f"{out} exists: a pass writes a new directory")
         model_path, model_sha = model_sha256(a.model)
         manifest = mc.read_manifest(a.manifest)
         text = Path(a.manifest).read_text(encoding="utf-8")
-        images = list(manifest.values())[:a.limit] if a.limit else list(manifest.values())
+        images = list(manifest.values())[:a.limit]  # all of them without --limit
         sess, ort_version = session(model_path)
+        out.mkdir(parents=True)
     except (InputError, OSError, KeyError, ValueError) as e:
         print(f"m4_fp32: {e}", file=sys.stderr)
         return 2
-    header = {**{k: pc[k] for k in mp.PC_FIELDS}, "pass": f"fp32_{a.model}", "model": a.model,
-              "model_file": Path(MODELS[a.model][0]).name, "model_sha256": model_sha, "precision": "fp32",
-              "rule": RULE_TEXT[a.model], "manifest": a.manifest, "manifest_sha256": mp.file_sha256(a.manifest),
-              "manifest_rows_sha256": mp.rows_sha256(text), "images_planned": len(images),
+    header = {**{k: pc[k] for k in mp.PC_FIELDS}, "record": pc["record"], "pass": f"fp32_{a.model}",
+              "model": a.model, "model_file": Path(MODELS[a.model][0]).name, "model_sha256": model_sha,
+              "precision": "fp32", "rule": RULE_TEXT[a.model], "manifest": a.manifest,
+              "manifest_sha256": mp.file_sha256(a.manifest), "manifest_rows_sha256": mp.rows_sha256(text),
+              "images_planned": len(images),
               "onnxruntime": f"{ort_version}, CPUExecutionProvider, 1 intra-op and 1 inter-op thread"}
-    out.mkdir(parents=True)
     rule = mr.RULES[a.model]
     name = sess.get_inputs()[0].name
     started, done, n_dets, ties, reason = time.time(), 0, 0, 0, "none"
@@ -132,8 +135,8 @@ def main(argv):
                 done, n_dets, ties = done + 1, n_dets + len(result.cls), ties + int(result.tied)
                 if done % 100 == 0:
                     print(f"m4_fp32: {done} of {len(images)} images, {time.time() - started:.0f} s", flush=True)
-        except (InputError, OSError, ValueError) as e:  # §5: an invalid pass, kept and repeated from the start
-            reason = str(e)
+        except Exception as e:  # §5: an invalid pass, kept and repeated from the start; pass.csv says why
+            reason = str(e) if isinstance(e, InputError) else f"{type(e).__name__}: {e}"
     rows = [("images", done), ("images_planned", len(images)), ("detections", n_dets), ("images_tied", ties),
             ("seconds", f"{time.time() - started:.0f}"), ("out", str(out)),
             ("sha256_detections_tsv", mp.file_sha256(out / "detections.tsv")),

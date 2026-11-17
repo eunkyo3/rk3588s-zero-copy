@@ -111,13 +111,16 @@ How M4's accuracy (prereg/M4.md §2) is run.
   - A candidate is a (cell, class) pair whose score is above 0.001.
   - Candidates are ordered by score; equal scores by branch, then cell, then class.
   - Each box is decoded from its own cell: per side, the softmax's expectation over the 16 DFL bins, summed bin by bin; then `(x + 0.5 − d) × stride`.
+  - **Bit for bit with the board:** `exp` is computed in float64 and rounded once to float32, as the board's `expf` gives it; numpy's float32 `exp` is off by up to 2 ulp. `acc += e × i` is rounded once, as the fused multiply-add GCC makes of it on the board. Without these, boxes differed by up to 6e-5 px, and the IoU of two boxes by up to 3.5e-6, more than the 1e-6 that §2.3 allows around 0.7.
+  - **The branches' order:** they must come in stride 8, 16, 32 order, since the tie order follows it.
 - **`yolov10_rule`:** the 300 best candidates, no NMS.
 - **`yolov8_rule`:** the first 30,000 candidates, then a greedy NMS per class going down their order. A candidate is dropped when its IoU (computed as `yolov8_post` does) with an earlier kept candidate of its class is above 0.7. The first 300 kept are the result. The score sums are not used.
 - **Ties (§6):** each rule also says whether its 301st detection has the 300th's score.
 - **Against the board:** on the exploration's board dumps (21 images, YOLOv10n INT8), `yolov10_rule` gives `yolov10_post`'s lists at conf 0.25 and 0.001: all 42 with the same count, order and classes.
-  - **Largest differences:** 4.9e-10 in score and 6.2e-5 px in box, against §2.3's 1e-6 and 1e-3 px.
-  - **Test:** a test repeats this wherever the dumps are (they are not committed).
+  - **Bit for bit:** all 32,530 scores and box coordinates are the board's, on the host and in the image. Before the decode above, 2,693 differed, by up to 6.2e-5 px; §2.3 allows 1e-6 in score and 1e-3 px in box.
+  - **Test:** a test repeats this wherever the dumps are (they are not committed). It checks §2.3's tolerances, then every bit.
   - **Still to come:** the check of §8 step 3, on the first 50 images and for both rules, comes with the board tool.
+  - **For the board's YOLOv8n rule:** its candidates should use `yolov10_post`'s `first_above`, as the Python does. `yolov8_post`'s `s > quantize(conf)` is not always the same test. GCC may also contract the IoU's union into a fused multiply-add, which moves the IoU by about 1e-7, within §2.3's 1e-6.
 
 ## Detections files
 
@@ -140,7 +143,9 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
   - the model sees RGB / 255 in float32, NCHW;
   - the model's rule gives the detections.
 - **Records:** the detections files go to `D:/m4data/passes/<record>/`. `pass.csv` in the record directory has the counts, both files' SHA-256, and `valid`.
-- **Scope:** a pass of kind `m4` runs all 5,000 images. `--limit N` runs the first N, for a check only.
+  - **Any error once the pass has started** makes it invalid: `valid,0`, with the error as the reason, and exit 1.
+  - **The files' header** also names the pass's record, where `tools/m4_coco.py` finds `pass.csv`.
+- **Scope:** a pass of kind `m4` runs all 5,000 images. `--limit N` (N ≥ 1) runs the first N, for a check only.
 - **Speed:** on this PC, per image (5 images, onnxruntime plus the rule):
   - YOLOv8n: 0.87 s + 0.21 s, so a pass takes about 1.5 hours;
   - YOLOv10n: 0.70 s + 0.05 s, about 1 hour.
@@ -160,6 +165,12 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 - **COCOeval:** `iouType` bbox, default parameters, over the pass's images, and again without the 20 quantization images.
 - **`coco_eval.csv`:** COCOeval's 12 stats for both image sets; the detections per image; how many images reached 300 and how many of those were tied; the SHA-256 of the files.
 - **The annotations:** checked against `coco.sha256`, and read from their zip.
+- **What it evaluates:**
+  - The pass's `manifest_rows_sha256` must be `--manifest`'s.
+  - **A model's detections** (a header that names `model_sha256`) only in a run of kind `m4`, after `freeze-m4` (§8 step 5), so that no AP is seen before. The pass must also be of kind `m4`, its own record must say `valid,1`, and it must cover the manifest's 5,000 images, 20 of them the quantization images.
+  - **Other detections** (synthetic ones, to check the tool) only in a run of kind `check`.
+  - A class out of range, a value that is not finite, or no detections at all: exit 2, before COCOeval.
+  - `coco_eval.csv` gives the pass's `valid` as `pass_valid` (`no record` without one).
 - **Size:** a pass has about 1.5 million detections. Most of the memory goes to two places:
   - COCOeval's records per image, category and area range (`evaluate`);
   - the loaded results (`loadRes`).

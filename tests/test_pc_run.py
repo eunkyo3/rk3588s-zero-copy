@@ -120,7 +120,10 @@ class Checks(unittest.TestCase):
 
     def test_the_evaluations_memory(self):
         self.assertEqual(pr.memory("tools/m4_coco.py"), (["--memory=6g", "--memory-swap=6g"], "6g, no swap"))
-        self.assertEqual(pr.memory("./tools/m4_coco.py")[1], "6g, no swap")
+        for spelling in ("./tools/m4_coco.py", "tools/../tools/m4_coco.py", "tools\\m4_coco.py"):
+            if "\\" not in spelling or sys.platform == "win32":
+                self.assertEqual(pr.memory(spelling)[1], "6g, no swap", spelling)
+        self.assertEqual(pr.memory("../tools/m4_coco.py")[1], "2g, 4g with swap")  # outside the repository
         self.assertEqual(pr.memory("tools/m4_fp32.py"), (["--memory=2g", "--memory-swap=4g"], "2g, 4g with swap"))
         self.assertEqual(pr.memory(None)[1], "2g, 4g with swap")
         pc, _ = self.checks(tool="tools/m4_coco.py", flags="H tools/m4_coco.py\n")

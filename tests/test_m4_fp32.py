@@ -95,12 +95,12 @@ class Pass(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def run_main(self, kind="check", limit=None, out="out"):
+    def run_main(self, kind="check", limit=None, out="out", fake=None):
         (self.t / "record/pc.json").write_text(json.dumps(dict(PC, run_kind=kind)))
-        fake = FakeSession()
+        fake = fake or FakeSession()
         argv = ["--model", "yolov10n", "--manifest", str(self.t / "manifest.tsv"), "--inputs",
                 str(self.t / "inputs"), "--out", str(self.t / out), "--record", str(self.t / "record")]
-        argv += ["--limit", str(limit)] if limit else []
+        argv += ["--limit", str(limit)] if limit is not None else []
         with mock.patch.object(mf, "model_sha256", return_value=(Path("m.onnx"), "4a925bcb" + "0" * 56)), \
                 mock.patch.object(mf, "session", return_value=(fake, "1.23.2")), \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
@@ -117,8 +117,8 @@ class Pass(unittest.TestCase):
         np.testing.assert_array_equal(x[0, 0], bgr[:, :, 2].astype(np.float32) / np.float32(255))  # R first
         header, dets = mc.read_table(self.t / "out/detections.tsv", mc.DET_COLUMNS)
         self.assertEqual([d[:4] for d in dets], [["139", "0", "5", "0.899999976"], ["285", "0", "5", "0.899999976"]])
-        self.assertEqual((header["pass"], header["precision"], header["model_sha256"][:8]),
-                         ("fp32_yolov10n", "fp32", "4a925bcb"))
+        self.assertEqual((header["pass"], header["precision"], header["model_sha256"][:8], header["record"]),
+                         ("fp32_yolov10n", "fp32", "4a925bcb", PC["record"]))
         _, images = mc.read_table(self.t / "out/images.tsv", mc.IMAGE_COLUMNS)
         self.assertEqual(images, [["139", "1", "1", "0"], ["285", "1", "1", "0"]])
         result = (self.t / "record/pass.csv").read_text()
@@ -133,10 +133,28 @@ class Pass(unittest.TestCase):
         self.assertIn("valid,0", result)
         self.assertIn("000000000285.png's RGB bytes are not the manifest's", result)
 
+    def test_any_error_once_started_invalidates_the_pass_with_its_reason(self):
+        class Failing(FakeSession):
+            def run(self, names, feed):
+                if self.inputs:
+                    raise RuntimeError("onnxruntime failed")
+                return super().run(names, feed)
+
+        code, fake, _ = self.run_main(fake=Failing())
+        self.assertEqual((code, len(fake.inputs)), (1, 1))
+        result = (self.t / "record/pass.csv").read_text()
+        self.assertIn("valid,0", result)
+        self.assertIn("reason,RuntimeError: onnxruntime failed", result)
+
     def test_what_stops_it_from_starting(self):
         code, _, err = self.run_main(kind="m4", limit=2)
         self.assertEqual(code, 2)
         self.assertIn("--limit is for a check", err)
+        for limit in (0, -1):
+            code, _, err = self.run_main(limit=limit)
+            self.assertEqual(code, 2)
+            self.assertIn("at least 1", err)
+            self.assertFalse((self.t / "out").exists())
         (self.t / "exists").mkdir()
         code, _, err = self.run_main(out="exists")
         self.assertEqual(code, 2)
