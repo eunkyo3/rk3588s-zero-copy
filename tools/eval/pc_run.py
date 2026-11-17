@@ -24,8 +24,9 @@ data:
     million detections) needs about 4.9 GB: that tool gets 6 GB without swap, which fails at once rather
     than thrash the disk, and it does not start while another container runs or in a Docker VM with less
     than 1 GB more than that.
-Its output goes to the console and to <record>/<tool>.log. With --checks-only, no tool runs: pc.json
-records the checks alone (the PC's clock, say).
+Its output goes to the console and to <record>/<tool>.log, and its exit code and end time to
+<record>/exit.txt (exit_code none when this script was stopped first). With --checks-only, no tool runs:
+pc.json records the checks alone (the PC's clock, say).
 
 Usage, on the PC from the repository (from Git Bash, with MSYS_NO_PATHCONV=1, which it checks: Git Bash
 would turn the container's /data/... into Windows paths):
@@ -308,13 +309,22 @@ def main(argv):
     if a.checks_only:
         return 0
     cmd = docker_command(pc["eval_image_id"], record, Path(a.data).resolve(), tool)
-    with open(record / f"{Path(tool[0]).stem}.log", "w", encoding="utf-8", newline="") as log:  # LF, as the tool's
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        for raw in p.stdout:
-            line = raw.decode("utf-8", errors="replace")
-            sys.stdout.write(line)
-            log.write(line)
-        return p.wait()
+    code = None
+    try:
+        with open(record / f"{Path(tool[0]).stem}.log", "w", encoding="utf-8", newline="") as log:  # LF, as the tool's
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            for raw in p.stdout:
+                line = raw.decode("utf-8", errors="replace")
+                sys.stdout.write(line)
+                log.write(line)
+            code = p.wait()
+    finally:
+        # How and when the tool ended, also when this script is stopped (exit_code none): tools/m4_order.py
+        # tells a pass that did not start from one that ended without its pass.csv (M4 §5).
+        end = dt.datetime.now(dt.timezone.utc)
+        (record / "exit.txt").write_text(f"exit_code: {'none' if code is None else code}\n"
+                                         f"end_time_utc: {end:%Y-%m-%dT%H:%M:%SZ}\n", encoding="utf-8", newline="\n")
+    return code
 
 
 if __name__ == "__main__":

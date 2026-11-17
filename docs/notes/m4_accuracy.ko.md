@@ -215,6 +215,8 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
 - **기록:** 검출 파일은 `D:/m4data/passes/<기록>/`에 간다. 기록 폴더의 `pass.csv`에 개수, 두 파일의 SHA-256, `valid`가 들어간다.
   - **패스가 시작된 뒤의 오류**는 종류와 상관없이 패스를 무효로 만든다. `valid,0`과 함께 오류를 이유로 적고, 종료 코드는 1이다.
   - **파일의 헤더**에는 패스의 기록 이름도 들어간다. `tools/m4_coco.py`는 이것으로 `pass.csv`를 찾는다.
+  - **`exit.txt`:** 도구가 끝나면 `pc_run.py`가 그 종료 코드와 끝난 시각을 여기에 쓴다. 스크립트 자체가 먼저 멈추면 `exit_code: none`이다.
+- **그다음, 보드로:** `python tools/m4_send_record.py results/m4/<기록>`이 기록을 보드의 `results/m4/`로 복사한다. 세션들의 관문은 거기서 패스 네 개를 찾는다(아래). 무효인 패스도 보낸다.
 - **범위:** 실행 종류 `m4`의 패스는 5,000장을 모두 돈다. `--limit N`(N ≥ 1)은 처음 N장만 돌고, 점검에만 쓴다.
 - **속도:** 이 PC에서 장당(5장, onnxruntime과 규칙):
   - YOLOv8n: 0.87초 + 0.21초, 그래서 패스 하나에 약 1.5시간;
@@ -222,6 +224,21 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - PC의 다른 작업이 속도를 늦춘다. 다른 프로젝트의 빌드와 Windows 업데이트가 도는 동안 아래 20장 점검은 장당 4.5초와 2.1초가 걸렸다.
 - **2026-11-17의 점검(`--limit 20`, 종류 `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20`과 `…T021553Z_fp32_yolov10n_limit20`, 둘 다 `valid,1`. 리뷰에 따라 디코딩을 바꾸기 전인 커밋 `3251204`에서 돌았다. 파일과 속도를 확인한 점검이다. 이 검출은 평가하지 않았다. AP는 freeze-m4 뒤에만 계산한다.
 - **이미지 안의 테스트:** 커밋 `d567e2c`에서 `results/check/20261117T034320Z_m4_rules_tests`(11개, 비트 단위 보드 대조 포함), `…T034351Z_m4_coco_tests`(11개), `…T034409Z_m4_fp32_tests`(6개). 건너뛴 테스트는 없다. 커밋 `3251204`의 실행(`…T021046Z`, `…T021205Z`, `…T021233Z`)은 리뷰 전의 것이다.
+
+## 실행 순서(§8 5단계)
+
+패스 네 개가 `calib_npu` 세션보다 먼저이고, `calib_npu` 세션이 파이프라인 세션보다 먼저다. [tools/m4_order.py](../../tools/m4_order.py)가 패스를 기록에서 읽는다([테스트](../../tests/test_m4_order.py)).
+- **기록:**
+  - **보드 패스:** `run.txt`에 명령과 시작 시각이 있다. 도구가 끝나면 `exit_code`와 `pass.csv`가 생긴다.
+  - **FP32 패스:** `pc.json`이 `tools/m4_fp32.py`를 적는다. 도구가 끝나면 `exit.txt`와 `pass.csv`가 생긴다.
+  - **시도로 치지 않는 것:** 시작하지 못한 실행, 곧 `pass.csv` 없이 종료 코드가 2인 것(거부, 또는 준비 실패)과, PC에서 docker의 125~127.
+  - **무효인 시도:** 그 밖의 이유로 `pass.csv` 없이 끝난 실행. 보드 리셋이나 죽은 실행이 그렇다.
+- **끝남:** 패스는 유효하거나, §5대로 두 번 무효였으면 끝난 것이다. 두 번 무효면 누락으로 보고한다. 보드에서 아직 도는 실행(같은 부팅에서 `m4_board_run.sh`의 PID로 살아 있는 것)이 있으면 패스는 끝나지 않은 것이다.
+- **확인하는 곳:**
+  - **보드, 세션이 시작하기 전:** 파이프라인 세션은 `tools/stream_session.py`가, `tools/m4_calib.sh`는 `tools/m4_order.py gate`가 확인한다. 둘 다 빌드의 후처리 오브젝트 네 개에 대해 두 설정 모두 통과한 배선 점검도 요구한다(§8 3단계, §5).
+  - **INT8 패스의 기록은 이미 보드에 있다.** FP32 패스의 기록은 PC에서 `tools/m4_send_record.py`로 보낸다. 이 도구는 패스가 끝난 기록만 보낸다. 이름이 같고 내용이 다른 기록은 덮어쓰지 않는다. 보낸 뒤 보드에서 모든 파일의 SHA-256을 확인한다([테스트](../../tests/test_m4_send_record.py)).
+  - **정하는 `calib_npu` 세션**도 패스가 끝난 뒤에 시작한 것이어야 한다([comparison.md](comparison.ko.md)).
+  - **나중에, PC에서:** `tools/check_prereg_order.py`가 `results/m4/`의 calib_npu 세션이나 파이프라인 세션 가운데, 그보다 먼저 시작한 패스들이 끝나기 전에 시작한 것을 보고한다. 자기 `calib_npu` 세션의 마지막 기록보다 먼저 시작한 파이프라인 세션도 보고한다.
 
 ## 평가(§2.3, §6)
 
@@ -268,6 +285,8 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
 | `src/m4/map_rules.cpp`, `sha256.cpp` | C++ mAP 규칙([테스트](../../tests/test_core.cpp))과 메모리 속 SHA-256 |
 | `tools/m4_board_pass.py`, `tools/m4_board_run.sh` | PC에서 보드 도구를 돌리기: 입력을 묶음으로 보내고 기록을 받아 옴 |
 | `tools/m4_rules_check.py` | 각 규칙의 두 구현을 비교하는 §8 3단계 점검 |
+| `tools/m4_order.py` | 기록으로 본 패스와 배선 점검, 그리고 `calib_npu` 세션의 관문(§8 3단계와 5단계) |
+| `tools/m4_send_record.py` | 관문을 위해 FP32 패스의 기록을 보드로 복사 |
 | `results/check/<UTC>_trial_*/` | 2026-11-17의 보드 도구 시험(덤프는 커밋하지 않음) |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | 평가 이미지, 그 ID, 확인, 보관본 |
 | `tools/eval/fetch_coco.sh`, `coco.sha256` | COCO의 두 파일과 그 SHA-256 |

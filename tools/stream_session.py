@@ -41,12 +41,12 @@ Subcommands:
                variant C, at 8 channels main with the staggered sampler (--stagger on, both arms), then at 5
                channels aux. Each run passes freeze-m4's commit from docs/notes/env.md. A session starts only
                once freeze-m4 has its row there, M2 §4's equivalence check has passed with this build's two
-               objects of A13 (M4 §8 step 3), and M4's calib_npu session (tools/m4_calib.sh, in
-               results/m4/<UTC>_m4_calib) decides (m4_calib_choice). That session gives each arm's
-               saturation label at the sweep's point (M4 §3.2). Every M4 pipeline session writes the session
-               it took to saturation.txt, and none starts with another one than the earlier ones took.
-               Until the gates on the accuracy passes and the wiring check exist, no protocol M4 session
-               starts (m4_pending_gates).
+               objects of A13 (M4 §8 step 3), the four accuracy passes are done and a passed wiring check
+               covers this build's post-processing objects (m4_gates_problem, M4 §8 steps 3 and 5), and M4's
+               calib_npu session (tools/m4_calib.sh, in results/m4/<UTC>_m4_calib) decides
+               (m4_calib_choice). That session gives each arm's saturation label at the sweep's point (M4
+               §3.2). Every M4 pipeline session writes the session it took to saturation.txt, and none starts
+               with another one than the earlier ones took.
   m4-check     the arms check of prereg/M4.md §8 step 3, run kind check: one run of each arm, C8 then C10,
                at 8 channels main with the staggered sampler, once M2 §4's equivalence check has passed with
                this build's two objects of A13. Its runs pass freeze-m4's commit, none before freeze-m4
@@ -148,6 +148,9 @@ import sys
 import time
 from fractions import Fraction
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import m4_order  # noqa: E402  (M4 §8 steps 3 and 5: the accuracy passes and the wiring check)
 
 SERVER, BOARD_IP, RTSP_PORT = "10.88.0.1", "10.88.0.2", 8554
 SSH = ["ssh", "-i", "/home/pi/.ssh/bench_stream", "-o", "UserKnownHostsFile=/home/pi/.ssh/known_hosts",
@@ -547,8 +550,9 @@ def m4_calib_choice(freeze_m4, freeze_created):
         a run wrote its summary (a new one is run in full, §3.1), or was made with an older amendment than an
         earlier one.
       - Of that amendment, the first session whose m4_calibration.csv says complete 1 and m4_settings yes,
-        with freeze-m4's commit, and which started after freeze-m4's created_at (§8 step 5), decides. §3.1
-        has one session, so a later one does not replace it."""
+        with freeze-m4's commit, and which started after freeze-m4's created_at and once the four accuracy
+        passes were done (§8 step 5, tools/m4_order.py), decides. §3.1 has one session, so a later one
+        does not replace it."""
     sessions = [d for d in sorted(Path("results", "m4").glob("*_" + M4_CALIB)) if calib_candidate(d, freeze_m4)]
     if not sessions:
         return None, "there is no calib_npu session with M4's settings and freeze-m4's commit in results/m4/"
@@ -562,6 +566,7 @@ def m4_calib_choice(freeze_m4, freeze_created):
     if amendment_number(amendment) < newest:
         return None, (f"the latest calib_npu session, {latest.name}, was made with {amendment}, after one made with "
                       f"A{newest}")
+    attempts = m4_order.pass_attempts(Path("results", "m4"), freeze_m4)
     for d in sessions:
         summary = d / "m4_calibration.csv"
         if amendments[d] != amendment or not summary.exists():
@@ -572,9 +577,12 @@ def m4_calib_choice(freeze_m4, freeze_created):
         start = calib_start(d, header)
         if freeze_created and not (start and start > parse_utc(freeze_created)):
             continue  # not §8 step 5's session; tools/check_prereg_order.py reports it
+        done, _ = m4_order.passes_status(attempts, before=start)
+        if not (start and done and done < start):
+            continue  # before the accuracy passes were done (§8 step 5): the same
         return d, None
     return None, (f"no calib_npu session of {amendment}, the latest session's amendment, is complete with M4's "
-                  "settings and freeze-m4's commit, after freeze-m4's created_at")
+                  "settings and freeze-m4's commit, after freeze-m4's created_at and the accuracy passes")
 
 
 def m4_pins():
@@ -597,12 +605,26 @@ def file_sha256(path):
         raise Stop(f"cannot read {path}: {e!r}") from None
 
 
-def m4_pending_gates():
-    """What is not gated yet before M4's protocol pipeline sessions, or None. They start only once both
-    gates exist: they are part of the code freeze-m4 fixes (§8 step 4)."""
-    return ("the gates on the accuracy passes coming first (M4 §8 step 5) and on the wiring check of this build's "
-            "yolov10_post and shared-function objects (§5, §8 step 3) are not in tools/stream_session.py yet; they "
-            "come with the accuracy tools")
+def m4_gates_problem(freeze_m4):
+    """Why M4's calib_npu session (tools/m4_order.py gate, for tools/m4_calib.sh) or a protocol pipeline
+    session cannot start yet, or None (tools/m4_order.py):
+      - §8 step 5: the four accuracy passes of freeze-m4's code in results/m4/ come first. Each is valid,
+        or was invalid twice (§5), and none is running. The FP32 passes' records come from the PC
+        (tools/m4_send_record.py).
+      - §8 step 3 and §5: a passed wiring check in results/check/ covers this build's four post-processing
+        objects (yolov10_post's and the shared function's among them), for C8 and for C10."""
+    _, problems = m4_order.passes_status(m4_order.pass_attempts(Path("results", "m4"), freeze_m4,
+                                                                alive=m4_order.board_alive))
+    if problems:
+        return ("M4's accuracy passes come before its calib_npu and pipeline sessions (M4 §8 step 5): "
+                + "; ".join(problems))
+    objects = {M4_POST_OBJECTS[k]: sha for k, sha in post_object_hashes(M4_POST_OBJECTS).items()}
+    missing = [p for p in M4_POST_OBJECTS.values() if p not in objects]
+    if missing:
+        return f"this build has no {', '.join(missing)} (M4 §8 step 3)"
+    problems = m4_order.wiring_problems(Path("results", "check"), objects,
+                                        {name: sha for _, sha, name in M4_MODELS.values()})
+    return "; ".join(problems) if problems else None
 
 
 def m4_model_problems():
@@ -1593,6 +1615,9 @@ def order_problem(name):
     if problem:
         return problem
     if is_m4(name):
+        problem = m4_gates_problem(freeze_m4_commit())  # the passes and the wiring check (§8 steps 3, 5)
+        if problem:
+            return problem
         calib, why = m4_calib_choice(*freeze_m4_registration())
         if calib is None:
             return f"M4's calib_npu session (tools/m4_calib.sh) comes before its pipeline sessions, and {why} " \
@@ -1605,9 +1630,6 @@ def order_problem(name):
                         f"SHA-256 {took[1]}), and the calib_npu session that decides now is {calib.name} ({sha}): one "
                         "session decides (M4 §3.2). A rerun under an amendment (§9) needs that amendment's own "
                         "procedure")
-        problem = m4_pending_gates()
-        if problem:
-            return problem
     if progress(name) == "complete":
         return f"{name} is complete"
     return None
