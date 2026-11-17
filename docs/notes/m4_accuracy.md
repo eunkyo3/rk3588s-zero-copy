@@ -141,7 +141,12 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
   - the model's rule gives the detections.
 - **Records:** the detections files go to `D:/m4data/passes/<record>/`. `pass.csv` in the record directory has the counts, both files' SHA-256, and `valid`.
 - **Scope:** a pass of kind `m4` runs all 5,000 images. `--limit N` runs the first N, for a check only.
-- **Speed:** on this PC, one image takes about 0.8 s in onnxruntime for either model, so a pass takes over an hour.
+- **Speed:** on this PC, per image (5 images, onnxruntime plus the rule):
+  - YOLOv8n: 0.87 s + 0.21 s, so a pass takes about 1.5 hours;
+  - YOLOv10n: 0.70 s + 0.05 s, about 1 hour.
+  - Other work on the PC slows it: with another project's build and a Windows update running, the 20-image checks below took 4.5 s and 2.1 s per image.
+- **Checks of 2026-11-17 (`--limit 20`, kind `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20` and `…T021553Z_fp32_yolov10n_limit20`, both `valid,1`. Their detections were not evaluated: AP is computed after freeze-m4 only.
+- **Tests in the image:** `results/check/20261117T021046Z_m4_rules_tests` (11, the board comparison included), `…T021205Z_m4_coco_tests` (8) and `…T021233Z_m4_fp32_tests` (5), at commit `3251204`. None was skipped.
 
 ## Evaluation (§2.3, §6)
 
@@ -178,3 +183,5 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 | `tools/m4_prep.py` | the inputs and the data checks ([tests](../../tests/test_m4_prep.py); those with OpenCV run in the image) |
 | `results/check/<UTC>_m4_eval_image/`, `…_m4_eval_image_archive/` | the image's checks, and its archive's SHA-256 |
 | `results/check/<UTC>_m4_inputs/` | `pc.json`, `manifest.tsv`, `m4_inputs.csv`, `m4_prep.log` |
+| `results/check/<UTC>_m4_{rules,coco,fp32}_tests/` | `pc.json` and the tests' log, in the image |
+| `results/check/<UTC>_fp32_<model>_limit20/` | `pc.json`, `pass.csv`, `m4_fp32.log` of a 20-image check pass |

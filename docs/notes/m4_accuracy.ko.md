@@ -141,7 +141,12 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - 모델의 규칙이 검출을 낸다.
 - **기록:** 검출 파일은 `D:/m4data/passes/<기록>/`에 간다. 기록 폴더의 `pass.csv`에 개수, 두 파일의 SHA-256, `valid`가 들어간다.
 - **범위:** 실행 종류 `m4`의 패스는 5,000장을 모두 돈다. `--limit N`은 처음 N장만 돌고, 점검에만 쓴다.
-- **속도:** 이 PC에서 onnxruntime은 어느 모델이든 이미지 한 장에 약 0.8초가 걸린다. 그래서 패스 하나에 한 시간이 넘게 걸린다.
+- **속도:** 이 PC에서 장당(5장, onnxruntime과 규칙):
+  - YOLOv8n: 0.87초 + 0.21초, 그래서 패스 하나에 약 1.5시간;
+  - YOLOv10n: 0.70초 + 0.05초, 약 1시간.
+  - PC의 다른 작업이 속도를 늦춘다. 다른 프로젝트의 빌드와 Windows 업데이트가 도는 동안 아래 20장 점검은 장당 4.5초와 2.1초가 걸렸다.
+- **2026-11-17의 점검(`--limit 20`, 종류 `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20`과 `…T021553Z_fp32_yolov10n_limit20`, 둘 다 `valid,1`. 이 검출은 평가하지 않았다. AP는 freeze-m4 뒤에만 계산한다.
+- **이미지 안의 테스트:** 커밋 `3251204`에서 `results/check/20261117T021046Z_m4_rules_tests`(11개, 보드 대조 포함), `…T021205Z_m4_coco_tests`(8개), `…T021233Z_m4_fp32_tests`(5개). 건너뛴 테스트는 없다.
 
 ## 평가(§2.3, §6)
 
@@ -178,3 +183,5 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
 | `tools/m4_prep.py` | 입력과 데이터 점검([테스트](../../tests/test_m4_prep.py); OpenCV가 필요한 테스트는 평가 이미지에서 돈다) |
 | `results/check/<UTC>_m4_eval_image/`, `…_m4_eval_image_archive/` | 이미지의 확인과 보관본의 SHA-256 |
 | `results/check/<UTC>_m4_inputs/` | `pc.json`, `manifest.tsv`, `m4_inputs.csv`, `m4_prep.log` |
+| `results/check/<UTC>_m4_{rules,coco,fp32}_tests/` | 이미지 안에서 돈 테스트의 `pc.json`과 로그 |
+| `results/check/<UTC>_fp32_<model>_limit20/` | 20장 점검 패스의 `pc.json`, `pass.csv`, `m4_fp32.log` |
