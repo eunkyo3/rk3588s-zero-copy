@@ -1,0 +1,6 @@
+time_utc: 2026-11-17T08:15:04Z
+script: tools/m4_board_pass.py wiring --model yolov10n --kind check --name wiring_yolov10n
+pc_head: 63febdfd9c84c9f30fb4c7ef56d1a052a0eeb38b
+board_build: 63febdfd9c84c9f30fb4c7ef56d1a052a0eeb38b
+outcome: the board tool exited 0
+seconds: 6

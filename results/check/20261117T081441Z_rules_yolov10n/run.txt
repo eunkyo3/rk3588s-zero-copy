@@ -1,0 +1,5 @@
+time_utc: 2026-11-17T08:14:42Z
+command: build/m4_accuracy pass --model models/yolov10n_i8.rknn --manifest /home/pi/m4/inputs/20261117T081441Z_rules_yolov10n/manifest.tsv --inputs /home/pi/m4/inputs/20261117T081441Z_rules_yolov10n --out results/check/20261117T081441Z_rules_yolov10n/dets --run-kind check --freeze-m4-commit none --dump 50 --chunk 500 --limit 50
+pid: 49415
+boot_id: 1188eb70-6cc8-4391-9881-c85699308781
+tool_pid: 49639

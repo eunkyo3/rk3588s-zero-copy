@@ -1,0 +1,36 @@
+# start_time_utc: 2026-11-17T08:16:56Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: none
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: C
+# channels: 2
+# condition: main
+# post: m1
+# stagger: off
+# repetition: 1
+# code_commit: 63febdfd9c84c9f30fb4c7ef56d1a052a0eeb38b
+# amendment: A13
+# warmup_s: 2
+# duration_s: 6
+# source: /home/pi/media/bench/pexels_36330861.mp4
+tid,comm,affinity,cpu_s_in_window
+50140,npu-2,"4-7",0.030
+50139,npu-1,"4-7",0.030
+50138,npu-0,"4-7",0.030
+50131,dec-2,"4-7",0.030
+50130,dec-1,"4-7",0.030
+50134,mpp_dec_parser,"4-7",0.020
+50132,mpp_dec_parser,"4-7",0.020
+50141,metrics,"0",0.010
+50137,pre-1,"4-7",0.000
+50136,pre-0,"4-7",0.000
+50135,mpp_dec_hal,"4-7",0.000
+50133,mpp_dec_hal,"4-7",0.000
+50123,bench_main,"4-7",0.000
