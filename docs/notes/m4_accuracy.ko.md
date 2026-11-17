@@ -274,7 +274,7 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - `20261117T081427Z_rules_yolov8n/dump`(`dump.sha256` `74e48290…`)와 `…081441Z_rules_yolov10n/dump`(`b7b4f93a…`).
   - PC와 보드에 두고, 커밋하지 않는다.
   - 두 `dump.sha256`은 `a2890a8`에서 한 시험의 것과 같다. 즉 두 빌드에서 출력이 같다.
-- **`freeze-m4` 전에 남은 것:** 5,000장 메모리 점검(아래 평가 절), 그다음 이 결과를 담은 A14.
+- **`freeze-m4` 전에 남은 것:** 이 결과를 담은 A14. 5,000장 메모리 점검은 통과했다(아래 평가 절).
 
 ## 실행 순서(§8 5단계)
 
@@ -340,6 +340,14 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - **다른 PC에서 돌려도 된다:** M4의 측정이 아니라 도구를 점검하는 것이고, 최고 메모리는 PC가 아니라 이미지와 데이터가 정한다. PC는 amd64여야 하고, Docker가 돌아야 하며, 컨테이너에 6 GB를 줄 수 있어야 한다(Docker VM 7 GB 이상).
   - **필요한 것:** 저장소, 이미지 보관본(`D:/m4data/images/m4-eval_c676e76f95356ea1.tar`, `docker load`로 불러 ID로 확인), `annotations_trainval2017.zip`. `m4_coco.py`가 zip을 `coco.sha256`과 대조한다. COCO 이미지는 필요 없다.
   - **실행 방법:** 명령은 도구의 docstring에 있다. 요약은 작업 폴더의 `m4_coco_memory.txt`에 남고, 어느 PC에서 돌렸는지도 적힌다.
+  - **결과**(기록 `results/check/20261117T134147Z_m4_coco_memory`):
+    - **어디서:** `3f6d24d`에서, 다른 PC로 돌렸다. AMD Ryzen 7 5700X3D에 Docker VM 31.3 GB.
+    - **결과:** 3.5분 만에 종료 코드 0. 컨테이너의 최고 메모리는 4,883 MB(`m4_coco.py`는 4,867 MB)로, 스왑 없는 6 GB 한도 안에 들었다.
+    - **예상과 비교:** 위에서 약 4.9 GB로 예상했고, 그대로 맞았다. 한도까지 약 1.2 GB가 남았다.
+    - **다른 컨테이너:** 다른 프로젝트의 컨테이너 11개가 같은 VM에서 돌았다. 최고 메모리는 이 컨테이너 자신의 cgroup 값이라 영향을 받지 않는다.
+    - **파일:** 기록에는 도구의 요약과 콘솔 출력을 남겼다. `env.txt`에는 시작 시각, 커밋, 이미지 ID, zip의 SHA-256을 더했다.
+    - **남기지 않은 것:** 패스의 파일들이다. 그중 101 MB인 `detections.tsv`와 161 MB인 `coco_results.json`이 있다. 이 파일들의 SHA-256은 `env.txt`에 있다.
+    - **역시 남기지 않은 것:** 도구의 `pc.json`, `coco_eval.csv`, `m4_coco.log`. 헤더에 도구의 자리표시값 "synthetic memory check"가 들어 있어서, `tools/check_prereg_order.py`가 시작 시각으로 받지 않는다.
 
 ## 파일
 
