@@ -151,15 +151,20 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 
 ## Milestones
 
-| Milestone | Content | Release |
-|---|---|---|
-| M1 | B vs C pipelines, channel sweep report, multi-channel detection demo | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) |
-| M1.1 (optional) | sensitivity and exploratory runs | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) |
-| M2 | post-processing optimization, same model | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) |
-| M3 | one-command reproduction scripts | `v0.3-m3` |
-| M4 | appendix: NMS-free model, mAP and throughput | `v0.4-m4` |
+| Milestone | Content | State | Registration | Release | Report |
+|---|---|---|---|---|---|
+| M1 | B vs C pipelines, channel sweep report, multi-channel detection demo | released | [`prereg-v1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-v1), [`amend-A8`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A8), [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) | [M1](docs/report/M1.md) |
+| M1.1 (optional) | sensitivity and exploratory runs: the 4K input (A11) and PROTOCOL §13's designs | released, exploratory | [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12), after `freeze-m1` | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) | [M1.1](docs/report/M1.1.md) |
+| M2 | post-processing optimization, same model | released; both CPU hypotheses adopted | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2) (with [`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.md) |
+| M4 | appendix: NMS-free model, mAP and throughput | pre-registered, with no hypotheses; the checks before `freeze-m4` passed, and A14 and `freeze-m4` come next | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4); `freeze-m4` to come | `v0.4-m4` (planned) | plan: [prereg/M4.md](prereg/M4.md) |
+| M3 | one-command reproduction scripts | after M4; it needs the board's OS to be reinstalled | | `v0.3-m3` (planned) | |
 
-**Current status:** M1 is released as [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1), with the report [docs/report/M1.md](docs/report/M1.md) and the demo video. Before the comparison runs came the freeze, [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) (reference time 2026-11-03T06:58:17Z), the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)). M1.1's exploratory designs ran after them, on 2026-11-04: the 4K input of [AMENDMENTS A11](prereg/AMENDMENTS.md) and the optional designs of PROTOCOL §13, built and run as A12 fixes them. M1.1 is released as [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1), with the report [docs/report/M1.1.md](docs/report/M1.1.md). M2, a faster post-processing for C, was pre-registered in [prereg/M2.md](prereg/M2.md) ([`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), then [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2), reference time 2026-11-05T07:04:00Z) and ran on 2026-11-05. Both CPU hypotheses were adopted: Cp used 6.07% less process CPU than C at 8 channels (threshold 3%) and 14.73% less at 5 channels × 30 fps (threshold 5%), with identical detections. Report: [docs/report/M2.md](docs/report/M2.md). M2 is released as [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2). M4, the appendix with an NMS-free model, comes before M3: its exploration is in [docs/notes/m4_exploration.md](docs/notes/m4_exploration.md), and its plan, with no hypotheses, in [prereg/M4.md](prereg/M4.md). M3 follows; it needs the board's OS to be reinstalled.
+- **Order:** M4 comes before M3.
+- **Results:** M1's are in [M1 results](#m1-results) above, and each milestone's in its report.
+- **Registration times:** each stage's reference time is its Release's `created_at`, as the Registration table of [docs/notes/env.md](docs/notes/env.md#registration) gives it.
+- **The later milestones' plans:** M2's in [prereg/M2.md](prereg/M2.md), M4's in [prereg/M4.md](prereg/M4.md).
+- **Before M1's comparison runs:** the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)).
+- **M4's notes:** the exploration ([docs/notes/m4_exploration.md](docs/notes/m4_exploration.md)), and the accuracy tooling and checks ([docs/notes/m4_accuracy.md](docs/notes/m4_accuracy.md)).
 
 ## Build and run
 

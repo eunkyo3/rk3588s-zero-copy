@@ -151,15 +151,20 @@ flowchart TB
 
 ## 마일스톤
 
-| 마일스톤 | 내용 | 릴리스 |
-|---|---|---|
-| M1 | B 대 C 파이프라인, 채널 스윕 리포트, 다채널 검출 데모 | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) |
-| M1.1 (선택) | 민감도 및 탐색 실행 | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) |
-| M2 | 후처리 최적화, 동일 모델 | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) |
-| M3 | 명령 하나로 재현하는 스크립트 | `v0.3-m3` |
-| M4 | 부록: NMS 없는 모델, mAP와 처리량 | `v0.4-m4` |
+| 마일스톤 | 내용 | 상태 | 등록 | 릴리스 | 보고서 |
+|---|---|---|---|---|---|
+| M1 | B 대 C 파이프라인, 채널 스윕 리포트, 다채널 검출 데모 | 공개 | [`prereg-v1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-v1), [`amend-A8`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A8), [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) | [M1](docs/report/M1.ko.md) |
+| M1.1 (선택) | 민감도 및 탐색 실행: 4K 입력(A11)과 PROTOCOL §13의 설계 | 공개, 탐색적 | `freeze-m1` 뒤의 [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12) | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) | [M1.1](docs/report/M1.1.ko.md) |
+| M2 | 후처리 최적화, 동일 모델 | 공개, CPU 가설 두 개 모두 채택 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2)([`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)과 함께) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.ko.md) |
+| M4 | 부록: NMS 없는 모델, mAP와 처리량 | 가설 없이 사전 등록됨. `freeze-m4` 전 점검을 통과했고, 다음은 A14와 `freeze-m4` | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), `freeze-m4`는 예정 | `v0.4-m4`(예정) | 계획: [prereg/M4.md](prereg/M4.ko.md) |
+| M3 | 명령 하나로 재현하는 스크립트 | M4 다음. 보드 OS를 다시 설치해야 한다 | | `v0.3-m3`(예정) | |
 
-**현재 상태:** M1을 [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1)으로 공개했다. 보고서 [docs/report/M1.ko.md](docs/report/M1.ko.md)와 데모 영상이 함께 있다. 비교 실행에 앞서 동결 [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1)(기준 시각 2026-11-03T06:58:17Z), M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md)), M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md))을 마쳤다. M1.1의 탐색 설계는 그 뒤 2026-11-04에 돌았다. [AMENDMENTS A11](prereg/AMENDMENTS.ko.md)의 4K 입력과, A12가 정한 대로 만들고 돌린 PROTOCOL §13의 선택 설계다. M1.1을 [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1)로 공개했다. 보고서 [docs/report/M1.1.ko.md](docs/report/M1.1.ko.md)가 함께 있다. M2는 C에 더 빠른 후처리를 넣은 것으로, [prereg/M2.md](prereg/M2.ko.md)에 사전 등록했고([`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), 다음 [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2), 기준 시각 2026-11-05T07:04:00Z) 2026-11-05에 돌았다. CPU 가설 두 개가 모두 채택됐다. Cp는 검출이 같으면서 8채널에서 C보다 프로세스 CPU를 6.07%(기준 3%), 5채널 × 30 fps에서 14.73%(기준 5%) 적게 썼다. 보고서는 [docs/report/M2.ko.md](docs/report/M2.ko.md)다. M2를 [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2)로 공개했다. NMS가 없는 모델을 다루는 부록 M4를 M3보다 먼저 한다. 그 탐색은 [docs/notes/m4_exploration.ko.md](docs/notes/m4_exploration.ko.md)에, 가설 없는 계획은 [prereg/M4.ko.md](prereg/M4.ko.md)에 있다. M3는 그다음이며, 보드 OS를 다시 설치해야 한다.
+- **순서:** M4를 M3보다 먼저 한다.
+- **결과:** M1의 결과는 위의 [M1 결과](#m1-결과)에, 각 마일스톤의 결과는 그 보고서에 있다.
+- **등록 시각:** 각 단계의 기준 시각은 그 Release의 `created_at`이며, [docs/notes/env.ko.md](docs/notes/env.ko.md#등록)의 등록 표에 있다.
+- **이후 마일스톤의 계획:** M2는 [prereg/M2.md](prereg/M2.ko.md)에, M4는 [prereg/M4.md](prereg/M4.ko.md)에 있다.
+- **M1 비교 실행 전:** M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md))과 M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)).
+- **M4 노트:** 탐색([docs/notes/m4_exploration.ko.md](docs/notes/m4_exploration.ko.md)), 그리고 정확도 도구와 점검([docs/notes/m4_accuracy.ko.md](docs/notes/m4_accuracy.ko.md)).
 
 ## 빌드와 실행
 
