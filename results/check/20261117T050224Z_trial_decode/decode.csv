@@ -1,0 +1,21 @@
+# start_time_utc: 2026-11-17T05:02:26Z
+# run_kind: check
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# amendment: A13
+# code_commit: f0fcc7dc372950b56c9db30f2677c948335a6dc5
+# record: 20261117T050224Z_trial_decode
+# ntp_synchronized: yes
+# manifest: /home/pi/m4/inputs/20261117T050224Z_trial_decode/manifest.tsv
+# manifest_sha256: b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+# manifest_rows_sha256: 5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+key,value
+images,100
+images_planned,100
+images_not_the_manifests,0
+first_problem,none
+seconds,7
+valid,1
+reason,none

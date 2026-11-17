@@ -1,0 +1,4 @@
+time_utc: 2026-11-17T04:56:12Z
+note: added afterwards, on 2026-11-17. This trial stopped before build/m4_accuracy wrote any header (it could
+  not read the manifest: the board's tree has no results/), and tools/m4_board_run.sh did not yet write
+  this file. The time is the record's name, which tools/m4_board_pass.py gave it when it started the run.

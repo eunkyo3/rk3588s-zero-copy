@@ -25,7 +25,8 @@ What it evaluates:
   - the pass's manifest_rows_sha256 must be --manifest's;
   - a model's detections (a header that names model_sha256) only in a run of kind m4, after freeze-m4
     (§8 step 5), and only a pass of kind m4 that its own record (results/m4/<record>/pass.csv) calls
-    valid, over the manifest's 5,000 images, 20 of them the quantization images;
+    valid, whose detections.tsv and images.tsv have the SHA-256 that record gives, over the manifest's
+    5,000 images, 20 of them the quantization images;
   - other detections (synthetic ones, for checks of the tool) only in a run of kind check.
 
 Usage, in the evaluation image (tools/eval/pc_run.py):
@@ -123,24 +124,37 @@ def to_coco(dets, manifest, category_ids):
     return "[" + ",\n".join(out) + "]\n"
 
 
-def pass_valid(det_header):
-    """valid ("1" or "0") in the pass's own record, results/<run kind>/<record>/pass.csv, or None without one."""
+def pass_record(det_header):
+    """The key,value rows of the pass's own record, results/<run kind>/<record>/pass.csv, or {} without one."""
     kind, name = det_header.get("run_kind", ""), det_header.get("record", "")
     path = REPO / "results" / kind / name / "pass.csv"
     if kind not in ("check", "m4") or not re.fullmatch(r"[A-Za-z0-9_-]+", name) or not path.is_file():
-        return None
+        return {}
     rows = csv.reader(l for l in path.read_text(encoding="utf-8").splitlines() if not l.startswith("# "))
-    return {r[0]: r[1] for r in rows if len(r) == 2}.get("valid")
+    return {r[0]: r[1] for r in rows if len(r) == 2}
 
 
-def what_may_run(pc, det_header, ids, manifest, gt_ids, without, valid):
-    """InputError unless this run may evaluate this pass (the module's docstring)."""
+def recorded_sha256(det_header):
+    """The keys under which a pass's record gives its detections files' SHA-256: the board's INT8 pass
+    has two pairs (map/ and pipeline/), the PC's FP32 pass one."""
+    if det_header.get("pass", "").endswith("_pipeline"):
+        return "sha256_pipeline_detections_tsv", "sha256_pipeline_images_tsv"
+    if det_header.get("precision") == "int8":
+        return "sha256_map_detections_tsv", "sha256_map_images_tsv"
+    return "sha256_detections_tsv", "sha256_images_tsv"
+
+
+def what_may_run(pc, det_header, ids, manifest, gt_ids, without, record, files_sha256):
+    """InputError unless this run may evaluate this pass (the module's docstring). record is pass_record's;
+    files_sha256 the SHA-256 of the detections.tsv and images.tsv to evaluate."""
     if det_header.get("model_sha256"):
         if pc["run_kind"] != "m4" or det_header.get("run_kind") != "m4":
             raise InputError("a model's detections are evaluated in a run of kind m4 only, of a pass of kind m4, "
                              "after freeze-m4 (M4 §8 step 5)")
-        if valid != "1":
+        if record.get("valid") != "1":
             raise InputError(f"the pass's record results/m4/{det_header.get('record')}/pass.csv does not say valid,1")
+        if tuple(record.get(k) for k in recorded_sha256(det_header)) != tuple(files_sha256):
+            raise InputError("the detections are not the files whose SHA-256 the pass's record gives")
         if ids != list(manifest) or len(ids) != IMAGES or len(gt_ids) != IMAGES \
                 or len(ids) - len(without) != QUANTIZATION_IMAGES:
             raise InputError(f"a pass covers the manifest's {IMAGES} images, {QUANTIZATION_IMAGES} of them the "
@@ -217,8 +231,10 @@ def main(argv):
         gt = load_gt(a.annotations)
         quant = set(mp.quantization_images(QUANTIZATION.read_text(encoding="utf-8")))
         without = [i for i in ids if manifest[i]["file_name"] not in quant]
-        valid = pass_valid(det_header)
-        what_may_run(pc, det_header, ids, manifest, gt.getImgIds(), without, valid)
+        record_rows = pass_record(det_header)
+        valid = record_rows.get("valid")
+        what_may_run(pc, det_header, ids, manifest, gt.getImgIds(), without, record_rows,
+                     (mp.file_sha256(dets_dir / "detections.tsv"), mp.file_sha256(dets_dir / "images.tsv")))
         text = to_coco(dets, manifest, sorted(gt.getCatIds()))
     except (InputError, OSError, KeyError, ValueError, IndexError, zipfile.BadZipFile) as e:
         print(f"m4_coco: {e}", file=sys.stderr)

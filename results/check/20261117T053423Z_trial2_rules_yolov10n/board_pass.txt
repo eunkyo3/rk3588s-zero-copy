@@ -1,0 +1,6 @@
+time_utc: 2026-11-17T05:34:23Z
+script: tools/m4_board_pass.py pass --model yolov10n --kind check --name trial2_rules_yolov10n --limit 50 --chunk 25 --dets-in-record
+pc_head: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+board_build: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+outcome: the board tool exited 0
+seconds: 10

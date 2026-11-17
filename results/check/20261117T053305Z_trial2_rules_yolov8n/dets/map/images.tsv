@@ -1,0 +1,79 @@
+# start_time_utc: 2026-11-17T05:33:07Z
+# run_kind: check
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# amendment: A13
+# code_commit: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+# record: 20261117T053305Z_trial2_rules_yolov8n
+# ntp_synchronized: yes
+# model: yolov8n
+# model_file: yolov8n_i8.rknn
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# precision: int8
+# map_rule: yolov8_map: conf 0.001, first 30000, class-wise greedy NMS at IoU 0.7, max 300
+# pipeline_post: NeonPost (arm Cp), conf 0.25, NMS 0.45; yolov8_post compared field for field
+# manifest: /home/pi/m4/inputs/20261117T053305Z_trial2_rules_yolov8n/manifest.tsv
+# manifest_sha256: b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+# manifest_rows_sha256: 5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+# images_planned: 50
+# sdk_version: 2.3.2 (429f97ae6b@2025-04-09T09:09:27) / driver 0.9.8
+# npu: context 0, NPU core 0; input bound as B binds its slots (CpuSlots), M1's output bindings
+# fixed_clocks: policy0_khz: 1800000; policy4_khz: 2208000; policy6_khz: 2208000; dmc_hz: 2112000000; npu_hz: 1000000000
+# user: root
+# post_objects_sha256: {"build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o": "536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2", "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o": "3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555", "build/CMakeFiles/core.dir/src/core/yolov10_post.cpp.o": "b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8", "build/CMakeFiles/core.dir/src/core/pipeline_post.cpp.o": "28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a"}
+# map_rule_object_sha256: 94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e
+# pass: int8_yolov8n
+# rule: yolov8_map: conf 0.001, first 30000, class-wise greedy NMS at IoU 0.7, max 300
+image_id	candidates	detections	tied
+139	640107	300	1
+285	640017	300	1
+632	640120	300	1
+724	640012	300	1
+776	640275	300	1
+785	640033	300	1
+802	640056	300	1
+872	640077	300	1
+885	640045	300	1
+1000	640109	300	1
+1268	640084	300	1
+1296	640130	300	1
+1353	640199	300	1
+1425	640237	300	1
+1490	640010	300	1
+1503	640076	300	1
+1532	640050	300	1
+1584	640015	300	1
+1675	640126	300	1
+1761	640018	300	1
+1818	640217	300	1
+1993	640086	300	1
+2006	640018	300	1
+2149	640305	300	1
+2153	640034	300	1
+2157	640191	300	1
+2261	640033	300	1
+2299	640036	300	1
+2431	640247	300	1
+2473	640011	300	1
+2532	640014	300	1
+2587	640302	300	1
+2592	640181	300	1
+2685	640181	300	1
+2923	640042	300	1
+3156	640195	300	1
+3255	640002	300	1
+3501	640186	300	1
+3553	640130	300	1
+3661	640298	300	1
+3845	640221	300	1
+3934	640162	300	1
+4134	640089	300	1
+4395	640073	300	1
+4495	640060	300	1
+4765	640070	300	1
+4795	640258	300	1
+5001	640241	300	1
+5037	640030	300	1
+5060	640080	300	1

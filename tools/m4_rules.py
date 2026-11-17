@@ -12,10 +12,12 @@ Arithmetic follows the C++ of src/core/yolov10_post.cpp and yolov8_post.cpp, in 
   - candidates are ordered by score, highest first; equal scores by branch (stride 8, 16, 32), then cell
     (row-major), then class;
   - a box is decoded from its own cell: per side, the softmax's expectation over the DFL bins, summed bin
-    by bin; then x1 = (x + 0.5 − d_left) × stride, y1, x2, y2 likewise, in model input coordinates. To give
-    the board's float32 values bit for bit, exp is computed in float64 and rounded once (the board's
-    expf; numpy's float32 exp is off by up to 2 ulp), and acc += e × i is one rounding of the exact value,
-    as the fused multiply-add GCC makes of it on the board.
+    by bin; then x1 = (x + 0.5 − d_left) × stride, y1, x2, y2 likewise, in model input coordinates. To
+    follow the board's float32 values, exp is computed in float64 and rounded once (numpy's float32 exp
+    is off by up to 2 ulp), and acc += e × i is one rounding of the exact value, as the fused
+    multiply-add GCC makes of it on the board. The board's glibc expf gives that correctly rounded value
+    for all but rare arguments: 2 of about 1,750 in the first 50 images' YOLOv8n outputs, 1 ulp apart,
+    which moved 4 of 75,000 values by 1 ulp (docs/notes/m4_accuracy.md).
 The rules:
   - yolov10_rule: the max_det (300) best candidates. No NMS.
   - yolov8_rule: of the first 30,000 candidates, going down the order, a candidate is dropped when its
@@ -138,16 +140,24 @@ def yolov10_rule(outputs, conf=CONF, max_det=MAX_DET):
     return Result(cls, score, boxes_of(br, branch, cell), total, bool(tied))
 
 
-def yolov8_rule(outputs, conf=CONF, max_det=MAX_DET, max_nms=MAX_NMS, iou_thresh=NMS_IOU):
+def yolov8_rule(outputs, conf=CONF, max_det=MAX_DET, max_nms=MAX_NMS, iou_thresh=NMS_IOU, near=None):
     """§2.3's YOLOv8n rule: multi-label candidates above conf, the first max_nms of them, greedy NMS per class
-    at iou_thresh going down their order, and the first max_det kept. The score sums are not used."""
+    at iou_thresh going down their order, and the first max_det kept. The score sums are not used.
+    near, a list, gets (rank of the candidate, IoU) for every IoU the NMS compares that is within 1e-6 of
+    iou_thresh: §2.3 excepts differences between the two implementations caused by these."""
     br = branches(outputs, 3)
     (score, branch, cell, cls), total = ordered_candidates(br, conf, max_nms)
     box = boxes_of(br, branch, cell)
     kept, per_class = [], {}
     for k in range(score.size):
         prior = per_class.get(cls[k])
-        if prior and (iou_with(box[prior], box[k]) > iou_thresh).any():
+        if not prior:
+            ious = None
+        else:
+            ious = iou_with(box[prior], box[k])
+            if near is not None:
+                near.extend((k, float(v)) for v in ious[np.abs(ious - iou_thresh) <= 1e-6])
+        if ious is not None and (ious > iou_thresh).any():
             continue
         kept.append(k)
         per_class.setdefault(cls[k], []).append(k)

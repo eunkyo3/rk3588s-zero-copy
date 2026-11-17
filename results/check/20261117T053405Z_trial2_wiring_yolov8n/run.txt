@@ -1,0 +1,4 @@
+time_utc: 2026-11-17T05:34:06Z
+command: build/m4_accuracy wiring --model models/yolov8n_i8.rknn --tensors /home/pi/calib/tensors_c.u8
+pid: 44890
+boot_id: 1188eb70-6cc8-4391-9881-c85699308781

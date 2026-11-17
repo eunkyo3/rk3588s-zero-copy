@@ -1,0 +1,52 @@
+# start_time_utc: 2026-11-17T05:33:07Z
+# run_kind: check
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# amendment: A13
+# code_commit: a2890a86fcbc8b5c78fb79aca5dead6ba1775cc9
+# record: 20261117T053305Z_trial2_rules_yolov8n
+# ntp_synchronized: yes
+# model: yolov8n
+# model_file: yolov8n_i8.rknn
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# precision: int8
+# map_rule: yolov8_map: conf 0.001, first 30000, class-wise greedy NMS at IoU 0.7, max 300
+# pipeline_post: NeonPost (arm Cp), conf 0.25, NMS 0.45; yolov8_post compared field for field
+# manifest: /home/pi/m4/inputs/20261117T053305Z_trial2_rules_yolov8n/manifest.tsv
+# manifest_sha256: b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+# manifest_rows_sha256: 5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+# images_planned: 50
+# sdk_version: 2.3.2 (429f97ae6b@2025-04-09T09:09:27) / driver 0.9.8
+# npu: context 0, NPU core 0; input bound as B binds its slots (CpuSlots), M1's output bindings
+# fixed_clocks: policy0_khz: 1800000; policy4_khz: 2208000; policy6_khz: 2208000; dmc_hz: 2112000000; npu_hz: 1000000000
+# user: root
+# post_objects_sha256: {"build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o": "536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2", "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o": "3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555", "build/CMakeFiles/core.dir/src/core/yolov10_post.cpp.o": "b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8", "build/CMakeFiles/core.dir/src/core/pipeline_post.cpp.o": "28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a"}
+# map_rule_object_sha256: 94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e
+key,value
+images,50
+images_planned,50
+detections,15000
+images_tied,50
+pipeline_detections,256
+reference_checks,1
+dumped_images,50
+dump_compared_with,none
+dump_images_compared,0
+dump_images_differing,0
+pipeline_neon_vs_yolov8_post_images_differing,0
+seconds,5
+input_wait_s,1.5
+decode_s,1.1
+npu_s,0.8
+map_rule_s,0.6
+pipeline_post_s,0.0
+out,results/check/20261117T053305Z_trial2_rules_yolov8n/dets
+sha256_map_detections_tsv,b64b82440d84ee1c112a930aba14d9689343a6f522910f7fd4a433a184ebf6d2
+sha256_map_images_tsv,9ee35bc070b46844aa1cda6c5f5fa73e55effe20922e8b70369a7afeee1ca256
+sha256_pipeline_detections_tsv,42cdb237c15b9c6900e30bc574c526042368b5ed82050262b386b10df78216f7
+sha256_pipeline_images_tsv,1e01f4e244a5d12774124fa33da64867f864b86e5e8fb6617c2963538715d4d6
+sha256_dump_sha256,74e4829065b022f15ec6d30271ea28bc226f7848977542b5221d4fe62568df97
+valid,1
+reason,none

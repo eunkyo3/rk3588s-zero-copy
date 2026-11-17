@@ -111,8 +111,13 @@ class Evaluation(unittest.TestCase):
         mc.write_table(d / "images.tsv", header, mc.IMAGE_COLUMNS, per_image)
         return d
 
-    def run_main(self, dets, kind="check", **header):
+    def run_main(self, dets, kind="check", sha=True, **header):
         d = self.pass_dir(dets, **header)
+        record = self.t / f"results/{header.get('run_kind')}/{header.get('record')}/pass.csv"
+        if sha and record.exists():  # the pass's record gives its files' SHA-256, as the tools write them
+            keys = mc.recorded_sha256(header)
+            lines = [f"{keys[0]},{mp.file_sha256(d / 'detections.tsv')}", f"{keys[1]},{mp.file_sha256(d / 'images.tsv')}"]
+            record.write_text(record.read_text() + "".join(line + "\n" for line in lines))
         (self.t / "record/pc.json").write_text(json.dumps(dict(PC, run_kind=kind)))
         argv = ["--dets", str(d), "--manifest", str(self.t / "manifest.tsv"), "--annotations", str(self.zip),
                 "--record", str(self.t / "record")]
@@ -186,6 +191,14 @@ class Evaluation(unittest.TestCase):
         code, rows, err = self.run_main(dets, kind="m4", **self.a_models_pass())
         self.assertEqual(code, 0, err)
         self.assertEqual((rows["pass_valid"], rows["all_ap"]), ("1", "1.000000"))
+        # the board's pipeline detections: their own pair of SHA-256 in the same record
+        code, rows, err = self.run_main(dets, kind="m4", **self.a_models_pass(), precision="int8",
+                                        **{"pass": "int8_yolov8n_pipeline"})
+        self.assertEqual(code, 0, err)
+        # files other than the record's: refused
+        code, _, err = self.run_main(dets, kind="m4", sha=False, **self.a_models_pass())
+        self.assertEqual(code, 2)
+        self.assertIn("not the files whose SHA-256", err)
         # without a model, kind m4 has nothing to evaluate
         code, _, err = self.run_main(dets, kind="m4")
         self.assertEqual(code, 2)

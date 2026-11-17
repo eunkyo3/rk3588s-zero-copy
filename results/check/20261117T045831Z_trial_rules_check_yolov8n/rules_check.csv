@@ -1,0 +1,32 @@
+# start_time_utc: 2026-11-17T04:58:31Z
+# run_kind: check
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# amendment: A13
+# code_commit: 08c8d1e26c6e3fbdcc005f6d840d4233fbe83e77
+# code_status: clean
+# eval_image: rk3588s-zero-copy/m4-eval:1
+# eval_image_id: sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+# board_record: 20261117T045751Z_trial_rules_yolov8n
+# board_code_commit: f0fcc7dc372950b56c9db30f2677c948335a6dc5
+# model: yolov8n
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# rule_python: tools/m4_rules.py
+# rule_cpp: yolov8_map: conf 0.001, first 30000, class-wise greedy NMS at IoU 0.7, max 300
+# map_rule_object_sha256: 94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e
+key,value
+board_record,20261117T045751Z_trial_rules_yolov8n
+model,yolov8n
+images,50
+lists_equal,50
+lists_differing,0
+lists_excepted_near_0.7,0
+largest_score_difference,0
+largest_box_difference_px,3.05e-05
+values_equal_bit_for_bit,74996
+values,75000
+ious_within_1e-6_of_0.7,0
+problems,none
+valid,1
