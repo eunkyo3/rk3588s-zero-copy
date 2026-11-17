@@ -12,9 +12,10 @@ while the tool runs, as prereg/M4.md §2.2 has it, then fetches the records (§2
     commit must be the PC's HEAD, without -dirty, for a run of kind m4; a check records it.
   - The run: tools/m4_board_run.sh, as root, in the background (sudo gets BOARD_SUDO_PASSWORD on its
     standard input, or runs with -n without it). Its record is results/<kind>/<UTC>_<name> on the board.
-  - Inputs (pass, decode): the manifest's PNGs (--inputs, default D:/m4data/inputs2) in chunks of
-    --chunk images, each sent as a tar to ~/m4/inputs/<record>/chunk_<k>.part and renamed chunk_<k> when
-    whole. At most --ahead chunks are on the board at once; the tool deletes each after its images.
+  - Inputs (pass, decode): the manifest goes to ~/m4/inputs/<record>/manifest.tsv (the board's tree has
+    no results/), then its PNGs (--inputs, default D:/m4data/inputs2) in chunks of --chunk images, each
+    sent as a tar to ~/m4/inputs/<record>/chunk_<k>.part and renamed chunk_<k> when whole. At most
+    --ahead chunks are on the board at once; the tool deletes each after its images.
   - Afterwards: the record goes to results/<kind>/<record>/ here, and a pass's detections (unless
     --dets-in-record) from ~/m4/passes/<record>/ to D:/m4data/passes/<record>/. The record's dumps
     (*.i8) are not committed (.gitignore).
@@ -149,16 +150,22 @@ def main(argv):
     name = f"{now:%Y%m%dT%H%M%SZ}_{a.name}"
     record = f"results/{a.kind}/{name}"
     inputs = f"/home/pi/m4/inputs/{name}"
+    manifest = f"{inputs}/manifest.tsv"  # the board's tree has no results/: the tool records its SHA-256
     out = f"{record}/dets" if a.dets_in_record else f"/home/pi/m4/passes/{name}"
+    if a.mode != "wiring":
+        code, outp = board(host, f"mkdir -p {inputs} && cat > {manifest}", data=(REPO / MANIFEST).read_bytes())
+        if code:
+            print(f"m4_board_pass: not starting: sending the manifest failed: {outp.strip()}", file=sys.stderr)
+            return 2
     args = [a.mode]
     if a.mode == "pass":
-        args += ["--model", MODELS[a.model], "--manifest", MANIFEST, "--inputs", inputs, "--out", out,
+        args += ["--model", MODELS[a.model], "--manifest", manifest, "--inputs", inputs, "--out", out,
                  "--run-kind", a.kind, "--freeze-m4-commit", a.freeze_m4_commit, "--dump", str(a.dump),
                  "--chunk", str(a.chunk)]
         args += ["--limit", str(a.limit)] if a.limit else []
         args += ["--compare-dump", a.compare_dump] if a.compare_dump else []
     elif a.mode == "decode":
-        args += ["--manifest", MANIFEST, "--inputs", inputs, "--chunk", str(a.chunk)]
+        args += ["--manifest", manifest, "--inputs", inputs, "--chunk", str(a.chunk)]
         args += ["--limit", str(a.limit)] if a.limit else []
     else:
         args += ["--model", MODELS[a.model], "--tensors", TENSORS]
@@ -189,7 +196,7 @@ def main(argv):
     fetch(host, f"{BOARD_REPO}/results/{a.kind}", name, REPO / "results" / a.kind)
     if a.mode == "pass" and not a.dets_in_record:
         fetch(host, "/home/pi/m4/passes", name, Path(a.passes))
-    board(host, f"rmdir {inputs} 2>/dev/null; true")
+    board(host, f"rm -f {manifest}; rmdir {inputs} 2>/dev/null; true")
     summary = REPO / record / {"pass": "pass.csv", "decode": "decode.csv", "wiring": "wiring.csv"}[a.mode]
     if summary.exists():
         print(summary.read_text(encoding="utf-8"), end="")
