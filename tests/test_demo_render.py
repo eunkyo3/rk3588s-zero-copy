@@ -18,8 +18,15 @@ sys.path.insert(0, str(ROOT / "tools"))
 try:
     import cv2  # noqa: F401
 except ImportError:
+    # The stand-in only for this import: left in sys.modules it would make the other tests take
+    # it for OpenCV and fail instead of skipping. (Only cv2 goes: numpy cannot be loaded twice.)
     sys.modules["cv2"] = types.ModuleType("cv2")
-import demo_render as dr  # noqa: E402
+    try:
+        import demo_render as dr  # noqa: E402
+    finally:
+        del sys.modules["cv2"]
+else:
+    import demo_render as dr  # noqa: E402
 
 
 class Render(unittest.TestCase):

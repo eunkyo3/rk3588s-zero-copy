@@ -4,8 +4,13 @@
 
 How M4's accuracy (prereg/M4.md §2) is run.
 - **Normative:** [prereg/M4.md](../../prereg/M4.md). This note says how the tools apply it.
-- **Covered so far:** the evaluation image, COCO's files, the inputs, the Python rules, the PC's FP32 pass and the evaluation.
-- **Not yet:** the board's INT8 pass, the C++ YOLOv8n rule and the check of §8 step 3 between the two implementations. They are added here with their tools.
+- **Covered:**
+  - the evaluation image, COCO's files and the inputs;
+  - the rules in Python and in C++, and the board tool;
+  - the PC's FP32 pass;
+  - the order of the runs and its gates;
+  - the evaluation;
+  - §8 step 3's checks at the code to be frozen.
 
 ## The evaluation image (§8 step 2)
 
@@ -184,11 +189,7 @@ How M4's accuracy (prereg/M4.md §2) is run.
   - **A dump without `dump.sha256`** (the first trials') was refused as a dump to compare with, with exit 2.
 - **The independent review** found nothing that changes the results. Its points are in: the driver's robustness, the m4 pass's conditions, the narrower exception, `m4_coco`'s check of the files' SHA-256, and the smaller items above.
 - **A dependency to know:** `yolov10_post` fuses `acc += e × i` because GCC contracts by default in this build. The Python rule and `yolov8_map` assume it does. Were a flag or compiler to change that, the pinned objects' SHA-256 and the bit-for-bit YOLOv10n check would show it.
-- **Still to come, §8 step 3 at the code to be frozen:**
-  - the decoding of all 5,000 PNGs;
-  - both rules on the first 50 images, with their Python checks;
-  - the wiring for both settings;
-  - the objects.
+- **§8 step 3 at the code to be frozen:** [below](#8-step-3-at-the-code-to-be-frozen).
 
 ## Detections files
 
@@ -222,6 +223,56 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
   - Other work on the PC slows it: with another project's build and a Windows update running, the 20-image checks below took 4.5 s and 2.1 s per image.
 - **Checks of 2026-11-17 (`--limit 20`, kind `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20` and `…T021553Z_fp32_yolov10n_limit20`, both `valid,1`, at commit `3251204`, before the review's changes to the decode. They checked the files and the speed. Their detections were not evaluated: AP is computed after freeze-m4 only.
 - **Tests in the image:** `results/check/20261117T034320Z_m4_rules_tests` (11, the bit-for-bit board comparison included), `…T034351Z_m4_coco_tests` (11) and `…T034409Z_m4_fp32_tests` (6), at commit `d567e2c`. None was skipped. The runs at `3251204` (`…T021046Z`, `…T021205Z`, `…T021233Z`) came before the review.
+
+## §8 step 3 at the code to be frozen
+
+Run on 2026-11-17, kind `check`, with the board built at `63febdf` (#55's merge).
+- **The code to be frozen:** after `63febdf` come only [tools/m4_checks.py](../../tools/m4_checks.py), which reads records, its tests, a fix to another test, and notes. `src/`, `CMakeLists.txt` and the tools these runs used are unchanged. The verdicts list what changed between the build and HEAD. A14 names the commit.
+- **The data check** is ①'s record `20261116T064917Z_m4_inputs`, made at `9dbf814`. `tools/m4_prep.py` and the evaluation image are unchanged since.
+- **Commands:**
+  - **On the PC:**
+    - `python tools/m4_board_pass.py decode --kind check --name m4_decode`;
+    - `… pass --model <model> --kind check --name rules_<model> --limit 50 --dets-in-record`;
+    - `… wiring --model <model> --kind check --name wiring_<model>`;
+    - `MSYS_NO_PATHCONV=1 python tools/eval/pc_run.py --kind check --name rules_check_<model> -- tools/m4_rules_check.py --board-record results/check/<rules record>`.
+  - **On the board, as root:** the default path and the arms check, as in [comparison.md](comparison.md) (M4). The arms check ran at 25 °C with the heatsink and fan.
+  - **The verdicts,** on the PC with the arms session fetched: `python tools/m4_checks.py --inputs … --decode … --rules-check <v8> <v10> --wiring <v8> <v10> --default … --arms …`. All passed (exit 0).
+    - Besides each check, it requires every record to be of run kind `check`, every board tool to have exited 0, and every board and PC record to name one build. The PC's code must have been clean, on the evaluation image of `tools/eval/image_id.txt`.
+    - The data record may be older than the build: its `tools/m4_prep.py` and image must be the build's.
+- **Results** (records in `results/check/`):
+
+| Check | Records | Result |
+|---|---|---|
+| Data (§2.1, §2.2) | `20261116T064917Z_m4_inputs` | COCO's two zips have `coco.sha256`'s SHA-256. 5,000 images, each at its annotated size, and the 20 quantization images by name and SHA-256. Manifest `b29adf50…` |
+| Decoding | `20261117T081135Z_m4_decode` | 5,000 of 5,000 PNGs decoded to the manifest's bytes, in 167 s |
+| Rules, YOLOv8n | `…081427Z_rules_yolov8n`, `…081555Z_rules_check_yolov8n` | 50 of 50 lists equal. 74,996 of 75,000 values bit for bit; largest box difference 3.05e-5 px. No IoU within 1e-6 of 0.7 |
+| Rules, YOLOv10n | `…081441Z_rules_yolov10n`, `…081622Z_rules_check_yolov10n` | 50 of 50 lists equal. 75,000 of 75,000 values bit for bit. No IoU within 1e-6 of 0.7 |
+| Wiring, C8 | `…081456Z_wiring_yolov8n` | 10 of 10 frames equal (`PipelinePost` neon against `NeonPost` called directly) |
+| Wiring, C10 | `…081504Z_wiring_yolov10n` | 10 of 10 frames equal (`PipelinePost` v10 against the pass's call of `yolov10_post`) |
+| Default path | `…081656Z_m4_default_c` | the threads, affinities and queues of M1's `32_main_C_2ch_r1` |
+| Arms | `20261117T082036Z_m4_check` | both runs valid. Every frame follows the sampler's rule, and each `env.json` records the arm's model and post-processing |
+| Build | the 20 places the records name it | all name `63febdf`; the data record's `9dbf814` has its `m4_prep.py` and image |
+| Objects | the 7 records that name them | the same four objects in all. `yolov8_post`'s and Cp's are A13's |
+
+- **The arms' values** (8 channels, main condition, staggered):
+
+| Arm | Run | Process CPU (s) | Stagger error (ms) | Phase spread (ms) |
+|---|---|---|---|---|
+| C8 | `01_m4_check_C8_8ch` | 17.560 | 7.4 | 159.9 |
+| C10 | `02_m4_check_C10_8ch` | 17.810 | 17.0 | 136.9 |
+
+  - Their saturation labels are `unknown`: no `calib_npu` session of kind `m4` exists yet, so rule 3 does not judge these runs.
+- **The objects, for A14:**
+  - `yolov8_post.cpp.o`: `536b9351…` (A13's);
+  - `yolov8_post_neon.cpp.o`: `3956c1ba…` (A13's);
+  - `yolov10_post.cpp.o`: `b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8`;
+  - `pipeline_post.cpp.o`: `28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a`;
+  - the YOLOv8n rule, `m4map.dir/src/m4/map_rules.cpp.o`: `94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e`.
+- **The dumps for §2.5:**
+  - `20261117T081427Z_rules_yolov8n/dump` (`dump.sha256` `74e48290…`) and `…081441Z_rules_yolov10n/dump` (`b7b4f93a…`).
+  - They are kept on the PC and on the board, not committed.
+  - Their `dump.sha256` equal those of the trials at `a2890a8`. So the outputs are the same across the two builds.
+- **Still before `freeze-m4`:** the memory check at 5,000 images (Evaluation, below), then A14 with these results.
 
 ## The order of the runs (§8 step 5)
 
@@ -299,6 +350,7 @@ The four passes come before the `calib_npu` session, and that before the pipelin
 | `tools/m4_board_pass.py`, `tools/m4_board_run.sh` | the board tool's runs from the PC: inputs in chunks, records back |
 | `tools/m4_rules_check.py` | §8 step 3's comparison of the two implementations of each rule |
 | `tools/m4_order.py` | the passes and the wiring check as their records show them, and the `calib_npu` session's gate (§8 steps 3 and 5) |
+| `tools/m4_checks.py` | the verdicts of §8 step 3's checks, from their records ([tests](../../tests/test_m4_checks.py)) |
 | `tools/m4_send_record.py` | an FP32 pass's record, copied to the board for the gates |
 | `results/check/<UTC>_trial_*/` | the board tool's trials of 2026-11-17 (their dumps are not committed) |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | the evaluation image, its ID, its checks and its archive |

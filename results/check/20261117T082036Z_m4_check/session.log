@@ -1,0 +1,10 @@
+2026-11-17T08:20:36Z saturation at the main point: C8 unknown, C10 unknown (from no calib_npu session; rule 3 only where unsaturated, M4 §3.2)
+2026-11-17T08:20:42Z starting the stream server
+2026-11-17T08:20:47Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261117T082043Z-335179, clock offset -0.0 ms
+2026-11-17T08:20:47Z idle for 600 s
+2026-11-17T08:30:47Z soc-thermal baseline 36076 m°C
+2026-11-17T08:30:48Z 01_m4_check_C8_8ch: C8, 8 ch, main
+2026-11-17T08:33:12Z 01_m4_check_C8_8ch: valid
+2026-11-17T08:34:12Z 02_m4_check_C10_8ch: C10, 8 ch, main
+2026-11-17T08:36:35Z 02_m4_check_C10_8ch: valid
+2026-11-17T08:36:35Z stopping the stream server

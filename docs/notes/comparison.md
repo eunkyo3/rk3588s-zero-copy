@@ -151,7 +151,9 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
     - It needs a passed equivalence check of this build's two objects of A13 in `results/check/`. M2's check counts while those objects are unchanged.
     - It does not need `freeze-m4`. Its runs pass `--freeze-m4-commit` with `freeze-m4`'s commit, which is `none` before it (§4). A check that §5 repeats after `freeze-m4` names it.
     - No `calib_npu` session of run kind `m4` exists yet. So rule 3 does not judge these runs, unless `--calib <dir>` names a `tools/m4_calib.sh` session whose labels it takes. A session whose label is `incomplete` is refused.
-  - The other checks of step 3 come with their own tools.
+  - **Default path:** `./build/bench_main --variant C --channels 2 --source /home/pi/media/bench/pexels_36330861.mp4 --warmup 2 --duration 6 --out results/check/<UTC>_m4_default_c`, as M2's.
+  - **The accuracy checks** (data, the board tool's decoding, rules, wiring) are run from the PC: [m4_accuracy.md](m4_accuracy.md#8-step-3-at-the-code-to-be-frozen).
+  - **The verdicts,** on the PC with the arms session fetched: `python tools/m4_checks.py --inputs … --decode … --rules-check <v8> <v10> --wiring <v8> <v10> --default … --arms <m4-check session>` prints them, with the arms' CPU values and the build every record names ([tests](../../tests/test_m4_checks.py)). Exit 0 when all pass. Its output goes into the amendment that `freeze-m4` tags.
 - **Runs, after `freeze-m4`** (§8 step 5): the accuracy passes, then the `calib_npu` session, then the pipeline sessions.
   - **The accuracy passes come first** ([m4_accuracy.md](m4_accuracy.md#the-order-of-the-runs-8-step-5)): four of them, each model in INT8 on the board and in FP32 on the PC.
     - A pass is done when it is valid, or once it has been invalid twice (§5: reported as missing). None may still run.
@@ -217,4 +219,6 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
 | `results/m4/<UTC>_m4_main/`, `…_m4_aux/` | one M4 session each, the files of a sweep |
 | `tools/m4_calib.sh`, `tools/m4_calib_summary.py` | M4's `calib_npu` session and its summary ([tests](../../tests/test_m4_calib_summary.py)) |
 | `tools/m4_order.py` | M4's accuracy passes and wiring check as their records show them, and the `calib_npu` session's gate ([tests](../../tests/test_m4_order.py)) |
+| `results/check/<UTC>_m4_default_c/` | M4's default path before `freeze-m4` (M4 §8 step 3) |
+| `tools/m4_checks.py` | the verdicts of M4's checks before `freeze-m4` ([tests](../../tests/test_m4_checks.py)) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |

@@ -4,8 +4,13 @@
 
 M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
 - **규범:** [prereg/M4.md](../../prereg/M4.ko.md). 이 노트는 도구가 그것을 어떻게 따르는지 적는다. 영어판이 우선한다.
-- **지금까지 다룬 것:** 평가 이미지, COCO 파일, 입력, Python 규칙, PC의 FP32 패스, 평가.
-- **아직 없는 것:** 보드의 INT8 패스, C++ YOLOv8n 규칙, 두 구현 사이의 §8 3단계 점검. 각자의 도구와 함께 여기에 더한다.
+- **다루는 것:**
+  - 평가 이미지, COCO 파일, 입력;
+  - Python과 C++의 규칙, 그리고 보드 도구;
+  - PC의 FP32 패스;
+  - 실행 순서와 그 관문;
+  - 평가;
+  - 고정할 코드에서의 §8 3단계 점검.
 
 ## 평가 이미지(§8 2단계)
 
@@ -186,11 +191,7 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - **`dump.sha256`이 없는 덤프**(첫 시험들의 것)와는 비교를 거부했다(종료 코드 2).
 - **독립 리뷰**는 결과를 바꿀 문제를 찾지 못했다. 지적한 것은 반영했다: 드라이버의 견고성, m4 패스의 조건, 좁힌 예외, `m4_coco`의 파일 SHA-256 확인, 위의 작은 항목들.
 - **알아 둘 의존 관계:** `yolov10_post`가 `acc += e × i`를 FMA로 계산하는 것은 이 빌드에서 GCC가 기본으로 축약하기 때문이다. Python 규칙과 `yolov8_map`은 그렇다고 가정한다. 플래그나 컴파일러가 바뀌어 이것이 달라지면, 고정한 객체의 SHA-256과 YOLOv10n의 비트 단위 대조가 드러낸다.
-- **아직 할 것, 고정할 코드에서의 §8 3단계:**
-  - 5,000장 PNG 전체의 디코딩;
-  - 처음 50장에서의 두 규칙과 그 Python 점검;
-  - 두 설정의 배선;
-  - 객체.
+- **고정할 코드에서의 §8 3단계:** [아래](#고정할-코드에서의-8-3단계).
 
 ## 검출 파일
 
@@ -224,6 +225,56 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - PC의 다른 작업이 속도를 늦춘다. 다른 프로젝트의 빌드와 Windows 업데이트가 도는 동안 아래 20장 점검은 장당 4.5초와 2.1초가 걸렸다.
 - **2026-11-17의 점검(`--limit 20`, 종류 `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20`과 `…T021553Z_fp32_yolov10n_limit20`, 둘 다 `valid,1`. 리뷰에 따라 디코딩을 바꾸기 전인 커밋 `3251204`에서 돌았다. 파일과 속도를 확인한 점검이다. 이 검출은 평가하지 않았다. AP는 freeze-m4 뒤에만 계산한다.
 - **이미지 안의 테스트:** 커밋 `d567e2c`에서 `results/check/20261117T034320Z_m4_rules_tests`(11개, 비트 단위 보드 대조 포함), `…T034351Z_m4_coco_tests`(11개), `…T034409Z_m4_fp32_tests`(6개). 건너뛴 테스트는 없다. 커밋 `3251204`의 실행(`…T021046Z`, `…T021205Z`, `…T021233Z`)은 리뷰 전의 것이다.
+
+## 고정할 코드에서의 §8 3단계
+
+2026-11-17에 종류 `check`로 돌렸고, 보드는 `63febdf`(#55의 머지)로 빌드했다.
+- **고정할 코드:** `63febdf` 뒤에 오는 것은 기록을 읽기만 하는 [tools/m4_checks.py](../../tools/m4_checks.py)와 그 테스트, 다른 테스트 하나의 수정, 노트뿐이다. `src/`, `CMakeLists.txt`, 그리고 이 실행들이 쓴 도구는 그대로다. 판정은 빌드와 HEAD 사이에 바뀐 것을 적는다. 커밋은 A14가 적는다.
+- **데이터 점검**은 ①의 기록 `20261116T064917Z_m4_inputs`로, `9dbf814`에서 만들었다. 그 뒤로 `tools/m4_prep.py`와 평가 이미지는 바뀌지 않았다.
+- **명령:**
+  - **PC에서:**
+    - `python tools/m4_board_pass.py decode --kind check --name m4_decode`;
+    - `… pass --model <모델> --kind check --name rules_<모델> --limit 50 --dets-in-record`;
+    - `… wiring --model <모델> --kind check --name wiring_<모델>`;
+    - `MSYS_NO_PATHCONV=1 python tools/eval/pc_run.py --kind check --name rules_check_<모델> -- tools/m4_rules_check.py --board-record results/check/<규칙 기록>`.
+  - **보드에서 root로:** 기본 경로와 두 팔 점검. [comparison.md](comparison.ko.md)(M4)대로 돌린다. 두 팔 점검은 25 °C에서 방열판과 팬을 달고 돌렸다.
+  - **판정**은 두 팔 세션을 받아 온 PC에서 낸다: `python tools/m4_checks.py --inputs … --decode … --rules-check <v8> <v10> --wiring <v8> <v10> --default … --arms …`. 모두 통과했다(종료 코드 0).
+    - 점검마다의 판정 말고도, 모든 기록이 종류 `check`이고, 보드 도구가 모두 종료 코드 0으로 끝났고, 보드와 PC의 기록이 모두 한 빌드를 적었는지 본다. PC의 코드는 깨끗했어야 하고, `tools/eval/image_id.txt`의 평가 이미지여야 한다.
+    - 데이터 기록은 빌드보다 오래됐을 수 있다. 그 `tools/m4_prep.py`와 이미지가 빌드의 것과 같아야 한다.
+- **결과**(기록은 `results/check/`):
+
+| 점검 | 기록 | 결과 |
+|---|---|---|
+| 데이터(§2.1, §2.2) | `20261116T064917Z_m4_inputs` | COCO zip 두 개의 SHA-256이 `coco.sha256`의 것과 같다. 5,000장이 모두 주석의 크기로 디코딩되고, 양자화 이미지 20장이 이름과 SHA-256으로 그 안에 있다. 매니페스트 `b29adf50…` |
+| 디코딩 | `20261117T081135Z_m4_decode` | PNG 5,000장 중 5,000장이 매니페스트의 바이트로 디코딩됐다(167초) |
+| 규칙, YOLOv8n | `…081427Z_rules_yolov8n`, `…081555Z_rules_check_yolov8n` | 목록 50개 중 50개가 같다. 값 75,000개 중 74,996개가 비트 단위로 같고, 가장 큰 박스 차이는 3.05e-5 px. 0.7에서 1e-6 이내의 IoU는 없다 |
+| 규칙, YOLOv10n | `…081441Z_rules_yolov10n`, `…081622Z_rules_check_yolov10n` | 목록 50개 중 50개가 같다. 값 75,000개 모두 비트 단위로 같다. 0.7에서 1e-6 이내의 IoU는 없다 |
+| 배선, C8 | `…081456Z_wiring_yolov8n` | 10프레임 중 10프레임이 같다(`PipelinePost` neon 대 직접 부른 `NeonPost`) |
+| 배선, C10 | `…081504Z_wiring_yolov10n` | 10프레임 중 10프레임이 같다(`PipelinePost` v10 대 패스가 부르는 `yolov10_post`) |
+| 기본 경로 | `…081656Z_m4_default_c` | 스레드, 어피니티, 큐가 M1의 `32_main_C_2ch_r1`과 같다 |
+| 두 팔 | `20261117T082036Z_m4_check` | 두 실행 모두 유효하다. 모든 프레임이 샘플러 규칙을 따르고, 각 `env.json`에 팔의 모델과 후처리가 기록됐다 |
+| 빌드 | 기록이 빌드를 적은 20곳 | 모두 `63febdf`다. 데이터 기록의 `9dbf814`는 그 `m4_prep.py`와 이미지를 가졌다 |
+| 객체 | 객체를 적는 기록 7개 | 모두 같은 객체 네 개다. `yolov8_post`와 Cp의 것은 A13의 것과 같다 |
+
+- **두 팔의 값**(본편 8채널, 시차 표집):
+
+| 팔 | 실행 | 프로세스 CPU(초) | 시차 오차(ms) | 위상 흩어짐(ms) |
+|---|---|---|---|---|
+| C8 | `01_m4_check_C8_8ch` | 17.560 | 7.4 | 159.9 |
+| C10 | `02_m4_check_C10_8ch` | 17.810 | 17.0 | 136.9 |
+
+  - 포화 표시는 `unknown`이다. 종류 `m4`의 `calib_npu` 세션이 아직 없으니, 규칙 3은 이 실행들을 판정하지 않는다.
+- **A14에 들어갈 객체:**
+  - `yolov8_post.cpp.o`: `536b9351…`(A13의 것);
+  - `yolov8_post_neon.cpp.o`: `3956c1ba…`(A13의 것);
+  - `yolov10_post.cpp.o`: `b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8`;
+  - `pipeline_post.cpp.o`: `28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a`;
+  - YOLOv8n 규칙 `m4map.dir/src/m4/map_rules.cpp.o`: `94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e`.
+- **§2.5를 위한 덤프:**
+  - `20261117T081427Z_rules_yolov8n/dump`(`dump.sha256` `74e48290…`)와 `…081441Z_rules_yolov10n/dump`(`b7b4f93a…`).
+  - PC와 보드에 두고, 커밋하지 않는다.
+  - 두 `dump.sha256`은 `a2890a8`에서 한 시험의 것과 같다. 즉 두 빌드에서 출력이 같다.
+- **`freeze-m4` 전에 남은 것:** 5,000장 메모리 점검(아래 평가 절), 그다음 이 결과를 담은 A14.
 
 ## 실행 순서(§8 5단계)
 
@@ -303,6 +354,7 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
 | `tools/m4_board_pass.py`, `tools/m4_board_run.sh` | PC에서 보드 도구를 돌리기: 입력을 묶음으로 보내고 기록을 받아 옴 |
 | `tools/m4_rules_check.py` | 각 규칙의 두 구현을 비교하는 §8 3단계 점검 |
 | `tools/m4_order.py` | 기록으로 본 패스와 배선 점검, 그리고 `calib_npu` 세션의 관문(§8 3단계와 5단계) |
+| `tools/m4_checks.py` | 기록으로 내리는 §8 3단계 점검의 판정([테스트](../../tests/test_m4_checks.py)) |
 | `tools/m4_send_record.py` | 관문을 위해 FP32 패스의 기록을 보드로 복사 |
 | `results/check/<UTC>_trial_*/` | 2026-11-17의 보드 도구 시험(덤프는 커밋하지 않음) |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | 평가 이미지, 그 ID, 확인, 보관본 |

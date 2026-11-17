@@ -151,7 +151,9 @@ M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko
     - 이 빌드의 A13 오브젝트 두 개에 대한 통과한 동등성 검사가 `results/check/`에 있어야 한다. 그 오브젝트가 바뀌지 않은 동안에는 M2의 검사가 그대로 인정된다.
     - `freeze-m4`는 필요 없다. 그 실행들은 `freeze-m4`의 커밋을 `--freeze-m4-commit`으로 넘기고, 그 값은 `freeze-m4` 전에는 `none`이다(§4). §5에 따라 `freeze-m4` 뒤에 다시 하는 점검은 그 커밋을 적는다.
     - 실행 종류 `m4`의 `calib_npu` 세션은 아직 없다. 그래서 `--calib <디렉터리>`로 `tools/m4_calib.sh` 세션을 지정해 그 라벨을 쓰지 않는 한, 규칙 3은 이 실행들을 판정하지 않는다. 라벨이 `incomplete`인 세션은 거부한다.
-  - 3단계의 다른 점검은 각자의 도구와 함께 들어온다.
+  - **기본 경로:** M2와 같이 `./build/bench_main --variant C --channels 2 --source /home/pi/media/bench/pexels_36330861.mp4 --warmup 2 --duration 6 --out results/check/<UTC>_m4_default_c`.
+  - **정확도 점검**(데이터, 보드 도구의 디코딩, 규칙, 배선)은 PC에서 돌린다: [m4_accuracy.md](m4_accuracy.ko.md#고정할-코드에서의-8-3단계).
+  - **판정**은 두 팔 세션을 받아 온 PC에서 낸다: `python tools/m4_checks.py --inputs … --decode … --rules-check <v8> <v10> --wiring <v8> <v10> --default … --arms <m4-check 세션>`이 판정과 두 팔 실행의 CPU 값, 모든 기록이 적은 빌드를 출력한다([테스트](../../tests/test_m4_checks.py)). 모두 통과하면 종료 코드 0. 그 출력은 `freeze-m4`가 태그하는 수정 항목에 들어간다.
 - **`freeze-m4` 뒤의 실행**(§8 5단계): 정확도 패스, 다음 `calib_npu` 세션, 다음 파이프라인 세션.
   - **정확도 패스가 먼저다**([m4_accuracy.md](m4_accuracy.ko.md#실행-순서8-5단계)): 모두 네 개로, 모델마다 보드의 INT8과 PC의 FP32가 하나씩이다.
     - 패스는 유효하거나, 두 번 무효였으면 끝난 것이다(§5: 누락으로 보고). 아직 도는 패스가 없어야 한다.
@@ -217,4 +219,6 @@ M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko
 | `results/m4/<UTC>_m4_main/`, `…_m4_aux/` | M4 세션 하나씩, 스윕과 같은 파일 |
 | `tools/m4_calib.sh`, `tools/m4_calib_summary.py` | M4의 `calib_npu` 세션과 그 요약([테스트](../../tests/test_m4_calib_summary.py)) |
 | `tools/m4_order.py` | 기록으로 본 M4의 정확도 패스와 배선 점검, 그리고 `calib_npu` 세션의 관문([테스트](../../tests/test_m4_order.py)) |
+| `results/check/<UTC>_m4_default_c/` | `freeze-m4` 전 M4의 기본 경로(M4 §8 3단계) |
+| `tools/m4_checks.py` | `freeze-m4` 전 M4 점검들의 판정([테스트](../../tests/test_m4_checks.py)) |
 | `tools/stream_session.py sweep`, `h3` | 스윕이나 H3의 세션 하나를 돌린다([테스트](../../tests/test_stream_session.py)) |
