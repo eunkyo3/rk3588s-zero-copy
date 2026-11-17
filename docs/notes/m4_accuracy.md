@@ -150,8 +150,8 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
   - YOLOv8n: 0.87 s + 0.21 s, so a pass takes about 1.5 hours;
   - YOLOv10n: 0.70 s + 0.05 s, about 1 hour.
   - Other work on the PC slows it: with another project's build and a Windows update running, the 20-image checks below took 4.5 s and 2.1 s per image.
-- **Checks of 2026-11-17 (`--limit 20`, kind `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20` and `…T021553Z_fp32_yolov10n_limit20`, both `valid,1`. Their detections were not evaluated: AP is computed after freeze-m4 only.
-- **Tests in the image:** `results/check/20261117T021046Z_m4_rules_tests` (11, the board comparison included), `…T021205Z_m4_coco_tests` (8) and `…T021233Z_m4_fp32_tests` (5), at commit `3251204`. None was skipped.
+- **Checks of 2026-11-17 (`--limit 20`, kind `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20` and `…T021553Z_fp32_yolov10n_limit20`, both `valid,1`, at commit `3251204`, before the review's changes to the decode. They checked the files and the speed. Their detections were not evaluated: AP is computed after freeze-m4 only.
+- **Tests in the image:** `results/check/20261117T034320Z_m4_rules_tests` (11, the bit-for-bit board comparison included), `…T034351Z_m4_coco_tests` (11) and `…T034409Z_m4_fp32_tests` (6), at commit `d567e2c`. None was skipped. The runs at `3251204` (`…T021046Z`, `…T021205Z`, `…T021233Z`) came before the review.
 
 ## Evaluation (§2.3, §6)
 
