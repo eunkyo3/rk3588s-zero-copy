@@ -136,6 +136,9 @@ class Send(unittest.TestCase):
             code, out = self.send(record, FakeBoard(), "--to", to)
             self.assertEqual(code, 2, to)
             self.assertIn("--to is an absolute directory", out)
+        code, out = self.send(record, FakeBoard(), "--to", "C:/Program Files/Git/home/pi/m4")  # Git Bash's doing
+        self.assertEqual(code, 2)
+        self.assertIn("is a Windows path: from Git Bash, run with MSYS_NO_PATHCONV=1", out)
         code, out = self.send(record, FakeBoard(), "--to", "/home/pi/m4/trial/")
         self.assertEqual(code, 0, out)
         self.assertIn(f"/home/pi/m4/trial/{record.name}: 3 files", out)  # pc.json, pass.csv, exit.txt

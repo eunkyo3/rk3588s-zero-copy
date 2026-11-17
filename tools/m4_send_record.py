@@ -21,6 +21,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shlex
 import sys
 import tarfile
@@ -96,6 +97,8 @@ def main(argv):
     name = record.name
     target = f"{to}/{name}"
     try:
+        if re.match(r"[A-Za-z]:[/\\]", to):
+            raise Refused(f"--to {to} is a Windows path: from Git Bash, run with MSYS_NO_PATHCONV=1")
         if not to.startswith("/") or any(c in to for c in " '\"$`\\;&|<>*?"):
             raise Refused("--to is an absolute directory of the board, without spaces, quotes or shell characters")
         check_record(record)
