@@ -180,6 +180,10 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
   - 2,500 images: peak 2.5 GB, exit 0 at 6 GB without swap;
   - growth is linear, so 5,000 images need about 4.9 GB, under the 6 GB limit.
 - **A 2 GB limit is too small:** with 2 GB plus 2 GB of swap, 5,000 images were killed for memory after 34 minutes of swapping.
+- **The check at 5,000 images, [tools/eval/m4_coco_memory.py](../../tools/eval/m4_coco_memory.py):** it writes synthetic detections for the manifest's first N images and runs `tools/m4_coco.py` as `pc_run.py` does, under the same 6 GB without swap. It reports the time and the peak memory.
+  - **Another PC can run it:** it is a check of the tool, not a measurement of M4, and the peak memory depends on the image and the data, not on the PC. The PC needs to be amd64, run Docker, and give the container 6 GB (a Docker VM of at least 7 GB).
+  - **What it needs:** the repository, the image's archive (`D:/m4data/images/m4-eval_c676e76f95356ea1.tar`, loaded with `docker load` and checked by its ID) and `annotations_trainval2017.zip`. `m4_coco.py` checks the zip against `coco.sha256`. The COCO images are not needed.
+  - **How to run it:** the command is in the tool's docstring. The summary goes to `m4_coco_memory.txt` in the work directory, and it names the PC.
 
 ## Files
 
@@ -188,6 +192,7 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 | `tools/m4_rules.py` | the two rules in Python ([tests](../../tests/test_m4_rules.py)) |
 | `tools/m4_fp32.py` | the PC's FP32 pass ([tests](../../tests/test_m4_fp32.py)) |
 | `tools/m4_coco.py` | the detections files, their COCO conversion and their evaluation ([tests](../../tests/test_m4_coco.py)) |
+| `tools/eval/m4_coco_memory.py` | the evaluation's time and peak memory on synthetic detections |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | the evaluation image, its ID, its checks and its archive |
 | `tools/eval/fetch_coco.sh`, `coco.sha256` | COCO's two files and their SHA-256 |
 | `tools/eval/pc_run.py` | a run on the PC after §4's checks ([tests](../../tests/test_pc_run.py)) |
