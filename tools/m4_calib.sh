@@ -5,7 +5,10 @@
 # §9) runs them in tools/calib_npu.sh, whose idle period, baseline and cooldown gate this copies.
 #   - Order: within a repetition, one model's two runs come first, P_cap before the raw limit. The
 #     model that goes first alternates between repetitions, starting with YOLOv8n.
-#   - Before the session: M1-3's tensor set (SHA-256 below, A7) and both models' SHA-256 (M4 §1).
+#   - Before the session: M1-3's tensor set (SHA-256 below, A7) and both models' SHA-256 (M4 §1). For
+#     run kind m4 also tools/m4_order.py's gate (M4 §8 steps 3 and 5): FREEZE_M4_COMMIT is freeze-m4's
+#     commit in docs/notes/env.md, the four accuracy passes are done, and a passed wiring check covers
+#     this build's post-processing objects.
 #   - Before each run: the cooldown gate, then tools/collect_env.sh (PROTOCOL §9.1).
 #   - An invalid run (calib_npu exit code other than 0: PROTOCOL §9.3 rules 1 and 2, or its output
 #     check, A7) is repeated once, after the gate (M4 §5); both are kept.
@@ -75,6 +78,11 @@ grep -q "\"tensors_sha256\": \"$sha\"" "$record" || fail "$TENSORS does not matc
 models_lines=$(sha256sum "$V8" "$V10") || fail "sha256sum of the models failed"
 echo "$models_lines" | grep -q "^$V8_SHA256  $V8\$" || fail "$V8 is not M4's YOLOv8n (M4 §1)"
 echo "$models_lines" | grep -q "^$V10_SHA256  $V10\$" || fail "$V10 is not M4's YOLOv10n (M4 §1)"
+# M4 §8 steps 3 and 5: run kind m4 waits for the four accuracy passes, and for a passed wiring check of
+# this build's post-processing objects. The gate prints its reason.
+if [ "$RUN_KIND" = m4 ]; then
+    python3 tools/m4_order.py gate "$FREEZE_M4_COMMIT" || fail "not starting (tools/m4_order.py gate)"
+fi
 
 mkdir -p "$OUT" || fail "cannot create $OUT"
 printf 'run_kind: %s\nfreeze_m4_commit: %s\ncooling: %s\nambient_c: %s\nwarmup_s: %s\nduration_s: %s\n' \

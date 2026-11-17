@@ -243,8 +243,15 @@ class Main(unittest.TestCase):
                 self.assertEqual(written["tool"], ["tools/x.py", "--a", "/data"])
                 self.assertEqual(written["record"], record.name)  # the tool names its outputs after it
                 self.assertEqual((record / "x.log").read_bytes(), b"line\n")
+                # how and when the tool ended (tools/m4_order.py)
+                ended = (record / "exit.txt").read_text(encoding="utf-8").splitlines()
+                self.assertEqual(ended[0], "exit_code: 3")
+                self.assertRegex(ended[1], r"^end_time_utc: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
                 cmd = popen.call_args[0][0]
                 self.assertEqual(cmd[cmd.index(IMAGE_ID):], [IMAGE_ID, "python3", "-I", "/repo/tools/x.py", "--a", "/data"])
+                # named after its record (tools/m4_send_record.py --ended)
+                self.assertEqual(cmd[cmd.index("--name") + 1], f"m4-{record.name}")
+                self.assertEqual(written["container"], f"m4-{record.name}")
                 self.assertIn(f"type=bind,source={repo},target=/repo,readonly", cmd)
                 self.assertTrue({"--network", "none", "no-new-privileges", "--memory=2g", "--memory-swap=4g"} <= set(cmd))
                 # the COCO evaluation: 6 GB without swap
@@ -260,6 +267,14 @@ class Main(unittest.TestCase):
                 self.assertEqual(code, 0)
                 popen.assert_not_called()
                 self.assertEqual(len(list((repo / "results/check").glob("*_clock/pc.json"))), 1)
+                self.assertEqual(list((repo / "results/check").glob("*_clock/exit.txt")), [])
+                # stopped while the tool ran: exit.txt still says when, with no exit code
+                popen.return_value.wait.side_effect = KeyboardInterrupt
+                with self.assertRaises(KeyboardInterrupt):
+                    self.main(["--kind", "check", "--name", "stopped", "--data", t, "--", "tools/x.py"],
+                              checks=lambda *a: pc)
+                ended = next((repo / "results/check").glob("*_stopped/exit.txt")).read_text(encoding="utf-8")
+                self.assertTrue(ended.startswith("exit_code: none\nend_time_utc: "), ended)
 
     def test_stage_fields(self):
         f = pr.stage_fields("check")

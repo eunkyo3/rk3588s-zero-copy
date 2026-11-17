@@ -24,8 +24,11 @@ data:
     million detections) needs about 4.9 GB: that tool gets 6 GB without swap, which fails at once rather
     than thrash the disk, and it does not start while another container runs or in a Docker VM with less
     than 1 GB more than that.
-Its output goes to the console and to <record>/<tool>.log. With --checks-only, no tool runs: pc.json
-records the checks alone (the PC's clock, say).
+Its container is named m4-<record name> (pc.json's container). Its output goes to the console and to
+<record>/<tool>.log, and its exit code and end time to <record>/exit.txt (exit_code none when this script
+was stopped first; when it could not write it at all, tools/m4_send_record.py --ended does, once no
+container of the record runs). With --checks-only, no tool runs:
+pc.json records the checks alone (the PC's clock, say).
 
 Usage, on the PC from the repository (from Git Bash, with MSYS_NO_PATHCONV=1, which it checks: Git Bash
 would turn the container's /data/... into Windows paths):
@@ -251,8 +254,13 @@ def checks(image, tool, allow_dirty):
     }
 
 
+def container_name(record_name):
+    """The tool's container, named after its record: tools/m4_send_record.py --ended looks for it."""
+    return f"m4-{record_name}"
+
+
 def docker_command(image_id, record, data, tool):
-    return ["docker", "run", "--rm", *CONTAINER, *memory(tool[0])[0],
+    return ["docker", "run", "--rm", "--name", container_name(record.name), *CONTAINER, *memory(tool[0])[0],
             "--mount", f"type=bind,source={REPO},target=/repo,readonly",
             "--mount", f"type=bind,source={record},target=/record",
             "--mount", f"type=bind,source={data},target=/data",
@@ -300,7 +308,7 @@ def main(argv):
     record = REPO / "results" / a.kind / f"{now:%Y%m%dT%H%M%SZ}_{a.name}"
     record.mkdir(parents=True)
     pc = {"start_time_utc": f"{now:%Y-%m-%dT%H:%M:%SZ}", **stage, "record": record.name, **pc, "data": a.data,
-          "tool": tool}
+          "tool": tool, **({"container": container_name(record.name)} if tool else {})}
     (record / "pc.json").write_text(json.dumps(pc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8",
                                     newline="\n")
     print(f"pc_run: {record.relative_to(REPO)}, host clock {pc['host']['ntp_offset_s']} s off NTP "
@@ -308,13 +316,22 @@ def main(argv):
     if a.checks_only:
         return 0
     cmd = docker_command(pc["eval_image_id"], record, Path(a.data).resolve(), tool)
-    with open(record / f"{Path(tool[0]).stem}.log", "w", encoding="utf-8", newline="") as log:  # LF, as the tool's
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        for raw in p.stdout:
-            line = raw.decode("utf-8", errors="replace")
-            sys.stdout.write(line)
-            log.write(line)
-        return p.wait()
+    code = None
+    try:
+        with open(record / f"{Path(tool[0]).stem}.log", "w", encoding="utf-8", newline="") as log:  # LF, as the tool's
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            for raw in p.stdout:
+                line = raw.decode("utf-8", errors="replace")
+                sys.stdout.write(line)
+                log.write(line)
+            code = p.wait()
+    finally:
+        # How and when the tool ended, also when this script is stopped (exit_code none): tools/m4_order.py
+        # tells a pass that did not start from one that ended without its pass.csv (M4 §5).
+        end = dt.datetime.now(dt.timezone.utc)
+        (record / "exit.txt").write_text(f"exit_code: {'none' if code is None else code}\n"
+                                         f"end_time_utc: {end:%Y-%m-%dT%H:%M:%SZ}\n", encoding="utf-8", newline="\n")
+    return code
 
 
 if __name__ == "__main__":

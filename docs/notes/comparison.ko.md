@@ -153,7 +153,11 @@ M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko
     - 실행 종류 `m4`의 `calib_npu` 세션은 아직 없다. 그래서 `--calib <디렉터리>`로 `tools/m4_calib.sh` 세션을 지정해 그 라벨을 쓰지 않는 한, 규칙 3은 이 실행들을 판정하지 않는다. 라벨이 `incomplete`인 세션은 거부한다.
   - 3단계의 다른 점검은 각자의 도구와 함께 들어온다.
 - **`freeze-m4` 뒤의 실행**(§8 5단계): 정확도 패스, 다음 `calib_npu` 세션, 다음 파이프라인 세션.
+  - **정확도 패스가 먼저다**([m4_accuracy.md](m4_accuracy.ko.md#실행-순서8-5단계)): 모두 네 개로, 모델마다 보드의 INT8과 PC의 FP32가 하나씩이다.
+    - 패스는 유효하거나, 두 번 무효였으면 끝난 것이다(§5: 누락으로 보고). 아직 도는 패스가 없어야 한다.
+    - FP32 패스의 기록은 `tools/m4_send_record.py`로 보드에 복사한다. 세션들은 거기서 그것을 찾는다.
   - **`calib_npu` 세션(§3.1):** `COOLING=... AMBIENT_C=... FREEZE_M4_COMMIT=<freeze-m4의 커밋> tools/m4_calib.sh /home/pi/calib/tensors_c.u8`.
+    - **관문**(`tools/m4_order.py gate`): `FREEZE_M4_COMMIT`가 env.md에 있는 `freeze-m4`의 커밋이고, 패스 네 개가 끝났고, 이 빌드의 후처리 오브젝트를 다루는 통과한 배선 점검이 있어야 한다(아래).
     - 한 세션에서 12회를 돌려 `results/m4/<UTC>_m4_calib/`에 남기고, 끝에 `tools/m4_calib_summary.py`의 `m4_calibration.csv`를 쓴다.
     - 멈춘 세션은 남겨 두고, 새 세션을 처음부터 끝까지 돌린다.
   - **파이프라인 세션(§3.2, §3.3):** `sweep m4_main`, 다음 `sweep m4_aux`. 실행 종류는 `m4`이고, `results/m4/<UTC>_<스윕>/`에 남는다.
@@ -162,14 +166,15 @@ M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko
     - **관문:** 다음이 모두 성립하기 전에는 어떤 M4 세션도 시작하지 않는다.
       - `freeze-m4`의 행이 env.md에 있다.
       - 이 빌드의 A13 오브젝트 두 개에 대한 통과한 동등성 검사가 `results/check/`에 있다.
+      - `freeze-m4` 코드로 돌린 정확도 패스 네 개가 `results/m4/`에서 끝났고, 돌고 있는 `build/m4_accuracy`가 없다(§8 5단계).
+      - **배선(§8 3단계, §5):** 이 빌드의 후처리 오브젝트 네 개(`yolov10_post`와 공용 함수의 것을 포함)를 다루는 통과한 배선 점검이 C8과 C10 모두에 있다. 그 점검은 `results/check/<UTC>_<이름>/wiring.csv`에 있고, 10개 이상인 프레임이 모두 같아야 한다. 같은 오브젝트로 한 점검에서 다른 프레임이 하나라도 나오면 그 오브젝트로는 영영 시작하지 않는다. 원인을 찾아 고쳐야 한다. 다시 빌드해 오브젝트가 달라지면 점검을 다시 해야 한다.
       - 정하는 `calib_npu` 세션이 있다(아래).
       - 그 세션이 앞선 M4 파이프라인 세션들이 쓴 세션과 같다.
-    - **아직 관문이 없는 것:** 정확도 패스가 먼저 끝났는지와, 이 빌드의 `yolov10_post`와 공용 함수 오브젝트에 대한 배선 점검. 두 관문이 생기기 전에는 세션 도구가 프로토콜 M4 세션을 하나도 시작하지 않는다. 이 관문들은 정확도 도구와 함께 들어온다.
     - **모델:** M4의 두 명령은 먼저 두 모델의 SHA-256을 §1과 대조한다. M4 실행마다 헤더에 그 팔의 모델과 후처리가 적혀 있어야 한다. 그렇지 않은 실행이나, `bench_main`이 실행 디렉터리를 만들기 전에 거부한 실행이 나오면 세션이 멈춘다.
   - **포화(§3.2): 정하는 `calib_npu` 세션.**
     - **후보:** `results/m4/<UTC>_m4_calib/` 가운데 적어도 한 번 시도한(`runs.tsv`) 세션으로, `session.txt`에 M4의 설정과 `freeze-m4`의 커밋이, `baseline.txt`에 10분 대기가 있는 것, UTC 순서. 스모크 테스트는 들지 않는다.
     - **수정 항목:** 가장 늦은 후보의 것. 수정 항목 뒤에 통째로 다시 돌린 세션(§9)은 더 늦은 수정 항목으로 만들어지고, 그보다 앞선 수정 항목의 세션들을 대체한다. 가장 늦은 후보가 어떤 실행도 요약을 쓰기 전에 멈췄거나(새 세션을 처음부터 끝까지 돌린다, §3.1) 앞선 후보보다 옛 수정 항목으로 만들어졌다면, 정하는 세션이 없다.
-    - **그 수정 항목 가운데,** `m4_calibration.csv`가 `complete,1`과 `m4_settings,yes`를 말하고 `freeze-m4`의 커밋을 가지며, `freeze-m4`의 `created_at` 뒤에 시작한(`tools/check_prereg_order.py`처럼 가장 이른 기록으로 본다) 첫 세션이 정한다. 같은 수정 항목의 더 늦은 세션은 그것을 대체하지 않는다. §3.1의 세션은 하나다.
+    - **그 수정 항목 가운데,** `m4_calibration.csv`가 `complete,1`과 `m4_settings,yes`를 말하고 `freeze-m4`의 커밋을 가지며, `freeze-m4`의 `created_at` 뒤에, 그리고 정확도 패스 네 개가 끝난 뒤에 시작한(`tools/check_prereg_order.py`처럼 가장 이른 기록으로 본다) 첫 세션이 정한다. 같은 수정 항목의 더 늦은 세션은 그것을 대체하지 않는다. §3.1의 세션은 하나다.
     - **고정:** M4 파이프라인 세션은 첫 실행 전에 자기가 쓴 세션과 그 `m4_calibration.csv`의 SHA-256을 `saturation.txt`에 적는다. 시도를 한 앞선 세션들이 쓴 것과 다른 세션이나 다른 요약으로는 어떤 프로토콜 M4 파이프라인 세션도 시작하지 않는다. 수정 항목에 따른 재실행은 그 수정 항목의 절차를 따른다. `m4-check`와 스모크 테스트는 고정하지 않는다.
   - **라벨:** 그 세션이 스윕 지점에서 팔마다 라벨을 준다.
     - 규칙 3은 라벨이 `unsaturated`인 팔의 실행만 판정한다.
@@ -211,4 +216,5 @@ M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko
 | `results/m4/<UTC>_m4_calib/` | M4의 `calib_npu` 세션: `runs.tsv`, 실행들, `m4_calibration.csv`(M4 §3.1) |
 | `results/m4/<UTC>_m4_main/`, `…_m4_aux/` | M4 세션 하나씩, 스윕과 같은 파일 |
 | `tools/m4_calib.sh`, `tools/m4_calib_summary.py` | M4의 `calib_npu` 세션과 그 요약([테스트](../../tests/test_m4_calib_summary.py)) |
+| `tools/m4_order.py` | 기록으로 본 M4의 정확도 패스와 배선 점검, 그리고 `calib_npu` 세션의 관문([테스트](../../tests/test_m4_order.py)) |
 | `tools/stream_session.py sweep`, `h3` | 스윕이나 H3의 세션 하나를 돌린다([테스트](../../tests/test_stream_session.py)) |

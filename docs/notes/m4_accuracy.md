@@ -213,6 +213,8 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 - **Records:** the detections files go to `D:/m4data/passes/<record>/`. `pass.csv` in the record directory has the counts, both files' SHA-256, and `valid`.
   - **Any error once the pass has started** makes it invalid: `valid,0`, with the error as the reason, and exit 1.
   - **The files' header** also names the pass's record, where `tools/m4_coco.py` finds `pass.csv`.
+  - **`exit.txt`:** `pc_run.py` writes the tool's exit code and end time there when it ends, and `exit_code: none` when the script itself was stopped first.
+- **Then, to the board:** `python tools/m4_send_record.py results/m4/<record>` copies the record into the board's `results/m4/`, where the sessions' gates look for the four passes (below). An invalid pass is sent too.
 - **Scope:** a pass of kind `m4` runs all 5,000 images. `--limit N` (N ≥ 1) runs the first N, for a check only.
 - **Speed:** on this PC, per image (5 images, onnxruntime plus the rule):
   - YOLOv8n: 0.87 s + 0.21 s, so a pass takes about 1.5 hours;
@@ -220,6 +222,36 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
   - Other work on the PC slows it: with another project's build and a Windows update running, the 20-image checks below took 4.5 s and 2.1 s per image.
 - **Checks of 2026-11-17 (`--limit 20`, kind `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20` and `…T021553Z_fp32_yolov10n_limit20`, both `valid,1`, at commit `3251204`, before the review's changes to the decode. They checked the files and the speed. Their detections were not evaluated: AP is computed after freeze-m4 only.
 - **Tests in the image:** `results/check/20261117T034320Z_m4_rules_tests` (11, the bit-for-bit board comparison included), `…T034351Z_m4_coco_tests` (11) and `…T034409Z_m4_fp32_tests` (6), at commit `d567e2c`. None was skipped. The runs at `3251204` (`…T021046Z`, `…T021205Z`, `…T021233Z`) came before the review.
+
+## The order of the runs (§8 step 5)
+
+The four passes come before the `calib_npu` session, and that before the pipeline sessions. [tools/m4_order.py](../../tools/m4_order.py) reads the passes from their records ([tests](../../tests/test_m4_order.py)).
+- **The records:**
+  - **A board pass:** `run.txt` gives the command, the start, and the PIDs of `m4_board_run.sh` and of the tool. Once the tool ends, `exit_code` and `pass.csv` follow. A TERM or INT to the script stops the tool too.
+  - **An FP32 pass:** `pc.json` names `tools/m4_fp32.py` and its container, `m4-<record>`. Once the tool ends, `exit.txt` and `pass.csv` follow.
+  - **Not an attempt:** a run that did not start, i.e. exit code 2 without `pass.csv` (the tool refused its options, or `m4_board_run.sh`'s `set_perf_mode.sh` or `collect_env.sh` failed), or docker's own errors, 125 to 127, on the PC.
+  - **An invalid attempt:** a run that ended without `pass.csv` any other way (§5: the tool exits abnormally), such as a board reset, a killed run or the runtime refusing the model.
+  - **The end:** the later of the tool's own (`pass.csv`'s start and seconds) and the one its runner recorded.
+- **Done:** a pass is done when it is valid, or once it has been invalid twice, as §5 has it: it is then reported as missing. A board run that still runs in this boot holds the passes back: its script, or its tool, is alive under its PID.
+- **Amendments:** the gates know nothing of them. They count the passes of `freeze-m4`'s code, and a rerun under an amendment (§9) follows that amendment's own procedure.
+- **Where it is checked:**
+  - **On the board, before a session starts:** `tools/stream_session.py` for the pipeline sessions, and `tools/m4_order.py gate` for `tools/m4_calib.sh`.
+    - Both refuse while any `build/m4_accuracy` runs, whatever its record says.
+    - Both also need a passed wiring check of the build's four post-processing objects, for both settings (§8 step 3, §5).
+  - **The board has the INT8 passes' records already.** The FP32 ones come from the PC with `tools/m4_send_record.py` ([tests](../../tests/test_m4_send_record.py)).
+    - It sends a record only once the pass has ended.
+    - It unpacks the record beside its place and then moves it in, so a copy cut short leaves nothing there.
+    - It refuses to overwrite a different record of the same name, and checks every file's SHA-256 on the board.
+    - **A pass whose `pc_run.py` died** (a crash, a reboot) has no `exit.txt`. `--ended` writes one, with `exit_code: none` and the time then, once docker shows that its container does not run.
+  - **The `calib_npu` session that decides** must also have started once the passes were done ([comparison.md](comparison.md)).
+  - **Afterwards, on the PC:** `tools/check_prereg_order.py` reports every calib_npu or pipeline session in `results/m4/` that starts before the passes that started before it were done and had ended. It also reports a pipeline session that starts before the last record of its `calib_npu` session.
+- **Trials of 2026-11-17** on the board (built at `bad15c9`, then `eeaa97d`), with nothing written under `results/m4/`:
+  - **Before `freeze-m4`:** the gate and `RUN_KIND=m4 tools/m4_calib.sh` refused, and the script made nothing.
+  - **Wiring:** the build's four objects had the SHA-256 of the board tool's trials, and the wiring gate took their `trial2` wiring records.
+  - **The changed `m4_board_run.sh`:** a wiring check (`results/check/20261117T074956Z_trial3_wiring_yolov10n`) gave 10 of 10 frames equal, exit 0, and `tool_pid` in `run.txt`.
+  - **Killing the script:** a TERM to the script alone, during a run, stopped its tool too. `exit_code` became 143, and both the alive check and the scan of running tools then found nothing.
+  - **`m4_send_record.py`:** a trial copy of an FP32 record, sent to a trial directory, arrived as root's 0644 files with equal SHA-256. A second send changed nothing, and a record of kind `check` was refused.
+  - **Real formats:** the board tool's and the PC's trial records, relabelled as kind `m4`, read as four valid passes with their ends.
 
 ## Evaluation (§2.3, §6)
 
@@ -266,6 +298,8 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 | `src/m4/map_rules.cpp`, `sha256.cpp` | the C++ mAP rules ([tests](../../tests/test_core.cpp)) and SHA-256 in memory |
 | `tools/m4_board_pass.py`, `tools/m4_board_run.sh` | the board tool's runs from the PC: inputs in chunks, records back |
 | `tools/m4_rules_check.py` | §8 step 3's comparison of the two implementations of each rule |
+| `tools/m4_order.py` | the passes and the wiring check as their records show them, and the `calib_npu` session's gate (§8 steps 3 and 5) |
+| `tools/m4_send_record.py` | an FP32 pass's record, copied to the board for the gates |
 | `results/check/<UTC>_trial_*/` | the board tool's trials of 2026-11-17 (their dumps are not committed) |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | the evaluation image, its ID, its checks and its archive |
 | `tools/eval/fetch_coco.sh`, `coco.sha256` | COCO's two files and their SHA-256 |

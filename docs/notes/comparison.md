@@ -153,7 +153,11 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
     - No `calib_npu` session of run kind `m4` exists yet. So rule 3 does not judge these runs, unless `--calib <dir>` names a `tools/m4_calib.sh` session whose labels it takes. A session whose label is `incomplete` is refused.
   - The other checks of step 3 come with their own tools.
 - **Runs, after `freeze-m4`** (§8 step 5): the accuracy passes, then the `calib_npu` session, then the pipeline sessions.
+  - **The accuracy passes come first** ([m4_accuracy.md](m4_accuracy.md#the-order-of-the-runs-8-step-5)): four of them, each model in INT8 on the board and in FP32 on the PC.
+    - A pass is done when it is valid, or once it has been invalid twice (§5: reported as missing). None may still run.
+    - The FP32 passes' records are copied to the board with `tools/m4_send_record.py`, where the sessions look for them.
   - **The `calib_npu` session (§3.1):** `COOLING=... AMBIENT_C=... FREEZE_M4_COMMIT=<freeze-m4's commit> tools/m4_calib.sh /home/pi/calib/tensors_c.u8`.
+    - **Its gate** (`tools/m4_order.py gate`): `FREEZE_M4_COMMIT` is `freeze-m4`'s commit in env.md, the four passes are done, and a passed wiring check covers this build's post-processing objects (below).
     - It makes 12 runs in one session, into `results/m4/<UTC>_m4_calib/`, and ends with `tools/m4_calib_summary.py`'s `m4_calibration.csv`.
     - A stopped session is kept, and a new one is run in full.
   - **The pipeline sessions (§3.2, §3.3):** `sweep m4_main`, then `sweep m4_aux`, run kind `m4`, into `results/m4/<UTC>_<sweep>/`.
@@ -162,14 +166,15 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
     - **Gates:** no M4 session starts until all of these hold:
       - `freeze-m4` has its row in env.md;
       - a passed equivalence check of this build's two objects of A13 is in `results/check/`;
+      - the four accuracy passes of `freeze-m4`'s code are done, in `results/m4/`, and no `build/m4_accuracy` runs (§8 step 5);
+      - **wiring (§8 step 3, §5):** a passed wiring check covers this build's four post-processing objects, `yolov10_post`'s and the shared function's among them, for C8 and for C10. It is in `results/check/<UTC>_<name>/wiring.csv`, and all its frames, at least 10, are equal. A check of the same objects in which a frame differed stops them for good: the cause is found and fixed. A rebuild whose objects differ needs the check again;
       - a `calib_npu` session decides (below);
       - it is the session that the earlier M4 pipeline sessions took.
-    - **Not gated yet:** that the accuracy passes came first, and the wiring check of this build's `yolov10_post` and shared-function objects. Until both gates exist, the session tool starts no protocol M4 session. They come with the accuracy tools.
     - **Models:** both M4 commands first check the two models' SHA-256 against §1. Every M4 run's header must name its arm's model and post-processing. A run that does not, or that `bench_main` refuses before it makes the run's directory, stops the session.
   - **Saturation (§3.2): the `calib_npu` session that decides.**
     - **Candidates:** the sessions in `results/m4/<UTC>_m4_calib/` that made at least one attempt (`runs.tsv`), with M4's settings and `freeze-m4`'s commit in `session.txt` and 10 minutes idle in `baseline.txt`, in UTC order. Smoke tests do not count.
     - **Amendment:** the latest candidate's. A session rerun whole after an amendment (§9) is made with a later one, and replaces those of earlier ones. None decides while the latest candidate stopped before any run wrote its summary (a new one is run in full, §3.1), or was made with an older amendment than an earlier one.
-    - **Of that amendment,** the first session decides whose `m4_calibration.csv` says `complete,1` and `m4_settings,yes`, with `freeze-m4`'s commit, and which started after `freeze-m4`'s `created_at` (its earliest record, as `tools/check_prereg_order.py` takes it). A later session of the same amendment does not replace it: §3.1 has one session.
+    - **Of that amendment,** the first session decides whose `m4_calibration.csv` says `complete,1` and `m4_settings,yes`, with `freeze-m4`'s commit, and which started after `freeze-m4`'s `created_at` (its earliest record, as `tools/check_prereg_order.py` takes it) and once the four accuracy passes were done. A later session of the same amendment does not replace it: §3.1 has one session.
     - **Pinned:** every M4 pipeline session writes the session it took, with its `m4_calibration.csv`'s SHA-256, to `saturation.txt` before its first run. No protocol M4 pipeline session starts with another session, or another summary, than the earlier ones that made an attempt took. A rerun under an amendment needs that amendment's own procedure. `m4-check` and smoke tests are not pinned.
   - **Labels:** that session gives each arm's label at the sweep's point.
     - Rule 3 judges an arm's runs only where its label is `unsaturated`.
@@ -211,4 +216,5 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
 | `results/m4/<UTC>_m4_calib/` | M4's `calib_npu` session: `runs.tsv`, the runs, `m4_calibration.csv` (M4 §3.1) |
 | `results/m4/<UTC>_m4_main/`, `…_m4_aux/` | one M4 session each, the files of a sweep |
 | `tools/m4_calib.sh`, `tools/m4_calib_summary.py` | M4's `calib_npu` session and its summary ([tests](../../tests/test_m4_calib_summary.py)) |
+| `tools/m4_order.py` | M4's accuracy passes and wiring check as their records show them, and the `calib_npu` session's gate ([tests](../../tests/test_m4_order.py)) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |

@@ -288,6 +288,58 @@ class Check(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertEqual(out.count("a m4 run that starts 2026-11-15T00:00:00Z, not after freeze-m4"), 2, out)
 
+    def m4_case(self):
+        """A case after freeze-m4 with the four accuracy passes, done at 2026-11-20T04:00:10Z (A14 known)."""
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import test_m4_order as tmo
+        c = self.case(extra_rows=M4_ROWS)
+        with open(c.d / "amendments.md", "a", encoding="utf-8") as f:
+            f.write("## A14 — 2026-11-18 — title\n- Change: x\n- Release: none\n")
+        tmo.all_passes(c.d / "results" / "m4", freeze="f4f4")
+        return c
+
+    def m4_session(self, c, name, *starts, calib=None):
+        """A session in results/m4/: its idle baseline at the first start, a run at each later one."""
+        c.csv(f"m4/{name}/idle_baseline.csv", starts[0], kind="m4", freeze_m4_commit="f4f4")
+        for k, start in enumerate(starts[1:], 1):
+            c.csv(f"m4/{name}/r{k}/summary.csv", start, kind="m4", freeze_m4_commit="f4f4")
+        if calib:
+            c.write(f"m4/{name}/saturation.txt", f"calib_npu_session: results/m4/{calib}\npoint: main\n")
+
+    def test_m4_passes_then_calib_npu_then_the_pipeline(self):
+        # M4 §8 step 5, in order: nothing to report
+        c = self.m4_case()
+        self.m4_session(c, "20261120T050000Z_m4_calib", "2026-11-20T05:00:00Z", "2026-11-20T06:00:00Z")
+        self.m4_session(c, "20261120T070000Z_m4_main", "2026-11-20T07:00:00Z", calib="20261120T050000Z_m4_calib")
+        self.m4_session(c, "20261120T080000Z_m4_aux", "2026-11-20T08:00:00Z", calib="20261120T050000Z_m4_calib")
+        code, out = c.run()
+        self.assertEqual(code, 0, out)
+        # Out of order: a calib_npu session while the last pass ran, a pipeline session before any pass, and
+        # one before the last record of its calib_npu session.
+        c = self.m4_case()
+        self.m4_session(c, "20261120T035000Z_m4_calib", "2026-11-20T03:50:00Z", "2026-11-20T06:00:00Z")
+        self.m4_session(c, "20261120T003000Z_m4_main", "2026-11-20T00:30:00Z")
+        self.m4_session(c, "20261120T053000Z_m4_aux", "2026-11-20T05:30:00Z", calib="20261120T035000Z_m4_calib")
+        code, out = c.run()
+        self.assertEqual(code, 1, out)
+        problems = [line for line in out.splitlines() if line.startswith("FAIL ")]
+        self.assertEqual(len(problems), 3, out)
+        self.assertIn("20261120T035000Z_m4_calib: an M4 calib_npu session that starts 2026-11-20T03:50:00Z, before "
+                      "the accuracy passes ended at 2026-11-20T04:00:10Z (M4 §8 step 5)", out)
+        self.assertIn("20261120T003000Z_m4_main: an M4 pipeline session that starts 2026-11-20T00:30:00Z before the "
+                      "accuracy passes are done (M4 §8 step 5): the INT8 pass of yolov8n has no record;", out)
+        self.assertIn("20261120T053000Z_m4_aux: an M4 pipeline session that starts 2026-11-20T05:30:00Z, before the "
+                      "last record of its calib_npu session 20261120T035000Z_m4_calib (M4 §8 step 5)", out)
+        # A pass that starts after a session (a rerun, say) does not count for that session.
+        c = self.m4_case()
+        self.m4_session(c, "20261120T050000Z_m4_calib", "2026-11-20T05:00:00Z")
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import test_m4_order as tmo
+        tmo.board_pass(c.d / "results/m4", "20261125T000000Z_int8_yolov8n", start="2026-11-25T00:00:00Z",
+                       freeze="f4f4", valid=0)
+        code, out = c.run()
+        self.assertEqual(code, 0, out)
+
     def test_a_header_that_names_prereg_m4(self):
         # M4 §4: whatever its run kind, a file whose header names prereg-m4 starts after it.
         for start, expected in [(BETWEEN, 1), (PREREG_M4, 1), (BETWEEN_M4, 0)]:

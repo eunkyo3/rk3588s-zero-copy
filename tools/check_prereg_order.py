@@ -9,6 +9,10 @@ reference times.
   - every run or pass of kind m4 starts after freeze-m4, and every run whose header names prereg-m4
     or freeze-m4 (prereg_m4_commit or freeze_m4_commit other than none) starts after it
     (prereg/M4.md §4);
+  - prereg/M4.md §8 step 5: every calib_npu session and pipeline session in results/m4/
+    (<UTC>_m4_calib, <UTC>_m4_main, <UTC>_m4_aux) starts once the four accuracy passes that started
+    before it were done and had ended (tools/m4_order.py: valid, or invalid twice), and every pipeline
+    session starts after every record of the calib_npu session its saturation.txt names;
   - every run whose header names an amendment with a Release amend-A<n> starts after that Release;
   - every commit a header gives for a stage (prereg_v1_commit, freeze_m1_commit, prereg_m2_commit,
     freeze_m2_commit, prereg_m4_commit, freeze_m4_commit; "none" gives none) is that stage's tag commit
@@ -39,6 +43,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import m4_order  # noqa: E402  (M4 §8 step 5: the accuracy passes)
+
 KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m4"}  # PROTOCOL §1.4
 AFTER_FREEZE = {"comparison": "freeze-m1", "reference": "freeze-m1", "m1.1": "freeze-m1",
                 "m2": "freeze-m2", "m4": "freeze-m4"}  # run kind -> the stage its runs start after (M2 §5.1, M4 §4)
@@ -47,6 +54,7 @@ COMMITS = {"prereg_v1_commit": "prereg-v1", "freeze_m1_commit": "freeze-m1", "pr
            "freeze_m2_commit": "freeze-m2", "prereg_m4_commit": "prereg-m4", "freeze_m4_commit": "freeze-m4"}
 # The stages that a header naming them (any commit other than none) starts after (M2 §5.1, M4 §4).
 NAMED = {"prereg-m2", "prereg-m4", "freeze-m4"}
+M4_SESSION = re.compile(r"\d{8}T\d{6}Z_(m4_calib|m4_main|m4_aux)")  # M4 §8 step 5, after the passes
 TAG_ROW = re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
 
 
@@ -225,7 +233,39 @@ def check(results, refs, commits, names, released):
                 if amendment in released and release is not None and start <= release:
                     problems.append(f"{p}: names {amendment} but starts {start:%Y-%m-%dT%H:%M:%SZ}, "
                                     f"not after amend-{amendment}")
+    problems += m4_order_problems(results, commits.get("freeze-m4"), headers)
     return len(files), sorted(set(problems))
+
+
+def m4_order_problems(results, freeze_m4, headers):
+    """M4 §8 step 5 in results/m4/: the four accuracy passes, then the calib_npu session, then the
+    pipeline sessions. A session's start is the earliest header in its directory, and its records'
+    starts all of theirs; headers: {path: (start, ...)} of check()."""
+    m4 = results / "m4"
+    if freeze_m4 is None or not m4.is_dir():
+        return []
+    starts = {}  # session directory -> the start of every header under it
+    for p, h in headers.items():
+        if m4 in p.parents and M4_SESSION.fullmatch(p.relative_to(m4).parts[0]):
+            starts.setdefault(p.relative_to(m4).parts[0], []).append(h[0])
+    attempts = m4_order.pass_attempts(m4, freeze_m4)
+    problems = []
+    for name, times in sorted(starts.items()):
+        start, d = min(times), m4 / name
+        kind = "calib_npu" if name.endswith("_m4_calib") else "pipeline"
+        done, missing = m4_order.passes_status(attempts, before=start)
+        if missing:
+            problems.append(f"{d}: an M4 {kind} session that starts {start:%Y-%m-%dT%H:%M:%SZ} before the accuracy "
+                            f"passes are done (M4 §8 step 5): {'; '.join(missing)}")
+        elif done >= start:
+            problems.append(f"{d}: an M4 {kind} session that starts {start:%Y-%m-%dT%H:%M:%SZ}, before the accuracy "
+                            f"passes ended at {done:%Y-%m-%dT%H:%M:%SZ} (M4 §8 step 5)")
+        if kind == "pipeline":
+            calib = Path(m4_order.keyed(d / "saturation.txt").get("calib_npu_session", "")).name
+            if calib in starts and start <= max(starts[calib]):
+                problems.append(f"{d}: an M4 pipeline session that starts {start:%Y-%m-%dT%H:%M:%SZ}, before the "
+                                f"last record of its calib_npu session {calib} (M4 §8 step 5)")
+    return problems
 
 
 def main(argv):

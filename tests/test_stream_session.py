@@ -19,6 +19,9 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import stream_session as ss  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import test_m4_order as tmo  # noqa: E402  (M4's pass and wiring records)
+
 UTC = dt.timezone.utc
 
 
@@ -848,7 +851,19 @@ class M4(unittest.TestCase):
     """prereg/M4.md: the sweeps of §3.2 and m4-check (§8 step 3), their bench options, the gates of §8, and
     the saturation labels of §3.2 that decide rule 3."""
 
-    setUp, tearDown = M2.setUp, M2.tearDown
+    tearDown = M2.tearDown
+
+    def setUp(self):
+        M2.setUp(self)
+        tmo.all_passes(Path("results/m4"))  # §8 step 5: the four accuracy passes, done at 2026-11-20T04:00:10Z
+
+    def m4_objects(self, post=b"post", neon=b"neon"):
+        """Writes the build's four post-processing objects (A13's two, yolov10_post's and the shared
+        function's); returns {path: SHA-256}, as the wiring check records them."""
+        M2.build(self, post, neon)
+        for key, data in (("sha256_yolov10_post_o", b"v10"), ("sha256_pipeline_post_o", b"pipeline")):
+            Path(ss.M4_POST_OBJECTS[key]).write_bytes(data)
+        return {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in ss.M4_POST_OBJECTS.values()}
 
     def test_the_m4_sweeps(self):
         i = ss.ORDER.index("m2_aux")
@@ -1061,7 +1076,7 @@ class M4(unittest.TestCase):
         stopped_calib(root / "20261123T000000Z_m4_calib", "A15")
         self.assertEqual(ss.m4_calib_choice(f4, created)[1],
                          "no calib_npu session of A15, the latest session's amendment, is complete with M4's settings "
-                         "and freeze-m4's commit, after freeze-m4's created_at")
+                         "and freeze-m4's commit, after freeze-m4's created_at and the accuracy passes")
         stopped_calib(root / "20261123T010000Z_m4_calib", None)  # stopped before any run wrote its summary
         self.assertIn("20261123T010000Z_m4_calib, stopped before any run wrote its summary",
                       ss.m4_calib_choice(f4, created)[1])
@@ -1075,6 +1090,17 @@ class M4(unittest.TestCase):
         m4_calibration(root / "20261123T050000Z_m4_calib", DRY_RUN, amendment="A14")
         self.assertEqual(ss.m4_calib_choice(f4, created)[1], "the latest calib_npu session, 20261123T050000Z_m4_calib, "
                          "was made with A14, after one made with A15")
+
+    def test_the_calib_npu_session_comes_after_the_accuracy_passes(self):
+        f4, created = "f4" * 20, "2026-11-20T00:00:00Z"
+        root = Path("results/m4")
+        # §8 step 5: one that started while the last pass ran does not decide (check_prereg_order reports it).
+        m4_calibration(root / "20261120T033000Z_m4_calib", DRY_RUN, start="2026-11-20T03:30:00Z")
+        self.assertEqual(ss.m4_calib_choice(f4, created)[1],
+                         "no calib_npu session of A14, the latest session's amendment, is complete with M4's settings "
+                         "and freeze-m4's commit, after freeze-m4's created_at and the accuracy passes")
+        later = m4_calibration(root / "20261120T050000Z_m4_calib", ALL_UNSATURATED, start="2026-11-20T05:00:00Z")
+        self.assertEqual(ss.m4_calib_choice(f4, created), (later, None))
 
     def test_the_summary_tools_m4_calib_summary_writes(self):
         sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -1133,7 +1159,7 @@ class M4(unittest.TestCase):
             Path("models/v10.rknn").write_bytes(b"v10")
             self.assertEqual(ss.m4_model_problems(), [])
 
-    def test_m4_sweeps_need_freeze_m4_the_equivalence_check_and_the_calib_npu_session(self):
+    def test_m4_sweeps_need_freeze_m4_the_checks_the_passes_and_the_calib_npu_session(self):
         Path("docs/notes").mkdir(parents=True)
         Path(ss.ENV_MD).write_text(env_md(), encoding="utf-8")
         with mock.patch.object(ss, "progress", lambda n: "new" if ss.is_m4(n) else "complete"):
@@ -1143,33 +1169,54 @@ class M4(unittest.TestCase):
             self.assertEqual(ss.freeze_m4_commit(), "f4" * 20)
             self.assertIn("a passed equivalence check", ss.order_problem("m4_main"))  # §8 step 3, A13's objects
             M2.equivalence(self, "20261106T000000Z_m2_equivalence", 1, M2.build(self, b"post", b"neon"))
+            # §8 step 5: the four accuracy passes come first, each valid or invalid twice, and none running.
+            shutil.rmtree("results/m4")
+            self.assertIn("M4's accuracy passes come before its calib_npu and pipeline sessions (M4 §8 step 5): the "
+                          "INT8 pass of yolov8n has no record; ", ss.order_problem("m4_main"))
+            tmo.all_passes(Path("results/m4"))
+            # §8 step 3 and §5: a passed wiring check of this build's four objects, for C8 and C10
+            self.assertIn("this build has no build/CMakeFiles/core.dir/src/core/yolov10_post.cpp.o, "
+                          "build/CMakeFiles/core.dir/src/core/pipeline_post.cpp.o", ss.order_problem("m4_main"))
+            objects = self.m4_objects()
+            self.assertIn("no passed wiring check of C8 (yolov8n)", ss.order_problem("m4_main"))
+            tmo.wiring_both(objects)
             self.assertIn("M4's calib_npu session", ss.order_problem("m4_main"))
             m4_calibration(Path("results/m4/20261121T000000Z_m4_calib"), DRY_RUN, freeze="e4" * 20)
             self.assertIn("M4's calib_npu session", ss.order_problem("m4_main"))
             a = m4_calibration(Path("results/m4/20261121T010000Z_m4_calib"), DRY_RUN)
-            # Until the gates on the accuracy passes and the wiring check exist, no protocol session starts.
-            self.assertIn("are not in tools/stream_session.py yet", ss.order_problem("m4_main"))
-            with mock.patch.object(ss, "m4_pending_gates", return_value=None):
-                self.assertIsNone(ss.order_problem("m4_main"))
-                self.assertIn("m4_main comes before m4_aux", ss.order_problem("m4_aux"))
-                # §3.2: the session the earlier pipeline sessions took decides for the later ones too
-                pipeline_session("20261121T020000Z_m4_main", str(a))
-                self.assertIsNone(ss.order_problem("m4_main"))
-                m4_calibration(Path("results/m4/20261121T030000Z_m4_calib"), ALL_UNSATURATED, amendment="A15")
-                self.assertIn("m4_main took its labels from 20261121T010000Z_m4_calib", ss.order_problem("m4_main"))
-                self.assertIn("the calib_npu session that decides now is 20261121T030000Z_m4_calib",
+            self.assertIsNone(ss.order_problem("m4_main"))
+            self.assertIn("m4_main comes before m4_aux", ss.order_problem("m4_aux"))
+            # §3.2: the session the earlier pipeline sessions took decides for the later ones too
+            pipeline_session("20261121T020000Z_m4_main", str(a))
+            self.assertIsNone(ss.order_problem("m4_main"))
+            m4_calibration(Path("results/m4/20261121T030000Z_m4_calib"), ALL_UNSATURATED, amendment="A15")
+            self.assertIn("m4_main took its labels from 20261121T010000Z_m4_calib", ss.order_problem("m4_main"))
+            self.assertIn("the calib_npu session that decides now is 20261121T030000Z_m4_calib",
+                          ss.order_problem("m4_main"))
+            shutil.rmtree("results/m4/20261121T030000Z_m4_calib")
+            self.assertIsNone(ss.order_problem("m4_main"))
+            # The same session with its summary written again, with other labels: refused too.
+            kept = (a / "m4_calibration.csv").read_bytes()
+            m4_calibration(a, ALL_UNSATURATED)
+            self.assertIn("took its labels from 20261121T010000Z_m4_calib (m4_calibration.csv SHA-256 "
+                          + hashlib.sha256(kept).hexdigest(), ss.order_problem("m4_main"))
+            (a / "m4_calibration.csv").write_bytes(kept)
+            self.assertIsNone(ss.order_problem("m4_main"))
+            M2.build(self, b"post", b"neon, rebuilt")  # objects that differ from A13's need the check again
+            self.assertIn("a passed equivalence check", ss.order_problem("m4_main"))
+            # A rebuilt shared function needs the wiring check again (§5), the equivalence check not.
+            M2.build(self, b"post", b"neon")
+            Path(ss.M4_POST_OBJECTS["sha256_pipeline_post_o"]).write_bytes(b"pipeline, rebuilt")
+            self.assertIn("no passed wiring check of C8 (yolov8n)", ss.order_problem("m4_main"))
+            self.m4_objects()
+            self.assertIsNone(ss.order_problem("m4_main"))
+            # A pass that runs again on the board (its run without an exit code, in this boot) holds them.
+            tmo.board_pass("results/m4", "20261122T000000Z_int8_yolov8n", start="2026-11-22T00:00:00Z",
+                           with_pass_csv=False)
+            with mock.patch.object(ss.m4_order, "board_alive", return_value=True):
+                self.assertIn("the INT8 pass of yolov8n is running (20261122T000000Z_int8_yolov8n)",
                               ss.order_problem("m4_main"))
-                shutil.rmtree("results/m4/20261121T030000Z_m4_calib")
-                self.assertIsNone(ss.order_problem("m4_main"))
-                # The same session with its summary written again, with other labels: refused too.
-                kept = (a / "m4_calibration.csv").read_bytes()
-                m4_calibration(a, ALL_UNSATURATED)
-                self.assertIn("took its labels from 20261121T010000Z_m4_calib (m4_calibration.csv SHA-256 "
-                              + hashlib.sha256(kept).hexdigest(), ss.order_problem("m4_main"))
-                (a / "m4_calibration.csv").write_bytes(kept)
-                self.assertIsNone(ss.order_problem("m4_main"))
-                M2.build(self, b"post", b"neon, rebuilt")  # objects that differ from A13's need the check again
-                self.assertIn("a passed equivalence check", ss.order_problem("m4_main"))
+            self.assertIsNone(ss.order_problem("m4_main"))
 
     def main_with(self, argv, err):
         """ss.main(argv) up to the session: (exit code, the session it made, or None)."""
@@ -1222,7 +1269,7 @@ class M4(unittest.TestCase):
         Path(ss.ENV_MD).write_text(env_md(FREEZE_M4_ROW), encoding="utf-8")
         calib = m4_calibration(Path("results/m4/20261121T000000Z_m4_calib"), ALL_UNSATURATED)
         progress = mock.patch.object(ss, "progress", lambda n: "new" if n == "m4_aux" else "complete")
-        with progress, mock.patch.object(ss, "m4_pending_gates", return_value=None):
+        with progress, mock.patch.object(ss, "m4_gates_problem", return_value=None):
             code, made, session = self.main_with(["sweep", "m4_aux"], err)
             self.assertEqual((code, made.labels, made.calib, made.smoke, made.run_kind),
                              (0, {"C8": "unsaturated", "C10": "unsaturated"}, calib, False, "m4"))
