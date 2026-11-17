@@ -7,10 +7,13 @@ against the C++ rule's detections of the same run (tools/m4_accuracy.cpp pass, -
       tools/m4_rules_check.py --board-record results/check/<UTC>_rules_yolov8n
 
 For each dumped image, the two lists must have the same count and order, the same class, the score within
-1e-6 and the box within 1e-3 px; no pair is excepted, except a difference caused by an IoU within 1e-6
-of 0.7, which is reported. The candidates' count and the tie flag must also agree. Writes
-<record>/rules_check.csv: the counts, the largest differences, how many values are equal bit for bit,
-the IoUs near 0.7, and valid. Exit 0 when valid, 1 when not, 2 for unusable input.
+1e-6 and the box within 1e-3 px; the candidates' count and the tie flag must also agree. No pair is
+excepted, except a difference caused by an IoU within 1e-6 of 0.7, which is reported. Caused means: the
+Python NMS compared such an IoU in that image, and moving the threshold by 1e-6 one way or the other
+makes the Python rule give the C++ list and tie. A difference in the candidates' count, which comes before
+the NMS, is never excepted.
+Writes <record>/rules_check.csv: the counts, the largest differences, how many values are equal bit for
+bit, the IoUs near 0.7, and valid. Exit 0 when valid, 1 when not, 2 for unusable input.
 """
 import argparse
 import csv
@@ -30,6 +33,7 @@ import m4_rules as mr  # noqa: E402
 MANIFEST = REPO / "results/check/20261116T064917Z_m4_inputs/manifest.tsv"
 IMAGES = 50  # §2.3, §8 step 3
 SCORE_TOL, BOX_TOL = 1e-6, 1e-3
+NEAR = 1e-6  # §2.3: an IoU within 1e-6 of 0.7
 
 
 class InputError(Exception):
@@ -58,7 +62,7 @@ def outputs_of(dump, image_id, attrs):
 
 def compare(result, rows):
     """(same list within §2.3's tolerances, largest score and box differences, values equal bit for bit,
-    values) of one image: the Python Result against the C++ rows."""
+    values) of one image: a Python Result against the C++ rows."""
     if len(rows) != len(result.cls) or any(int(r[2]) != c for r, c in zip(rows, result.cls.tolist())):
         return False, float("inf"), float("inf"), 0, 0
     want = np.array([[r[3], r[4], r[5], r[6], r[7]] for r in rows], np.float32).reshape(-1, 5)
@@ -67,6 +71,26 @@ def compare(result, rows):
     box_diff = float(np.abs(got[:, 1:] - want[:, 1:]).max()) if len(rows) else 0.0
     ok = score_diff <= SCORE_TOL and box_diff <= BOX_TOL
     return ok, score_diff, box_diff, int((got == want).sum()), int(want.size)
+
+
+def judge(rule, outputs, rows, candidates, tied, nms):
+    """One image: (verdict "equal", "excepted" or "differ", what differs, score and box differences, values
+    equal bit for bit, values, the near-0.7 IoUs). rule(outputs, **kw) is the Python rule; rows are the C++
+    list; candidates and tied are the C++ counts; nms says whether the rule has an NMS (YOLOv8n)."""
+    near = [] if nms else None
+    result = rule(outputs, near=near) if nms else rule(outputs)
+    ok, s, b, bits, n = compare(result, rows)
+    if candidates != result.candidates:
+        return "differ", "the candidates' count", s, b, bits, n, near or []
+    if ok and tied == result.tied:
+        return "equal", "", s, b, bits, n, near or []
+    what = "the lists" if not ok else "the tie"
+    if near:
+        for thresh in (mr.NMS_IOU - np.float32(NEAR), mr.NMS_IOU + np.float32(NEAR)):
+            moved = rule(outputs, iou_thresh=np.float32(thresh))
+            if compare(moved, rows)[0] and moved.tied == tied:
+                return "excepted", what + f", reproduced at IoU {float(thresh):.7f}", s, b, bits, n, near
+    return "differ", what, s, b, bits, n, near or []
 
 
 def main(argv):
@@ -91,41 +115,39 @@ def main(argv):
         dumped = sorted(int(p.name[:12]) for p in (board / "dump").glob("*_out0.i8"))
         if dumped != sorted(manifest[:IMAGES]):
             raise InputError(f"the dump has {len(dumped)} images, not the manifest's first {IMAGES}")
+        per_image = {int(r[0]): r for r in images}
+        missing = [i for i in manifest[:IMAGES] if i not in per_image]
+        if missing:
+            raise InputError(f"images.tsv has no row for {missing[0]:012d}")
     except (InputError, OSError, KeyError, ValueError) as e:
         print(f"m4_rules_check: {e}", file=sys.stderr)
         return 2
     by_image = {}
     for r in dets:
         by_image.setdefault(int(r[0]), []).append(r)
-    per_image = {int(r[0]): r for r in images}
 
-    equal = differ = excepted = bits = values = 0
+    counts = {"equal": 0, "excepted": 0, "differ": 0}
+    bits = values = 0
     worst_score = worst_box = 0.0
     near_all, problems = [], []
     for image_id in manifest[:IMAGES]:
-        near = [] if model == "yolov8n" else None
-        result = rule(outputs_of(board / "dump", image_id, attrs), near=near) if near is not None \
-            else rule(outputs_of(board / "dump", image_id, attrs))
-        ok, s, b, eq_bits, n = compare(result, by_image.get(image_id, []))
-        cpp = per_image.get(image_id)
-        counts_ok = cpp is not None and int(cpp[1]) == result.candidates and int(cpp[3]) == int(result.tied)
-        near_all += [(image_id, k, v) for k, v in (near or [])]
-        if ok and counts_ok:
-            equal += 1
-        elif near:
-            excepted += 1  # §2.3: reported, not a failure
-            problems.append(f"{image_id:012d}: differs with {len(near)} IoU(s) within 1e-6 of 0.7 (excepted)")
-        else:
-            differ += 1
-            problems.append(f"{image_id:012d}: " + ("the lists differ" if not ok else "the candidates or the tie differ"))
+        cpp = per_image[image_id]
+        verdict, what, s, b, eq_bits, n, near = judge(
+            rule, outputs_of(board / "dump", image_id, attrs), by_image.get(image_id, []), int(cpp[1]),
+            cpp[3] == "1", model == "yolov8n")
+        counts[verdict] += 1
+        if verdict != "equal":
+            problems.append(f"{image_id:012d}: {what} differ" + (" (excepted: §2.3)" if verdict == "excepted" else ""))
+        near_all += [(image_id, k, v) for k, v in near]
         worst_score, worst_box = max(worst_score, s), max(worst_box, b)
         bits, values = bits + eq_bits, values + n
 
-    valid = differ == 0
-    rows = [("board_record", board.name), ("model", model), ("images", IMAGES), ("lists_equal", equal),
-            ("lists_differing", differ), ("lists_excepted_near_0.7", excepted),
+    valid = counts["differ"] == 0
+    rows = [("board_record", board.name), ("model", model), ("images", IMAGES), ("lists_equal", counts["equal"]),
+            ("lists_differing", counts["differ"]), ("lists_excepted_near_0.7", counts["excepted"]),
             ("largest_score_difference", f"{worst_score:.3g}"), ("largest_box_difference_px", f"{worst_box:.3g}"),
             ("values_equal_bit_for_bit", bits), ("values", values), ("ious_within_1e-6_of_0.7", len(near_all)),
+            ("ious_within_1e-6_of_0.7_list", "; ".join(f"{i:012d} rank {k} IoU {v:.9g}" for i, k, v in near_all) or "none"),
             ("problems", "; ".join(problems) or "none"), ("valid", int(valid))]
     header = {**{k: pc[k] for k in mp.PC_FIELDS}, "board_record": board.name,
               "board_code_commit": pass_header.get("code_commit", ""), "model": model,

@@ -120,6 +120,17 @@ class Yolov8(unittest.TestCase):
                          [(3, np.float32(0.9)), (4, np.float32(0.7)), (3, np.float32(0.6))])
         self.assertEqual(r.candidates, 4)
 
+    def test_near_reports_ious_within_1e_6_of_the_threshold(self):
+        same = peaked(4, 4, 4, 4)
+        out = outputs(3, {(0, 3, 0): 0.9, (0, 3, 1): 0.8}, {(0, 0): same, (0, 1): same})
+        box = mr.decode_cells(out[0])
+        iou = mr.iou_with(box[[0]], box[1])[0]  # about 0.78: cells 8 px apart
+        near = []
+        mr.yolov8_rule(out, near=near)
+        self.assertEqual(near, [])  # 0.78 is not near 0.7
+        r = mr.yolov8_rule(out, iou_thresh=np.float32(iou), near=near)
+        self.assertEqual((near, len(r.cls)), ([(1, float(iou))], 2))  # not above itself: both kept
+
     def test_iou_is_yolov8_posts(self):
         kept = np.array([[0, 0, 10, 10], [5, 5, 15, 15], [20, 20, 21, 21]], np.float32)
         np.testing.assert_allclose(mr.iou_with(kept, np.array([0, 0, 10, 10], np.float32)),
