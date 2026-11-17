@@ -111,7 +111,8 @@ How M4's accuracy (prereg/M4.md §2) is run.
   - A candidate is a (cell, class) pair whose score is above 0.001.
   - Candidates are ordered by score; equal scores by branch, then cell, then class.
   - Each box is decoded from its own cell: per side, the softmax's expectation over the 16 DFL bins, summed bin by bin; then `(x + 0.5 − d) × stride`.
-  - **Bit for bit with the board:** `exp` is computed in float64 and rounded once to float32, as the board's `expf` gives it; numpy's float32 `exp` is off by up to 2 ulp. `acc += e × i` is rounded once, as the fused multiply-add GCC makes of it on the board. Without these, boxes differed by up to 6e-5 px, and the IoU of two boxes by up to 3.5e-6, more than the 1e-6 that §2.3 allows around 0.7.
+  - **Close to the board, bit for bit:** `exp` is computed in float64 and rounded once to float32; numpy's float32 `exp` is off by up to 2 ulp. `acc += e × i` is rounded once, as the fused multiply-add GCC makes of it on the board. Without these, boxes differed by up to 6e-5 px, and the IoU of two boxes by up to 3.5e-6, more than the 1e-6 that §2.3 allows around 0.7.
+  - **glibc's `expf`** gives the correctly rounded value for all but rare arguments. In the first 50 images' YOLOv8n outputs, 2 of about 1,750 distinct arguments came out 1 ulp apart, the same in the board's glibc and the image's. The Python rule keeps the correctly rounded value: calling `expf` for each element would add about 40 minutes to an FP32 pass.
   - **The branches' order:** they must come in stride 8, 16, 32 order, since the tie order follows it.
 - **`yolov10_rule`:** the 300 best candidates, no NMS.
 - **`yolov8_rule`:** the first 30,000 candidates, then a greedy NMS per class going down their order. A candidate is dropped when its IoU (computed as `yolov8_post` does) with an earlier kept candidate of its class is above 0.7. The first 300 kept are the result. The score sums are not used.
@@ -119,8 +120,58 @@ How M4's accuracy (prereg/M4.md §2) is run.
 - **Against the board:** on the exploration's board dumps (21 images, YOLOv10n INT8), `yolov10_rule` gives `yolov10_post`'s lists at conf 0.25 and 0.001: all 42 with the same count, order and classes.
   - **Bit for bit:** all 32,530 scores and box coordinates are the board's, on the host and in the image. Before the decode above, 2,693 differed, by up to 6.2e-5 px; §2.3 allows 1e-6 in score and 1e-3 px in box.
   - **Test:** a test repeats this wherever the dumps are (they are not committed). It checks §2.3's tolerances, then every bit.
-  - **Still to come:** the check of §8 step 3, on the first 50 images and for both rules, comes with the board tool.
-  - **For the board's YOLOv8n rule:** its candidates should use `yolov10_post`'s `first_above`, as the Python does. `yolov8_post`'s `s > quantize(conf)` is not always the same test. GCC may also contract the IoU's union into a fused multiply-add, which moves the IoU by about 1e-7, within §2.3's 1e-6.
+  - **Both rules against the board tool:** see "The board tool" below.
+
+## The board tool (§2.2 to §2.5, §8 step 3)
+
+[tools/m4_accuracy.cpp](../../tools/m4_accuracy.cpp) runs on the board, as root, from the repository. It has three modes.
+- **`pass`, the INT8 pass:**
+  - **Binding:** context 0 (NPU core 0) with M1's output bindings; the input is bound as B binds its slots (`CpuSlots`).
+  - **Each image:** its PNG is decoded and made RGB in the slot. The slot's bytes must be the manifest's (SHA-256, [src/m4/sha256.cpp](../../src/m4/sha256.cpp)); otherwise the pass is invalid and stops (§5).
+  - **Bound outputs:** on every 100th image (the 1st, the 101st, ...) they must equal `rknn_outputs_get` of a separate context on the same input (§2.5); otherwise the pass is invalid and stops.
+  - **Dumps:** the first 50 images' outputs go to `<record>/dump/`, for §8 step 3's check of the rules. With `--compare-dump` they are also compared byte for byte with that check's dump, and the count of images that differ is reported (§2.5).
+  - **mAP's rule** ([src/m4/map_rules.cpp](../../src/m4/map_rules.cpp)): `yolov8_map` or `yolov10_map`, conf 0.001, at most 300. It writes the detections files below, under `map/`.
+  - **The pipeline's settings (§2.4)**, under `pipeline/`:
+    - YOLOv8n goes through `NeonPost` and `yolov8_post`, both at conf 0.25 and NMS 0.45. They are compared field for field, and `NeonPost`'s detections are written.
+    - YOLOv10n goes through `yolov10_post` at conf 0.25, at most 300.
+  - **Records:** `<record>/pass.csv` holds the counts, the files' SHA-256 and `valid`. `<record>/outputs.csv` holds the outputs' attributes.
+  - **A pass of kind `m4`** runs every image as root, with the clocks fixed and freeze-m4's commit.
+- **`decode`:** §8 step 3's check that every PNG decodes to the manifest's bytes.
+- **`wiring`:** §8 step 3's check of the shared choice of post-processing (`PipelinePost`).
+  - It runs on the first 10 frames of `tensors_c.u8` (A7's SHA-256 is checked).
+  - **C10's setting:** `PipelinePost` must give the same detections as the pass's own call of `yolov10_post` at conf 0.25.
+  - **C8's setting:** `PipelinePost` must give the same detections as `NeonPost` called directly.
+- **The C++ YOLOv8n rule (`yolov8_map`):**
+  - **Candidates:** it takes them with `yolov10_post`'s `first_above`, as the Python does. `yolov8_post`'s `s > quantize(conf)` is not always the same test.
+  - **Arithmetic:** its file is compiled without floating-point contraction, so the IoU is computed as written. The decoding's fused `acc += e × i` is written as `std::fma`, as in `yolov10_post`'s compiled code.
+  - **Tests:** `test_core` covers the class-wise NMS, conf, the tie order, the 300 and their tie, and `max_nms`.
+- **From the PC, [tools/m4_board_pass.py](../../tools/m4_board_pass.py):**
+  - It sends the manifest, then the PNGs in chunks (500 by default, at most 3 on the board), while the tool runs ([tools/m4_board_run.sh](../../tools/m4_board_run.sh), which fixes the clocks first).
+  - The tool deletes each chunk after its images (§2.2).
+  - Afterwards the script fetches the record into `results/<kind>/`, and a pass's detections into `D:/m4data/passes/<record>/`.
+  - A run of kind `m4` needs the board built from the PC's HEAD, clean.
+  - **Commands:** `python tools/m4_board_pass.py pass --model yolov8n --kind check --name rules_yolov8n --limit 50 --dets-in-record`, `… decode --kind check --name m4_decode`, `… wiring --model yolov10n --kind check --name wiring_yolov10n`. The environment gives `SSH` and `BOARD_SUDO_PASSWORD`.
+- **The rules' check, [tools/m4_rules_check.py](../../tools/m4_rules_check.py),** runs in the image through `pc_run.py`.
+  - It runs the Python rule on a board record's dumps and compares it with that record's C++ lists, by §2.3's tolerances.
+  - It also reports how many values are equal bit for bit, and every IoU within 1e-6 of 0.7, which §2.3 excepts.
+- **Trials of 2026-11-17** (kind `check`, the board built at `f0fcc7d`, records `results/check/20261117T04*_trial_*` and `…T05*_trial_*`):
+  - **Rules on the first 50 images:**
+    - YOLOv8n: all 50 lists equal; 74,996 of 75,000 values bit for bit, and the other 4 are 1 ulp apart (glibc's `expf`, above).
+    - YOLOv10n: all 50 equal; all 75,000 values bit for bit.
+    - No IoU came within 1e-6 of 0.7.
+  - **Wiring:** 10 of 10 frames equal for both settings.
+  - **Decoding:** 100 of 100 images were the manifest's.
+  - **Determinism:** a second YOLOv8n run's dumps equal the first's for all 50 images.
+  - **Pipeline settings:** `NeonPost` and `yolov8_post` agreed on all 50 images.
+  - **Invalid runs:** a PNG swapped for another made the pass invalid at that image, with its reason and exit 1. Run kind `m4` without its conditions, run kind `check` with a freeze-m4 commit, `--limit 0`, and a file that is not one of M4's models were each refused with exit 2.
+  - **The first trial** stopped at once (`…T045612Z`): the board's tree has no `results/`, so the script now sends the manifest.
+  - **Objects:** `yolov8_post.cpp.o` and `yolov8_post_neon.cpp.o` have A13's SHA-256.
+  - **Speed per image:** decoding 50 ms, NPU 16 ms, mAP's rule 12 ms (YOLOv8n). A pass of 5,000 images takes about 7 minutes, plus sending 2.6 GB of PNGs.
+- **Still to come, §8 step 3 at the code to be frozen:**
+  - the decoding of all 5,000 PNGs;
+  - both rules on the first 50 images, with their Python checks;
+  - the wiring for both settings;
+  - the objects.
 
 ## Detections files
 
@@ -129,7 +180,7 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
   - **Order:** one row per detection, the images in the manifest's order, each image's detections in the rule's order.
   - **Values:** the score and the box (model input coordinates) are float32 printed with 9 significant digits, as the board's C++ prints them.
 - **`images.tsv`:** `image_id, candidates, detections, tied`.
-- **Both precisions:** the board's INT8 pass will write the same two files.
+- **Both precisions:** the board's INT8 pass writes the same two files, under `map/` (mAP's rule) and `pipeline/` (§2.4, `candidates` -1: not counted). Its header also names the pass's record.
 
 ## The FP32 pass on the PC (§2.2, §2.5)
 
@@ -193,6 +244,11 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 | `tools/m4_fp32.py` | the PC's FP32 pass ([tests](../../tests/test_m4_fp32.py)) |
 | `tools/m4_coco.py` | the detections files, their COCO conversion and their evaluation ([tests](../../tests/test_m4_coco.py)) |
 | `tools/eval/m4_coco_memory.py` | the evaluation's time and peak memory on synthetic detections |
+| `tools/m4_accuracy.cpp` | the board tool: INT8 passes, the decoding check and the wiring check |
+| `src/m4/map_rules.cpp`, `sha256.cpp` | the C++ mAP rules ([tests](../../tests/test_core.cpp)) and SHA-256 in memory |
+| `tools/m4_board_pass.py`, `tools/m4_board_run.sh` | the board tool's runs from the PC: inputs in chunks, records back |
+| `tools/m4_rules_check.py` | §8 step 3's comparison of the two implementations of each rule |
+| `results/check/<UTC>_trial_*/` | the board tool's trials of 2026-11-17 (their dumps are not committed) |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | the evaluation image, its ID, its checks and its archive |
 | `tools/eval/fetch_coco.sh`, `coco.sha256` | COCO's two files and their SHA-256 |
 | `tools/eval/pc_run.py` | a run on the PC after §4's checks ([tests](../../tests/test_pc_run.py)) |

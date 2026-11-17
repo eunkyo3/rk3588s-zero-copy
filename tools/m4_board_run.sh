@@ -10,6 +10,12 @@ set -u
 RECORD=$1
 shift
 mkdir -p "$RECORD" || exit 2
+# The record's start time first (PROTOCOL §1.4; tools/check_prereg_order.py reads time_utc), so that a
+# run that stops before the tool writes its header still has one.
+{
+    echo "time_utc: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "command: build/m4_accuracy $*"
+} > "$RECORD/run.txt"
 if [ "$1" = pass ]; then
     if ! tools/set_perf_mode.sh > "$RECORD/fixed_clocks.txt" 2>> "$RECORD/m4_accuracy.log"; then
         echo 2 > "$RECORD/exit_code"

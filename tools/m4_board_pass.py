@@ -15,7 +15,8 @@ while the tool runs, as prereg/M4.md §2.2 has it, then fetches the records (§2
   - Inputs (pass, decode): the manifest goes to ~/m4/inputs/<record>/manifest.tsv (the board's tree has
     no results/), then its PNGs (--inputs, default D:/m4data/inputs2) in chunks of --chunk images, each
     sent as a tar to ~/m4/inputs/<record>/chunk_<k>.part and renamed chunk_<k> when whole. At most
-    --ahead chunks are on the board at once; the tool deletes each after its images.
+    --ahead chunks are on the board at once; the tool deletes each after its images, and this script
+    deletes ~/m4/inputs/<record> at the end (the chunks of a pass that stopped early).
   - Afterwards: the record goes to results/<kind>/<record>/ here, and a pass's detections (unless
     --dets-in-record) from ~/m4/passes/<record>/ to D:/m4data/passes/<record>/. The record's dumps
     (*.i8) are not committed (.gitignore).
@@ -196,7 +197,8 @@ def main(argv):
     fetch(host, f"{BOARD_REPO}/results/{a.kind}", name, REPO / "results" / a.kind)
     if a.mode == "pass" and not a.dets_in_record:
         fetch(host, "/home/pi/m4/passes", name, Path(a.passes))
-    board(host, f"rm -f {manifest}; rmdir {inputs} 2>/dev/null; true")
+    # The run's own copies of the inputs: what the tool did not delete (a pass that stopped early).
+    board(host, f"rm -rf {inputs}")
     summary = REPO / record / {"pass": "pass.csv", "decode": "decode.csv", "wiring": "wiring.csv"}[a.mode]
     if summary.exists():
         print(summary.read_text(encoding="utf-8"), end="")

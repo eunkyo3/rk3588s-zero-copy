@@ -12,10 +12,12 @@ Arithmetic follows the C++ of src/core/yolov10_post.cpp and yolov8_post.cpp, in 
   - candidates are ordered by score, highest first; equal scores by branch (stride 8, 16, 32), then cell
     (row-major), then class;
   - a box is decoded from its own cell: per side, the softmax's expectation over the DFL bins, summed bin
-    by bin; then x1 = (x + 0.5 − d_left) × stride, y1, x2, y2 likewise, in model input coordinates. To give
-    the board's float32 values bit for bit, exp is computed in float64 and rounded once (the board's
-    expf; numpy's float32 exp is off by up to 2 ulp), and acc += e × i is one rounding of the exact value,
-    as the fused multiply-add GCC makes of it on the board.
+    by bin; then x1 = (x + 0.5 − d_left) × stride, y1, x2, y2 likewise, in model input coordinates. To
+    follow the board's float32 values, exp is computed in float64 and rounded once (numpy's float32 exp
+    is off by up to 2 ulp), and acc += e × i is one rounding of the exact value, as the fused
+    multiply-add GCC makes of it on the board. The board's glibc expf gives that correctly rounded value
+    for all but rare arguments: 2 of about 1,750 in the first 50 images' YOLOv8n outputs, 1 ulp apart,
+    which moved 4 of 75,000 values by 1 ulp (docs/notes/m4_accuracy.md).
 The rules:
   - yolov10_rule: the max_det (300) best candidates. No NMS.
   - yolov8_rule: of the first 30,000 candidates, going down the order, a candidate is dropped when its

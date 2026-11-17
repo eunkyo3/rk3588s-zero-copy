@@ -1,0 +1,28 @@
+# start_time_utc: 2026-11-17T05:01:33Z
+# run_kind: check
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# amendment: A13
+# code_commit: f0fcc7dc372950b56c9db30f2677c948335a6dc5
+# record: 20261117T050131Z_trial_wiring_yolov10n
+# ntp_synchronized: yes
+# model: yolov10n
+# model_sha256: 6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+# tensors: /home/pi/calib/tensors_c.u8
+# tensors_sha256: 051d6f12662e0b8ef9b72f00f74f498683913c39f197deb42c34ac1a54340c67
+# setting: C10: PipelinePost v10 against the accuracy tool's yolov10_post, conf 0.25, max 300
+# post_objects_sha256: {"build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o": "536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2", "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o": "3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555", "build/CMakeFiles/core.dir/src/core/yolov10_post.cpp.o": "b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8", "build/CMakeFiles/core.dir/src/core/pipeline_post.cpp.o": "28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a"}
+# map_rule_object_sha256: 94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e
+frame,shared_detections,direct_detections,equal
+0,15,15,1
+1,16,16,1
+2,16,16,1
+3,16,16,1
+4,17,17,1
+5,18,18,1
+6,17,17,1
+7,18,18,1
+8,16,16,1
+9,19,19,1
