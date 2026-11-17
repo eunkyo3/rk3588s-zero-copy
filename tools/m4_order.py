@@ -10,24 +10,31 @@
 
 The records:
   - A board pass: results/m4/<UTC>_<name>/ from tools/m4_board_pass.py. run.txt (tools/m4_board_run.sh)
-    gives the command and the start. Once the tool ends, exit_code and pass.csv (tools/m4_accuracy.cpp)
-    follow, and on the PC board_pass.txt.
+    gives the command, the start, and the PIDs of the script and of the tool. Once the tool ends,
+    exit_code and pass.csv (tools/m4_accuracy.cpp) follow, and on the PC board_pass.txt.
   - An FP32 pass: results/m4/<UTC>_<name>/ from tools/eval/pc_run.py. pc.json names tools/m4_fp32.py,
-    exit.txt follows when the tool ends, and pass.csv too. tools/m4_send_record.py copies the record
-    to the board, whose sessions check the order.
+    exit.txt follows when the tool ends (or tools/m4_send_record.py --ended writes it once no container
+    of the record runs), and pass.csv too. tools/m4_send_record.py copies the record to the board, whose
+    sessions check the order.
   - A wiring check: results/check/<UTC>_<name>/wiring.csv (tools/m4_accuracy.cpp wiring).
-A pass that did not start (exit code 2 without pass.csv: refused, or a failed setup; on the PC also
-docker's 125 to 127) is no attempt. One that ended without pass.csv any other way (a board reset, a
-killed run) is an invalid attempt.
+A pass that did not start is no attempt: exit code 2 without pass.csv (the tool refused its options, or
+tools/m4_board_run.sh's set_perf_mode.sh or collect_env.sh failed), and on the PC also docker's own
+errors, 125 to 127. One that ended without pass.csv any other way is an invalid attempt (§5: the tool
+exits abnormally), whether it processed an image or not: a board reset, a killed run, the runtime
+refusing the model. A pass ends at the later of its tool's end (pass.csv's start and seconds) and the
+end its runner recorded.
+
+The gates know nothing of amendments: the passes they count are those of freeze-m4's code, and a rerun
+under an amendment (§9) follows that amendment's own procedure.
 
 Used by tools/stream_session.py and, through the gate below, tools/m4_calib.sh on the board, and by
 tools/check_prereg_order.py.
 
   python3 tools/m4_order.py gate <freeze-m4's commit>
 The gate of M4's calib_npu session (tools/m4_calib.sh, run kind m4): freeze-m4's commit from
-docs/notes/env.md, the four passes done, and the wiring check of this build's objects
-(tools/stream_session.py m4_gates_problem, which the pipeline sessions pass too). Exit 0 when the
-session may start, 1 with the reason when not, 2 when the records cannot be read.
+docs/notes/env.md, no board tool running, the four passes done, and the wiring check of this build's
+objects (tools/stream_session.py m4_gates_problem, which the pipeline sessions pass too). Exit 0 when the
+session may start, 1 with the reason when not, 2 when docs/notes/env.md cannot be read.
 """
 from __future__ import annotations
 
@@ -110,15 +117,42 @@ def arg(words, flag):
     return words[words.index(flag) + 1] if flag in words[:-1] else None
 
 
-def board_alive(run):
-    """Whether the run of run.txt's fields still runs: the same boot, and its PID is
-    tools/m4_board_run.sh. False where /proc cannot tell (on the PC)."""
+PROC = Path("/proc")
+
+
+def argv(pid, proc=None):
+    """A process's arguments from /proc, or [] if it is gone (or there is no /proc: on the PC)."""
     try:
-        boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
-        cmdline = Path("/proc", run.get("pid", "none"), "cmdline").read_bytes()
+        return Path(proc or PROC, str(pid), "cmdline").read_bytes().split(b"\0")
+    except OSError:
+        return []
+
+
+def board_alive(run, proc=None):
+    """Whether the run of run.txt's fields still runs, in this boot: its tools/m4_board_run.sh (pid), or
+    the tool it started (tool_pid). False where /proc cannot tell (on the PC)."""
+    try:
+        boot = Path(proc or PROC, "sys/kernel/random/boot_id").read_text().strip()
     except OSError:
         return False
-    return boot == run.get("boot_id") and b"m4_board_run.sh" in cmdline
+    if boot != run.get("boot_id"):
+        return False
+    script = argv(run.get("pid", "none"), proc)
+    return any(b"m4_board_run.sh" in a for a in script) or is_tool(argv(run.get("tool_pid", "none"), proc))
+
+
+def is_tool(args):
+    return bool(args) and Path(args[0].decode(errors="replace")).name == "m4_accuracy"
+
+
+def tools_running(proc=None):
+    """The PIDs of the board tool's processes (build/m4_accuracy) that run now, of any run kind and
+    record: a pass must not overlap a calib_npu or pipeline session."""
+    try:
+        pids = sorted((p.name for p in Path(proc or PROC).iterdir() if p.name.isdigit()), key=int)
+    except OSError:
+        return []
+    return [pid for pid in pids if is_tool(argv(pid, proc))]
 
 
 def attempt(d, model, precision, start, freeze_m4, exit_code, end, running, side):
@@ -130,9 +164,10 @@ def attempt(d, model, precision, start, freeze_m4, exit_code, end, running, side
                 != ("m4", freeze_m4, model, precision):
             return None
         t0 = parse_utc(header.get("start_time_utc", ""))
-        try:
-            end = t0 + timedelta(seconds=float(rows["seconds"])) if t0 else end
-        except (KeyError, ValueError):
+        try:  # the later of the tool's own end and the one its runner recorded (exit.txt, board_pass.txt)
+            tool_end = t0 + timedelta(seconds=float(rows["seconds"]))
+            end = max(tool_end, end) if end else tool_end
+        except (KeyError, ValueError, TypeError):
             pass
         return Attempt(d, model, precision, start, end, "valid" if rows.get("valid") == "1" else "invalid")
     if exit_code in NOT_STARTED[side]:

@@ -289,7 +289,7 @@ class Check(unittest.TestCase):
         self.assertEqual(out.count("a m4 run that starts 2026-11-15T00:00:00Z, not after freeze-m4"), 2, out)
 
     def m4_case(self):
-        """A case after freeze-m4 with the four accuracy passes, done at 2026-11-20T04:00:01Z (A14 known)."""
+        """A case after freeze-m4 with the four accuracy passes, done at 2026-11-20T04:00:10Z (A14 known)."""
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import test_m4_order as tmo
         c = self.case(extra_rows=M4_ROWS)
@@ -325,12 +325,12 @@ class Check(unittest.TestCase):
         problems = [line for line in out.splitlines() if line.startswith("FAIL ")]
         self.assertEqual(len(problems), 3, out)
         self.assertIn("20261120T035000Z_m4_calib: an M4 calib_npu session that starts 2026-11-20T03:50:00Z, before "
-                      "the accuracy passes ended at 2026-11-20T04:00:01Z (M4 §8 step 5)", out)
+                      "the accuracy passes ended at 2026-11-20T04:00:10Z (M4 §8 step 5)", out)
         self.assertIn("20261120T003000Z_m4_main: an M4 pipeline session that starts 2026-11-20T00:30:00Z before the "
                       "accuracy passes are done (M4 §8 step 5): the INT8 pass of yolov8n has no record;", out)
         self.assertIn("20261120T053000Z_m4_aux: an M4 pipeline session that starts 2026-11-20T05:30:00Z, before the "
                       "last record of its calib_npu session 20261120T035000Z_m4_calib (M4 §8 step 5)", out)
-        # A pass repeated later (after an amendment, §9) does not move the earlier sessions' order.
+        # A pass that starts after a session (a rerun, say) does not count for that session.
         c = self.m4_case()
         self.m4_session(c, "20261120T050000Z_m4_calib", "2026-11-20T05:00:00Z")
         sys.path.insert(0, str(Path(__file__).resolve().parent))

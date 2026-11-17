@@ -166,7 +166,7 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
     - **Gates:** no M4 session starts until all of these hold:
       - `freeze-m4` has its row in env.md;
       - a passed equivalence check of this build's two objects of A13 is in `results/check/`;
-      - the four accuracy passes of `freeze-m4`'s code are done, in `results/m4/` (§8 step 5);
+      - the four accuracy passes of `freeze-m4`'s code are done, in `results/m4/`, and no `build/m4_accuracy` runs (§8 step 5);
       - **wiring (§8 step 3, §5):** a passed wiring check covers this build's four post-processing objects, `yolov10_post`'s and the shared function's among them, for C8 and for C10. It is in `results/check/<UTC>_<name>/wiring.csv`, and all its frames, at least 10, are equal. A check of the same objects in which a frame differed stops them for good: the cause is found and fixed. A rebuild whose objects differ needs the check again;
       - a `calib_npu` session decides (below);
       - it is the session that the earlier M4 pipeline sessions took.

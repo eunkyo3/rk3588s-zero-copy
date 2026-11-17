@@ -610,9 +610,13 @@ def m4_gates_problem(freeze_m4):
     session cannot start yet, or None (tools/m4_order.py):
       - §8 step 5: the four accuracy passes of freeze-m4's code in results/m4/ come first. Each is valid,
         or was invalid twice (§5), and none is running. The FP32 passes' records come from the PC
-        (tools/m4_send_record.py).
+        (tools/m4_send_record.py). No build/m4_accuracy runs at all, whatever its record says.
       - §8 step 3 and §5: a passed wiring check in results/check/ covers this build's four post-processing
         objects (yolov10_post's and the shared function's among them), for C8 and for C10."""
+    running = m4_order.tools_running()
+    if running:
+        return (f"build/m4_accuracy runs (PID {', '.join(running)}): M4's sessions do not overlap a pass or a "
+                "check of the board tool (M4 §8 step 5)")
     _, problems = m4_order.passes_status(m4_order.pass_attempts(Path("results", "m4"), freeze_m4,
                                                                 alive=m4_order.board_alive))
     if problems:

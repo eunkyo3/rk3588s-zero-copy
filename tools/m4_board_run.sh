@@ -6,7 +6,8 @@
 #   - A pass then fixes the clocks (tools/set_perf_mode.sh, PROTOCOL §8; prereg/M4.md §2.5), records
 #     the environment (tools/collect_env.sh, PROTOCOL §9.1), and gives the tool the fixed clocks.
 #   - The tool's output goes to <record>/m4_accuracy.log, and its exit code to <record>/exit_code, which
-#     m4_board_pass.py waits for; 2 when the run could not start.
+#     m4_board_pass.py waits for; 2 when the run could not start. Its PID is added to run.txt
+#     (tool_pid), and a TERM or INT to this script stops it too.
 # Usage, as root: tools/m4_board_run.sh <record> pass|decode|wiring ARGS...
 set -u
 [ "$(id -u)" -eq 0 ] || { echo "m4_board_run.sh: run as root" >&2; exit 2; }
@@ -28,10 +29,20 @@ stop() {
 if [ "$1" = pass ]; then
     tools/set_perf_mode.sh > "$RECORD/fixed_clocks.txt" 2>> "$RECORD/m4_accuracy.log" || stop "set_perf_mode.sh failed"
     tools/collect_env.sh > "$RECORD/env.txt" 2>> "$RECORD/m4_accuracy.log" || stop "collect_env.sh failed"
-    build/m4_accuracy "$@" --record "$RECORD" --fixed-clocks "$RECORD/fixed_clocks.txt" >> "$RECORD/m4_accuracy.log" 2>&1
+    build/m4_accuracy "$@" --record "$RECORD" --fixed-clocks "$RECORD/fixed_clocks.txt" >> "$RECORD/m4_accuracy.log" 2>&1 &
 else
-    build/m4_accuracy "$@" --record "$RECORD" >> "$RECORD/m4_accuracy.log" 2>&1
+    build/m4_accuracy "$@" --record "$RECORD" >> "$RECORD/m4_accuracy.log" 2>&1 &
 fi
+# The tool runs as this script's child, and its PID goes to run.txt too (tools/m4_order.py). A TERM or INT
+# to this script stops the tool with it, so no tool runs on once its run looks ended.
+tool=$!
+echo "tool_pid: $tool" >> "$RECORD/run.txt"
+trap 'kill "$tool" 2>/dev/null' TERM INT
+wait "$tool"
 code=$?
+while kill -0 "$tool" 2>/dev/null; do  # a signal ended the wait: wait for the tool itself
+    wait "$tool"
+    code=$?
+done
 echo "$code" > "$RECORD/exit_code"
 exit "$code"

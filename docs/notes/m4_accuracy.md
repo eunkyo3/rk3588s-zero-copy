@@ -227,14 +227,22 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 
 The four passes come before the `calib_npu` session, and that before the pipeline sessions. [tools/m4_order.py](../../tools/m4_order.py) reads the passes from their records ([tests](../../tests/test_m4_order.py)).
 - **The records:**
-  - **A board pass:** `run.txt` gives the command and the start. Once the tool ends, `exit_code` and `pass.csv` follow.
-  - **An FP32 pass:** `pc.json` names `tools/m4_fp32.py`. Once the tool ends, `exit.txt` and `pass.csv` follow.
-  - **Not an attempt:** a run that did not start, i.e. exit code 2 without `pass.csv` (refused, or a failed setup), or docker's 125 to 127 on the PC.
-  - **An invalid attempt:** a run that ended without `pass.csv` any other way, such as a board reset or a killed run.
-- **Done:** a pass is done when it is valid, or once it has been invalid twice, as §5 has it: it is then reported as missing. A board run that still runs, in the same boot under the PID of `m4_board_run.sh`, holds the passes back.
+  - **A board pass:** `run.txt` gives the command, the start, and the PIDs of `m4_board_run.sh` and of the tool. Once the tool ends, `exit_code` and `pass.csv` follow. A TERM or INT to the script stops the tool too.
+  - **An FP32 pass:** `pc.json` names `tools/m4_fp32.py` and its container, `m4-<record>`. Once the tool ends, `exit.txt` and `pass.csv` follow.
+  - **Not an attempt:** a run that did not start, i.e. exit code 2 without `pass.csv` (the tool refused its options, or `m4_board_run.sh`'s `set_perf_mode.sh` or `collect_env.sh` failed), or docker's own errors, 125 to 127, on the PC.
+  - **An invalid attempt:** a run that ended without `pass.csv` any other way (§5: the tool exits abnormally), such as a board reset, a killed run or the runtime refusing the model.
+  - **The end:** the later of the tool's own (`pass.csv`'s start and seconds) and the one its runner recorded.
+- **Done:** a pass is done when it is valid, or once it has been invalid twice, as §5 has it: it is then reported as missing. A board run that still runs in this boot holds the passes back: its script, or its tool, is alive under its PID.
+- **Amendments:** the gates know nothing of them. They count the passes of `freeze-m4`'s code, and a rerun under an amendment (§9) follows that amendment's own procedure.
 - **Where it is checked:**
-  - **On the board, before a session starts:** `tools/stream_session.py` for the pipeline sessions, and `tools/m4_order.py gate` for `tools/m4_calib.sh`. Both also need a passed wiring check of the build's four post-processing objects, for both settings (§8 step 3, §5).
-  - **The board has the INT8 passes' records already.** The FP32 ones come from the PC with `tools/m4_send_record.py`. It sends a record only once the pass has ended, refuses to overwrite a different record of the same name, and checks every file's SHA-256 on the board ([tests](../../tests/test_m4_send_record.py)).
+  - **On the board, before a session starts:** `tools/stream_session.py` for the pipeline sessions, and `tools/m4_order.py gate` for `tools/m4_calib.sh`.
+    - Both refuse while any `build/m4_accuracy` runs, whatever its record says.
+    - Both also need a passed wiring check of the build's four post-processing objects, for both settings (§8 step 3, §5).
+  - **The board has the INT8 passes' records already.** The FP32 ones come from the PC with `tools/m4_send_record.py` ([tests](../../tests/test_m4_send_record.py)).
+    - It sends a record only once the pass has ended.
+    - It unpacks the record beside its place and then moves it in, so a copy cut short leaves nothing there.
+    - It refuses to overwrite a different record of the same name, and checks every file's SHA-256 on the board.
+    - **A pass whose `pc_run.py` died** (a crash, a reboot) has no `exit.txt`. `--ended` writes one, with `exit_code: none` and the time then, once docker shows that its container does not run.
   - **The `calib_npu` session that decides** must also have started once the passes were done ([comparison.md](comparison.md)).
   - **Afterwards, on the PC:** `tools/check_prereg_order.py` reports every calib_npu or pipeline session in `results/m4/` that starts before the passes that started before it were done and had ended. It also reports a pipeline session that starts before the last record of its `calib_npu` session.
 

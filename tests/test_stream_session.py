@@ -855,7 +855,7 @@ class M4(unittest.TestCase):
 
     def setUp(self):
         M2.setUp(self)
-        tmo.all_passes(Path("results/m4"))  # §8 step 5: the four accuracy passes, done at 2026-11-20T04:00:01Z
+        tmo.all_passes(Path("results/m4"))  # §8 step 5: the four accuracy passes, done at 2026-11-20T04:00:10Z
 
     def m4_objects(self, post=b"post", neon=b"neon"):
         """Writes the build's four post-processing objects (A13's two, yolov10_post's and the shared

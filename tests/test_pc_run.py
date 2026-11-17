@@ -249,6 +249,9 @@ class Main(unittest.TestCase):
                 self.assertRegex(ended[1], r"^end_time_utc: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
                 cmd = popen.call_args[0][0]
                 self.assertEqual(cmd[cmd.index(IMAGE_ID):], [IMAGE_ID, "python3", "-I", "/repo/tools/x.py", "--a", "/data"])
+                # named after its record (tools/m4_send_record.py --ended)
+                self.assertEqual(cmd[cmd.index("--name") + 1], f"m4-{record.name}")
+                self.assertEqual(written["container"], f"m4-{record.name}")
                 self.assertIn(f"type=bind,source={repo},target=/repo,readonly", cmd)
                 self.assertTrue({"--network", "none", "no-new-privileges", "--memory=2g", "--memory-swap=4g"} <= set(cmd))
                 # the COCO evaluation: 6 GB without swap

@@ -46,7 +46,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import m4_order  # noqa: E402  (M4 §8 step 5: the accuracy passes)
 
-KINDS ={"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m4"}  # PROTOCOL §1.4
+KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m4"}  # PROTOCOL §1.4
 AFTER_FREEZE = {"comparison": "freeze-m1", "reference": "freeze-m1", "m1.1": "freeze-m1",
                 "m2": "freeze-m2", "m4": "freeze-m4"}  # run kind -> the stage its runs start after (M2 §5.1, M4 §4)
 # Header field -> the stage whose tag commit it gives (PROTOCOL §1.4, M2 §5.1, M4 §4).
@@ -55,7 +55,7 @@ COMMITS = {"prereg_v1_commit": "prereg-v1", "freeze_m1_commit": "freeze-m1", "pr
 # The stages that a header naming them (any commit other than none) starts after (M2 §5.1, M4 §4).
 NAMED = {"prereg-m2", "prereg-m4", "freeze-m4"}
 M4_SESSION = re.compile(r"\d{8}T\d{6}Z_(m4_calib|m4_main|m4_aux)")  # M4 §8 step 5, after the passes
-TAG_ROW =re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
+TAG_ROW = re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
 
 
 class InputError(Exception):

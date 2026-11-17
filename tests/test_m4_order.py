@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -61,12 +62,13 @@ def board_pass(root, name, model="yolov8n", start="2026-11-20T01:00:00Z", second
 
 
 def fp32_pass(root, name, model="yolov8n", start="2026-11-20T02:00:00Z", seconds=5000, valid=1, freeze=F4,
-              tool="tools/m4_fp32.py", exit_code="auto", with_pass_csv=True, ended=True, kind="m4"):
+              tool="tools/m4_fp32.py", exit_code="auto", with_pass_csv=True, ended=True, kind="m4", container=True):
     """A record of tools/eval/pc_run.py running tools/m4_fp32.py: pc.json, pass.csv and exit.txt."""
     d = Path(root, name)
     d.mkdir(parents=True)
     pc = {"start_time_utc": start, "run_kind": kind, "freeze_m4_commit": freeze, "amendment": "A14", "record": name,
-          "tool": [tool, "--model", model, "--manifest", "m.tsv", "--inputs", "/data/inputs2"]}
+          "tool": [tool, "--model", model, "--manifest", "m.tsv", "--inputs", "/data/inputs2"],
+          **({"container": f"m4-{name}"} if container else {})}
     (d / "pc.json").write_text(json.dumps(pc, indent=1) + "\n", encoding="utf-8", newline="\n")
     if with_pass_csv:
         pass_csv(d, start, kind, freeze, model, "fp32", seconds, valid)
@@ -79,12 +81,12 @@ def fp32_pass(root, name, model="yolov8n", start="2026-11-20T02:00:00Z", seconds
 
 
 def all_passes(root, freeze=F4):
-    """The four passes, valid, one after another from 2026-11-20T01:00:00Z; the last ends 04:00:01."""
+    """The four passes, valid, one after another from 2026-11-20T01:00:00Z; the last ends 04:00:10 (its exit.txt)."""
     board_pass(root, "20261120T010000Z_int8_yolov8n", "yolov8n", "2026-11-20T01:00:00Z", freeze=freeze)
     board_pass(root, "20261120T011000Z_int8_yolov10n", "yolov10n", "2026-11-20T01:10:00Z", freeze=freeze)
     fp32_pass(root, "20261120T012000Z_fp32_yolov8n", "yolov8n", "2026-11-20T01:20:00Z", 5000, freeze=freeze)
     fp32_pass(root, "20261120T030000Z_fp32_yolov10n", "yolov10n", "2026-11-20T03:00:00Z", 3600, freeze=freeze)
-    return utc("2026-11-20T04:00:01Z")
+    return utc("2026-11-20T04:00:10Z")
 
 
 def wiring_check(root, name, model, objects, frames=10, differ=(), model_sha=None, tensors=mo.TENSORS_SHA256,
@@ -164,7 +166,7 @@ class Attempts(InTemp):
             ("20261120T040000Z_reset", "yolov10n", "int8", "invalid", "2026-11-20T04:01:35Z"),
             ("20261120T050000Z_died", "yolov10n", "int8", "invalid", None),
             ("20261120T060000Z_running", "yolov8n", "int8", "running", None),
-            ("20261120T100000Z_fp32_yolov8n", "yolov8n", "fp32", "valid", "2026-11-20T11:23:21Z"),
+            ("20261120T100000Z_fp32_yolov8n", "yolov8n", "fp32", "valid", "2026-11-20T11:23:30Z"),
             ("20261120T130000Z_fp32_killed", "yolov10n", "fp32", "invalid", "2026-11-20T13:01:50Z")])
         # Without a way to tell (the PC), a run without its exit code is an invalid one.
         self.assertEqual([a.outcome for a in mo.pass_attempts(r, F4) if a.record.name.endswith("_running")],
@@ -204,10 +206,32 @@ class Attempts(InTemp):
         self.assertEqual(mo.passes_status(attempts)[1],
                          ["the INT8 pass of yolov8n is running (20261120T070000Z_int8_yolov8n)"])
 
-    def test_board_alive_without_proc(self):
-        if Path("/proc/sys/kernel/random/boot_id").exists():
-            self.skipTest("this host has /proc")
-        self.assertFalse(mo.board_alive({"pid": "1", "boot_id": "b"}))
+    def test_a_board_run_that_still_runs(self):
+        proc = Path("proc")
+
+        def process(pid, *args):
+            Path(proc, str(pid)).mkdir(parents=True)
+            Path(proc, str(pid), "cmdline").write_bytes(b"\0".join(args) + b"\0")
+
+        Path(proc, "sys/kernel/random").mkdir(parents=True)
+        Path(proc, "sys/kernel/random/boot_id").write_text("b-1\n")
+        process(10, b"sh", b"tools/m4_board_run.sh", b"results/m4/x", b"pass")
+        process(11, b"build/m4_accuracy", b"pass", b"--model", b"m")
+        process(12, b"tail", b"-f", b"results/m4/x/m4_accuracy.log")  # not the tool
+        process(13, b"python3", b"tools/stream_session.py")
+        alive = lambda run: mo.board_alive(run, proc)  # noqa: E731
+        self.assertTrue(alive({"pid": "10", "tool_pid": "11", "boot_id": "b-1"}))
+        self.assertTrue(alive({"pid": "99", "tool_pid": "11", "boot_id": "b-1"}))  # the script killed, the tool not
+        self.assertTrue(alive({"pid": "10", "boot_id": "b-1"}))  # a run.txt before tool_pid
+        self.assertFalse(alive({"pid": "10", "tool_pid": "11", "boot_id": "b-0"}))  # another boot
+        self.assertFalse(alive({"pid": "12", "tool_pid": "13", "boot_id": "b-1"}))  # PIDs reused by others
+        self.assertFalse(alive({"boot_id": "b-1"}))
+        self.assertEqual(mo.tools_running(proc), ["11"])
+        process(9, b"/home/pi/rk3588s-zero-copy/build/m4_accuracy", b"wiring")
+        self.assertEqual(mo.tools_running(proc), ["9", "11"])
+        # Without /proc (the PC): nothing runs.
+        self.assertFalse(mo.board_alive({"pid": "10", "boot_id": "b-1"}, Path("none")))
+        self.assertEqual(mo.tools_running(Path("none")), [])
 
 
 class Wiring(InTemp):
@@ -301,10 +325,21 @@ class Gate(InTemp):
         wiring_both(objects)
         self.assertEqual(self.gate(), (0, "m4_order: the four accuracy passes are done, and a wiring check covers "
                                           "this build's objects\n"))
+        # A board tool that runs, whatever its record, holds the gate.
+        with unittest.mock.patch.object(mo, "tools_running", return_value=["4242"]):
+            code, out = self.gate()
+        self.assertEqual(code, 1)
+        self.assertIn("build/m4_accuracy runs (PID 4242)", out)
         build_objects(b"rebuilt")  # §5: objects that differ need the check again
         self.assertEqual(self.gate()[0], 1)
         with redirect_stderr(io.StringIO()):
             self.assertEqual(mo.main(["gate"]), 2)
+
+    def test_m4_calib_sh_runs_the_gate_before_it_makes_anything(self):
+        script = (Path(self.here) / "tools/m4_calib.sh").read_text(encoding="utf-8")
+        gate = script.index('python3 tools/m4_order.py gate "$FREEZE_M4_COMMIT" || fail')
+        self.assertLess(gate, script.index('mkdir -p "$OUT"'))
+        self.assertIn('if [ "$RUN_KIND" = m4 ]; then\n    python3 tools/m4_order.py gate', script)
 
 
 if __name__ == "__main__":
