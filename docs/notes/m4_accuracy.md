@@ -272,7 +272,7 @@ Run on 2026-11-17, kind `check`, with the board built at `63febdf` (#55's merge)
   - `20261117T081427Z_rules_yolov8n/dump` (`dump.sha256` `74e48290…`) and `…081441Z_rules_yolov10n/dump` (`b7b4f93a…`).
   - They are kept on the PC and on the board, not committed.
   - Their `dump.sha256` equal those of the trials at `a2890a8`. So the outputs are the same across the two builds.
-- **Still before `freeze-m4`:** the memory check at 5,000 images (Evaluation, below), then A14 with these results.
+- **Still before `freeze-m4`:** A14 with these results. The memory check at 5,000 images passed (Evaluation, below).
 
 ## The order of the runs (§8 step 5)
 
@@ -336,6 +336,14 @@ The four passes come before the `calib_npu` session, and that before the pipelin
   - **Another PC can run it:** it is a check of the tool, not a measurement of M4, and the peak memory depends on the image and the data, not on the PC. The PC needs to be amd64, run Docker, and give the container 6 GB (a Docker VM of at least 7 GB).
   - **What it needs:** the repository, the image's archive (`D:/m4data/images/m4-eval_c676e76f95356ea1.tar`, loaded with `docker load` and checked by its ID) and `annotations_trainval2017.zip`. `m4_coco.py` checks the zip against `coco.sha256`. The COCO images are not needed.
   - **How to run it:** the command is in the tool's docstring. The summary goes to `m4_coco_memory.txt` in the work directory, and it names the PC.
+  - **Result** (record `results/check/20261117T134147Z_m4_coco_memory`):
+    - **Where:** at `3f6d24d`, on another PC: an AMD Ryzen 7 5700X3D with a Docker VM of 31.3 GB.
+    - **Outcome:** exit 0 in 3.5 minutes. The container's peak was 4,883 MB (4,867 MB for `m4_coco.py`), under the 6 GB limit without swap.
+    - **Against the estimate:** about 4.9 GB was estimated above, so the estimate held. About 1.2 GB of the limit was left.
+    - **Other containers:** 11 containers of another project ran in the same VM. The peak is the container's own cgroup's, so they do not change it.
+    - **Files:** the record keeps the tool's summary and its console output. `env.txt` adds the start time, the commit, the image ID and the zip's SHA-256.
+    - **Not kept:** the pass's files, among them a 101 MB `detections.tsv` and a 161 MB `coco_results.json`. Their SHA-256 are in `env.txt`.
+    - **Not kept either:** the tool's `pc.json`, `coco_eval.csv` and `m4_coco.log`. Their headers hold the tool's placeholder "synthetic memory check", which `tools/check_prereg_order.py` refuses as a start time.
 
 ## Files
 

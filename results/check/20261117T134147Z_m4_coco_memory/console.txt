@@ -1,0 +1,20 @@
+m4_coco_memory: 5000 images, 1500000 detections written in 12 s; running tools/m4_coco.py
+    0.0 min  m4_coco resident 0 MB
+    1.0 min  m4_coco resident 2803 MB
+    2.0 min  m4_coco resident 4867 MB
+    3.0 min  m4_coco resident 4830 MB
+cpu: AMD Ryzen 7 5700X3D 8-Core Processor
+vm_memory_gb: 31.3
+container_memory_max: 6442450944
+container_swap_max: 0
+python: 3.10.22
+numpy: 1.26.4
+pycocotools: 2.0.11
+images: 5000
+detections: 1500000
+m4_coco_exit: 0
+m4_coco_minutes: 3.5
+m4_coco_peak_resident_mb: 4867
+m4_coco_peak_resident_sampled_mb: 4867
+container_memory_peak_mb: 4883
+exit=0 wall=4 min
