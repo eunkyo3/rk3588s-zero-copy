@@ -20,7 +20,10 @@ data:
   - the repository read-only at /repo (the working directory), the record directory at /record, and
     --data (default D:/m4data) at /data;
   - no network, no new privileges, and memory limited to 2 GB (4 GB with swap), as for the conversion:
-    other projects' containers share the Docker VM.
+    other projects' containers share the Docker VM. COCOeval of a pass (tools/m4_coco.py, about 1.5
+    million detections) needs about 4.9 GB: that tool gets 6 GB without swap, which fails at once rather
+    than thrash the disk, and it does not start while another container runs or in a Docker VM with less
+    than 1 GB more than that.
 Its output goes to the console and to <record>/<tool>.log. With --checks-only, no tool runs: pc.json
 records the checks alone (the PC's clock, say).
 
@@ -51,7 +54,9 @@ IMAGE = "rk3588s-zero-copy/m4-eval:1"
 IMAGE_ID_FILE = REPO / "tools/eval/image_id.txt"  # the evaluation image's ID, which runs must use (§8)
 NTP_SERVER = "time.windows.com"
 MAX_OFFSET_S = 1.0  # M4 §4, for the host's offset from NTP and the container's from the host
-CONTAINER = ["--memory=2g", "--memory-swap=4g", "--network", "none", "--security-opt", "no-new-privileges"]
+CONTAINER = ["--network", "none", "--security-opt", "no-new-privileges"]
+MEMORY = ["--memory=2g", "--memory-swap=4g"]
+LARGE_MEMORY_GB = {"tools/m4_coco.py": 6}  # without swap
 KINDS = ("check", "m4")
 SAMPLE = re.compile(r"^\s*[0-9]{1,2}:[0-9]{2}:[0-9]{2},\s*(.*?)\s*$")  # w32tm /dataonly: "hh:mm:ss, <value>"
 OFFSET = re.compile(r"([+-][0-9]+\.[0-9]+)s")
@@ -110,9 +115,48 @@ def run(cmd, timeout=120):
     return r.returncode, decode(r.stdout) + decode(r.stderr)
 
 
+def large_memory_gb(tool):
+    """The tool's large memory limit in GB, or None: by its path in the repository, however it is written."""
+    if not tool:
+        return None
+    try:
+        key = (REPO / tool).resolve().relative_to(REPO.resolve()).as_posix()
+    except (OSError, ValueError):
+        return None
+    return LARGE_MEMORY_GB.get(key)
+
+
+def memory(tool):
+    """The tool's container memory: (docker run's flags, the record's text)."""
+    gb = large_memory_gb(tool)
+    if gb is None:
+        return MEMORY, "2g, 4g with swap"
+    return [f"--memory={gb}g", f"--memory-swap={gb}g"], f"{gb}g, no swap"
+
+
+def memory_problem(tool):
+    """Why a tool with a large memory limit cannot start now, or None: another container runs, or the
+    Docker VM has less than 1 GB more than the limit."""
+    gb = large_memory_gb(tool)
+    if gb is None:
+        return None
+    code, running = run(["docker", "ps", "--format", "{{.Names}}"])
+    if code:
+        return "docker ps failed: " + one_line(running)
+    if running.strip():
+        return f"{tool} takes {gb} GB of the Docker VM, and other containers run: {one_line(running)}"
+    code, total = run(["docker", "info", "--format", "{{.MemTotal}}"])
+    if code or not total.strip().isdigit():
+        return "docker info failed: " + one_line(total)
+    if int(total) < (gb + 1) * 2**30:
+        return f"{tool} takes {gb} GB, and the Docker VM has {int(total) / 2**30:.1f} GB (at least {gb + 1} GB)"
+    return None
+
+
 def container_clock(image_id):
     """(offset, round trip) of the container clock against the host's (best_exchange)."""
-    p = subprocess.Popen(["docker", "run", "-i", "--rm", *CONTAINER, image_id, "python3", "-u", "-c", CLOCK],
+    p = subprocess.Popen(["docker", "run", "-i", "--rm", *CONTAINER, *MEMORY, image_id, "python3", "-u", "-c",
+                          CLOCK],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
     answers = queue.Queue()
     threading.Thread(target=lambda: [answers.put(line) for line in p.stdout], daemon=True).start()
@@ -181,6 +225,9 @@ def checks(image, tool, allow_dirty):
     if code or image_id.strip() != expected:
         raise Refused(f"no image {expected} ({IMAGE_ID_FILE.name}): docker load -i D:/m4data/images/m4-eval_<ID>.tar "
                       "(tools/eval/save_image.sh)")
+    problem = memory_problem(tool)
+    if problem:
+        raise Refused(problem)
     _, cpu = run(["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_Processor).Name"])
     _, chart = run(["w32tm", "/stripchart", f"/computer:{NTP_SERVER}", "/samples:3", "/dataonly"])
     offsets, failed = parse_stripchart(chart)
@@ -200,11 +247,12 @@ def checks(image, tool, allow_dirty):
                  "ntp_stripchart": one_line(chart), "w32tm_status": one_line(w32tm_status) or "(no output)",
                  "w32tm_status_exit": status_code},
         "container_clock_offset_s": f"{container_offset:+.4f}", "container_clock_rtt_s": f"{rtt:.4f}",
+        "container_memory": memory(tool)[1],
     }
 
 
 def docker_command(image_id, record, data, tool):
-    return ["docker", "run", "--rm", *CONTAINER,
+    return ["docker", "run", "--rm", *CONTAINER, *memory(tool[0])[0],
             "--mount", f"type=bind,source={REPO},target=/repo,readonly",
             "--mount", f"type=bind,source={record},target=/record",
             "--mount", f"type=bind,source={data},target=/data",
@@ -251,7 +299,8 @@ def main(argv):
     now = dt.datetime.now(dt.timezone.utc)
     record = REPO / "results" / a.kind / f"{now:%Y%m%dT%H%M%SZ}_{a.name}"
     record.mkdir(parents=True)
-    pc = {"start_time_utc": f"{now:%Y-%m-%dT%H:%M:%SZ}", **stage, **pc, "data": a.data, "tool": tool}
+    pc = {"start_time_utc": f"{now:%Y-%m-%dT%H:%M:%SZ}", **stage, "record": record.name, **pc, "data": a.data,
+          "tool": tool}
     (record / "pc.json").write_text(json.dumps(pc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8",
                                     newline="\n")
     print(f"pc_run: {record.relative_to(REPO)}, host clock {pc['host']['ntp_offset_s']} s off NTP "

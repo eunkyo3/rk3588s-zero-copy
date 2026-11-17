@@ -4,8 +4,8 @@
 
 M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
 - **규범:** [prereg/M4.md](../../prereg/M4.ko.md). 이 노트는 도구가 그것을 어떻게 따르는지 적는다. 영어판이 우선한다.
-- **지금까지 다룬 것:** 평가 이미지, COCO 파일, 입력.
-- **아직 없는 것:** 보드 패스, PC 패스, 평가. 각자의 도구와 함께 여기에 더한다.
+- **지금까지 다룬 것:** 평가 이미지, COCO 파일, 입력, Python 규칙, PC의 FP32 패스, 평가.
+- **아직 없는 것:** 보드의 INT8 패스, C++ YOLOv8n 규칙, 두 구현 사이의 §8 3단계 점검. 각자의 도구와 함께 여기에 더한다.
 
 ## 평가 이미지(§8 2단계)
 
@@ -63,6 +63,7 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
   - **기록:** `results/<종류>/<UTC>_<이름>/`. 그 `pc.json`에 위의 내용과 호스트 시계로 잰 시작 시각, 실행 종류, M4의 단계 커밋, 효력 있는 수정 항목이 들어간다(PROTOCOL §1.4, M4 §4). 그래서 도구가 일찍 멈춰도 `tools/check_prereg_order.py`가 확인하는 헤더가 남는다.
   - **컨테이너:** 이미지의 ID로 돌린다. 저장소는 `/repo`에 읽기 전용으로, 기록 폴더는 `/record`에, 데이터는 `/data`에 붙인다. 네트워크가 없고 새 권한을 얻지 못한다.
   - **제한:** 변환 때처럼 메모리 2 GB(스왑 포함 4 GB). 다른 프로젝트의 컨테이너가 같은 Docker VM을 쓴다.
+  - **평가의 한도:** `tools/m4_coco.py`는 스왑 없이 6 GB를 쓴다(아래 평가 절 참고). 스왑이 없으니 더 필요한 실행은 디스크를 혹사하지 않고 바로 실패한다. 다른 컨테이너가 실행 중이거나 Docker VM이 7 GB보다 작으면 시작하지 않는다. `pc.json`은 한도를 `container_memory`로 기록한다.
   - **Python:** 입력이 내려받은 데이터이므로 `python3 -I`로 돌린다.
   - **`--checks-only`:** 도구를 돌리지 않고 `pc.json`만 남긴다. 예를 들어 PC의 시계를 기록할 때 쓴다.
 - **PC:** Intel Core i7-6500U.
@@ -103,13 +104,95 @@ M4의 정확도(prereg/M4.md §2)를 어떻게 돌리는지 적는다.
     - **그 전의 확인:** NTP 오프셋 +0.582초(샘플 셋 가운데 하나 응답), 컨테이너 −0.003초. Windows Time 서비스는 켜져 있었다.
     - **OpenCV:** 4.11.0, 최적화 사용.
 
+## Python 규칙(§2.3)
+
+[tools/m4_rules.py](../../tools/m4_rules.py)에 두 규칙이 있다. 규칙은 float32 출력에서 돈다. INT8 출력은 `dequantize`, 즉 C++의 식 `(q − zp) × scale`로 float32가 된다.
+- **연산:** float32로, C++(`src/core/yolov10_post.cpp`, `yolov8_post.cpp`)와 같은 순서로 한다.
+  - 후보는 점수가 0.001보다 큰 (셀, 클래스) 쌍이다.
+  - 후보는 점수 순으로 놓고, 점수가 같으면 분기, 셀, 클래스 순이다.
+  - 박스는 각자의 셀에서 디코딩한다. 변마다 DFL 빈 16개에 대한 소프트맥스 기댓값을 빈 하나씩 더해 구하고, `(x + 0.5 − d) × stride`로 계산한다.
+  - **보드와 비트 단위로 같게:** `exp`는 float64로 계산해 float32로 한 번만 반올림한다. 보드의 `expf`가 주는 값이다. numpy의 float32 `exp`는 최대 2 ulp까지 어긋난다. `acc += e × i`도 한 번만 반올림한다. 보드에서 GCC가 이 식을 FMA(곱셈과 덧셈을 한 번에 반올림하는 명령)로 만들기 때문이다. 이렇게 하지 않으면 박스가 최대 6e-5 px, 두 박스의 IoU가 최대 3.5e-6까지 달라졌다. 이는 §2.3이 0.7 근처에서 허용하는 1e-6보다 크다.
+  - **분기의 순서:** 동점 순서가 분기 순서를 따르므로, 분기는 stride 8, 16, 32 순서로 와야 한다.
+- **`yolov10_rule`:** 가장 좋은 후보 300개, NMS 없음.
+- **`yolov8_rule`:** 처음 30,000개 후보를 그 순서대로 내려가며 클래스별 탐욕 NMS를 한다. 후보는 같은 클래스의 앞서 남긴 후보와의 IoU(`yolov8_post`와 같은 계산)가 0.7보다 크면 버린다. 처음 남은 300개가 결과다. 점수 합 출력은 쓰지 않는다.
+- **동점(§6):** 두 규칙 모두 301번째 검출이 300번째와 같은 점수인지도 알려 준다.
+- **보드와의 대조:** 탐색 때의 보드 덤프(21장, YOLOv10n INT8)에서 `yolov10_rule`은 `yolov10_post`의 목록과 같다. conf 0.25와 0.001의 목록 42개 모두 개수, 순서, 클래스가 같다.
+  - **비트 단위로 같음:** 점수와 박스 좌표 32,530개가 모두 보드의 값과 같다. 호스트와 평가 이미지 양쪽에서 확인했다. 위의 디코딩으로 바꾸기 전에는 2,693개가 최대 6.2e-5 px 달랐다. §2.3의 허용치는 점수 1e-6, 박스 1e-3 px다.
+  - **테스트:** 덤프가 있는 곳이면 테스트가 이 대조를 되풀이한다(덤프는 커밋하지 않는다). §2.3의 허용치를 먼저 확인하고, 그다음 모든 비트를 확인한다.
+  - **아직 할 것:** 처음 50장에서 두 규칙 모두를 대조하는 §8 3단계 점검은 보드 도구와 함께 들어온다.
+  - **보드의 YOLOv8n 규칙을 위한 메모:** 후보를 고를 때 Python처럼 `yolov10_post`의 `first_above`를 써야 한다. `yolov8_post`의 `s > quantize(conf)`는 항상 같은 판정이 아니다. GCC가 IoU의 합집합 계산도 FMA로 바꿀 수 있는데, 그러면 IoU가 1e-7쯤 움직인다. §2.3의 1e-6 안이다.
+
+## 검출 파일
+
+패스는 저장소 밖 자기 폴더 `D:/m4data/passes/<기록>/`에 표 두 개를 쓴다. 둘 다 `# key: value` 헤더가 있다(`pc.json`의 필드, 패스, 모델과 그 SHA-256, 정밀도, 규칙, 매니페스트의 SHA-256들).
+- **`detections.tsv`:** `image_id, rank, class, score, x1, y1, x2, y2`.
+  - **순서:** 검출마다 한 행이고, 이미지는 매니페스트 순서, 이미지마다 검출은 규칙의 순서다.
+  - **값:** 점수와 박스(모델 입력 좌표)는 보드의 C++가 출력하는 대로 float32를 유효숫자 9자리로 쓴다.
+- **`images.tsv`:** `image_id, candidates, detections, tied`.
+- **두 정밀도:** 보드의 INT8 패스도 같은 두 파일을 쓴다.
+
+## PC의 FP32 패스(§2.2, §2.5)
+
+`MSYS_NO_PATHCONV=1 python tools/eval/pc_run.py --kind m4 --name fp32_<모델> -- tools/m4_fp32.py --model <yolov8n|yolov10n> --manifest results/check/20261116T064917Z_m4_inputs/manifest.tsv --inputs /data/inputs2`
+
+- **모델:** 무엇이든 돌리기 전에 SHA-256이 §1의 값(`models/<모델>.sha256`)이어야 한다.
+- **onnxruntime:** CPU 실행 공급자, intra-op 스레드 1개와 inter-op 스레드 1개, 기본 그래프 최적화.
+- **이미지마다:**
+  - 매니페스트 순서대로 PNG를 디코딩해 RGB로 만든다;
+  - 그 바이트가 매니페스트와 같아야 한다. 다르면 패스는 무효(§5)이고 멈춘다;
+  - 모델은 float32 NCHW의 RGB / 255를 본다;
+  - 모델의 규칙이 검출을 낸다.
+- **기록:** 검출 파일은 `D:/m4data/passes/<기록>/`에 간다. 기록 폴더의 `pass.csv`에 개수, 두 파일의 SHA-256, `valid`가 들어간다.
+  - **패스가 시작된 뒤의 오류**는 종류와 상관없이 패스를 무효로 만든다. `valid,0`과 함께 오류를 이유로 적고, 종료 코드는 1이다.
+  - **파일의 헤더**에는 패스의 기록 이름도 들어간다. `tools/m4_coco.py`는 이것으로 `pass.csv`를 찾는다.
+- **범위:** 실행 종류 `m4`의 패스는 5,000장을 모두 돈다. `--limit N`(N ≥ 1)은 처음 N장만 돌고, 점검에만 쓴다.
+- **속도:** 이 PC에서 장당(5장, onnxruntime과 규칙):
+  - YOLOv8n: 0.87초 + 0.21초, 그래서 패스 하나에 약 1.5시간;
+  - YOLOv10n: 0.70초 + 0.05초, 약 1시간.
+  - PC의 다른 작업이 속도를 늦춘다. 다른 프로젝트의 빌드와 Windows 업데이트가 도는 동안 아래 20장 점검은 장당 4.5초와 2.1초가 걸렸다.
+- **2026-11-17의 점검(`--limit 20`, 종류 `check`):** `results/check/20261117T021343Z_fp32_yolov8n_limit20`과 `…T021553Z_fp32_yolov10n_limit20`, 둘 다 `valid,1`. 리뷰에 따라 디코딩을 바꾸기 전인 커밋 `3251204`에서 돌았다. 파일과 속도를 확인한 점검이다. 이 검출은 평가하지 않았다. AP는 freeze-m4 뒤에만 계산한다.
+- **이미지 안의 테스트:** 커밋 `d567e2c`에서 `results/check/20261117T034320Z_m4_rules_tests`(11개, 비트 단위 보드 대조 포함), `…T034351Z_m4_coco_tests`(11개), `…T034409Z_m4_fp32_tests`(6개). 건너뛴 테스트는 없다. 커밋 `3251204`의 실행(`…T021046Z`, `…T021205Z`, `…T021233Z`)은 리뷰 전의 것이다.
+
+## 평가(§2.3, §6)
+
+`MSYS_NO_PATHCONV=1 python tools/eval/pc_run.py --kind <check|m4> --name eval_<패스> -- tools/m4_coco.py --dets /data/passes/<패스 기록> --manifest <manifest.tsv> --annotations /data/coco/annotations_trainval2017.zip`
+
+- **변환([tools/m4_coco.py](../../tools/m4_coco.py)), 두 정밀도에 한 함수:**
+  - 박스마다 이미지로 되돌린다. `left`나 `top`을 빼고, `r`로 나누고, 이미지 안으로 자른 뒤 `[x, y, width, height]`로 쓴다;
+  - 값은 float32를 유효숫자 9자리로 쓴다;
+  - 클래스 k는 k번째로 작은 카테고리 id가 된다;
+  - 이미지마다 검출의 순서를 그대로 둔다.
+- **COCOeval:** `iouType` bbox, 기본 매개변수로, 패스의 이미지 전체와 양자화 이미지 20장을 뺀 이미지에서 각각 돈다.
+- **`coco_eval.csv`:** 두 이미지 집합의 COCOeval 통계 12개; 이미지당 검출 수; 300개에 이른 이미지 수와 그 가운데 동점이었던 수; 파일들의 SHA-256.
+- **주석:** `coco.sha256`과 대조하고, zip에서 바로 읽는다.
+- **무엇을 평가하는가:**
+  - 패스의 `manifest_rows_sha256`이 `--manifest`의 것과 같아야 한다.
+  - **모델의 검출**(헤더에 `model_sha256`이 있는 것)은 `freeze-m4` 뒤 실행 종류 `m4`에서만 평가한다(§8 5단계). 그 전에는 AP를 아무도 보지 않게 하기 위해서다. 패스도 종류 `m4`여야 하고, 패스 자신의 기록이 `valid,1`이어야 하며, 매니페스트의 5,000장(그중 20장은 양자화 이미지)을 모두 다뤄야 한다.
+  - **그 밖의 검출**(도구를 점검하는 합성 검출)은 실행 종류 `check`에서만 평가한다.
+  - 범위를 벗어난 클래스, 유한하지 않은 값, 검출이 하나도 없는 패스는 COCOeval 전에 종료 코드 2로 끝난다.
+  - `coco_eval.csv`는 패스의 `valid`를 `pass_valid`로 적는다(기록이 없으면 `no record`).
+- **크기:** 패스 하나에 검출이 약 150만 개다. 메모리는 주로 두 곳에 쓰인다:
+  - COCOeval이 이미지, 카테고리, 면적 구간마다 만드는 기록(`evaluate`);
+  - 불러온 결과(`loadRes`).
+- **메모리 절약:** 도구는 COCOeval 전에 검출 표를 메모리에서 내리고, 결과는 두 이미지 집합에 한 번만 불러온다.
+- **측정:** 이미지 안에서 합성 검출(무작위 박스와 클래스, 이미지당 300개; 모델의 것이 아님)로 쟀다:
+  - 500장: 최고 0.64 GB;
+  - 2,500장: 최고 2.5 GB, 스왑 없는 6 GB에서 종료 코드 0;
+  - 장 수에 비례해 늘어나므로 5,000장은 약 4.9 GB로, 6 GB 한도 안에 든다.
+- **2 GB 한도로는 모자란다:** 2 GB에 스왑 2 GB를 더한 한도에서 5,000장은 34분 동안 스왑을 쓰다 메모리 초과로 강제 종료됐다.
+
 ## 파일
 
 | 파일 | 내용 |
 |---|---|
+| `tools/m4_rules.py` | Python 규칙 두 개([테스트](../../tests/test_m4_rules.py)) |
+| `tools/m4_fp32.py` | PC의 FP32 패스([테스트](../../tests/test_m4_fp32.py)) |
+| `tools/m4_coco.py` | 검출 파일, 그 COCO 변환과 평가([테스트](../../tests/test_m4_coco.py)) |
 | `tools/eval/Dockerfile`, `requirements.txt`, `constraints.txt`, `image_id.txt`, `build.sh`, `save_image.sh` | 평가 이미지, 그 ID, 확인, 보관본 |
 | `tools/eval/fetch_coco.sh`, `coco.sha256` | COCO의 두 파일과 그 SHA-256 |
 | `tools/eval/pc_run.py` | §4의 확인을 거친 PC 실행([테스트](../../tests/test_pc_run.py)) |
 | `tools/m4_prep.py` | 입력과 데이터 점검([테스트](../../tests/test_m4_prep.py); OpenCV가 필요한 테스트는 평가 이미지에서 돈다) |
 | `results/check/<UTC>_m4_eval_image/`, `…_m4_eval_image_archive/` | 이미지의 확인과 보관본의 SHA-256 |
 | `results/check/<UTC>_m4_inputs/` | `pc.json`, `manifest.tsv`, `m4_inputs.csv`, `m4_prep.log` |
+| `results/check/<UTC>_m4_{rules,coco,fp32}_tests/` | 이미지 안에서 돈 테스트의 `pc.json`과 로그 |
+| `results/check/<UTC>_fp32_<model>_limit20/` | 20장 점검 패스의 `pc.json`, `pass.csv`, `m4_fp32.log` |
