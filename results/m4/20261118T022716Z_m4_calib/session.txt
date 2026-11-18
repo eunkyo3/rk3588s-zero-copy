@@ -1,0 +1,6 @@
+run_kind: m4
+freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+ambient_c: 24
+warmup_s: 20
+duration_s: 120

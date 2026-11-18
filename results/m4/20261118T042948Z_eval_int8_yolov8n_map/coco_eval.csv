@@ -1,0 +1,55 @@
+# start_time_utc: 2026-11-18T04:29:48Z
+# run_kind: m4
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# amendment: A14
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# code_status: clean
+# eval_image: rk3588s-zero-copy/m4-eval:1
+# eval_image_id: sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+# pass_record: 20261118T010957Z_int8_yolov8n
+# pass: int8_yolov8n
+# model: yolov8n
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# precision: int8
+# rule: yolov8_map: conf 0.001, first 30000, class-wise greedy NMS at IoU 0.7, max 300
+# manifest_sha256: b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+# manifest_rows_sha256: 5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+# dets: /data/passes/20261118T010957Z_int8_yolov8n/map
+key,value
+pass_valid,1
+images,5000
+images_without_quantization,4980
+detections,1500000
+detections_per_image_mean,300.00
+images_at_300,5000
+images_tied_at_300,4984
+sha256_detections_tsv,d475987d48525379ae096042512178a73d51397554f7b13216cf0cbcbd47c1e1
+sha256_images_tsv,a6196ab0e7f0c37aebe46ecc0fc6a6e483a0bfe733201c6c8a0d873ac16d444d
+sha256_coco_results_json,6d355f62b63b2062c32587ffc87f892ccf6b566908bf48b670790ee05dd1a4b9
+all_ap,0.368283
+all_ap50,0.518746
+all_ap75,0.400847
+all_ap_small,0.183234
+all_ap_medium,0.405545
+all_ap_large,0.527137
+all_ar1,0.316546
+all_ar10,0.522512
+all_ar100,0.568812
+all_ar_small,0.336886
+all_ar_medium,0.625934
+all_ar_large,0.758067
+without_quantization_ap,0.368420
+without_quantization_ap50,0.518909
+without_quantization_ap75,0.401023
+without_quantization_ap_small,0.182634
+without_quantization_ap_medium,0.406446
+without_quantization_ap_large,0.526759
+without_quantization_ar1,0.316768
+without_quantization_ar10,0.522620
+without_quantization_ar100,0.568930
+without_quantization_ar_small,0.336571
+without_quantization_ar_medium,0.626450
+without_quantization_ar_large,0.757967

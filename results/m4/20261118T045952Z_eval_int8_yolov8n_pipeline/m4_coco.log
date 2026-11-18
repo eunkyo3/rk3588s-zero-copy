@@ -1,0 +1,55 @@
+# start_time_utc: 2026-11-18T04:59:52Z
+# run_kind: m4
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# amendment: A14
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# code_status: clean
+# eval_image: rk3588s-zero-copy/m4-eval:1
+# eval_image_id: sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+# pass_record: 20261118T010957Z_int8_yolov8n
+# pass: int8_yolov8n_pipeline
+# model: yolov8n
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# precision: int8
+# rule: NeonPost (arm Cp), conf 0.25, NMS 0.45; yolov8_post compared field for field
+# manifest_sha256: b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+# manifest_rows_sha256: 5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+# dets: /data/passes/20261118T010957Z_int8_yolov8n/pipeline
+key,value
+pass_valid,1
+images,5000
+images_without_quantization,4980
+detections,24276
+detections_per_image_mean,4.86
+images_at_300,0
+images_tied_at_300,0
+sha256_detections_tsv,7e56d50684d415061da20723b6d931ef4e35c41b2a3e84fa607404cf8e82d447
+sha256_images_tsv,28d399c12ecdc236e4e5a857d8ec10d5ddb0de711f64a40a53be07cb803406fb
+sha256_coco_results_json,5e316093833b5bf1b3d1833c5fe6b89f2b338df1fcc325b050f614784e91d575
+all_ap,0.305704
+all_ap50,0.413601
+all_ap75,0.335164
+all_ap_small,0.107369
+all_ap_medium,0.336691
+all_ap_large,0.467753
+all_ar1,0.256160
+all_ar10,0.351237
+all_ar100,0.354192
+all_ar_small,0.119703
+all_ar_medium,0.388038
+all_ar_large,0.545429
+without_quantization_ap,0.305710
+without_quantization_ap50,0.413573
+without_quantization_ap75,0.335629
+without_quantization_ap_small,0.106599
+without_quantization_ap_medium,0.337498
+without_quantization_ap_large,0.467570
+without_quantization_ar1,0.256175
+without_quantization_ar10,0.351251
+without_quantization_ar100,0.354207
+without_quantization_ar_small,0.118990
+without_quantization_ar_medium,0.388822
+without_quantization_ar_large,0.545303

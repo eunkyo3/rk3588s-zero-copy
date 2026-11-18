@@ -1,0 +1,85 @@
+# start_time_utc: 2026-11-18T06:02:57Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# run_kind: m4
+# model_sha256: 6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: C
+# channels: 5
+# condition: aux
+# post: v10
+# stagger: off
+# repetition: 3
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# amendment: A14
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+key,value
+window_s,120
+warmup_start_utc,2026-11-18T06:02:59.520Z
+window_start_utc,2026-11-18T06:03:19.520Z
+window_end_utc,2026-11-18T06:05:19.520Z
+process_cpu_s,34.810
+process_cpu_a76_s,34.670
+process_cpu_a55_s,0.130
+process_cpu_unattributed_s,0.010
+system_cpu0_s,1.190
+system_cpu1_s,1.090
+system_cpu2_s,0.350
+system_cpu3_s,0.180
+system_cpu4_s,6.650
+system_cpu5_s,7.120
+system_cpu6_s,6.100
+system_cpu7_s,5.760
+system_cpu0-3_s,2.810
+system_cpu4-5_s,13.770
+system_cpu6-7_s,11.860
+system_cpu_total_s,28.440
+schedstat_version,15
+schedstat_cpu0_s,1.689
+schedstat_cpu1_s,1.072
+schedstat_cpu2_s,0.505
+schedstat_cpu3_s,0.127
+schedstat_cpu4_s,8.876
+schedstat_cpu5_s,9.135
+schedstat_cpu6_s,8.553
+schedstat_cpu7_s,8.509
+schedstat_cpu0-3_s,3.394
+schedstat_cpu4-5_s,18.011
+schedstat_cpu6-7_s,17.062
+schedstat_cpu_total_s,38.467
+decode_fps_min,29.992
+decode_fps_max,30.000
+drift_max_s,0.033
+decoder_drops,0
+input_ended_early,0
+sampled_in_window,17999
+q1_drops_in_window,0
+drop_rate,0.00000
+processed_in_window,18000
+latency_p50_ms,25.534
+latency_p99_ms,31.516
+mpp_hold_p50_ms,1.680
+mpp_hold_p99_ms,1.730
+slot_wait_p99_ms,0.001
+rss_window_start_kb,167728
+rss_window_end_kb,167728
+rss_window_max_kb,167728
+rss_growth_pct,0.00
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,50846

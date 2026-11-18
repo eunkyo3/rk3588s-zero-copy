@@ -1,0 +1,45 @@
+# start_time_utc: 2026-11-18T05:52:36Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# run_kind: m4
+# model_sha256: 6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: C
+# channels: 5
+# condition: aux
+# post: v10
+# stagger: off
+# repetition: 2
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# amendment: A14
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+tid,comm,affinity,cpu_s_in_window
+69411,npu-1,"4-7",8.480
+69410,npu-0,"4-7",8.420
+69412,npu-2,"4-7",8.320
+69397,dec-5,"4-7",1.350
+69396,dec-4,"4-7",1.270
+69395,dec-3,"4-7",1.250
+69393,dec-1,"4-7",1.240
+69394,dec-2,"4-7",1.080
+69409,pre-1,"4-7",0.680
+69408,pre-0,"4-7",0.670
+69404,mpp_dec_parser,"4-7",0.600
+69400,mpp_dec_parser,"4-7",0.580
+69398,mpp_dec_parser,"4-7",0.570
+69406,mpp_dec_parser,"4-7",0.520
+69402,mpp_dec_parser,"4-7",0.460
+69413,metrics,"0",0.110
+69407,mpp_dec_hal,"4-7",0.110
+69405,mpp_dec_hal,"4-7",0.110
+69403,mpp_dec_hal,"4-7",0.100
+69401,mpp_dec_hal,"4-7",0.090
+69399,mpp_dec_hal,"4-7",0.080
+69387,bench_main,"4-7",0.000

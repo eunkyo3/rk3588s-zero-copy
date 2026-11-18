@@ -1,0 +1,19 @@
+2026-11-18T05:35:35Z saturation at the aux point: C8 unsaturated, C10 saturated (from results/m4/20261118T022716Z_m4_calib; rule 3 only where unsaturated, M4 §3.2)
+2026-11-18T05:35:41Z starting the stream server
+2026-11-18T05:35:46Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261118T053542Z-351972, clock offset 0.2 ms
+2026-11-18T05:35:46Z idle for 600 s
+2026-11-18T05:45:47Z soc-thermal baseline 37000 m°C
+2026-11-18T05:45:47Z m4_aux: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-18T05:45:47Z 01_m4_aux_C8_5ch_r1: C8, 5 ch, aux
+2026-11-18T05:48:10Z 01_m4_aux_C8_5ch_r1: valid
+2026-11-18T05:49:10Z 02_m4_aux_C10_5ch_r1: C10, 5 ch, aux
+2026-11-18T05:51:33Z 02_m4_aux_C10_5ch_r1: valid
+2026-11-18T05:52:36Z 03_m4_aux_C10_5ch_r2: C10, 5 ch, aux
+2026-11-18T05:54:59Z 03_m4_aux_C10_5ch_r2: valid
+2026-11-18T05:56:05Z 04_m4_aux_C8_5ch_r2: C8, 5 ch, aux
+2026-11-18T05:58:28Z 04_m4_aux_C8_5ch_r2: valid
+2026-11-18T05:59:34Z 05_m4_aux_C8_5ch_r3: C8, 5 ch, aux
+2026-11-18T06:01:57Z 05_m4_aux_C8_5ch_r3: valid
+2026-11-18T06:02:57Z 06_m4_aux_C10_5ch_r3: C10, 5 ch, aux
+2026-11-18T06:05:20Z 06_m4_aux_C10_5ch_r3: valid
+2026-11-18T06:05:20Z stopping the stream server

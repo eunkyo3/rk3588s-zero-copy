@@ -1,0 +1,95 @@
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# run_kind: m4
+# decoder: none (preloaded tensors)
+# variant: n/a (PROTOCOL §6.2)
+# channels: n/a
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# amendment: A14
+# warmup_s: 20
+# duration_s: 120
+# tensors: /home/pi/calib/tensors_c.u8
+# tensor_count: 1000
+# start_time_utc: 2026-11-18T02:38:20Z
+# repetition: 1-3 (median)
+# ntp_synchronized: yes
+# model_sha256_yolov8n: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# post_yolov8n_p_cap: neon
+# model_sha256_yolov10n: 6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+# post_yolov10n_p_cap: v10
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 24
+key,value
+yolov8n_p_cap_inf_per_s,193.1667
+yolov8n_p_cap_valid_runs,3
+yolov8n_p_cap_r1,192.4167
+yolov8n_p_cap_r1_completed,23090
+yolov8n_p_cap_r2,193.1667
+yolov8n_p_cap_r2_completed,23180
+yolov8n_p_cap_r3,193.2333
+yolov8n_p_cap_r3_completed,23188
+yolov8n_p_cap_run_ms,15.378
+yolov8n_p_cap_bind_ms,0.024
+yolov8n_p_cap_post_ms,0.128
+yolov8n_p_cap_npu_load_core0,92.0
+yolov8n_p_cap_npu_load_core1,92.0
+yolov8n_p_cap_npu_load_core2,92.0
+yolov8n_npu_raw_1c_inf_per_s,69.2083
+yolov8n_npu_raw_1c_valid_runs,3
+yolov8n_npu_raw_1c_r1,69.1750
+yolov8n_npu_raw_1c_r1_completed,8301
+yolov8n_npu_raw_1c_r2,69.4083
+yolov8n_npu_raw_1c_r2_completed,8329
+yolov8n_npu_raw_1c_r3,69.2083
+yolov8n_npu_raw_1c_r3_completed,8305
+yolov8n_npu_raw_1c_run_ms,14.435
+yolov8n_npu_raw_1c_bind_ms,0.014
+yolov8n_npu_raw_1c_npu_load_core0,94.0
+yolov8n_npu_raw_1c_npu_load_core1,0.0
+yolov8n_npu_raw_1c_npu_load_core2,0.0
+yolov10n_p_cap_inf_per_s,161.8417
+yolov10n_p_cap_valid_runs,3
+yolov10n_p_cap_r1,161.6667
+yolov10n_p_cap_r1_completed,19400
+yolov10n_p_cap_r2,161.9833
+yolov10n_p_cap_r2_completed,19438
+yolov10n_p_cap_r3,161.8417
+yolov10n_p_cap_r3_completed,19421
+yolov10n_p_cap_run_ms,18.409
+yolov10n_p_cap_bind_ms,0.020
+yolov10n_p_cap_post_ms,0.108
+yolov10n_p_cap_npu_load_core0,93.0
+yolov10n_p_cap_npu_load_core1,93.0
+yolov10n_p_cap_npu_load_core2,93.1
+yolov10n_npu_raw_1c_inf_per_s,57.9083
+yolov10n_npu_raw_1c_valid_runs,3
+yolov10n_npu_raw_1c_r1,57.9333
+yolov10n_npu_raw_1c_r1_completed,6952
+yolov10n_npu_raw_1c_r2,57.9083
+yolov10n_npu_raw_1c_r2_completed,6949
+yolov10n_npu_raw_1c_r3,57.8833
+yolov10n_npu_raw_1c_r3_completed,6946
+yolov10n_npu_raw_1c_run_ms,17.254
+yolov10n_npu_raw_1c_bind_ms,0.014
+yolov10n_npu_raw_1c_npu_load_core0,94.0
+yolov10n_npu_raw_1c_npu_load_core1,0.0
+yolov10n_npu_raw_1c_npu_load_core2,0.0
+yolov8n_main_point,unsaturated
+yolov8n_aux_point,unsaturated
+yolov10n_main_point,unsaturated
+yolov10n_aux_point,saturated
+fixed_policy0_khz,1800000
+fixed_policy4_khz,2208000
+fixed_policy6_khz,2208000
+fixed_dmc_hz,2112000000
+fixed_npu_hz,1000000000
+tensors_sha256,051d6f12662e0b8ef9b72f00f74f498683913c39f197deb42c34ac1a54340c67
+idle_s,600
+soc_thermal_baseline_mc,34230
+samples_at_or_above_trip0_all_attempts,0
+clock_samples_below_fixed_all_attempts,0
+order_as_planned,1
+complete,1
+m4_settings,yes

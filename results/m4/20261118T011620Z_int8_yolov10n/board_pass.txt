@@ -1,0 +1,6 @@
+time_utc: 2026-11-18T01:16:20Z
+script: tools/m4_board_pass.py pass --model yolov10n --kind m4 --name int8_yolov10n --freeze-m4-commit 67221382e065f3917c28479f1bac08a4ed00d286 --compare-dump results/check/20261117T081441Z_rules_yolov10n/dump
+pc_head: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+board_build: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+outcome: the board tool exited 0
+seconds: 318

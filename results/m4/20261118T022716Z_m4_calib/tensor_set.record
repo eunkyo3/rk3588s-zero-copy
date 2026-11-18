@@ -1,0 +1,17 @@
+{
+  "args": ["/home/pi/media/bench/pexels_36330861.mp4", "models/yolov8n_i8.rknn", "/home/pi/calib/tensors_c.u8", "1000"],
+  "start_time_utc": "2026-11-02T05:51:08Z",
+  "code_commit": "38ddd37bf01250a04dcb54e7154cce15198477bd-dirty",
+  "amendment": "A6",
+  "source": "/home/pi/media/bench/pexels_36330861.mp4",
+  "source_sha256": "435a6b05ffb60cf1f0bb4e60c86c8a2f5d5a56a5aa9ca145d845c9a5fffc37ce",
+  "model_sha256": "04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee",
+  "decoder": "h264_rkmpp, ffmpeg 8b4385e9",
+  "preprocessing": "C: RGA3, im_opt_t.interp 0",
+  "backend": {"slot_heap": "system-uncached-dma32", "rga_core_mask": "0x3", "rga_color": "IM_YUV_TO_RGB_BT601_LIMIT", "input_binding": "UINT8 NHWC rknn_create_mem_from_fd", "output_coherence_check": true, "decoder_buffers_per_channel_max": 6, "decoder_buffers_retired": 0},
+  "librga": "RGA_api version       : v1.10.3_[2]RGA version           : RGA_2_Enhance RGA_3 ",
+  "frames": 1000,
+  "tensor_shape": [640, 640, 3],
+  "tensors": "tensors_c.u8",
+  "tensors_sha256": "051d6f12662e0b8ef9b72f00f74f498683913c39f197deb42c34ac1a54340c67"
+}

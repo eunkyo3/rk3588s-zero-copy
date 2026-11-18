@@ -1,0 +1,74 @@
+m4_accuracy: 100 of 5000 images, 18 s
+m4_accuracy: 200 of 5000 images, 23 s
+m4_accuracy: 300 of 5000 images, 28 s
+m4_accuracy: 400 of 5000 images, 33 s
+m4_accuracy: 500 of 5000 images, 37 s
+m4_accuracy: 600 of 5000 images, 42 s
+m4_accuracy: 700 of 5000 images, 47 s
+m4_accuracy: 800 of 5000 images, 52 s
+m4_accuracy: 900 of 5000 images, 56 s
+m4_accuracy: 1000 of 5000 images, 61 s
+m4_accuracy: 1100 of 5000 images, 66 s
+m4_accuracy: 1200 of 5000 images, 71 s
+m4_accuracy: 1300 of 5000 images, 75 s
+m4_accuracy: 1400 of 5000 images, 80 s
+m4_accuracy: 1500 of 5000 images, 85 s
+m4_accuracy: 1600 of 5000 images, 112 s
+m4_accuracy: 1700 of 5000 images, 117 s
+m4_accuracy: 1800 of 5000 images, 122 s
+m4_accuracy: 1900 of 5000 images, 126 s
+m4_accuracy: 2000 of 5000 images, 131 s
+m4_accuracy: 2100 of 5000 images, 160 s
+m4_accuracy: 2200 of 5000 images, 165 s
+m4_accuracy: 2300 of 5000 images, 169 s
+m4_accuracy: 2400 of 5000 images, 174 s
+m4_accuracy: 2500 of 5000 images, 179 s
+m4_accuracy: 2600 of 5000 images, 183 s
+m4_accuracy: 2700 of 5000 images, 188 s
+m4_accuracy: 2800 of 5000 images, 193 s
+m4_accuracy: 2900 of 5000 images, 198 s
+m4_accuracy: 3000 of 5000 images, 203 s
+m4_accuracy: 3100 of 5000 images, 209 s
+m4_accuracy: 3200 of 5000 images, 214 s
+m4_accuracy: 3300 of 5000 images, 220 s
+m4_accuracy: 3400 of 5000 images, 225 s
+m4_accuracy: 3500 of 5000 images, 231 s
+m4_accuracy: 3600 of 5000 images, 236 s
+m4_accuracy: 3700 of 5000 images, 242 s
+m4_accuracy: 3800 of 5000 images, 247 s
+m4_accuracy: 3900 of 5000 images, 253 s
+m4_accuracy: 4000 of 5000 images, 258 s
+m4_accuracy: 4100 of 5000 images, 264 s
+m4_accuracy: 4200 of 5000 images, 270 s
+m4_accuracy: 4300 of 5000 images, 275 s
+m4_accuracy: 4400 of 5000 images, 281 s
+m4_accuracy: 4500 of 5000 images, 287 s
+m4_accuracy: 4600 of 5000 images, 292 s
+m4_accuracy: 4700 of 5000 images, 298 s
+m4_accuracy: 4800 of 5000 images, 304 s
+m4_accuracy: 4900 of 5000 images, 309 s
+m4_accuracy: 5000 of 5000 images, 315 s
+images: 5000
+images_planned: 5000
+detections: 1500000
+images_tied: 4991
+pipeline_detections: 21156
+reference_checks: 50
+dumped_images: 50
+dump_compared_with: results/check/20261117T081441Z_rules_yolov10n/dump
+dump_images_compared: 50
+dump_images_differing: 0
+seconds: 315
+input_wait_s: 60.1
+decode_s: 103.9
+npu_s: 93.0
+map_rule_s: 50.7
+pipeline_post_s: 0.4
+out: /home/pi/m4/passes/20261118T011620Z_int8_yolov10n
+sha256_map_detections_tsv: 997da6370c05287aa1f3e75c6aa39727e6f694aa0717d23f22d9d317b27d42ec
+sha256_map_images_tsv: 2c0b7c67c98e900cb04c5da6af17e9a49f369cf176113a13d613f83cbdf70b39
+sha256_pipeline_detections_tsv: 8f803361c63af81a83f0aa6bfcbbf0c96a33be3e81cc3fdff20315092234ce8c
+sha256_pipeline_images_tsv: 06d61952c0803d4157f037e1c57339d4af1abce6c353724bba37882bcf01e696
+sha256_dump_sha256: b7b4f93aa5fd3ee7e66ddd64752d96a053bb4dbe11e72d53fe99db9c4debd439
+valid: 1
+reason: none
