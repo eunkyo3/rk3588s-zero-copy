@@ -1,0 +1,56 @@
+# start_time_utc: 2026-11-18T02:41:42Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# run_kind: m4
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: none (preloaded tensors)
+# variant: n/a (PROTOCOL §6.2)
+# channels: n/a
+# repetition: 1
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# amendment: A14
+# measurement: npu_raw
+# post: none
+# cores: 1
+# warmup_s: 20
+# duration_s: 120
+# tensors: /home/pi/calib/tensors_c.u8
+# tensor_count: 1000
+# tensor_heap: system-uncached-dma32
+key,value
+measurement,npu_raw
+cores,1
+tensor_count,1000
+completed_in_window,8301
+inferences_per_s,69.1750
+completed_core0,8301
+bind_ms_mean,0.014
+run_ms_mean,14.441
+process_cpu_s,7.420
+npu_load_mean_core0,94.0
+npu_load_mean_core1,0.0
+npu_load_mean_core2,0.0
+fixed_policy0_khz,1800000
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+fixed_policy4_khz,2208000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+fixed_policy6_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+fixed_dmc_hz,2112000000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+fixed_npu_hz,1000000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,40692
+samples_at_or_above_trip0,0
+clock_samples_below_fixed,0
+bound_outputs_match_before_window,1
+bound_outputs_match_after_window,1
+valid,1

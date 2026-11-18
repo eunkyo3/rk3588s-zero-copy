@@ -1,0 +1,19 @@
+2026-11-18T04:33:38Z saturation at the main point: C8 unsaturated, C10 unsaturated (from results/m4/20261118T022716Z_m4_calib; rule 3 only where unsaturated, M4 §3.2)
+2026-11-18T04:33:44Z starting the stream server
+2026-11-18T04:33:50Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261118T043345Z-349256, clock offset 0.3 ms
+2026-11-18T04:33:50Z idle for 600 s
+2026-11-18T04:43:50Z soc-thermal baseline 36076 m°C
+2026-11-18T04:43:50Z m4_main: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-18T04:43:50Z 01_m4_main_C8_8ch_r1: C8, 8 ch, main
+2026-11-18T04:46:14Z 01_m4_main_C8_8ch_r1: valid
+2026-11-18T04:47:13Z 02_m4_main_C10_8ch_r1: C10, 8 ch, main
+2026-11-18T04:49:36Z 02_m4_main_C10_8ch_r1: valid
+2026-11-18T04:50:36Z 03_m4_main_C10_8ch_r2: C10, 8 ch, main
+2026-11-18T04:52:59Z 03_m4_main_C10_8ch_r2: valid
+2026-11-18T04:54:00Z 04_m4_main_C8_8ch_r2: C8, 8 ch, main
+2026-11-18T04:56:23Z 04_m4_main_C8_8ch_r2: valid
+2026-11-18T04:57:24Z 05_m4_main_C8_8ch_r3: C8, 8 ch, main
+2026-11-18T04:59:47Z 05_m4_main_C8_8ch_r3: valid
+2026-11-18T05:00:48Z 06_m4_main_C10_8ch_r3: C10, 8 ch, main
+2026-11-18T05:03:11Z 06_m4_main_C10_8ch_r3: valid
+2026-11-18T05:03:11Z stopping the stream server

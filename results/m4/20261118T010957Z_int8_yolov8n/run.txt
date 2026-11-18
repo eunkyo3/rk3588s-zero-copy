@@ -1,0 +1,5 @@
+time_utc: 2026-11-18T01:09:58Z
+command: build/m4_accuracy pass --model models/yolov8n_i8.rknn --manifest /home/pi/m4/inputs/20261118T010957Z_int8_yolov8n/manifest.tsv --inputs /home/pi/m4/inputs/20261118T010957Z_int8_yolov8n --out /home/pi/m4/passes/20261118T010957Z_int8_yolov8n --run-kind m4 --freeze-m4-commit 67221382e065f3917c28479f1bac08a4ed00d286 --dump 50 --chunk 500 --compare-dump results/check/20261117T081427Z_rules_yolov8n/dump
+pid: 54541
+boot_id: 1188eb70-6cc8-4391-9881-c85699308781
+tool_pid: 54750

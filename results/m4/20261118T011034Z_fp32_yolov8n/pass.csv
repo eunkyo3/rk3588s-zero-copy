@@ -1,0 +1,34 @@
+# start_time_utc: 2026-11-18T01:10:34Z
+# run_kind: m4
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# amendment: A14
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# code_status: clean
+# eval_image: rk3588s-zero-copy/m4-eval:1
+# eval_image_id: sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a
+# record: 20261118T011034Z_fp32_yolov8n
+# pass: fp32_yolov8n
+# model: yolov8n
+# model_file: yolov8n.onnx
+# model_sha256: 0c8716701f471067932b797eeb67c8e5db47c693c2557c881d7679ec12e21bc5
+# precision: fp32
+# rule: yolov8_rule: conf 0.001, first 30000, class-wise greedy NMS at IoU 0.7, max 300
+# manifest: results/check/20261116T064917Z_m4_inputs/manifest.tsv
+# manifest_sha256: b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+# manifest_rows_sha256: 5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+# images_planned: 5000
+# onnxruntime: 1.23.2, CPUExecutionProvider, 1 intra-op and 1 inter-op thread
+key,value
+images,5000
+images_planned,5000
+detections,881820
+images_tied,2
+seconds,2971
+out,/data/passes/20261118T011034Z_fp32_yolov8n
+sha256_detections_tsv,7e6e4c7a8e792a5bb996daf17880f1d31c782a47f41dcb306f30e0ee1c75c24b
+sha256_images_tsv,7daa27a6395921aa22bc3bbca02604757cf6588dac6285dfd85c448225e7ab84
+valid,1
+reason,none

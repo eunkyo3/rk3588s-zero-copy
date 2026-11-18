@@ -1,0 +1,7 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc	replaces
+1	01_m4_aux_C8_5ch_r1	m4_aux	C8	5	aux	1	1	0	1				0	37923	0.4	2026-11-18T05:45:47Z	2026-11-18T05:48:09Z	
+2	02_m4_aux_C10_5ch_r1	m4_aux	C10	5	aux	1	1	0	1				0	39769	0.3	2026-11-18T05:49:10Z	2026-11-18T05:51:32Z	
+3	03_m4_aux_C10_5ch_r2	m4_aux	C10	5	aux	2	1	0	1				0	39769	0.3	2026-11-18T05:52:36Z	2026-11-18T05:54:58Z	
+4	04_m4_aux_C8_5ch_r2	m4_aux	C8	5	aux	2	1	0	1				0	39769	0.3	2026-11-18T05:56:05Z	2026-11-18T05:58:27Z	
+5	05_m4_aux_C8_5ch_r3	m4_aux	C8	5	aux	3	1	0	1				0	39769	0.2	2026-11-18T05:59:34Z	2026-11-18T06:01:56Z	
+6	06_m4_aux_C10_5ch_r3	m4_aux	C10	5	aux	3	1	0	1				0	39769	-0.7	2026-11-18T06:02:57Z	2026-11-18T06:05:19Z	

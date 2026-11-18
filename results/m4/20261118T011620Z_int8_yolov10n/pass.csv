@@ -1,0 +1,51 @@
+# start_time_utc: 2026-11-18T01:16:25Z
+# run_kind: m4
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# amendment: A14
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# record: 20261118T011620Z_int8_yolov10n
+# ntp_synchronized: yes
+# model: yolov10n
+# model_file: yolov10n_i8.rknn
+# model_sha256: 6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+# precision: int8
+# map_rule: yolov10_map: yolov10_post, conf 0.001, max 300, no NMS
+# pipeline_post: yolov10_post, conf 0.25, max 300, no NMS
+# manifest: /home/pi/m4/inputs/20261118T011620Z_int8_yolov10n/manifest.tsv
+# manifest_sha256: b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444
+# manifest_rows_sha256: 5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69
+# images_planned: 5000
+# sdk_version: 2.3.2 (429f97ae6b@2025-04-09T09:09:27) / driver 0.9.8
+# npu: context 0, NPU core 0; input bound as B binds its slots (CpuSlots), M1's output bindings
+# fixed_clocks: policy0_khz: 1800000; policy4_khz: 2208000; policy6_khz: 2208000; dmc_hz: 2112000000; npu_hz: 1000000000
+# user: root
+# post_objects_sha256: {"build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o": "536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2", "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o": "3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555", "build/CMakeFiles/core.dir/src/core/yolov10_post.cpp.o": "b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8", "build/CMakeFiles/core.dir/src/core/pipeline_post.cpp.o": "28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a"}
+# map_rule_object_sha256: 94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e
+key,value
+images,5000
+images_planned,5000
+detections,1500000
+images_tied,4991
+pipeline_detections,21156
+reference_checks,50
+dumped_images,50
+dump_compared_with,results/check/20261117T081441Z_rules_yolov10n/dump
+dump_images_compared,50
+dump_images_differing,0
+seconds,315
+input_wait_s,60.1
+decode_s,103.9
+npu_s,93.0
+map_rule_s,50.7
+pipeline_post_s,0.4
+out,/home/pi/m4/passes/20261118T011620Z_int8_yolov10n
+sha256_map_detections_tsv,997da6370c05287aa1f3e75c6aa39727e6f694aa0717d23f22d9d317b27d42ec
+sha256_map_images_tsv,2c0b7c67c98e900cb04c5da6af17e9a49f369cf176113a13d613f83cbdf70b39
+sha256_pipeline_detections_tsv,8f803361c63af81a83f0aa6bfcbbf0c96a33be3e81cc3fdff20315092234ce8c
+sha256_pipeline_images_tsv,06d61952c0803d4157f037e1c57339d4af1abce6c353724bba37882bcf01e696
+sha256_dump_sha256,b7b4f93aa5fd3ee7e66ddd64752d96a053bb4dbe11e72d53fe99db9c4debd439
+valid,1
+reason,none

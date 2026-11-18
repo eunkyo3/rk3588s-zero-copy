@@ -1,0 +1,33 @@
+# start_time_utc: 2026-11-18T04:43:50Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: 67221382e065f3917c28479f1bac08a4ed00d286
+# run_kind: m4
+# model_sha256_C8: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# post_C8: neon
+# model_sha256_C10: 6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+# post_C10: v10
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: de78dbd1ffe3046e807e6c17ddc9fa48accd6bff
+# amendment: A14
+# session: 20261118T043338Z_m4_main
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 25
+key,value
+sweep,m4_main
+session_status,completed
+channel_order,8
+earlier_sessions,none
+repetitions_run_here,8ch_r1 8ch_r2 8ch_r3
+repetitions_left,none
+calib_npu_session,results/m4/20261118T022716Z_m4_calib
+saturation_C8,unsaturated
+saturation_C10,unsaturated
+sha256_yolov8_post_o,536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2
+sha256_yolov8_post_neon_o,3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555
+sha256_yolov10_post_o,b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8
+sha256_pipeline_post_o,28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a
+invalid_x2_runs,none
+protocol_settings,yes
