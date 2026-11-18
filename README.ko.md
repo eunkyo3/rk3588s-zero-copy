@@ -159,18 +159,18 @@ flowchart TB
 | M1.1 (선택) | 민감도 및 탐색 실행: 4K 입력(A11)과 PROTOCOL §13의 설계 | 공개, 탐색적 | `freeze-m1` 뒤의 [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12) | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) | [M1.1](docs/report/M1.1.ko.md) |
 | M2 | 후처리 최적화, 동일 모델 | 공개, CPU 가설 두 개 모두 채택 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2)([`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)과 함께) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.ko.md) |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | 보고함, 판정 없음(가설 없음) | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4)([`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)와 함께) | [`v0.4-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.4-m4) | [M4](docs/report/M4.ko.md) |
-| M3 | 명령 하나로 재현하는 스크립트 | M4 다음. 보드 OS를 다시 설치해야 한다 | | `v0.3-m3`(예정) | |
+| M3 | 초기화한 보드에서 H1 지점을 명령 하나로 재현 | 계획과 스크립트 작성([prereg/M3.md](prereg/M3.ko.md)). 실행은 `freeze-m3` 뒤 | | `v0.3-m3`(예정) | |
 
 - **순서:** M4를 M3보다 먼저 한다.
 - **결과:** M1의 결과는 위의 [M1 결과](#m1-결과)에, 각 마일스톤의 결과는 그 보고서에 있다.
 - **등록 시각:** 각 단계의 기준 시각은 그 Release의 `created_at`이며, [docs/notes/env.ko.md](docs/notes/env.ko.md#등록)의 등록 표에 있다.
-- **이후 마일스톤의 계획:** M2는 [prereg/M2.md](prereg/M2.ko.md)에, M4는 [prereg/M4.md](prereg/M4.ko.md)에 있다.
+- **이후 마일스톤의 계획:** M2는 [prereg/M2.md](prereg/M2.ko.md)에, M4는 [prereg/M4.md](prereg/M4.ko.md)에, M3는 [prereg/M3.md](prereg/M3.ko.md)에 있다.
 - **M1 비교 실행 전:** M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md))과 M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)).
 - **M4 노트:** 탐색([docs/notes/m4_exploration.ko.md](docs/notes/m4_exploration.ko.md)), 그리고 정확도 도구와 점검([docs/notes/m4_accuracy.ko.md](docs/notes/m4_accuracy.ko.md)).
 
 ## 빌드와 실행
 
-보드에서 한다. MPP, librga, librknnrt는 FriendlyElec 이미지에 들어 있다.
+보드에서 한다. MPP와 librga는 FriendlyElec 이미지에 들어 있다. librknnrt 2.3.2는 rknn-toolkit2에서 받는다: `scripts/setup_board.sh`가 아래의 나머지와 함께 설치한다([docs/notes/reproduce.md](docs/notes/reproduce.ko.md)).
 
 ```sh
 sudo apt-get update && sudo apt-get install cmake libopencv-dev
@@ -193,7 +193,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 
 `{n}`은 채널 번호로 바뀐다. 실행은 20초 예열한 뒤 120초 측정한다. `summary.csv`, `channels.csv`, `frames.csv`, `samples.csv`, `threads.csv`, `env.json`을 `results/check/<UTC 시각>_C_8ch/`에 쓴다. 옵션은 [src/app/bench_main.cpp](src/app/bench_main.cpp) 맨 위에 있다.
 
-판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에, `tools/stream_session.py`가 RTSP 세션에 이를 적용한다([docs/notes/comparison.ko.md](docs/notes/comparison.ko.md)). 보고서의 파일은 [docs/report/M1.ko.md](docs/report/M1.ko.md#이-보고서-재현하기)의 명령으로 다시 만든다. 실행을 명령 하나로 재현하는 스크립트는 M3에서 나온다.
+판정에 쓰는 실행은 PROTOCOL §9의 순서, 냉각 대기, 유효성 규칙도 따른다. `tools/calib_npu.sh`가 `P_cap` 캘리브레이션에, `tools/stream_session.py`가 RTSP 세션에 이를 적용한다([docs/notes/comparison.ko.md](docs/notes/comparison.ko.md)). 보고서의 파일은 [docs/report/M1.ko.md](docs/report/M1.ko.md#이-보고서-재현하기)의 명령으로 다시 만든다. 보드를 설정하고 H1 지점을 명령 하나로 다시 재려면 [docs/notes/reproduce.md](docs/notes/reproduce.ko.md)를 본다(M3).
 
 테스트: 파이프라인 코어는 `build/test_core`, Python 도구는 `python3 tests/test_calib_summary.py`, `tests/test_check_prereg_order.py`, `tests/test_equivalence_check.py`, `tests/test_stream_session.py`, `tests/test_m1_report.py`, `tests/test_m1_plots.py`, `tests/test_m1_stages.py`, `tests/test_m1_phases.py`, `tests/test_demo_render.py`(동등성, 리포트, 단계, 위상, 데모 테스트는 numpy, 그림 테스트는 matplotlib 필요).
 

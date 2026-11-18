@@ -38,7 +38,7 @@ sudo COOLING="heatsink + always-on fan" AMBIENT_C=25 setsid nohup scripts/reprod
 - **Logs outside the repository:** a file in it would make the commit read `-dirty` in every record.
 - **`setsid nohup`** keeps each job running if the login ends. A setup cut short cannot be resumed: the board must be reset again (M3 §5).
 - **`COOLING` and `AMBIENT_C`** go into every record. `AMBIENT_C` is the room temperature, as read from a thermometer.
-- **The setup** took about 11 minutes in a chroot of the image (A15). The steps that need the bench link and the stream PC come first, so a problem with them shows within a minute.
+- **The setup** took about 9 minutes in a chroot of the image (A15). The steps that need the bench link and the stream PC come first, so a problem with them shows within a minute.
 - **A session takes about 45 minutes:**
   - 10 minutes idle, for the baselines;
   - 6 runs of 140 s;

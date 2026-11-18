@@ -546,3 +546,86 @@ Each entry has this form:
     - [m4_accuracy.md](../docs/notes/m4_accuracy.md) lists the trials. Their values are not used.
 - Affected data: none.
 - Release: `amend-A14`. `freeze-m4` tags the merge of the pull request that adds this entry. Its `created_at` is the reference time for M4's runs.
+
+## A15 — 2026-11-18 — M3: the values registered with `freeze-m3`
+- Change: registers [M3.md](M3.md) and fixes the values of its §8 step 2. Nothing in M3.md changes.
+  - **One stage:** `prereg-m3`, `amend-A15` and `freeze-m3` all tag one commit, the merge of the pull request that adds M3.md and this entry.
+  - **Code:** commit `0114c2431dfcc9927b77d5d266204960bae61b85`, which adds M3's tools.
+    - **What runs:** both sweeps run code whose `src/`, `tools/`, `scripts/`, `tests/` and `CMakeLists.txt` equal this commit's. Both scripts check this against `freeze-m3`'s commit (M3 §3, §4).
+    - **Against `freeze-m4`'s code:** `src/app/bench_main.cpp` gains run kind `m3`, `--freeze-m3-commit` and the header field `freeze_m3_commit`. Nothing else in `src/` or `CMakeLists.txt` changes.
+    - **The tools:**
+      - `tools/stream_session.py` gains the sweeps `m3_before` and `m3_after`.
+      - `tools/check_prereg_order.py` gains M3's order checks.
+      - `tools/setup/build_ffmpeg_rockchip.sh` fixes git's hash abbreviation at 8 characters (below).
+      - New: `tools/m3_report.py`, `scripts/setup_board.sh`, `scripts/reproduce_m1.sh` and `tests/test_m3.py`.
+  - **The runs (§1):**
+    - **Options passed:** the session tool passes `--variant B` or `--variant C`, `--channels 8`, `--condition main`, `--warmup 20`, `--duration 120` and `--run-kind m3`. It also passes `--freeze-m3-commit`, with `freeze-m3`'s commit from the Registration table of `docs/notes/env.md`.
+    - **Defaults:** it passes no other option, so `--post m1`, `--stagger off`, `--prep-threads 2`, `--cores a76` and `models/yolov8n_i8.rknn` stay at their defaults.
+    - **Refusal:** `bench_main` refuses a run of kind `m3` that differs in any of these.
+  - **Pinned inventory keys (§4):** the session stops if any of these 25 keys of `tools/inventory.sh` differs from [inventory_m1.txt](../docs/notes/inventory_m1.txt). The list is `M3_PINNED` in `tools/stream_session.py`:
+    - `kernel`, `boot_firmware`, `rknpu_driver`, `rga_driver`;
+    - `ffmpeg`, `ffmpeg_configuration`, and the four `h264_rkmpp_default_*`;
+    - `librknnrt`, `librga`, and the three `rknn_header *`;
+    - `cmake_build_type`, `core_cxx_flags`, `core_cxx_includes`, `bench_main_cxx_flags`, `bench_main_cxx_includes`, `core_cxx_defines`;
+    - `model`;
+    - `lib /usr/lib/librknnrt.so`, `lib /usr/lib/aarch64-linux-gnu/librga.so.2.1.0`, `lib /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.0`.
+  - **Not pinned:** the other 36 keys are recorded and reported. They are:
+    - `os` and `ffmpeg_built_with`;
+    - the four `CMAKE_*` tools;
+    - `link_bench_main`, the link line, whose library paths follow from the pinned keys and the packages;
+    - 29 `lib` lines of Ubuntu's packages and ffmpeg-rockchip's own libraries.
+  - **Fresh-board markers (§3):**
+    - `/var/lib/rk3588s-bench/setup-started`, which the setup writes before its first change;
+    - `/opt/ffmpeg-rockchip`, `/opt/rknpu2`, `/usr/lib/librknnrt.so`, `/home/pi/.ssh/bench_stream` and `/etc/systemd/timesyncd.conf.d/50-bench.conf`.
+
+    A setup that finds none of them records `fresh: yes`. The board's base image has none of them. The board as set up for M1 has all of them but the first.
+  - **What the setup checks (§3):**
+    - `librknnrt.so` 2.3.2 from rknn-toolkit2 `v2.3.2` (`rknpu2/runtime/Linux/librknn_api/aarch64/`): SHA-256 `d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8`, the same as the board's;
+    - the model, from the Release `data-model-yolov8n_i8-04a76611`: `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`;
+    - the video manifest `media/bench/manifest.tsv` from the stream PC: `fcd33374d77ede742ef3a646ac870f9ab6d8e16c605f31b122f607ec78cbbf93`, the same on the board and on the PC;
+    - after the packages, the kernel and the SHA-256 of librga's and MPP's libraries, against `inventory_m1.txt`.
+  - **What the setup installs (§3):**
+    - `apt-get upgrade`, then `build-essential cmake git pkg-config libdrm-dev libopencv-dev binutils wget ca-certificates python3`, from the image's own sources (`mirrors.ustc.edu.cn`, `ubuntu-ports`);
+    - ffmpeg-rockchip at `8b4385e985c0a50bf7d3f96cf3cb6d0b63c53e6c`, as for M1.
+  - **The reset (§3):** FriendlyElec's `/usr/local/bin/firstboot`, then a reboot. It marks the data partition (`data=` on the kernel command line), and the next boot wipes it.
+  - **Development runs before this registration (§8 step 1),** all of run kind `check`:
+    - **Smoke test** [results/check/20261118T091529Z_m3_before_smoke](../results/check/20261118T091529Z_m3_before_smoke). It ran before the tools' commit (`db0308f…-dirty`). All 3 repetitions completed, with no invalid run, and the inventory equalled M1's.
+    - **Chroot test 1,** 09:22–09:27 UTC:
+      - The packages step passed.
+      - My guard stopped the test in the ffmpeg step. The data partition, which the live root file system shares, had fallen below 700 MB.
+      - An earlier version of the script wrote its record inside the chroot, as run kind `m3`. So the record is not kept, and these lines stand for it.
+    - **Taking down chroot test 1** unmounted the host's `/sys` and `/dev` submounts, among them debugfs, `/dev/pts` and the cgroup tree.
+      - **Why:** the test had bound `/sys` recursively, and the host's mounts are shared.
+      - **Repair:** the board was rebooted at 09:41 UTC to restore them. No measurement was running, and nothing on disk changed.
+      - **Since then:** the tests mount fresh, private file systems in the chroot.
+    - **Chroot test 2,** [results/check/20261118T093021Z_m3_setup](../results/check/20261118T093021Z_m3_setup): every step passed up to the record. The record failed because debugfs was missing after test 1's teardown.
+    - **Chroot test 3,** [results/check/20261118T094315Z_m3_setup](../results/check/20261118T094315Z_m3_setup): every step passed up to the record. The record failed on one pinned key, `ffmpeg`:
+      - M1's build reads `ffmpeg version 8b4385e9`; this one read `8b4385e`.
+      - The commit is the same. FFmpeg's version string is git's abbreviated hash, and git chooses its length from the clone's size. M1's source folder was a larger clone than the script's shallow fetch.
+      - **Fix:** `tools/setup/build_ffmpeg_rockchip.sh` now fixes the abbreviation at 8.
+    - **A review of the tools and of M3.md,** before the tools' commit. It led to these changes:
+      - the clone's commit, and the check that its code equals `freeze-m3`'s;
+      - the setup's own marker, written before its first change;
+      - only the latest setup record counts;
+      - the network and stream PC steps come first;
+      - apt never prompts, and waits for another apt;
+      - early checks of the image's pinned keys;
+      - the boot time from `/proc/stat`;
+      - the scripts committed as executable;
+      - no outcome before a sweep is complete, and `m3_before` reported as descriptive;
+      - the hedges on §2's probabilities.
+    - **At the tools' commit `0114c24`:**
+      - **Smoke test** [results/check/20261118T100910Z_m3_before_smoke](../results/check/20261118T100910Z_m3_before_smoke): all 3 repetitions completed, with no invalid run, and the inventory equalled M1's.
+      - **Chroot test 4,** [results/check/20261118T101519Z_m3_setup](../results/check/20261118T101519Z_m3_setup): result `ok`, on a fresh board, in 550 s.
+        - **Steps:** packages 201 s, librknnrt 2 s, ffmpeg 310 s, model 1 s, build 32 s, record 4 s.
+        - **Pinned keys:** every one equals M1's.
+        - **Keys that differ:** 10 of the 61:
+          - `os` (Ubuntu 24.04.5 against 24.04.4);
+          - libavutil's SHA-256 (libavcodec, libavformat and libswresample are byte-identical to M1's);
+          - libc6 `2.39-0ubuntu8.12` against `8.9`, in 5 lines;
+          - the security updates of libX11, liblzma and zlib.
+        - **Not covered:** a chroot cannot test the network and stream PC steps (`--no-services`).
+    - **Their values:** the smoke tests' CPU and latency come from 10 s windows. They are not compared with anything.
+- Reason: M3's plan and its values are registered together, after the tools were written, tested and reviewed, and before any of M3's runs.
+- Affected data: none.
+- Release: `amend-A15`. `prereg-m3` and `freeze-m3` tag the same commit, the merge of the pull request that adds this entry. `freeze-m3`'s `created_at` is the reference time for M3's runs.
