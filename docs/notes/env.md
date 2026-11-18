@@ -16,6 +16,8 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 | [`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13) | `3880af442b947f9f913578ed8fe00d13aca6b083` | 2026-11-05T07:04:00Z |
 | [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2) | `3880af442b947f9f913578ed8fe00d13aca6b083` | 2026-11-05T07:04:00Z |
 | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4) | `8638685d9ef806a85e5042d7cc10febdd5ae93a9` | 2026-11-11T00:04:33Z |
+| `amend-A14` | not created yet | |
+| `freeze-m4` | not created yet | |
 
 `created_at` is the reference time (PROTOCOL §1). The tagged commit is the merge of PR #1, whose committer date (2026-10-30T01:58:11Z) is not used. `amend-A8` is the Release of an amendment made before `freeze-m1`, so that the check it registers has a reference time ([A8](../../prereg/AMENDMENTS.md)). Its tagged commit is the merge of PR #12. GitHub gives that commit's time as the Release's `created_at`; the Release was published at 2026-11-03T01:40:12Z. The check started at 02:19:49Z, after both.
 

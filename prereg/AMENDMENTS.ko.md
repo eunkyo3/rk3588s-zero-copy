@@ -475,3 +475,74 @@
   - **보드 재부팅:** 다시 빌드하던 중 보드가 저절로 재부팅됐다. 저널의 마지막 기록은 빌드의 ssh 세션이 열린 05:43:53 UTC이고, 05:44:15에 다시 부팅했다(점검의 `env.txt`에 있는 `boot_time_utc`). 종료 기록도 커널 경고도 남지 않았고, 원인은 모른다. 위의 점검은 그 뒤에 했고, 세션마다 클럭을 다시 고정한다.
 - Affected data: 없음.
 - Release: `amend-A13`. `freeze-m2`는 이 항목을 더하는 PR의 머지 커밋에 붙인다. 그 `created_at`이 M2 실행의 기준 시각이다.
+
+## A14 — 2026-11-18 — M4: `freeze-m4` 전에 정하는 값
+- Change: §8 3단계의 점검을 마친 뒤 [M4.md](M4.ko.md) §8 4단계 표의 값을 정한다. M4.md는 바뀌지 않는다.
+  - **코드:** PR #55의 머지 커밋 `63febdfd9c84c9f30fb4c7ef56d1a052a0eeb38b`이고, 보드에서 `-dirty` 없이 빌드했다. §8 3단계의 모든 점검이 이 빌드로 돌았다.
+    - **이 항목까지의 뒤 커밋:** `src/`, `CMakeLists.txt`, `tools/`, `tests/`에서 바뀐 것은 기록을 읽기만 하고 M4 실행이 쓰지 않는 도구뿐이다. `tools/m4_checks.py`(아래 판정), `tools/cpu_breakdown.py`와 `tools/m1_intervals.py`(M1, M2에 대한 탐색 노트), 그 테스트들, 그리고 `tests/test_demo_render.py`의 수정이다.
+    - **M4 실행**은 `main`의 더 뒤 커밋으로 빌드하며, 각 실행의 머리말이 그 커밋을 적는다. `63febdf`과 그 커밋 사이에 §9 목록의 어느 것도 바뀌면 안 된다. M4 보고서는 둘 사이에 `src/`, `CMakeLists.txt`, `tools/`, `tests/`에서 바뀐 파일을 적는다.
+  - **갈래(§1, §3.2):** 둘 다 `bench_main --variant C`다.
+    - **C8:** `--post neon --model models/yolov8n_i8.rknn`(SHA-256 `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`). Cp의 후처리이며 conf 0.25, NMS 0.45다.
+    - **C10:** `--post v10 --model models/yolov10n_i8.rknn`(SHA-256 `6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81`). `yolov10_post`이며 conf 0.25, `max_det` 300이다.
+    - **샘플러:** `m4_main`의 모든 실행에 `--stagger on`을 더한다. `m4_aux`의 실행에는 더하지 않는다.
+    - **freeze 커밋:** 세션 도구는 모든 M4 실행에 `--run-kind m4`와, `docs/notes/env.md`의 Registration 표에서 읽은 `freeze-m4`의 커밋을 `--freeze-m4-commit`으로 넘긴다.
+    - **`calib_npu`(§3.1):** `tools/m4_calib.sh`가 M1-3의 텐서(`051d6f12…`, A7)로 돌린다.
+      - `P_cap`은 코어 3개에서 `--with-post`와 갈래의 후처리로 잰다(YOLOv8n은 `--post neon`, YOLOv10n은 `--post v10`).
+      - 원시 한계는 코어 1개에서 후처리 없이 잰다.
+    - **정확도 패스(§2.5):** 두 종류이며, 설정은 §2.3의 것으로 도구가 고정한다. 명령은 [m4_accuracy.md](../docs/notes/m4_accuracy.ko.md)에 있다.
+      - 보드의 INT8 패스: `tools/m4_board_pass.py pass --model <model> --kind m4`.
+      - PC의 FP32 패스: `tools/eval/pc_run.py --kind m4`를 거친 `tools/m4_fp32.py`.
+  - **후처리 오브젝트(§8 3단계):** 이를 적는 기록 7개가 모두 같은 오브젝트를 준다.
+    - **A13의 둘:**
+      - `build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o`: `536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2`;
+      - `…/yolov8_post_neon.cpp.o`: `3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555`.
+      - 둘 다 A13의 것이므로 M2 §4의 동등성 점검은 다시 하지 않는다.
+    - **`…/yolov10_post.cpp.o`:** `b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8`.
+    - **`…/pipeline_post.cpp.o`:** `28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a`. 후처리를 고르는 공유 함수다.
+    - **정확도 도구의 YOLOv8n 규칙,** `build/CMakeFiles/m4map.dir/src/m4/map_rules.cpp.o`: `94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e`.
+  - **COCO 파일과 입력 매니페스트(§2.1, §2.2):**
+    - **두 zip,** [tools/eval/coco.sha256](../tools/eval/coco.sha256)에 적힌 대로:
+      - `val2017.zip`: `4f7e2ccb2866ec5041993c9cf2a952bbed69647b115d0f74da7ce8f4bef82f05`;
+      - `annotations_trainval2017.zip`: `113a836d90195ee1f884e704da6304dfaaecff1f023f49b6ca93c4aaae470268`.
+    - **입력 매니페스트:** [results/check/20261116T064917Z_m4_inputs](../results/check/20261116T064917Z_m4_inputs)의 `manifest.tsv`.
+      - SHA-256은 `b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444`이고, 그 행들의 것은 `5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69`다.
+      - 모든 정확도 패스는 이 매니페스트로 한다.
+  - **평가 이미지(§8 2단계):** `tools/eval/image_id.txt`에 적힌 `sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a`.
+    - **베이스:** 변환기 이미지 `sha256:3ea3796529342281fdb543b8911261112e5ab942798c2fea4363edf3eca67f8f`. 이 이미지는 `python:3.10-slim-bookworm@sha256:5be5aaecb962a41567bc8041f1e9e3432cb085b037fe057f9a562630b2e4b370` 위에 빌드했다.
+    - **`pip freeze`:** [tools/eval/constraints.txt](../tools/eval/constraints.txt)와 같다. 패키지 25개이며, 파일의 SHA-256은 `d62f5342280814927165b03de87c7d49e463e397bb786206186d576110af67e9`다.
+      - 기록은 `results/check/20261116T065949Z_m4_eval_image`이고, `tools/eval/build.sh`의 점검을 모두 통과했다.
+    - **보관본:** `m4-eval_c676e76f95356ea1.tar`, SHA-256 `ae9a7dcfd59672e8573cda16c7985c99542c0e8f0c4c2543ca9f38d3f53d71ab`. 저장소 밖에 둔다. 기록은 `results/check/20261116T064711Z_m4_eval_image_archive`다.
+  - **§8 3단계의 결과:** 모두 통과했다. 이 기록들에 대해 `tools/m4_checks.py`는 0으로 끝난다. 명령은 [m4_accuracy.md](../docs/notes/m4_accuracy.ko.md#고정할-코드에서의-8-3단계)에 있다.
+
+    | 점검 | `results/check/`의 기록 | 결과 |
+    |---|---|---|
+    | 데이터 | `20261116T064917Z_m4_inputs` | COCO의 두 zip은 위와 같다. 이미지 5,000장이 각각 주석의 크기이고, 양자화 이미지 20장이 이름과 SHA-256으로 맞는다 |
+    | 디코딩 | `20261117T081135Z_m4_decode` | PNG 5,000장 중 5,000장이 매니페스트의 바이트로 디코딩됐다 |
+    | 규칙, YOLOv8n | `20261117T081427Z_rules_yolov8n`, `20261117T081555Z_rules_check_yolov8n` | 목록 50개 중 50개가 같다. 값 75,000개 중 74,996개가 비트 단위로 같고, 나머지 4개는 1 ulp 다르다. IoU가 0.7에서 1e-6 이내인 경우는 없다 |
+    | 규칙, YOLOv10n | `20261117T081441Z_rules_yolov10n`, `20261117T081622Z_rules_check_yolov10n` | 목록 50개 중 50개가 같다. 값 75,000개 중 75,000개가 비트 단위로 같다 |
+    | 배선, C8과 C10 | `20261117T081456Z_wiring_yolov8n`, `20261117T081504Z_wiring_yolov10n` | 각각 10프레임 중 10프레임이 같다 |
+    | 기본 경로 | `20261117T081656Z_m4_default_c` | M1의 `32_main_C_2ch_r1`과 스레드, 어피니티, `queues`가 같다 |
+    | 갈래 | `20261117T082036Z_m4_check` | 두 실행 모두 유효하다. 모든 프레임이 M2의 샘플러 규칙을 따르고, 각 `env.json`이 갈래의 모델 SHA-256과 후처리를 적는다 |
+    | 빌드 | 기록들이 빌드를 적는 20곳 | 모두 `63febdf`이다. 데이터 기록의 `9dbf814`는 `tools/m4_prep.py`와 평가 이미지가 같다 |
+    | 오브젝트 | 오브젝트를 적는 기록 7개 | 위와 같다 |
+
+    - **§2.5의 결정성 점검용:** 덤프의 `dump.sha256`은 `74e4829065b022f15ec6d30271ea28bc226f7848977542b5221d4fe62568df97`(YOLOv8n)와 `b7b4f93aa5fd3ee7e66ddd64752d96a053bb4dbe11e72d53fe99db9c4debd439`(YOLOv10n)다. 덤프는 PC와 보드에 둔다.
+    - **갈래 점검**은 2026-11-17 08:20부터 08:37 UTC까지, 실내 25 °C에서 돌았다.
+  - **점검 실행의 값(보고만 함; §8 3단계; 아무것도 바꾸지 않음):** 8채널, 주 조건, stagger로 갈래마다 한 번씩 돌린 값이다.
+    - **프로세스 CPU:** C8 17.560 s, C10 17.810 s.
+    - **stagger 오차:** 7.4 ms와 17.0 ms. **위상 폭:** 159.9 ms와 136.9 ms.
+    - **포화 표지:** `unknown`. 종류 `m4`의 `calib_npu` 세션이 아직 없었기 때문이다.
+  - **COCO 평가의 메모리:** `freeze-m4` 전에 5,000장으로 점검했다. §8의 점검은 아니고, 정확도 노트가 먼저 요구한 도구 점검이다.
+    - 기록은 [results/check/20261117T134147Z_m4_coco_memory](../results/check/20261117T134147Z_m4_coco_memory)이며, 다른 PC에서 `3f6d24d`으로 했다.
+    - 통과했다. 종료 코드 0이고, 최대 4,883 MB로 swap 없는 컨테이너 한도 6 GB 안이었다. `tools/eval/pc_run.py`는 `m4_coco.py`에 그 한도를 그대로 둔다.
+  - **컴파일러, 플래그, 라이브러리, 클럭, 냉각:** A10, A7, A9, A13의 것이고 다른 것이 없다.
+    - **인벤토리:** 갈래 점검의 `inventory.txt`는 `docs/notes/inventory_m1.txt`와 같다. 세션이 실행 전에 이를 확인했다.
+    - **클럭:** `tools/set_perf_mode.sh`로 고정했다.
+    - **냉각:** A9의 방열판과 상시 미니 팬이다.
+- Reason:
+  - M4.md §8은 이 값들을 `freeze-m4` 전에 정한다.
+  - **개발 실행:** 모두 실행 종류 `check`이고 `results/check/`에 둔다.
+    - 탐색(`20261110T073848Z_m4_probe`, M4.md가 공개한다)과, 2026-11-16과 2026-11-17의 도구 테스트와 시험 실행이다.
+    - 시험 실행은 [m4_accuracy.md](../docs/notes/m4_accuracy.ko.md)가 적는다. 그 값은 쓰지 않는다.
+- Affected data: 없음.
+- Release: `amend-A14`. `freeze-m4`는 이 항목을 더하는 PR의 머지 커밋에 붙인다. 그 `created_at`이 M4 실행의 기준 시각이다.

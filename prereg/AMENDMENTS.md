@@ -475,3 +475,74 @@ Each entry has this form:
   - **A board reset:** the board reset itself during a rebuild. Its journal's last entry is at 05:43:53 UTC, when the rebuild's ssh session opened, and it booted again at 05:44:15 (`boot_time_utc` in the checks' `env.txt`). No shutdown and no kernel warning were logged. Its cause is unknown. The checks above ran after it, and every session fixes the clocks again.
 - Affected data: none.
 - Release: `amend-A13`. `freeze-m2` tags the merge of the pull request that adds this entry. Its `created_at` is the reference time of M2's runs.
+
+## A14 — 2026-11-18 — M4: the values fixed before `freeze-m4`
+- Change: fixes the values of the table in [M4.md](M4.md) §8 step 4, after the checks of §8 step 3. Nothing in M4.md changes.
+  - **Code:** commit `63febdfd9c84c9f30fb4c7ef56d1a052a0eeb38b`, the merge of PR #55, built on the board without `-dirty`. Every check of §8 step 3 ran with this build.
+    - **Later commits, up to this entry:** in `src/`, `CMakeLists.txt`, `tools/` and `tests/` they change only tools that read records, which M4's runs do not use. These are `tools/m4_checks.py` (the verdicts below), `tools/cpu_breakdown.py` and `tools/m1_intervals.py` (exploratory notes on M1 and M2), their tests, and a fix to `tests/test_demo_render.py`.
+    - **M4's runs** are built from a later commit of `main`, which each run's header names. Between `63febdf` and that commit nothing in §9's list may change. M4's report lists the files changed between them in `src/`, `CMakeLists.txt`, `tools/` and `tests/`.
+  - **Arms (§1, §3.2):** both are `bench_main --variant C`.
+    - **C8:** `--post neon --model models/yolov8n_i8.rknn` (SHA-256 `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`). This is Cp's post-processing, at conf 0.25 and NMS 0.45.
+    - **C10:** `--post v10 --model models/yolov10n_i8.rknn` (SHA-256 `6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81`). This is `yolov10_post`, at conf 0.25 and `max_det` 300.
+    - **Sampler:** every run of `m4_main` adds `--stagger on`. The runs of `m4_aux` do not.
+    - **Freeze commit:** the session tool passes every M4 run `--run-kind m4`, and `--freeze-m4-commit` with `freeze-m4`'s commit from the Registration table of `docs/notes/env.md`.
+    - **`calib_npu` (§3.1):** `tools/m4_calib.sh` runs on M1-3's tensors (`051d6f12…`, A7).
+      - `P_cap` is measured on 3 cores, with `--with-post` and the arm's post-processing (`--post neon` for YOLOv8n, `--post v10` for YOLOv10n).
+      - The raw limit is measured on 1 core, without post-processing.
+    - **Accuracy passes (§2.5):** two kinds, at §2.3's settings, which the tools fix. The commands are in [m4_accuracy.md](../docs/notes/m4_accuracy.md).
+      - The board's INT8 passes: `tools/m4_board_pass.py pass --model <model> --kind m4`.
+      - The PC's FP32 passes: `tools/m4_fp32.py` through `tools/eval/pc_run.py --kind m4`.
+  - **Post-processing objects (§8 step 3):** all 7 records that name them give the same objects.
+    - **A13's two:**
+      - `build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o`: `536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2`;
+      - `…/yolov8_post_neon.cpp.o`: `3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555`.
+      - Both are A13's, so M2 §4's equivalence check is not repeated.
+    - **`…/yolov10_post.cpp.o`:** `b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8`.
+    - **`…/pipeline_post.cpp.o`:** `28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a`. This is the shared function that chooses the post-processing.
+    - **The accuracy tool's YOLOv8n rule,** `build/CMakeFiles/m4map.dir/src/m4/map_rules.cpp.o`: `94f5f4316f0505c5b1ac0d298258d578c910f697b475c112712a89dec38be35e`.
+  - **COCO's files and the input manifest (§2.1, §2.2):**
+    - **The two zips,** as in [tools/eval/coco.sha256](../tools/eval/coco.sha256):
+      - `val2017.zip`: `4f7e2ccb2866ec5041993c9cf2a952bbed69647b115d0f74da7ce8f4bef82f05`;
+      - `annotations_trainval2017.zip`: `113a836d90195ee1f884e704da6304dfaaecff1f023f49b6ca93c4aaae470268`.
+    - **The input manifest:** [results/check/20261116T064917Z_m4_inputs](../results/check/20261116T064917Z_m4_inputs)'s `manifest.tsv`.
+      - Its SHA-256 is `b29adf50175677fd031adbc2600f68a5115a075c80095b73d5b8665b35ffc444`, and that of its rows `5a63ad71886c7d670184bd1f91601a719d6d0f456d5e5c35bfa93c2418d69a69`.
+      - Every accuracy pass is of this manifest.
+  - **The evaluation image (§8 step 2):** `sha256:c676e76f95356ea1aac39a87694ac5a498207890922f2a01c9fdbedd773f250a`, as in `tools/eval/image_id.txt`.
+    - **Base:** the converter image `sha256:3ea3796529342281fdb543b8911261112e5ab942798c2fea4363edf3eca67f8f`. That image is built on `python:3.10-slim-bookworm@sha256:5be5aaecb962a41567bc8041f1e9e3432cb085b037fe057f9a562630b2e4b370`.
+    - **`pip freeze`:** it equals [tools/eval/constraints.txt](../tools/eval/constraints.txt), 25 packages, whose SHA-256 is `d62f5342280814927165b03de87c7d49e463e397bb786206186d576110af67e9`.
+      - The record is `results/check/20261116T065949Z_m4_eval_image`, which passed every check of `tools/eval/build.sh`.
+    - **Archive:** `m4-eval_c676e76f95356ea1.tar`, SHA-256 `ae9a7dcfd59672e8573cda16c7985c99542c0e8f0c4c2543ca9f38d3f53d71ab`, kept outside the repository. Its record is `results/check/20261116T064711Z_m4_eval_image_archive`.
+  - **Results of §8 step 3:** all passed. On these records `tools/m4_checks.py` exits 0. The commands are in [m4_accuracy.md](../docs/notes/m4_accuracy.md#8-step-3-at-the-code-to-be-frozen).
+
+    | Check | Record in `results/check/` | Result |
+    |---|---|---|
+    | Data | `20261116T064917Z_m4_inputs` | COCO's two zips as above. 5,000 images, each at its annotated size, and the 20 quantization images by name and SHA-256 |
+    | Decoding | `20261117T081135Z_m4_decode` | 5,000 of 5,000 PNGs decoded to the manifest's bytes |
+    | Rules, YOLOv8n | `20261117T081427Z_rules_yolov8n`, `20261117T081555Z_rules_check_yolov8n` | 50 of 50 lists equal. 74,996 of 75,000 values bit for bit; the other 4 differ by 1 ulp. No IoU within 1e-6 of 0.7 |
+    | Rules, YOLOv10n | `20261117T081441Z_rules_yolov10n`, `20261117T081622Z_rules_check_yolov10n` | 50 of 50 lists equal. 75,000 of 75,000 values bit for bit |
+    | Wiring, C8 and C10 | `20261117T081456Z_wiring_yolov8n`, `20261117T081504Z_wiring_yolov10n` | 10 of 10 frames equal, each |
+    | Default path | `20261117T081656Z_m4_default_c` | the threads, affinities and `queues` of M1's `32_main_C_2ch_r1` |
+    | Arms | `20261117T082036Z_m4_check` | both runs valid. Every frame follows M2's sampler rule, and each `env.json` records the arm's model SHA-256 and post-processing |
+    | Build | the 20 places the records name it | `63febdf` in all. The data record's `9dbf814` has the same `tools/m4_prep.py` and evaluation image |
+    | Objects | the 7 records that name them | as above |
+
+    - **For §2.5's determinism check:** the dumps' `dump.sha256` are `74e4829065b022f15ec6d30271ea28bc226f7848977542b5221d4fe62568df97` (YOLOv8n) and `b7b4f93aa5fd3ee7e66ddd64752d96a053bb4dbe11e72d53fe99db9c4debd439` (YOLOv10n). The dumps are kept on the PC and the board.
+    - **The arms check** ran from 08:20 to 08:37 UTC on 2026-11-17, at an ambient 25 °C.
+  - **The check runs' values (reported; §8 step 3; they change nothing):** one run of each arm at 8 channels, main condition, staggered.
+    - **Process CPU:** C8 17.560 s, C10 17.810 s.
+    - **Stagger error:** 7.4 ms and 17.0 ms. **Phase spread:** 159.9 ms and 136.9 ms.
+    - **Saturation labels:** `unknown`, since no `calib_npu` session of kind `m4` existed yet.
+  - **The COCO evaluation's memory:** checked at 5,000 images before `freeze-m4`. It is not one of §8's checks; it is a check of the tool, which the accuracy notes required first.
+    - The record is [results/check/20261117T134147Z_m4_coco_memory](../results/check/20261117T134147Z_m4_coco_memory), made on another PC at `3f6d24d`.
+    - It passed: exit 0, with a peak of 4,883 MB under the container's 6 GB without swap. `tools/eval/pc_run.py` keeps that limit for `m4_coco.py`.
+  - **Compiler, flags, libraries, clocks and cooling:** those of A10, A7, A9 and A13; none differs.
+    - **Inventory:** the arms check's `inventory.txt` equals `docs/notes/inventory_m1.txt`. The session checked it before its runs.
+    - **Clocks:** fixed with `tools/set_perf_mode.sh`.
+    - **Cooling:** A9's heatsink and always-on mini fan.
+- Reason:
+  - M4.md §8 fixes these values before `freeze-m4`.
+  - **Development runs:** all are of run kind `check` and kept in `results/check/`.
+    - They are the exploration (`20261110T073848Z_m4_probe`, which M4.md discloses), and the tools' tests and trials of 2026-11-16 and 2026-11-17.
+    - [m4_accuracy.md](../docs/notes/m4_accuracy.md) lists the trials. Their values are not used.
+- Affected data: none.
+- Release: `amend-A14`. `freeze-m4` tags the merge of the pull request that adds this entry. Its `created_at` is the reference time for M4's runs.
