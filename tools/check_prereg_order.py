@@ -13,9 +13,15 @@ reference times.
     (<UTC>_m4_calib, <UTC>_m4_main, <UTC>_m4_aux) starts once the four accuracy passes that started
     before it were done and had ended (tools/m4_order.py: valid, or invalid twice), and every pipeline
     session starts after every record of the calib_npu session its saturation.txt names;
+  - every run or record of kind m3 starts after freeze-m3, and every run whose header names freeze-m3
+    (freeze_m3_commit other than none) starts after it (prereg/M3.md §4);
+  - prereg/M3.md §3 in results/m3/: every setup record (<UTC>_setup, scripts/setup_board.sh) starts after
+    every record of every m3_before session, and every m3_after session starts after the latest setup record
+    before it, which passed on a fresh board (result ok, fresh yes), had ended;
   - every run whose header names an amendment with a Release amend-A<n> starts after that Release;
   - every commit a header gives for a stage (prereg_v1_commit, freeze_m1_commit, prereg_m2_commit,
-    freeze_m2_commit, prereg_m4_commit, freeze_m4_commit; "none" gives none) is that stage's tag commit
+    freeze_m2_commit, prereg_m4_commit, freeze_m4_commit, freeze_m3_commit; "none" gives none) is that stage's
+    tag commit
     in the Registration table.
 
 The reference times are the Releases' created_at, and the tag commits the Releases' commits, as the
@@ -46,15 +52,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import m4_order  # noqa: E402  (M4 §8 step 5: the accuracy passes)
 
-KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m4"}  # PROTOCOL §1.4
+KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m3", "m4"}  # PROTOCOL §1.4
 AFTER_FREEZE = {"comparison": "freeze-m1", "reference": "freeze-m1", "m1.1": "freeze-m1",
-                "m2": "freeze-m2", "m4": "freeze-m4"}  # run kind -> the stage its runs start after (M2 §5.1, M4 §4)
+                "m2": "freeze-m2", "m3": "freeze-m3",
+                "m4": "freeze-m4"}  # run kind -> the stage its runs start after (M2 §5.1, M3 §4, M4 §4)
 # Header field -> the stage whose tag commit it gives (PROTOCOL §1.4, M2 §5.1, M4 §4).
 COMMITS = {"prereg_v1_commit": "prereg-v1", "freeze_m1_commit": "freeze-m1", "prereg_m2_commit": "prereg-m2",
-           "freeze_m2_commit": "freeze-m2", "prereg_m4_commit": "prereg-m4", "freeze_m4_commit": "freeze-m4"}
-# The stages that a header naming them (any commit other than none) starts after (M2 §5.1, M4 §4).
-NAMED = {"prereg-m2", "prereg-m4", "freeze-m4"}
+           "freeze_m2_commit": "freeze-m2", "prereg_m4_commit": "prereg-m4", "freeze_m4_commit": "freeze-m4",
+           "freeze_m3_commit": "freeze-m3"}
+# The stages that a header naming them (any commit other than none) starts after (M2 §5.1, M3 §4, M4 §4).
+NAMED = {"prereg-m2", "prereg-m4", "freeze-m4", "freeze-m3"}
 M4_SESSION = re.compile(r"\d{8}T\d{6}Z_(m4_calib|m4_main|m4_aux)")  # M4 §8 step 5, after the passes
+M3_RECORD = re.compile(r"\d{8}T\d{6}Z_(m3_before|setup|m3_after)")  # M3 §3: before, the setup, after
 TAG_ROW = re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")
 
 
@@ -234,7 +243,52 @@ def check(results, refs, commits, names, released):
                     problems.append(f"{p}: names {amendment} but starts {start:%Y-%m-%dT%H:%M:%SZ}, "
                                     f"not after amend-{amendment}")
     problems += m4_order_problems(results, commits.get("freeze-m4"), headers)
+    problems += m3_order_problems(results, headers)
     return len(files), sorted(set(problems))
+
+
+def setup_values(path):
+    """{key: value} of a setup record's setup.csv (its header and its key,value table), {} if unreadable."""
+    out = {}
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("# "):
+                k, _, v = line[2:].partition(": ")
+            else:
+                k, _, v = line.partition(",")
+            out[k] = v
+    except (OSError, UnicodeDecodeError):
+        return {}
+    return out
+
+
+def m3_order_problems(results, headers):
+    """M3 §3 in results/m3/: the m3_before sessions, then the setup of the reset board, then the m3_after
+    sessions. A record's start is the earliest header in its directory, and its last the latest; headers:
+    {path: (start, ...)} of check()."""
+    m3 = results / "m3"
+    if not m3.is_dir():
+        return []
+    starts = {}  # record directory -> the start of every header under it
+    for p, h in headers.items():
+        if m3 in p.parents and M3_RECORD.fullmatch(p.relative_to(m3).parts[0]):
+            starts.setdefault(p.relative_to(m3).parts[0], []).append(h[0])
+    befores = [max(v) for k, v in starts.items() if k.endswith("_m3_before")]
+    problems, setups = [], []  # setups: (start, passed on a fresh board, end or None)
+    for name in sorted(k for k in starts if k.endswith("_setup")):
+        start, v = min(starts[name]), setup_values(m3 / name / "setup.csv")
+        if befores and start <= max(befores):
+            problems.append(f"{m3 / name}: a setup record that starts {start:%Y-%m-%dT%H:%M:%SZ}, before the last "
+                            f"record of the m3_before sessions (M3 §3)")
+        good = v.get("result") == "ok" and v.get("fresh") == "yes" and bool(v.get("end_time_utc"))
+        setups.append((start, good, parse_time(v["end_time_utc"], str(m3 / name / "setup.csv")) if good else None))
+    for name in sorted(k for k in starts if k.endswith("_m3_after")):
+        start = min(starts[name])
+        earlier = sorted(s for s in setups if s[0] < start)
+        if not earlier or not earlier[-1][1] or not earlier[-1][2] < start:
+            problems.append(f"{m3 / name}: an m3_after session that starts {start:%Y-%m-%dT%H:%M:%SZ}, and the "
+                            "latest setup record before it did not pass on a fresh board and end before it (M3 §3)")
+    return problems
 
 
 def m4_order_problems(results, freeze_m4, headers):
