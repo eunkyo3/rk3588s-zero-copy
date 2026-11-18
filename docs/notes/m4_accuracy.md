@@ -227,7 +227,7 @@ A pass writes two tables to a directory of its own, outside the repository: `D:/
 ## §8 step 3 at the code to be frozen
 
 Run on 2026-11-17, kind `check`, with the board built at `63febdf` (#55's merge).
-- **The code to be frozen:** after `63febdf` come only [tools/m4_checks.py](../../tools/m4_checks.py), which reads records, its tests, a fix to another test, and notes. `src/`, `CMakeLists.txt` and the tools these runs used are unchanged. The verdicts list what changed between the build and HEAD. A14 names the commit.
+- **The code to be frozen:** after `63febdf` come only tools that read records, their tests, a fix to another test, and notes. The tools are [tools/m4_checks.py](../../tools/m4_checks.py), and `tools/cpu_breakdown.py` and `tools/m1_intervals.py` (#75, #76). `src/`, `CMakeLists.txt` and the tools these runs used are unchanged. The verdicts list what changed between the build and HEAD. [A14](../../prereg/AMENDMENTS.md) names `63febdf` as M4's code commit.
 - **The data check** is ①'s record `20261116T064917Z_m4_inputs`, made at `9dbf814`. `tools/m4_prep.py` and the evaluation image are unchanged since.
 - **Commands:**
   - **On the PC:**
@@ -272,7 +272,7 @@ Run on 2026-11-17, kind `check`, with the board built at `63febdf` (#55's merge)
   - `20261117T081427Z_rules_yolov8n/dump` (`dump.sha256` `74e48290…`) and `…081441Z_rules_yolov10n/dump` (`b7b4f93a…`).
   - They are kept on the PC and on the board, not committed.
   - Their `dump.sha256` equal those of the trials at `a2890a8`. So the outputs are the same across the two builds.
-- **Still before `freeze-m4`:** A14 with these results. The memory check at 5,000 images passed (Evaluation, below).
+- **A14** fixes these results, the code commit, the objects and the data before `freeze-m4` ([AMENDMENTS.md](../../prereg/AMENDMENTS.md)). The memory check at 5,000 images passed (Evaluation, below).
 
 ## The order of the runs (§8 step 5)
 
