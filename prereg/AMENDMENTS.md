@@ -511,7 +511,7 @@ Each entry has this form:
     - **Base:** the converter image `sha256:3ea3796529342281fdb543b8911261112e5ab942798c2fea4363edf3eca67f8f`. That image is built on `python:3.10-slim-bookworm@sha256:5be5aaecb962a41567bc8041f1e9e3432cb085b037fe057f9a562630b2e4b370`.
     - **`pip freeze`:** it equals [tools/eval/constraints.txt](../tools/eval/constraints.txt), 25 packages, whose SHA-256 is `d62f5342280814927165b03de87c7d49e463e397bb786206186d576110af67e9`.
       - The record is `results/check/20261116T065949Z_m4_eval_image`, which passed every check of `tools/eval/build.sh`.
-    - **Archive:** `m4-eval_c676e76f95356ea1.tar`, SHA-256 `ae9a7dcfd59672e8573cda16c7985c99542c0e8f0c4c2543ca9f38d3f53d71ab`, kept outside the repository.
+    - **Archive:** `m4-eval_c676e76f95356ea1.tar`, SHA-256 `ae9a7dcfd59672e8573cda16c7985c99542c0e8f0c4c2543ca9f38d3f53d71ab`, kept outside the repository. Its record is `results/check/20261116T064711Z_m4_eval_image_archive`.
   - **Results of §8 step 3:** all passed. On these records `tools/m4_checks.py` exits 0. The commands are in [m4_accuracy.md](../docs/notes/m4_accuracy.md#8-step-3-at-the-code-to-be-frozen).
 
     | Check | Record in `results/check/` | Result |

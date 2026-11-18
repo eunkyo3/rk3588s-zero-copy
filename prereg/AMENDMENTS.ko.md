@@ -511,7 +511,7 @@
     - **베이스:** 변환기 이미지 `sha256:3ea3796529342281fdb543b8911261112e5ab942798c2fea4363edf3eca67f8f`. 이 이미지는 `python:3.10-slim-bookworm@sha256:5be5aaecb962a41567bc8041f1e9e3432cb085b037fe057f9a562630b2e4b370` 위에 빌드했다.
     - **`pip freeze`:** [tools/eval/constraints.txt](../tools/eval/constraints.txt)와 같다. 패키지 25개이며, 파일의 SHA-256은 `d62f5342280814927165b03de87c7d49e463e397bb786206186d576110af67e9`다.
       - 기록은 `results/check/20261116T065949Z_m4_eval_image`이고, `tools/eval/build.sh`의 점검을 모두 통과했다.
-    - **보관본:** `m4-eval_c676e76f95356ea1.tar`, SHA-256 `ae9a7dcfd59672e8573cda16c7985c99542c0e8f0c4c2543ca9f38d3f53d71ab`. 저장소 밖에 둔다.
+    - **보관본:** `m4-eval_c676e76f95356ea1.tar`, SHA-256 `ae9a7dcfd59672e8573cda16c7985c99542c0e8f0c4c2543ca9f38d3f53d71ab`. 저장소 밖에 둔다. 기록은 `results/check/20261116T064711Z_m4_eval_image_archive`다.
   - **§8 3단계의 결과:** 모두 통과했다. 이 기록들에 대해 `tools/m4_checks.py`는 0으로 끝난다. 명령은 [m4_accuracy.md](../docs/notes/m4_accuracy.ko.md#고정할-코드에서의-8-3단계)에 있다.
 
     | 점검 | `results/check/`의 기록 | 결과 |
