@@ -2,15 +2,19 @@
 
 # Where the CPU goes, from B to Cp
 
-**Exploratory, computed after the fact.** Nothing here was pre-registered, and nothing is judged. The note reads the committed runs of M1, M1.1 and M2 again, and puts in one place where each arm's process CPU goes.
+**Exploratory, computed after the fact.** Nothing here was pre-registered, and nothing is judged. The note reads the committed runs of M1, M1.1, M2 and M4 again, and puts in one place where each arm's process CPU goes.
 - **Arms:**
   - **B:** CPU preprocessing, then a copy into the NPU's input (M1);
   - **Bd:** B without its last copy (M1.1, A12);
   - **C:** RGA into the NPU's input, zero copy (M1);
-  - **Cp:** C with NEON post-processing (M2).
+  - **Cp:** C with NEON post-processing (M2);
+  - **C8:** M4's name for Cp (M4);
+  - **C10:** C with YOLOv10n and its own NMS-free post-processing (M4).
 - **Points:** 8 channels in the main condition (5 fps), and 5 channels × 30 fps.
 - **Tool:** [tools/cpu_breakdown.py](../../tools/cpu_breakdown.py). Every number here comes from it. Its full output is [cpu_breakdown/tables.md](cpu_breakdown/tables.md).
-- **C10:** M4's arm with YOLOv10n has not run. It is added here once M4 has run.
+- **M4:** C10 against C8, in M4's own sessions.
+  - **C10 is saturated at 5 channels × 30 fps,** by M4's §3.2 label: 150 inferences/s is more than 0.8 × its `P_cap` of 161.8/s, which is 129.5/s ([M4.md](../report/M4.md#npu-capacity)). That point compares unequal loads.
+  - At 8 channels both arms are unsaturated.
 
 ![CPU by thread group, per session](cpu_breakdown/cpu_breakdown.svg)
 
@@ -23,10 +27,11 @@ Each step is measured against the control of its own session. No ratio here chai
 | M1 | B → C | [main](../../results/comparison/20261103T073439Z_main), [aux](../../results/comparison/20261103T101109Z_aux) | `86587a2` |
 | M1.1 (A12) | B → Bd, B → C | [bdirect_main](../../results/m1.1/20261104T061958Z_bdirect_main), [bdirect_aux](../../results/m1.1/20261104T065947Z_bdirect_aux) | `cdb309e` |
 | M2 | C → Cp | [m2_main](../../results/m2/20261105T071518Z_m2_main), [m2_aux](../../results/m2/20261105T074458Z_m2_aux) | `88206ab` |
+| M4 | C8 → C10 | [m4_main](../../results/m4/20261118T043338Z_m4_main), [m4_aux](../../results/m4/20261118T053535Z_m4_aux) | `de78dbd` |
 
 - **Code:** the commit in each run's `env.json`. Every run of a session has the same one.
 - **Runs:** 3 valid runs per arm and point. Values are the mean ± sample sd per 120 s window.
-- **The sessions differ** in day, session and binary. M2's main condition also staggers the channels' sampling ([prereg/M2.md](../../prereg/M2.md) §3.1). M1's and M1.1's do not.
+- **The sessions differ** in day, session and binary. M2's and M4's main conditions also stagger the channels' sampling ([prereg/M2.md](../../prereg/M2.md) §3.1, [prereg/M4.md](../../prereg/M4.md) §3.2). M1's and M1.1's do not.
 - **C in the three sessions:**
   - 18.56, 19.49 and 18.74 s at 8 channels; 35.68, 37.45 and 37.28 s at 5 channels × 30 fps.
   - Both spreads are 5.0% ((max − min) / min). At 8 channels that is about the size of Cp's effect.
@@ -43,6 +48,7 @@ Process CPU, the arm's mean over its control's mean:
 | B → Bd | M1.1 | 0.972 | 0.992 |
 | B → C | M1.1 | 0.443 | 0.286 |
 | C → Cp | M2 | 0.939 | 0.853 |
+| C8 → C10 | M4 | 1.015 | 1.054 (C10 saturated) |
 
 - **B → C is the preprocessing threads.** In M1, C used 24.72 s less at 8 channels, 24.26 s of it in preprocessing. At 5 channels it used 93.91 s less, 90.73 s of it in preprocessing. M1.1's B → C gives the same split: 24.30 of 24.55 s, and 90.83 of 93.51 s.
 - **B → Bd is not in the preprocessing threads.**
@@ -50,6 +56,10 @@ Process CPU, the arm's mean over its control's mean:
   - At 5 channels it used 1.10 s less: 0.23 s less in the decoder, 1.88 s less in the NPU workers, and 1.01 s more in preprocessing.
   - This note does not explain it.
 - **C → Cp is the NPU workers' threads,** where post-processing runs. They used 1.01 of the 1.14 s less at 8 channels, and 4.95 of 5.49 s less at 5 channels.
+- **C8 → C10 used more CPU in the NPU workers' threads at both points:** 0.15 of 0.27 s more at 8 channels, and 1.58 of 1.79 s more at 5 channels.
+  - At 8 channels the decoder's threads also used 0.17 s more. Their sd there is 0.50 s (C8) and 1.07 s (C10).
+  - M4's report finds the NPU workers' extra CPU consistent with work inside the longer `rknn_run` call. That work is not measured ([M4.md](../report/M4.md#where-c10s-extra-cpu-may-be-exploratory)).
+  - At 5 channels C10 is saturated, so that step compares unequal loads.
 
 ## CPU by thread group
 
@@ -70,6 +80,8 @@ The groups are the M2 report's ([M2.md](../report/M2.md#where-the-saving-comes-f
 | | C | 19.49 ± 0.26 | 11.34 ± 0.16 | 7.75 ± 0.12 | 0.31 ± 0.02 | 0.10 ± 0.01 | 58.2% |
 | M2 | C | 18.74 ± 0.17 | 11.33 ± 0.15 | 6.83 ± 0.08 | 0.45 ± 0.01 | 0.11 ± 0.00 | 60.5% |
 | | Cp | 17.60 ± 0.56 | 11.24 ± 0.53 | 5.82 ± 0.01 | 0.43 ± 0.02 | 0.11 ± 0.01 | 63.8% |
+| M4 | C8 | 17.80 ± 0.57 | 11.38 ± 0.50 | 5.84 ± 0.09 | 0.44 ± 0.02 | 0.12 ± 0.01 | 63.9% |
+| | C10 | 18.07 ± 1.03 | 11.54 ± 1.07 | 5.99 ± 0.05 | 0.42 ± 0.01 | 0.10 ± 0.01 | 63.9% |
 
 5 channels × 30 fps (s):
 
@@ -82,6 +94,8 @@ The groups are the M2 report's ([M2.md](../report/M2.md#where-the-saving-comes-f
 | | C | 37.45 ± 1.41 | 8.42 ± 0.72 | 27.65 ± 0.69 | 1.23 ± 0.04 | 0.14 ± 0.01 | 22.5% |
 | M2 | C | 37.28 ± 0.53 | 8.74 ± 0.25 | 27.10 ± 0.46 | 1.31 ± 0.02 | 0.14 ± 0.01 | 23.4% |
 | | Cp | 31.79 ± 0.40 | 8.29 ± 0.29 | 22.15 ± 0.18 | 1.21 ± 0.04 | 0.14 ± 0.01 | 26.1% |
+| M4 | C8 | 33.25 ± 1.05 | 8.58 ± 0.44 | 23.25 ± 0.54 | 1.28 ± 0.07 | 0.15 ± 0.01 | 25.8% |
+| | C10 (saturated) | 35.04 ± 1.00 | 8.77 ± 0.59 | 24.83 ± 0.35 | 1.31 ± 0.04 | 0.12 ± 0.01 | 25.0% |
 
 - **Against process CPU:** the four groups add up to process CPU within 0.03 s for every arm, on average over its runs. This remainder's sd over the runs is at most 0.07 s.
   - `threads.csv` holds the threads alive at the window's end. A thread that ended earlier would show up in the remainder.
@@ -89,16 +103,17 @@ The groups are the M2 report's ([M2.md](../report/M2.md#where-the-saving-comes-f
 ## Once the input path is zero copy
 
 - **At 8 channels in the main condition, the decoder's threads are the largest group once the input path is zero copy.**
-  - They took 58.4% of C's process CPU in M1, 58.2% in M1.1 and 60.5% in M2, and 63.8% of Cp's.
+  - They took 58.4% of C's process CPU in M1, 58.2% in M1.1 and 60.5% in M2, 63.8% of Cp's, and 63.9% of both C8's and C10's in M4.
   - In B and Bd the largest group is preprocessing, with 55.9 to 57.6%. The decoder's threads took 24.1 to 24.7% there.
-- **At 5 channels × 30 fps they are not.** There the NPU workers' threads are the largest group in C and Cp, with 69.7 to 73.8%. The decoder's threads took 22.5 to 26.1%.
-- **Within a session, the decoder's seconds change little between arms.** At 8 channels they went up 0.38 s (M1) and 0.47 s (M1.1) from B to C, and down 0.10 s from C to Cp. Their share grows because the other groups shrink.
+- **At 5 channels × 30 fps they are not.** There the NPU workers' threads are the largest group in C, Cp, C8 and C10, with 69.7 to 73.8%. The decoder's threads took 22.5 to 26.1%.
+- **Within a session, the decoder's seconds change little between arms.** At 8 channels they went up 0.38 s (M1) and 0.47 s (M1.1) from B to C, down 0.10 s from C to Cp, and up 0.17 s from C8 to C10. Their share grows because the other groups shrink.
 
 ## Against the published values
 
 - **The tool gives back every published value it overlaps with,** at the published digits:
-  - the process CPU of every arm and point here ([M1_tables.md](../report/M1_tables.md), [M2_tables.md](../report/M2_tables.md));
-  - every value of the M2 report's thread-group table ([M2.md](../report/M2.md#where-the-saving-comes-from-exploratory)).
+  - the process CPU of every arm and point here ([M1_tables.md](../report/M1_tables.md), [M2_tables.md](../report/M2_tables.md), [M4_tables.md](../report/M4_tables.md));
+  - every value of the M2 report's thread-group table ([M2.md](../report/M2.md#where-the-saving-comes-from-exploratory));
+  - the four thread groups of both M4 arms at both points, 16 values ([M4_tables.md](../report/M4_tables.md#pipeline-32-33)).
 - **The check is part of the tool.** It prints the comparison at the end of its output, and exits 1 if a value does not match.
 - **The M2 report's table had no tool in the repository.** This tool's groups give back each of its 12 values.
 

@@ -3,16 +3,18 @@
 
 Each step against the control of its own session, at 8 channels in the main condition and at 5 channels
 × 30 fps: C against B in M1 (sweeps main and aux), Bd and C against B in M1.1 (A12: bdirect_main and
-bdirect_aux), Cp against C in M2 (m2_main and m2_aux). Per arm, over the valid runs that count (taken as
-tools/m1_report.py takes them), the mean ± sample sd of:
+bdirect_aux), Cp against C in M2 (m2_main and m2_aux), C10 against C8 in M4 (m4_main and m4_aux; C8 is
+Cp). Per arm, over the valid runs that count (taken as tools/m1_report.py takes them), the mean ± sample sd
+of:
   - process CPU in the 120 s window (summary.csv), and the ratio of its mean to the control's mean;
   - CPU by thread group, from threads.csv, with the groups of the M2 report: NPU workers (npu-*), decoder
     (dec-* and MPP's mpp_* threads), preprocessing (pre-*), and the rest (bench_main, metrics);
   - the remainder: process CPU minus the sum of the threads (threads.csv has the threads alive at the
     window's end).
-With them: each session's code commit, from its runs' env.json; the published values these numbers overlap
-with, and whether they match at the published digits (exit 1 if one does not); and the figure. The sessions,
-and their binaries, differ, so the tables and the figure compare values within a session only.
+With them: each session's code commit, from its runs' env.json; the arms its saturation.txt labels
+saturated (M4 §3.2), if it has one; the published values these numbers overlap with, and whether they match
+at the published digits (exit 1 if one does not); and the figure. The sessions, and their binaries, differ,
+so the tables and the figure compare values within a session only.
 
 Usage, from the repository: python3 tools/cpu_breakdown.py [--out FILE] [--svg FILE]
   --out   write the tables there (Markdown) instead of printing them
@@ -39,13 +41,14 @@ STUDIES = (  # (study, {point: sweep}, arms; the first is the session's control)
     ("M1", {"main": "main", "aux": "aux"}, ("B", "C")),
     ("M1.1", {"main": "bdirect_main", "aux": "bdirect_aux"}, ("B", "Bd", "C")),
     ("M2", {"main": "m2_main", "aux": "m2_aux"}, ("C", "Cp")),
+    ("M4", {"main": "m4_main", "aux": "m4_aux"}, ("C8", "C10")),
 )
 POINTS = {"main": (8, "8 channels, main condition (5 fps)"), "aux": (5, "5 channels × 30 fps")}
 GROUPS = (("dec", "Decoder (dec-*, mpp_*)"), ("npu", "NPU workers (npu-*)"), ("pre", "Preprocessing (pre-*)"),
           ("rest", "Rest (bench_main, metrics)"))
 KEYS = ("process",) + tuple(g for g, _ in GROUPS) + ("threads", "remainder")
 PUBLISHED = {  # (study, point, arm): {key: value as published}; process CPU from the reports' tables, the
-    # groups from docs/report/M2.md, "Where the saving comes from"
+    # groups from docs/report/M2.md, "Where the saving comes from", and docs/report/M4_tables.md
     ("M1", "main", "B"): {"process": "43.283 ± 0.343"},
     ("M1", "main", "C"): {"process": "18.560 ± 0.308"},
     ("M1", "aux", "B"): {"process": "129.587 ± 1.236"},
@@ -60,8 +63,17 @@ PUBLISHED = {  # (study, point, arm): {key: value as published}; process CPU fro
     ("M2", "main", "Cp"): {"process": "17.600 ± 0.560", "npu": "5.82 ± 0.01", "dec": "11.24 ± 0.53", "pre": "0.43"},
     ("M2", "aux", "C"): {"process": "37.280 ± 0.528", "npu": "27.10 ± 0.46", "dec": "8.74 ± 0.25", "pre": "1.31"},
     ("M2", "aux", "Cp"): {"process": "31.790 ± 0.401", "npu": "22.15 ± 0.18", "dec": "8.29 ± 0.29", "pre": "1.21"},
+    ("M4", "main", "C8"): {"process": "17.797 ± 0.570", "npu": "5.840 ± 0.090", "dec": "11.377 ± 0.497",
+                           "pre": "0.440 ± 0.017", "rest": "0.120 ± 0.010"},
+    ("M4", "main", "C10"): {"process": "18.070 ± 1.031", "npu": "5.993 ± 0.049", "dec": "11.543 ± 1.074",
+                            "pre": "0.423 ± 0.012", "rest": "0.100 ± 0.010"},
+    ("M4", "aux", "C8"): {"process": "33.250 ± 1.051", "npu": "23.247 ± 0.538", "dec": "8.583 ± 0.441",
+                          "pre": "1.280 ± 0.070", "rest": "0.147 ± 0.006"},
+    ("M4", "aux", "C10"): {"process": "35.037 ± 0.999", "npu": "24.830 ± 0.348", "dec": "8.767 ± 0.590",
+                           "pre": "1.310 ± 0.040", "rest": "0.117 ± 0.012"},
 }
-SOURCES = {"M1": "M1_tables.md", "M1.1": "M1_tables.md (A12)", "M2": "M2_tables.md; groups: M2.md"}
+SOURCES = {"M1": "M1_tables.md", "M1.1": "M1_tables.md (A12)", "M2": "M2_tables.md; groups: M2.md",
+           "M4": "M4_tables.md"}
 COLOURS = dict(zip((g for g, _ in GROUPS), ("#2a78d6", "#eb6834", "#1baf7a", "#eda100")))  # categorical slots 1-4
 
 
@@ -97,11 +109,20 @@ def run_cpu(run_dir):
     return dict(g, process=process, threads=threads, remainder=process - threads, commit=commit)
 
 
+def saturated(session_dir):
+    """The arms a session's saturation.txt labels saturated ("label_<arm>: saturated", M4 §3.2); none
+    without the file."""
+    path = session_dir / "saturation.txt"
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    return [k[len("label_"):] for k, _, v in (x.partition(": ") for x in lines)
+            if k.startswith("label_") and v.strip() == "saturated"]
+
+
 # ---------------------------------------------------------------- the runs that count
 
 def collect(root):
-    """{(study, point): {"sweep", "sessions", "commits", "arms": {arm: {repetition: run_cpu}}}}, from the
-    valid runs that count of each study's sweeps under root/results."""
+    """{(study, point): {"sweep", "sessions", "commits", "saturated", "arms": {arm: {repetition: run_cpu}}}},
+    from the valid runs that count of each study's sweeps under root/results."""
     out = {}
     for study, sweeps, arms in STUDIES:
         for point, sweep in sweeps.items():
@@ -114,7 +135,9 @@ def collect(root):
                     data[arm][r] = run_cpu(root / "results" / kind / run["session"] / run["name"])
                     sessions.add(run["session"])
             commits = sorted({m["commit"] for runs_ in data.values() for m in runs_.values()})
-            out[(study, point)] = {"sweep": sweep, "sessions": sorted(sessions), "commits": commits, "arms": data}
+            sat = [a for a in arms if any(a in saturated(root / "results" / kind / s) for s in sessions)]
+            out[(study, point)] = {"sweep": sweep, "sessions": sorted(sessions), "commits": commits,
+                                   "saturated": sat, "arms": data}
     return out
 
 
@@ -200,13 +223,18 @@ def report(c):
                 lines.append(f"| {study} | {arms[0]} → {arm} | "
                              + " | ".join(f"{s[k][1] - base[k][1]:+.2f}" if s[k][0] and base[k][0] else "–"
                                           for k in ("process",) + tuple(g for g, _ in GROUPS) + ("remainder",)) + " |")
-        cs = [summary(c[(study, point)]["arms"]["C"])["process"][1] for study, _, _ in STUDIES]
+        with_c = [study for study, _, arms in STUDIES if "C" in arms]
+        cs = [summary(c[(study, point)]["arms"]["C"])["process"][1] for study in with_c]
         lines += ["", "C's process CPU in the three sessions (not one scale): "
-                  + ", ".join(f"{study} {f(x)} s" for (study, _, _), x in zip(STUDIES, cs))
+                  + ", ".join(f"{study} {f(x)} s" for study, x in zip(with_c, cs))
                   + f"; (max − min) / min = {f(100 * spread(cs), 1)}%."]
         bs = [summary(c[(study, point)]["arms"]["B"])["process"][1] for study, _, arms in STUDIES if "B" in arms]
         lines.append(f"B's in M1 and M1.1: {', '.join(f(x) + ' s' for x in bs)}; (max − min) / min = "
                      f"{f(100 * spread(bs), 1)}%.")
+        sat = [f"{study} {a}" for study, _, _ in STUDIES for a in c[(study, point)]["saturated"]]
+        if sat:
+            lines.append(f"Labelled saturated by its session's `saturation.txt`, so the step to it compares unequal "
+                         f"loads: {', '.join(sat)}.")
     lines += ["", "## Against the published values", "",
               "| Study | Point | Arm | Value | Published | This tool | Match | Source |",
               "|---|---|---|---|---|---|---|---|"]
@@ -229,7 +257,7 @@ def checks(c):
 
 # ---------------------------------------------------------------- the figure
 
-FIG_W, FIG_H, AXES_H = 9.6, 8.9, 2.55  # inches: the figure, and each row's panels
+FIG_W, FIG_H, AXES_H = 12.0, 8.9, 2.55  # inches: the figure, and each row's panels
 LINE_IN = 7.5 / 72 * 1.25  # one line of the segments' 7.5 pt text
 
 
@@ -264,6 +292,7 @@ def figure(c, path):
                                 color=plots.INK if g == "rest" else "#ffffff", zorder=4)
                     bottom += h
                 tag = "control" if x == 0 else f"{ratio(s['process'][1], control):.3f} × {arms[0]}"
+                tag += "\nsaturated" if arm in d["saturated"] else ""
                 ax.text(x, bottom + 0.012 * y_max, f"{mean_sd(s['process'])} s\n{tag}", ha="center", va="bottom",
                         fontsize=7.5, color=plots.INK, zorder=4)
             ax.set_xticks(range(len(arms)))
@@ -275,21 +304,24 @@ def figure(c, path):
         axes[row][0].set_ylabel("CPU s in the 120 s window")
         fig.text(0.01, axes[row][0].get_position().y1 + 0.5 / FIG_H, title, ha="left", va="bottom", fontsize=10,
                  fontweight="bold", color=plots.INK)
-    cs = {p: [summary(c[(study, p)]["arms"]["C"])["process"][1] for study, _, _ in STUDIES] for p in POINTS}
+    with_c = [study for study, _, arms in STUDIES if "C" in arms]
+    cs = {p: [summary(c[(study, p)]["arms"]["C"])["process"][1] for study in with_c] for p in POINTS}
     remainder = max(abs(summary(r)["remainder"][1]) for d in c.values() for r in d["arms"].values() if r)
     note = ("Exploratory, computed after the fact. Each panel is one session with its own binary (its code commit in "
-            "its title): compare bars within a panel only. C's process CPU in M1 / M1.1 / M2: "
+            f"its title): compare bars within a panel only. C's process CPU in {' / '.join(with_c)}: "
             + "; ".join(f"{POINTS[p][0]} channels {' / '.join(f'{x:.2f}' for x in v)} s ({100 * spread(v):.1f}% apart)"
                         for p, v in cs.items())
-            + ". M2's main condition staggers the channels' sampling. A bar is the sum of the threads in threads.csv "
-            f"(those alive at the window's end); it differs from the process CPU above it by at most {remainder:.2f} s "
-            "on average. In a segment: CPU s (share of process CPU). Mean ± sample sd of 3 runs; ratios of the means.")
+            + ". M4's C8 is M2's Cp. M2's and M4's main conditions stagger the channels' sampling. \"saturated\": its "
+            "session labels it so (M4 §3.2); the step to it compares unequal loads. A bar is the sum of "
+            "the threads in threads.csv (those alive at the window's end); it differs from the process CPU above it by "
+            f"at most {remainder:.2f} s on average. In a segment: CPU s (share of process CPU). Mean ± sample sd of 3 "
+            "runs; ratios of the means.")
     fig.suptitle("Where the CPU goes, from B to Cp, by thread group", x=0.01, y=1 - 0.1 / FIG_H, ha="left",
                  va="top", fontsize=10.5, fontweight="bold", color=plots.INK)
     handles, labels = axes[0][0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper left", bbox_to_anchor=(0.005, 1 - 0.4 / FIG_H), ncol=len(labels),
                fontsize=8.5, labelcolor=plots.INK)
-    fig.text(0.01, 0.08 / FIG_H, textwrap.fill(note, 170), ha="left", va="bottom", fontsize=7.5, color=plots.INK_2)
+    fig.text(0.01, 0.08 / FIG_H, textwrap.fill(note, 210), ha="left", va="bottom", fontsize=7.5, color=plots.INK_2)
     with open(path, "w", encoding="utf-8", newline="\n") as out:  # the same bytes on every OS
         fig.savefig(out, format="svg", metadata={"Date": None, "Creator": None})
     plt.close(fig)

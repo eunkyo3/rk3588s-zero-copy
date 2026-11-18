@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Tests for tools/cpu_breakdown.py: the thread groups, one run's CPU, the ratios and spreads, the published
-values written at their digits, and the published values the committed sessions give back.
+"""Tests for tools/cpu_breakdown.py: the thread groups, one run's CPU, a session's saturation labels, the ratios
+and spreads, the published values written at their digits, and the published values the committed sessions
+give back.
 
 Usage: python3 tests/test_cpu_breakdown.py
 """
@@ -16,7 +17,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import cpu_breakdown as cb  # noqa: E402
 
 SESSIONS = [ROOT / "results" / "comparison" / "20261103T073439Z_main",
-            ROOT / "results" / "m2" / "20261105T074458Z_m2_aux"]
+            ROOT / "results" / "m2" / "20261105T074458Z_m2_aux",
+            ROOT / "results" / "m4" / "20261118T053535Z_m4_aux"]
 
 
 def thread(comm, s):
@@ -50,6 +52,14 @@ class OneRun(unittest.TestCase):
         self.assertAlmostEqual(m["remainder"], 0.4)
         self.assertEqual((m["npu"], m["dec"], m["pre"], m["rest"], m["commit"]), (2.0, 1.0, 0.0, 0.1, "88206ab9"))
 
+    def test_saturation_labels(self):
+        with tempfile.TemporaryDirectory() as t:
+            d = Path(t)
+            self.assertEqual(cb.saturated(d), [])  # no saturation.txt: M1's, M1.1's and M2's sessions
+            (d / "saturation.txt").write_text("calib_npu_session: results/m4/x\npoint: aux\nlabel_C8: unsaturated\n"
+                                              "label_C10: saturated\n", encoding="utf-8")
+            self.assertEqual(cb.saturated(d), ["C10"])
+
 
 class Numbers(unittest.TestCase):
     def test_summary_largest_ratio_spread(self):
@@ -81,7 +91,17 @@ class Published(unittest.TestCase):
         self.assertEqual({k: d["commits"] for k, d in c.items() if k[1] == "main"},
                          {("M1", "main"): ["86587a29975c28c1c49f202ba8f6023ed4074861"],
                           ("M1.1", "main"): ["cdb309e4bbe9bf17646526a722e0a1fccb5e9d56"],
-                          ("M2", "main"): ["88206ab978e318eaaf1db3d4a5448b580a84f8ac"]})
+                          ("M2", "main"): ["88206ab978e318eaaf1db3d4a5448b580a84f8ac"],
+                          ("M4", "main"): ["de78dbd1ffe3046e807e6c17ddc9fa48accd6bff"]})
+        self.assertEqual({k: d["saturated"] for k, d in c.items() if d["saturated"]}, {("M4", "aux"): ["C10"]})
+
+    def test_m4_has_its_step_and_stays_out_of_the_c_lines(self):
+        text = cb.report(cb.collect(ROOT))
+        self.assertIn("| M4 | C8 → C10 | +0.27 |", text)
+        self.assertIn("| M4 | C8 → C10 | +1.79 |", text)
+        self.assertIn("C's process CPU in the three sessions (not one scale): M1 18.56 s, M1.1 19.49 s, M2 18.74 s;",
+                      text)
+        self.assertIn("compares unequal loads: M4 C10.", text)
 
     def test_the_figure_twice_gives_the_same_bytes(self):
         c = cb.collect(ROOT)
