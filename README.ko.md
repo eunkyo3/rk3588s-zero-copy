@@ -8,6 +8,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 - 사전 등록한 가설마다 판정과 그 근거가 된 측정을 담은 리포트: [docs/report/M1.ko.md](docs/report/M1.ko.md)
 - 선택 설계에 대한 탐색용 리포트. 아무것도 판정하지 않는다: [docs/report/M1.1.ko.md](docs/report/M1.1.ko.md)
 - C의 후처리를 빠르게 한 M2의 리포트. 따로 사전 등록한 가설이 있다: [docs/report/M2.ko.md](docs/report/M2.ko.md)
+- NMS 없는 모델(YOLOv10n)에 대한 M4의 부록 리포트. 가설 없이 등록했다: [docs/report/M4.ko.md](docs/report/M4.ko.md)
 - 다채널 검출 데모: [docs/notes/demo.ko.md](docs/notes/demo.ko.md)
 - 결과를 다시 만드는 스크립트
 
@@ -44,6 +45,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 - **4K, 탐색용(M1.1):** 2026-11-04에 1·2·4·8채널로 24회를 실행했고, 모두 유효했다. 이번에도 C의 프로세스 CPU가 59–60% 적었고, 모든 채널 수에서 p99가 낮았다. 4K에서는 A5의 동등성을 주장하지 않는다(B에 대한 텐서 MAE: C 4.52, R 1.88). 아무것도 판정하지 않는다. [M1.1 보고서](docs/report/M1.1.ko.md#4k-입력a11)를 보라.
 - **§13의 설계, 탐색용(M1.1):** 2026-11-04에 26회를 실행했고 모두 유효했다. 설계마다 자기 B와 C를 다시 돌렸다. B의 마지막 복사만 없앤 B-direct는 8채널에서 B의 프로세스 CPU를 2.8% 줄였다. C는 55.7%다. 그러니 C의 절감은 대부분 C와 B-direct를 가르는 것, 주로 RGA3에서의 변환에 있다. 전처리 스레드 네 개는 B의 지연을 낮추지 않았고, A55 코어에서 두 변형 모두 8채널을 유지했다. 사후에 발견한 것: 채널들의 프레임이 얼마나 몰려 도착하는지는 프로토콜이 통제하지 않는데, 여러 채널의 측정점에서 지연이 이와 함께 움직였다. 아무것도 판정하지 않는다. [M1.1 보고서](docs/report/M1.1.ko.md)를 보라.
 - **M2, C의 더 빠른 후처리(사전 등록):** 2026-11-05에 12회를 실행했고 모두 유효했다. 검출이 M1과 같은 NEON 후처리를 넣은 갈래 Cp는 C보다 프로세스 CPU를 8채널에서 6.07%, 5채널 × 30 fps에서 14.73% 적게 썼다. 두 가설(기준 3%와 5%, 프로토타입을 본 뒤 정했고 이를 공개함)이 모두 채택됐다. 차이의 대부분은 후처리가 도는 NPU 워커 스레드에 있다(탐색). [M2 리포트](docs/report/M2.ko.md)를 보라.
+- **M4, NMS 없는 모델(등록한 부록, 가설 없음):** 2026-11-18에 COCO val2017 5,000장에 대한 정확도 패스 4개와 보드 실행 24회를 했고, 모두 유효했다. AP@[.5:.95]는 YOLOv8n이 36.8(INT8, 보드)과 37.3(FP32), YOLOv10n이 37.8과 38.4였다. YOLOv10n의 NPU 용량은 16% 낮아서(초당 161.8회 대 193.2회) 5채널 × 30 fps에서 포화다. C 파이프라인에서 그 `rknn_run`은 약 3 ms 길었고, 프로세스 CPU 차이는 +1.7%와 +5.4%였으며 구간은 0을 걸친다. 아무것도 판정하지 않는다. [M4 리포트](docs/report/M4.ko.md)를 보라.
 - **데모:** 8채널에서 C가 검출한 결과를 오프라인으로 렌더했다([docs/notes/demo.ko.md](docs/notes/demo.ko.md)). 영상은 `v0.1-m1` Release에 첨부하며, 그 속 원본 영상은 Apache-2.0이 아니다([라이선스](#라이선스)).
 
 ![검출 데모의 한 프레임](docs/report/demo/demo_m1.jpg)
@@ -156,7 +158,7 @@ flowchart TB
 | M1 | B 대 C 파이프라인, 채널 스윕 리포트, 다채널 검출 데모 | 공개 | [`prereg-v1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-v1), [`amend-A8`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A8), [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) | [M1](docs/report/M1.ko.md) |
 | M1.1 (선택) | 민감도 및 탐색 실행: 4K 입력(A11)과 PROTOCOL §13의 설계 | 공개, 탐색적 | `freeze-m1` 뒤의 [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12) | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) | [M1.1](docs/report/M1.1.ko.md) |
 | M2 | 후처리 최적화, 동일 모델 | 공개, CPU 가설 두 개 모두 채택 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2)([`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)과 함께) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.ko.md) |
-| M4 | 부록: NMS 없는 모델, mAP와 처리량 | 가설 없이 사전 등록됨. 고정됨(A14). 실행은 끝났고([results/m4](results/m4)), 다음은 보고서 | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4)([`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)와 함께) | `v0.4-m4`(예정) | 계획: [prereg/M4.md](prereg/M4.ko.md) |
+| M4 | 부록: NMS 없는 모델, mAP와 처리량 | 보고함, 판정 없음(가설 없음) | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4)([`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)와 함께) | [`v0.4-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.4-m4) | [M4](docs/report/M4.ko.md) |
 | M3 | 명령 하나로 재현하는 스크립트 | M4 다음. 보드 OS를 다시 설치해야 한다 | | `v0.3-m3`(예정) | |
 
 - **순서:** M4를 M3보다 먼저 한다.
@@ -208,7 +210,7 @@ sudo build/bench_main --variant C --channels 8 --source 'rtsp://<pc>:8554/ch{n}'
 | `models/` | 모델 다운로드와 변환. 파일은 Release에 있다. |
 | `tests/` | 파이프라인 코어와 Python 도구의 테스트 |
 | `docs/notes/` | 마일스톤별 기록: 환경, 스파이크, 전처리, 코어, 동등성, 캘리브레이션, 비교, 분석, M2 전의 탐색 |
-| `docs/report/` | M1, M1.1, M2 보고서와 그 표, 요약 파일, 단계별 시간, 도착 위상, 그림, 그리고 데모의 파일 |
+| `docs/report/` | M1, M1.1, M2, M4 보고서와 그 표, 요약 파일, 단계별 시간, 도착 위상, 그림, 그리고 데모의 파일 |
 | `results/` | 모든 실행의 원자료. 큰 텐서 덤프는 Release에 둔다. 파일마다 헤더에 코드, 모델, 수정 기록 번호가 있다(PROTOCOL §1). |
 
 ## 라이선스

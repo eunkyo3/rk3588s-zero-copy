@@ -8,6 +8,7 @@ The project publishes:
 - a report that gives each pre-registered hypothesis its verdicts, with the measurements behind them: [docs/report/M1.md](docs/report/M1.md);
 - an exploratory report on the optional designs, which judges nothing: [docs/report/M1.1.md](docs/report/M1.1.md);
 - M2's report, a faster post-processing for C with its own pre-registered hypotheses: [docs/report/M2.md](docs/report/M2.md);
+- M4's report, an appendix on an NMS-free model (YOLOv10n), registered with no hypotheses: [docs/report/M4.md](docs/report/M4.md);
 - a multi-channel detection demo: [docs/notes/demo.md](docs/notes/demo.md);
 - scripts that reproduce the results.
 
@@ -44,6 +45,7 @@ Two pipelines share the same RTSP input, decoder (ffmpeg-rockchip `h264_rkmpp`, 
 - **4K, exploratory (M1.1):** 24 runs on 2026-11-04 at 1, 2, 4 and 8 channels, all valid. C again used 59 to 60% less process CPU, and its p99 was lower at every count. Equivalence under A5 is not claimed at 4K (tensor MAE against B: C 4.52, R 1.88). Nothing is judged; see [the M1.1 report](docs/report/M1.1.md#4k-input-a11).
 - **The designs of §13, exploratory (M1.1):** 26 runs on 2026-11-04, all valid, each design with its own B and C rerun. B-direct, which drops only B's last copy, saved 2.8% of B's process CPU at 8 channels, against C's 55.7%: most of C's saving lies in what separates C from B-direct, chiefly the conversion on RGA3. Four preprocessing threads did not lower B's latency, and on the A55 cores both variants held 8 channels. Found after the fact: how close together the channels' frames arrive is not controlled by the protocol, and at multi-channel points latency went with it. Nothing is judged; see [the M1.1 report](docs/report/M1.1.md).
 - **M2, a faster post-processing for C (pre-registered):** 12 runs on 2026-11-05, all valid. Arm Cp, C with a NEON post-processing whose detections equal M1's, used 6.07% less process CPU than C at 8 channels and 14.73% less at 5 channels × 30 fps; both hypotheses (thresholds 3% and 5%, set after the prototype, which is disclosed) were adopted. Most of the difference is in the NPU workers' threads, where post-processing runs (exploratory). See [the M2 report](docs/report/M2.md).
+- **M4, an NMS-free model (registered appendix, no hypotheses):** on 2026-11-18, four accuracy passes over COCO val2017's 5,000 images and 24 board runs, all valid. AP@[.5:.95] was 36.8 (INT8, board) and 37.3 (FP32) for YOLOv8n, 37.8 and 38.4 for YOLOv10n. YOLOv10n's NPU capacity was 16% lower (161.8 against 193.2 inferences/s), so it is saturated at 5 channels × 30 fps. In C's pipeline its `rknn_run` took about 3 ms longer; its process CPU differed by +1.7% and +5.4%, with intervals that span 0. Nothing is judged; see [the M4 report](docs/report/M4.md).
 - **Demo:** C's detections on eight channels, rendered offline ([docs/notes/demo.md](docs/notes/demo.md)). The video is attached to the `v0.1-m1` Release; its footage is not Apache-2.0 ([License](#license)).
 
 ![Detection demo, one frame](docs/report/demo/demo_m1.jpg)
@@ -156,7 +158,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 | M1 | B vs C pipelines, channel sweep report, multi-channel detection demo | released | [`prereg-v1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-v1), [`amend-A8`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A8), [`freeze-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m1) | [`v0.1-m1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1-m1) | [M1](docs/report/M1.md) |
 | M1.1 (optional) | sensitivity and exploratory runs: the 4K input (A11) and PROTOCOL §13's designs | released, exploratory | [`amend-A12`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A12), after `freeze-m1` | [`v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.1.1) | [M1.1](docs/report/M1.1.md) |
 | M2 | post-processing optimization, same model | released; both CPU hypotheses adopted | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2) (with [`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.md) |
-| M4 | appendix: NMS-free model, mAP and throughput | pre-registered, with no hypotheses; frozen (A14); its runs are done ([results/m4](results/m4)), the report comes next | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4) (with [`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)) | `v0.4-m4` (planned) | plan: [prereg/M4.md](prereg/M4.md) |
+| M4 | appendix: NMS-free model, mAP and throughput | reported, with no verdict (no hypotheses) | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4) (with [`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)) | [`v0.4-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.4-m4) | [M4](docs/report/M4.md) |
 | M3 | one-command reproduction scripts | after M4; it needs the board's OS to be reinstalled | | `v0.3-m3` (planned) | |
 
 - **Order:** M4 comes before M3.
@@ -208,7 +210,7 @@ Tests: `build/test_core` for the pipeline core; `python3 tests/test_calib_summar
 | `models/` | model download and conversion. The files are kept in a Release. |
 | `tests/` | unit tests of the pipeline core and of the Python tools |
 | `docs/notes/` | notes per milestone: environment, spike, preprocessing, core, equivalence, calibration, comparison, analysis, the exploration before M2 |
-| `docs/report/` | the M1, M1.1 and M2 reports, their tables, summary file, stage times, arrival phases and figures, and the demo's files |
+| `docs/report/` | the M1, M1.1, M2 and M4 reports, their tables, summary file, stage times, arrival phases and figures, and the demo's files |
 | `results/` | the raw results of every run; large tensor dumps are kept in Releases. Each file's header names its code, model and amendment (PROTOCOL §1). |
 
 ## License
