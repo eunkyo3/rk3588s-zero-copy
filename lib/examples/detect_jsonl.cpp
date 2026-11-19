@@ -1,7 +1,7 @@
 // An example of the library, and the tool the tests compare with the benchmark's: detections as JSON
 // lines on stdout, events on stderr.
 // Usage: rkzc-jsonl --model FILE.rknn [--post auto|m1|neon|v10] [--every N] [--loop] [--seconds S]
-//                   SOURCE...
+//                   [--retry-max MS] [--stall MS] SOURCE...
 // It runs until every source has ended (files, without --loop), for S seconds, or until SIGINT/SIGTERM.
 //   {"channel": 0, "seq": 0, "pts_us": 0, "width": 1920, "height": 1080,
 //    "detections": [[class, score, x, y, w, h], ...]}        x, y, w, h in the source frame's pixels
@@ -50,11 +50,15 @@ int main(int argc, char** argv) {
             cfg.every_nth_frame = std::atoi(argv[++i]);
         else if (a == "--seconds" && has_value)
             seconds = std::atoi(argv[++i]);
+        else if (a == "--retry-max" && has_value)
+            cfg.reconnect_max_ms = std::atoi(argv[++i]);
+        else if (a == "--stall" && has_value)
+            cfg.stall_timeout_ms = std::atoi(argv[++i]);
         else if (a == "--loop")
             cfg.loop_files = true;
         else if (a.rfind("--", 0) == 0) {
             std::fprintf(stderr, "usage: rkzc-jsonl --model FILE.rknn [--post auto|m1|neon|v10] [--every N] "
-                                 "[--loop] [--seconds S] SOURCE...\n");
+                                 "[--loop] [--seconds S] [--retry-max MS] [--stall MS] SOURCE...\n");
             return 2;
         } else
             cfg.sources.push_back(a);

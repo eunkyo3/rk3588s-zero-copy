@@ -74,7 +74,7 @@ It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?
 | `src/detector.cpp` | the pipeline: decode, sample, prepare, infer, post-process, call back |
 | `src/check.cpp` | `check_model`, `check_source` |
 | `tools/rkzc_check.cpp`, `examples/detect_jsonl.cpp` | `rkzc-check`, `rkzc-jsonl` |
-| `tests/` | `test_checks`, `test_detector`, `equivalence.sh` (board); `no_opencv.sh` |
+| `tests/` | `test_checks`, `test_detector`, `equivalence.sh` (board); `no_opencv.sh`; `rtsp_interruptions.sh` (manual, on a PC) |
 
 ## Known limits
 
@@ -84,7 +84,7 @@ It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?
 - **A failed open can leak what the failing step held:** a slot's buffer and mapping if the RGA refuses it, or the extra RKNN context of the output check if its run fails. These need the NPU or the kernel to fail.
 - **One failure is undefined behaviour:** if the decoder does not offer DRM PRIME frames, `die()` throws inside an FFmpeg callback. `h264_rkmpp` always offers them.
 - **The libraries underneath print** to stderr on their own (MPP, RKNN, FFmpeg).
-- **Reconnection was tested with files that start again, a file that does not exist and a stall limit of 1 ms,** not with a camera or an RTSP server that drops.
+- **Reconnection was tested against one RTSP server (mediamtx) on a wired link,** not against a camera, Wi-Fi or packet loss. The table under "Checked" is from a manual test, not from `ctest`.
 - **On `stop()` the decoders close while already prepared frames are still being inferred.** The benchmark keeps its inputs open until the pipeline has drained. Frames waiting for preprocessing are let through first, so no frame holds a decoder buffer when its decoder closes.
 - **Not the measured configuration in three ways:** it is compiled with `-fPIC` and hidden visibility; it pins nothing, where `bench_main` pins its process, and so MPP's, FFmpeg's and librknnrt's threads, to the A76 cores 4 to 7; and it adds the callback, the coordinate mapping and a monitor thread. What these do to CPU time or latency has not been measured. A program that wants the benchmark's placement can pin itself before `Detector::open`.
 
@@ -99,5 +99,16 @@ On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn`, a 2 s
 - **A looped file:** two channels were each reopened 7 times in 15 s with no error. A channel held at most 2 decoder buffers for the RGA in its first play and at most 2 after four reopenings; with the release on reopening taken out, the same test saw 16 and failed. No file descriptor was left open afterwards.
 - **A stall:** with the limit at 1 ms, a file's channel was halted and opened again 15 times in 3 s.
 - **A source that is down** was retried 12 times in 4 s (100 ms doubling to 400 ms) while the other channel played; `stop()` returned in 0.01 s.
+- **A real RTSP server, interrupted** (`tests/rtsp_interruptions.sh` on the stream PC: mediamtx and one ffmpeg publisher; the detector on the board with the retry wait capped at 4 s). The channel came back every time, with 596 frames inferred, none dropped and no frame error:
+
+  | Interruption | Noticed after | What ended the read | Open again, after the source was back |
+  |---|---|---|---|
+  | A: the publisher is killed, the server stays up | 0.01 s | the server closed the stream | 5.5 s |
+  | B: the publisher is frozen for 20 s | 10.0 s | the server gave the publisher up and closed the stream | 4.5 s |
+  | C: the server is frozen for 20 s | 10.2 s | FFmpeg's own read timeout, twice 5 s | 0.1 s |
+  | D: the server and the publisher are killed | 0.01 s | the connection closed | 4.5 s |
+
+  - **The stall limit did not act in that run:** at its default of 10 s, the server or FFmpeg ended the read first. In a second run with the limit at 3 s, a frozen server and a frozen publisher were each noticed after 3.0 s, and the blocked network read returned 0.04 s after the monitor asked.
+  - **How long the reopening takes** depends on where the retry wait stands when the source returns: up to the cap, 30 s by default.
 - **Eight looped channels for 30 s:** 152 frames sampled and delivered on each channel, none dropped, no error. This is not a measurement.
 - `ldd` shows no OpenCV; `exit` and `abort` are not among the undefined symbols.
