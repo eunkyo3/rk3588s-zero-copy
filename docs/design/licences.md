@@ -4,6 +4,8 @@
 
 **Status:** step 1 of [packaging.md](packaging.md). The licence texts were read on 2026-11-19, at the versions this repository pins. This is a reading by the project, not legal advice; a commercial use should have it checked.
 
+**Intended use (the owner, 2026-11-19):** an open-source portfolio project, not a commercial product. The decisions below do not depend on that: the limits on redistributing Rockchip's files hold for any distributor, and keeping the model outside keeps the package Apache 2.0.
+
 **Result:**
 
 | Part | Licence, as read | Decision |
