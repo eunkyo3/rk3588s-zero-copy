@@ -97,14 +97,14 @@ The hard part of installation is not this repository's code. M3's setup script s
 |---|---|---|---|
 | Kernel drivers (rknpu, rga, MPP) | yes | — | require them; check versions at install |
 | librga, MPP userspace | yes | no (FriendlyElec's own packages) | depend on the image's; check versions |
-| librknnrt 2.3.2 | **no** | no | (a) bundle it, (b) fetch it at install with its SHA-256 |
+| librknnrt 2.3.2 | **no** | no | fetch it at install with its SHA-256; its licence does not allow bundling |
 | ffmpeg-rockchip | no | no | (a) bundle the four built libraries, (b) build at install (6 min on the board) |
-| The model (`.rknn`) | no | no | fetch from this repository's Release, or the user's own |
+| The model (`.rknn`) | no | no | not in the package (AGPL 3.0): fetched from this repository's Release by a separate command, or the user's own |
 
-- **Recommended:** bundle ffmpeg-rockchip's libraries privately under `/opt/rkzc/lib` (as the setup script does under `/opt/ffmpeg-rockchip`), so they cannot collide with Ubuntu's FFmpeg. Fetch librknnrt at install unless its licence clearly allows redistribution.
-- **Licences — not checked yet, and they decide the options above:**
-  - **librknnrt** is a binary from Rockchip's rknn-toolkit2. Whether it may be redistributed inside another package has to be read from that repository's licence before anything is bundled.
-  - **ffmpeg-rockchip** is built here with `--enable-version3` and without `--enable-gpl`, which should make it LGPL v3. Bundling LGPL libraries as separate shared objects is the usual compliant form, but the notices and the source offer need to be done properly.
+- **Decided by the licences** ([licences.md](licences.md)):
+  - **ffmpeg-rockchip** is LGPL v3 as built here. Its four libraries are bundled privately under `/opt/rkzc/lib` (as the setup script does under `/opt/ffmpeg-rockchip`), so they cannot collide with Ubuntu's FFmpeg. The package carries the licence texts, and the Release carries the exact source.
+  - **librknnrt** is fetched at install from Rockchip's repository. Its licence grants no right to redistribute, and the RKNN headers forbid copying, so neither is in the package or in this repository.
+  - **The models** are AGPL 3.0 and stay outside the package.
   - **This repository** is Apache 2.0.
 - **Versions:** the package states the image it was tested on (`rom-version` 20251222, kernel 6.1.141, rknpu driver 0.9.8) and refuses, with a clear message, on a kernel driver or runtime it does not know. M3's pinned inventory keys are the starting list.
 - **Built how:** on the board, or in an arm64 container, by a script in the repository; published as a Release asset. No apt repository at first.
@@ -127,11 +127,11 @@ These change the design, and they are the owner's to answer:
 
 ## Suggested steps
 
-1. Read the licences of librknnrt and ffmpeg-rockchip, and settle "bundle or fetch".
+1. Read the licences of librknnrt and ffmpeg-rockchip, and settle "bundle or fetch". **Done:** [licences.md](licences.md).
 2. Split C's path out of `core` into a library target without OpenCV, with errors instead of aborts. `bench_main` keeps its behaviour, checked by the existing tests and a smoke run.
 3. Add the run-until-stopped mode, reconnection and the detection callback; add the equivalence test against `bench_main`.
 4. Write `rkzc-detect` and its service file.
-5. Write the packaging script; install the `.deb` on a reset board, the way M3 did its setup.
+5. Write the packaging script, with the `copyright` file and ffmpeg-rockchip's source archive; install the `.deb` on a reset board, the way M3 did its setup.
 6. Decide whether to measure the packaged path, and register a plan if so.
 
 Each step is a pull request of its own.
