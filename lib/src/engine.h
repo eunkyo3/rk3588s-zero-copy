@@ -26,6 +26,8 @@ public:
     // Releases what the backend cached for the channel's decoder buffers (shim/preprocess/fd_cache.h).
     // Only when none of the channel's frames is in prepare or waiting for it.
     void forget_channel(int channel);
+    // Decoder buffers the backend holds an RGA handle for, for the channel.
+    size_t cached_buffers(int channel);
 
 private:
     Engine() = default;

@@ -33,7 +33,7 @@ det->stop();
 
 - **Sampling:** one frame in `every_nth_frame` (6 by default: 5 inferences per second from a 30 fps stream, the benchmark's main condition).
 - **Models:** YOLOv8 and YOLOv10 exports of rknn_model_zoo, picked by the model's outputs. The thresholds are the measured ones and are fixed.
-- **Sources:** H.264 over RTSP (TCP) or files. A stream that ends, fails or cannot be opened is tried again, after 1 s, then 2 s, up to 30 s. A file ends its channel, or starts again with `loop_files`.
+- **Sources:** H.264 over RTSP (TCP) or files. A source that ends, fails, cannot be opened, or is open and gives no frame for 10 s is opened again. The wait is 1 s, doubling up to 30 s while no frame arrives, and 1 s again once one does. A file that played to its end finishes its channel, or starts again with `loop_files`; a file that cannot be opened is retried like a stream.
 - **Callbacks** come from the library's threads, one at a time. A slow callback holds the pipeline back, and sampled frames are then dropped (`stats()` counts them).
 
 [include/rkzc/rkzc.h](include/rkzc/rkzc.h) is the whole interface. [examples/detect_jsonl.cpp](examples/detect_jsonl.cpp) prints detections as JSON lines.
@@ -84,17 +84,20 @@ It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?
 - **A failed open can leak what the failing step held:** a slot's buffer and mapping if the RGA refuses it, or the extra RKNN context of the output check if its run fails. These need the NPU or the kernel to fail.
 - **One failure is undefined behaviour:** if the decoder does not offer DRM PRIME frames, `die()` throws inside an FFmpeg callback. `h264_rkmpp` always offers them.
 - **The libraries underneath print** to stderr on their own (MPP, RKNN, FFmpeg).
-- **Reconnection was tested with files that start again and with a file that does not exist,** not with a camera or an RTSP server that drops.
-- **Compiled with `-fPIC` and hidden visibility,** which the measured build was not. Whether that, the callback or the coordinate mapping changes CPU time has not been measured.
+- **Reconnection was tested with files that start again, a file that does not exist and a stall limit of 1 ms,** not with a camera or an RTSP server that drops.
+- **On `stop()` the decoders close while already prepared frames are still being inferred.** The benchmark keeps its inputs open until the pipeline has drained. Frames waiting for preprocessing are let through first, so no frame holds a decoder buffer when its decoder closes.
+- **Not the measured configuration in three ways:** it is compiled with `-fPIC` and hidden visibility; it pins nothing, where `bench_main` pins its process, and so MPP's, FFmpeg's and librknnrt's threads, to the A76 cores 4 to 7; and it adds the callback, the coordinate mapping and a monitor thread. What these do to CPU time or latency has not been measured. A program that wants the benchmark's placement can pin itself before `Detector::open`.
 
 ## Checked
 
 On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn`, a 2 s 1080p H.264 file made on the board, and one of the benchmark's videos (`pexels_29130409.mp4`):
 
 - `ctest`: 4 of 4 passed.
-- **Against the registered `tools/demo_detect`** on the first 300 frames of the video (50 sampled frames): the same 806 detections, with the same classes and scores and boxes that agree after mapping to the source frame.
+- An independent review found no blocker; its points (no stall limit, a test that could not tell whether buffers were released, the undisclosed pinning, and smaller ones) are addressed in the code and in this file.
+- **Against the registered `tools/demo_detect`** on the first 300 frames of the video (50 sampled frames): the same 806 detections, with the same classes and scores and boxes that agree after mapping to the source frame. This held with M1's post-processing and with the library's default (neon). On a portrait version of the clip, where the letterbox bars are at the sides: the same 367 detections (the test encodes this clip anew each run, so the count moves by one or two).
 - **Errors:** a missing or wrong model, a missing source, a file that is not a video, a server that never answers and a wrong configuration each came back as an error; the same process went on.
-- **A looped file:** two channels were each reopened 7 times in 15 s with no error, and no file descriptor was left open afterwards.
+- **A looped file:** two channels were each reopened 7 times in 15 s with no error. A channel held at most 2 decoder buffers for the RGA in its first play and at most 2 after four reopenings; with the release on reopening taken out, the same test saw 16 and failed. No file descriptor was left open afterwards.
+- **A stall:** with the limit at 1 ms, a file's channel was halted and opened again 15 times in 3 s.
 - **A source that is down** was retried 12 times in 4 s (100 ms doubling to 400 ms) while the other channel played; `stop()` returned in 0.01 s.
 - **Eight looped channels for 30 s:** 152 frames sampled and delivered on each channel, none dropped, no error. This is not a measurement.
 - `ldd` shows no OpenCV; `exit` and `abort` are not among the undefined symbols.

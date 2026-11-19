@@ -39,4 +39,11 @@ void Engine::forget_channel(int channel) {
         f(channel);
 }
 
+size_t Engine::cached_buffers(int channel) {
+    size_t n = 0;
+    for (auto& f : hooks_.count)
+        n += f(channel);
+    return n;
+}
+
 }  // namespace rkzc

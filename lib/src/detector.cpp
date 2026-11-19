@@ -59,7 +59,11 @@ bool is_stream(const std::string& url) { return url.rfind("rtsp://", 0) == 0; }
 
 struct Channel {
     std::atomic<int64_t> decoded{0}, sampled{0}, inferred{0}, dropped{0}, errors{0}, reconnects{0};
+    std::atomic<int64_t> decode_errors{0};
     std::atomic<bool> connected{false}, ended{false};
+    // What the channel's VideoSource watches: set by stop(), and by the monitor when the source stalls.
+    std::atomic<bool> halt{false}, stalled{false};
+    std::atomic<int64_t> progress_ns{0};  // when it was opened or last returned a frame
     std::atomic<int> in_prepare{0};  // frames in Q1 or in prepare: they hold decoder buffers
 };
 
@@ -95,6 +99,7 @@ struct Detector::Impl {
     }
 
     void decode_loop(int i);
+    void monitor_loop();
     void preprocess_loop();
     void npu_loop(int k);
 
@@ -115,6 +120,7 @@ struct Detector::Impl {
     std::vector<std::unique_ptr<Channel>> ch;
     std::atomic<int64_t> pending{0};  // frames sampled and not yet delivered, dropped or failed
     std::vector<std::thread> decoders, pre, workers;
+    std::thread monitor;
 
     std::mutex band_m;
     bool band_set = false;
@@ -126,17 +132,21 @@ void Detector::Impl::decode_loop(int i) {
     Channel& c = *ch[i];
     const std::string& url = cfg.sources[i];
     int64_t counter = 0;  // decode order over the channel's life, for the sampler and Frame::seq
-    int wait_ms = cfg.reconnect_initial_ms;
+    int64_t wait_ms = cfg.reconnect_initial_ms;
     bool opened_before = false;
 
     while (!stop.load()) {
+        c.halt = false;
+        c.stalled = false;
+        if (stop.load())  // stop() sets stop, then halt: a stop before this line is seen here
+            break;
         bool opened = false;
         std::string error;
         const int64_t decoded_before = c.decoded.load();
         {
             VideoSource src(url);
             try {
-                src.open(&stop);
+                src.open(&c.halt);
                 opened = true;
             } catch (const std::exception& e) {
                 error = e.what();
@@ -145,7 +155,7 @@ void Detector::Impl::decode_loop(int i) {
                 if (opened_before)
                     c.reconnects++;
                 opened_before = true;
-                wait_ms = cfg.reconnect_initial_ms;
+                c.progress_ns = now_ns();
                 c.connected = true;
                 emit(EventKind::SourceOpened, i, url);
                 const AVRational tb = src.time_base();
@@ -153,6 +163,7 @@ void Detector::Impl::decode_loop(int i) {
                     [&](AVFrame* f) {
                         const int64_t t0 = now_ns();
                         c.decoded++;
+                        c.progress_ns = t0;
                         if (counter++ % cfg.every_nth_frame != 0) {  // sampler
                             av_frame_free(&f);
                             return;
@@ -172,20 +183,25 @@ void Detector::Impl::decode_loop(int i) {
                             pending--;
                         }
                     },
-                    [] {});  // a decoder error: the decoder goes on with the next packet
+                    [&] { c.decode_errors++; });  // the decoder goes on with the next packet
                 c.connected = false;
+                if (c.decoded.load() > decoded_before)
+                    wait_ms = cfg.reconnect_initial_ms;
                 // The channel's frames still in Q1 or in prepare hold this decoder's buffers. When they
-                // are through, release what the backend cached for them, before the decoder closes.
-                while (!stop.load() && c.in_prepare.load() > 0)
+                // are through, release what the backend cached for them, before the decoder closes. On
+                // stop() too: the preprocessing threads run until the decoders have ended.
+                while (c.in_prepare.load() > 0)
                     usleep(1000);
-                if (!stop.load())
-                    engine->forget_channel(i);
+                engine->forget_channel(i);
             }
         }  // the input and its decoder close here
         if (stop.load())
             break;
         if (!opened) {
             emit(EventKind::SourceError, i, error);
+        } else if (c.stalled.load()) {
+            emit(EventKind::SourceLost, i,
+                 "no frame for " + std::to_string(cfg.stall_timeout_ms) + " ms from " + url);
         } else if (is_stream(url)) {
             emit(EventKind::SourceLost, i, url);
         } else if (cfg.loop_files && c.decoded.load() > decoded_before) {
@@ -197,8 +213,21 @@ void Detector::Impl::decode_loop(int i) {
             c.ended = true;
             return;
         }
-        pause_ms(wait_ms);
-        wait_ms = std::min(wait_ms * 2, cfg.reconnect_max_ms);
+        pause_ms(static_cast<int>(wait_ms));
+        wait_ms = std::min<int64_t>(wait_ms * 2, cfg.reconnect_max_ms);
+    }
+}
+
+// Closes a source that is open and returns no frame: VideoSource has no time limit of its own once
+// packets arrive.
+void Detector::Impl::monitor_loop() {
+    pthread_setname_np(pthread_self(), "monitor");
+    while (!stop.load()) {
+        const int64_t limit = now_ns() - int64_t(cfg.stall_timeout_ms) * 1000000;
+        for (auto& c : ch)
+            if (c->connected.load() && c->progress_ns.load() < limit && !c->stalled.exchange(true))
+                c->halt = true;
+        pause_ms(100);
     }
 }
 
@@ -237,8 +266,8 @@ void Detector::Impl::preprocess_loop() {
         c.in_prepare--;
         if (!error.empty()) {
             slots.release(slot);
-            pending--;
             frame_error(item->channel, error);
+            pending--;
             continue;
         }
         if (!q2.push({item->channel, item->seq, item->pts_us, item->t0, slot, w, h})) {
@@ -266,8 +295,8 @@ void Detector::Impl::npu_loop(int k) {
         }
         slots.release(p->slot);
         if (!error.empty()) {
-            pending--;
             frame_error(p->channel, error);
+            pending--;
             continue;
         }
         // Back through the letterbox, into the source frame.
@@ -321,6 +350,8 @@ std::unique_ptr<Detector> Detector::open(const Config& config, Status* status) {
         return fail("every_nth_frame must be at least 1");
     if (config.reconnect_initial_ms < 1 || config.reconnect_max_ms < config.reconnect_initial_ms)
         return fail("reconnect_initial_ms must be at least 1 and at most reconnect_max_ms");
+    if (config.stall_timeout_ms < 1)
+        return fail("stall_timeout_ms must be at least 1");
     PostKind kind = PostKind::Neon;
     if (config.post != "auto" && !parse_post_kind(config.post, &kind))
         return fail("post must be auto, m1, neon or v10");
@@ -372,6 +403,7 @@ Status Detector::start() {
         });
     for (int i = 0; i < n; i++)
         d.decoders.emplace_back([&d, i] { d.decode_loop(i); });
+    d.monitor = std::thread([&d] { d.monitor_loop(); });
     return Status{};
 }
 
@@ -383,6 +415,9 @@ void Detector::stop() {
     d.stopped = true;
     // Inputs first, then each stage in order (src/core/pipeline.cpp).
     d.stop = true;
+    d.monitor.join();  // first, so that nothing but the line below and the decoders touches halt
+    for (auto& c : d.ch)
+        c->halt = true;
     for (auto& t : d.decoders)
         t.join();
     d.q1.close();
@@ -422,8 +457,10 @@ std::vector<ChannelStats> Detector::stats() const {
         s.inferred = c->inferred;
         s.dropped = c->dropped;
         s.errors = c->errors;
+        s.decode_errors = c->decode_errors;
         s.reconnects = c->reconnects;
         s.connected = c->connected;
+        s.cached_buffers = static_cast<int>(impl_->engine->cached_buffers(static_cast<int>(all.size())));
         all.push_back(s);
     }
     return all;

@@ -88,6 +88,9 @@ int main(int argc, char** argv) {
     cfg.model = "/nonexistent/model.rknn";
     expect(!rkzc::Detector::open(cfg, &st) && !st.ok, "a missing model is an error", st.message);
     cfg.model = model;
+    cfg.stall_timeout_ms = 0;
+    expect(!rkzc::Detector::open(cfg, &st) && !st.ok, "stall_timeout_ms 0 is an error", st.message);
+    cfg.stall_timeout_ms = 10000;
 
     const int fds_before = open_fds();
 
@@ -124,7 +127,23 @@ int main(int argc, char** argv) {
             return 1;
         attach(*det, c);
         det->start();
-        expect(!det->wait(15000), "a looped file never ends: wait() times out");
+        // While it runs: the buffers held for the RGA must not pile up as the decoder is opened again and
+        // again. Without the release on reopening, each new decoder's buffers are added to the old ones.
+        int first_play = 0, later = 0;
+        bool ended = false;
+        for (int i = 0; i < 30 && !ended; i++) {
+            ended = det->wait(500);
+            for (const rkzc::ChannelStats& s : det->stats()) {
+                if (s.reconnects == 0)
+                    first_play = s.cached_buffers > first_play ? s.cached_buffers : first_play;
+                if (s.reconnects >= 4)
+                    later = s.cached_buffers > later ? s.cached_buffers : later;
+            }
+        }
+        expect(!ended, "a looped file never ends: wait() times out");
+        expect(first_play > 0 && later > 0 && later <= first_play + 2,
+               "after four reopenings a channel holds no more decoder buffers than in its first play",
+               std::to_string(first_play) + " in the first play, " + std::to_string(later) + " later");
         const auto t0 = std::chrono::steady_clock::now();
         det->stop();
         expect(seconds_since(t0) < 3.0, "stop() returns", std::to_string(seconds_since(t0)) + " s");
@@ -158,6 +177,34 @@ int main(int argc, char** argv) {
         expect(c.source_errors >= 6 && c.source_errors <= 14, "the missing source was retried with a growing wait",
                std::to_string(c.source_errors) + " tries in 4 s");
         expect(s[0].decoded == 0 && s[1].inferred > 0 && c.ended == 1, "the other channel played its file");
+    }
+
+    // ---- a source that stalls is closed and opened again ----
+    // No real stall here: with a limit of 1 ms a file read at 30 fps always looks stalled, which drives
+    // the same path (the monitor halts the source, SourceLost, a wait, a new open).
+    {
+        Counts c;
+        std::atomic<int> lost{0};
+        cfg.sources = {video};
+        cfg.stall_timeout_ms = 1;
+        cfg.reconnect_initial_ms = 100;
+        cfg.reconnect_max_ms = 100;
+        auto det = rkzc::Detector::open(cfg, &st);
+        expect(det && st.ok, "the detector opens with a 1 ms stall limit", st.message);
+        if (!det)
+            return 1;
+        attach(*det, c);
+        det->on_event([&](const rkzc::Event& e) {
+            lost += e.kind == rkzc::EventKind::SourceLost;
+            c.opened += e.kind == rkzc::EventKind::SourceOpened;
+        });
+        det->start();
+        expect(!det->wait(3000), "a stalled source does not end its channel");
+        det->stop();
+        expect(lost >= 3 && c.opened >= 3 && det->stats()[0].reconnects >= 2,
+               "the source was halted and opened again",
+               std::to_string(lost) + " lost, " + std::to_string(c.opened) + " opened");
+        cfg.stall_timeout_ms = 10000;
     }
 
     const int fds_after = open_fds();

@@ -32,6 +32,7 @@ extern "C" {
 namespace rkzc {
 struct CacheHooks {
     std::vector<std::function<void(int channel)>> forget;
+    std::vector<std::function<size_t(int channel)>> count;  // entries held for the channel
     static inline thread_local CacheHooks* collecting = nullptr;
 };
 }  // namespace rkzc
@@ -42,8 +43,10 @@ public:
     // limit: entries per channel and pool, the decoder's buffer group cap.
     FdCache(size_t limit, std::function<T(int fd, size_t size)> make, std::function<void(T&)> release)
         : limit_(limit), make_(std::move(make)), release_(std::move(release)) {
-        if (rkzc::CacheHooks::collecting)
+        if (rkzc::CacheHooks::collecting) {
             rkzc::CacheHooks::collecting->forget.push_back([this](int channel) { forget(channel); });
+            rkzc::CacheHooks::collecting->count.push_back([this](int channel) { return held(channel); });
+        }
     }
     ~FdCache() { clear(); }
 
@@ -91,6 +94,16 @@ public:
                 *keep++ = r;
         }
         retired_.erase(keep, retired_.end());
+    }
+
+    // Entries held for the channel, retired ones included.
+    size_t held(int channel) {
+        std::lock_guard<std::mutex> lk(m_);
+        auto it = pools_.find(channel);
+        size_t n = it == pools_.end() ? 0 : it->second.entries.size();
+        for (auto& r : retired_)
+            n += r.first == channel;
+        return n;
     }
 
     // Releases every entry, retired ones included. Call after the pipeline has stopped.

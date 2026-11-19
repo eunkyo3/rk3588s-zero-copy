@@ -17,13 +17,14 @@ endif()
 # apart from -fPIC.
 add_compile_options(-Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls)
 
-set(FFMPEG_PREFIX /opt/ffmpeg-rockchip CACHE PATH "ffmpeg-rockchip install prefix")
+# Not "FFMPEG_PREFIX": pkg_check_modules(FFMPEG ...) writes a cache entry of that name itself.
+set(RKZC_FFMPEG_DIR /opt/ffmpeg-rockchip CACHE PATH "ffmpeg-rockchip install prefix")
 set(RKNN_INCLUDE_DIR /opt/rknpu2/include CACHE PATH "RKNN C API headers")
 set(RKZC_TEST_MODEL "" CACHE FILEPATH "a .rknn model for the board tests")
 set(RKZC_TEST_VIDEO "" CACHE STRING "a short H.264 file for the board tests (a few seconds)")
 set(RKZC_TEST_OBJECTS_VIDEO "" CACHE FILEPATH "an H.264 file of at least 10 s with objects the model detects")
 set(RKZC_DEMO_DETECT "" CACHE FILEPATH "the root build's demo_detect, for the equivalence test")
-set(ENV{PKG_CONFIG_PATH} "${FFMPEG_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+set(ENV{PKG_CONFIG_PATH} "${RKZC_FFMPEG_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil)
@@ -61,7 +62,7 @@ set_target_properties(rkzc PROPERTIES
     VISIBILITY_INLINES_HIDDEN ON
     VERSION ${PROJECT_VERSION}
     SOVERSION 0
-    BUILD_RPATH ${FFMPEG_PREFIX}/lib)
+    BUILD_RPATH ${RKZC_FFMPEG_DIR}/lib)
 
 add_executable(rkzc-check tools/rkzc_check.cpp)
 target_link_libraries(rkzc-check PRIVATE rkzc)
@@ -85,5 +86,5 @@ endif()
 if(RKZC_TEST_MODEL AND RKZC_TEST_OBJECTS_VIDEO AND RKZC_DEMO_DETECT)
     add_test(NAME equivalence
         COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/equivalence.sh ${RKZC_DEMO_DETECT} $<TARGET_FILE:rkzc-jsonl>
-                ${RKZC_TEST_MODEL} ${RKZC_TEST_OBJECTS_VIDEO})
+                ${RKZC_TEST_MODEL} ${RKZC_TEST_OBJECTS_VIDEO} ${RKZC_FFMPEG_DIR}/bin/ffmpeg)
 endif()

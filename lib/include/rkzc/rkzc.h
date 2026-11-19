@@ -53,7 +53,7 @@ struct Frame {
 
 enum class EventKind {
     SourceOpened,  // the input and its decoder are open; also after a reconnection
-    SourceLost,    // a stream ended or failed; the detector will reconnect
+    SourceLost,    // a stream ended, failed or gave no frame for stall_timeout_ms; the detector reconnects
     SourceEnded,   // a file reached its end (and Config::loop_files is off); the channel is finished
     SourceError,   // the input could not be opened; the detector will try again
     FrameError,    // one frame failed in preprocessing, inference or the frame callback; it was skipped
@@ -75,8 +75,13 @@ struct Config {
     // 0.25; NMS IoU 0.45 for YOLOv8; at most 300 detections for YOLOv10.
     std::string post = "auto";
     bool loop_files = false;           // start a file again when it ends
-    int reconnect_initial_ms = 1000;   // the wait before the first retry; doubles up to the maximum
+    // The wait before a retry. It doubles, up to the maximum, while the source gives no frame, and goes
+    // back to the initial value once a frame is decoded. A file that cannot be opened is retried too.
+    int reconnect_initial_ms = 1000;
     int reconnect_max_ms = 30000;
+    // An open source that returns no frame for this long is closed and opened again: a stream can stay
+    // connected and deliver packets that never decode.
+    int stall_timeout_ms = 10000;
 };
 
 struct ChannelStats {
@@ -85,8 +90,10 @@ struct ChannelStats {
     int64_t inferred = 0;    // delivered to the frame callback
     int64_t dropped = 0;     // sampled, then dropped because the pipeline was behind
     int64_t errors = 0;      // FrameError events
+    int64_t decode_errors = 0;  // errors the decoder reported; it goes on with the next packet
     int64_t reconnects = 0;  // times the source was opened again
     bool connected = false;
+    int cached_buffers = 0;  // decoder buffers held for the RGA right now; bounded by the decoder's pool
 };
 
 class Detector {
@@ -105,9 +112,11 @@ public:
     RKZC_API void on_event(std::function<void(const Event&)> callback);
 
     RKZC_API Status start();  // once per Detector
-    RKZC_API void stop();     // returns when every thread has ended; frames still in the pipeline are discarded
-    // Waits until every source has ended and its frames are delivered, which only happens with files
-    // and loop_files off, or until stop(). False if timeout_ms (-1: none) passed first.
+    // Returns when every thread has ended. Frames already sampled are still inferred and delivered
+    // before it returns, unless the pipeline is behind.
+    RKZC_API void stop();
+    // Waits until every source has ended and its frames are delivered, or until stop(). A source ends
+    // only if it is a file that was opened and played to its end with loop_files off. False if timeout_ms (-1: none) passed first.
     RKZC_API bool wait(int timeout_ms = -1);
 
     RKZC_API std::vector<ChannelStats> stats() const;
