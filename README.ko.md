@@ -167,6 +167,7 @@ flowchart TB
 - **이후 마일스톤의 계획:** M2는 [prereg/M2.md](prereg/M2.ko.md)에, M4는 [prereg/M4.md](prereg/M4.ko.md)에 있다.
 - **M1 비교 실행 전:** M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md))과 M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)).
 - **M4 노트:** 탐색([docs/notes/m4_exploration.ko.md](docs/notes/m4_exploration.ko.md)), 그리고 정확도 도구와 점검([docs/notes/m4_accuracy.ko.md](docs/notes/m4_accuracy.ko.md)).
+- **배경:** 디코딩된 프레임을 RKNN NPU에 넣는 기존 방법, 공개된 측정값, 이 프로젝트가 겪은 런타임 동작이 다른 곳에 문서화돼 있는지([docs/notes/background.ko.md](docs/notes/background.ko.md)).
 
 ## 빌드와 실행
 
