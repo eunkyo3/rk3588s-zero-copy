@@ -1,0 +1,25 @@
+# start_time_utc: 2026-11-19T04:44:33Z
+# run_kind: m3
+# freeze_m3_commit: dec7c90c5d4e1addc94ebeb2d7ad4d5e8c7670f2
+# code_commit: 593fe58ae03f9c6782fefe3837dfd68945ce9d55
+# amendment: A15
+# measurement: the setup of the board (prereg/M3.md §3), not a run
+key,value
+result,ok
+fresh,yes
+services,yes
+code_equals_freeze_m3,yes
+set_up_markers_found,none
+image_rom_version,20251222
+boot_time_utc,2026-11-19T04:40:21Z
+first_dpkg_log_line,none
+ntp_synchronized,yes
+step_network_s,1
+step_stream_pc_s,1
+step_packages_s,434
+step_rknn_s,2
+step_ffmpeg_s,362
+step_model_s,1
+step_build_s,40
+step_record_s,6
+end_time_utc,2026-11-19T04:58:41Z

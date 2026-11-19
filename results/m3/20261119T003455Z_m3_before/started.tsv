@@ -1,0 +1,7 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	start_utc
+1	01_m3_before_B_8ch_r1	m3_before	B	8	main	1	1	2026-11-19T00:45:08Z
+2	02_m3_before_C_8ch_r1	m3_before	C	8	main	1	1	2026-11-19T00:48:31Z
+3	03_m3_before_C_8ch_r2	m3_before	C	8	main	2	1	2026-11-19T00:51:55Z
+4	04_m3_before_B_8ch_r2	m3_before	B	8	main	2	1	2026-11-19T00:55:19Z
+5	05_m3_before_B_8ch_r3	m3_before	B	8	main	3	1	2026-11-19T00:58:42Z
+6	06_m3_before_C_8ch_r3	m3_before	C	8	main	3	1	2026-11-19T01:02:05Z
