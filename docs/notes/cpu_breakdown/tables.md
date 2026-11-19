@@ -12,6 +12,8 @@ Computed after the fact, not pre-registered, no verdict. Values are the mean ± 
 | M1.1 | 5 channels × 30 fps | `bdirect_aux` | `20261104T065947Z_bdirect_aux` | `cdb309e` | B: 3, Bd: 3, C: 3 |
 | M2 | 8 channels, main condition (5 fps) | `m2_main` | `20261105T071518Z_m2_main` | `88206ab` | C: 3, Cp: 3 |
 | M2 | 5 channels × 30 fps | `m2_aux` | `20261105T074458Z_m2_aux` | `88206ab` | C: 3, Cp: 3 |
+| M4 | 8 channels, main condition (5 fps) | `m4_main` | `20261118T043338Z_m4_main` | `de78dbd` | C8: 3, C10: 3 |
+| M4 | 5 channels × 30 fps | `m4_aux` | `20261118T053535Z_m4_aux` | `de78dbd` | C8: 3, C10: 3 |
 
 ## 8 channels, main condition (5 fps)
 
@@ -24,6 +26,8 @@ Computed after the fact, not pre-registered, no verdict. Values are the mean ± 
 | M1.1 | C | 19.49 ± 0.26 | 0.443 | 11.34 ± 0.16 | 7.75 ± 0.12 | 0.31 ± 0.02 | 0.10 ± 0.01 | 19.50 ± 0.27 | -0.01 ± 0.01 | 58.2% | Decoder (58.2%) |
 | M2 | C | 18.74 ± 0.17 | control | 11.33 ± 0.15 | 6.83 ± 0.08 | 0.45 ± 0.01 | 0.11 ± 0.00 | 18.72 ± 0.15 | 0.02 ± 0.02 | 60.5% | Decoder (60.5%) |
 | M2 | Cp | 17.60 ± 0.56 | 0.939 | 11.24 ± 0.53 | 5.82 ± 0.01 | 0.43 ± 0.02 | 0.11 ± 0.01 | 17.60 ± 0.56 | 0.00 ± 0.01 | 63.8% | Decoder (63.8%) |
+| M4 | C8 | 17.80 ± 0.57 | control | 11.38 ± 0.50 | 5.84 ± 0.09 | 0.44 ± 0.02 | 0.12 ± 0.01 | 17.78 ± 0.60 | 0.02 ± 0.04 | 63.9% | Decoder (63.9%) |
+| M4 | C10 | 18.07 ± 1.03 | 1.015 | 11.54 ± 1.07 | 5.99 ± 0.05 | 0.42 ± 0.01 | 0.10 ± 0.01 | 18.06 ± 1.04 | 0.01 ± 0.02 | 63.9% | Decoder (63.9%) |
 
 Change against the session's control, mean − mean (s):
 
@@ -33,6 +37,7 @@ Change against the session's control, mean − mean (s):
 | M1.1 | B → Bd | -1.25 | -0.57 | -0.71 | +0.03 | +0.01 | -0.01 |
 | M1.1 | B → C | -24.55 | +0.47 | -0.70 | -24.30 | +0.01 | -0.02 |
 | M2 | C → Cp | -1.14 | -0.10 | -1.01 | -0.02 | +0.00 | -0.01 |
+| M4 | C8 → C10 | +0.27 | +0.17 | +0.15 | -0.02 | -0.02 | -0.01 |
 
 C's process CPU in the three sessions (not one scale): M1 18.56 s, M1.1 19.49 s, M2 18.74 s; (max − min) / min = 5.0%.
 B's in M1 and M1.1: 43.28 s, 44.04 s; (max − min) / min = 1.7%.
@@ -48,6 +53,8 @@ B's in M1 and M1.1: 43.28 s, 44.04 s; (max − min) / min = 1.7%.
 | M1.1 | C | 37.45 ± 1.41 | 0.286 | 8.42 ± 0.72 | 27.65 ± 0.69 | 1.23 ± 0.04 | 0.14 ± 0.01 | 37.44 ± 1.43 | 0.00 ± 0.02 | 22.5% | NPU workers (73.8%) |
 | M2 | C | 37.28 ± 0.53 | control | 8.74 ± 0.25 | 27.10 ± 0.46 | 1.31 ± 0.02 | 0.14 ± 0.01 | 37.29 ± 0.54 | -0.01 ± 0.01 | 23.4% | NPU workers (72.7%) |
 | M2 | Cp | 31.79 ± 0.40 | 0.853 | 8.29 ± 0.29 | 22.15 ± 0.18 | 1.21 ± 0.04 | 0.14 ± 0.01 | 31.80 ± 0.38 | -0.01 ± 0.02 | 26.1% | NPU workers (69.7%) |
+| M4 | C8 | 33.25 ± 1.05 | control | 8.58 ± 0.44 | 23.25 ± 0.54 | 1.28 ± 0.07 | 0.15 ± 0.01 | 33.26 ± 1.05 | -0.01 ± 0.01 | 25.8% | NPU workers (69.9%) |
+| M4 | C10 | 35.04 ± 1.00 | 1.054 | 8.77 ± 0.59 | 24.83 ± 0.35 | 1.31 ± 0.04 | 0.12 ± 0.01 | 35.02 ± 0.97 | 0.01 ± 0.03 | 25.0% | NPU workers (70.9%) |
 
 Change against the session's control, mean − mean (s):
 
@@ -57,9 +64,11 @@ Change against the session's control, mean − mean (s):
 | M1.1 | B → Bd | -1.10 | -0.23 | -1.88 | +1.01 | -0.00 | -0.00 |
 | M1.1 | B → C | -93.51 | +0.18 | -2.84 | -90.83 | +0.02 | -0.03 |
 | M2 | C → Cp | -5.49 | -0.45 | -4.95 | -0.10 | +0.01 | +0.00 |
+| M4 | C8 → C10 | +1.79 | +0.18 | +1.58 | +0.03 | -0.03 | +0.02 |
 
 C's process CPU in the three sessions (not one scale): M1 35.68 s, M1.1 37.45 s, M2 37.28 s; (max − min) / min = 5.0%.
 B's in M1 and M1.1: 129.59 s, 130.95 s; (max − min) / min = 1.1%.
+Labelled saturated by its session's `saturation.txt`, so the step to it compares unequal loads: M4 C10.
 
 ## Against the published values
 
@@ -91,3 +100,23 @@ B's in M1 and M1.1: 129.59 s, 130.95 s; (max − min) / min = 1.1%.
 | M2 | 5 ch | Cp | NPU workers (npu-*) | 22.15 ± 0.18 | 22.15 ± 0.18 | yes | M2_tables.md; groups: M2.md |
 | M2 | 5 ch | Cp | Decoder (dec-*, mpp_*) | 8.29 ± 0.29 | 8.29 ± 0.29 | yes | M2_tables.md; groups: M2.md |
 | M2 | 5 ch | Cp | Preprocessing (pre-*) | 1.21 | 1.21 | yes | M2_tables.md; groups: M2.md |
+| M4 | 8 ch | C8 | Process CPU | 17.797 ± 0.570 | 17.797 ± 0.570 | yes | M4_tables.md |
+| M4 | 8 ch | C8 | NPU workers (npu-*) | 5.840 ± 0.090 | 5.840 ± 0.090 | yes | M4_tables.md |
+| M4 | 8 ch | C8 | Decoder (dec-*, mpp_*) | 11.377 ± 0.497 | 11.377 ± 0.497 | yes | M4_tables.md |
+| M4 | 8 ch | C8 | Preprocessing (pre-*) | 0.440 ± 0.017 | 0.440 ± 0.017 | yes | M4_tables.md |
+| M4 | 8 ch | C8 | Rest (bench_main, metrics) | 0.120 ± 0.010 | 0.120 ± 0.010 | yes | M4_tables.md |
+| M4 | 8 ch | C10 | Process CPU | 18.070 ± 1.031 | 18.070 ± 1.031 | yes | M4_tables.md |
+| M4 | 8 ch | C10 | NPU workers (npu-*) | 5.993 ± 0.049 | 5.993 ± 0.049 | yes | M4_tables.md |
+| M4 | 8 ch | C10 | Decoder (dec-*, mpp_*) | 11.543 ± 1.074 | 11.543 ± 1.074 | yes | M4_tables.md |
+| M4 | 8 ch | C10 | Preprocessing (pre-*) | 0.423 ± 0.012 | 0.423 ± 0.012 | yes | M4_tables.md |
+| M4 | 8 ch | C10 | Rest (bench_main, metrics) | 0.100 ± 0.010 | 0.100 ± 0.010 | yes | M4_tables.md |
+| M4 | 5 ch | C8 | Process CPU | 33.250 ± 1.051 | 33.250 ± 1.051 | yes | M4_tables.md |
+| M4 | 5 ch | C8 | NPU workers (npu-*) | 23.247 ± 0.538 | 23.247 ± 0.538 | yes | M4_tables.md |
+| M4 | 5 ch | C8 | Decoder (dec-*, mpp_*) | 8.583 ± 0.441 | 8.583 ± 0.441 | yes | M4_tables.md |
+| M4 | 5 ch | C8 | Preprocessing (pre-*) | 1.280 ± 0.070 | 1.280 ± 0.070 | yes | M4_tables.md |
+| M4 | 5 ch | C8 | Rest (bench_main, metrics) | 0.147 ± 0.006 | 0.147 ± 0.006 | yes | M4_tables.md |
+| M4 | 5 ch | C10 | Process CPU | 35.037 ± 0.999 | 35.037 ± 0.999 | yes | M4_tables.md |
+| M4 | 5 ch | C10 | NPU workers (npu-*) | 24.830 ± 0.348 | 24.830 ± 0.348 | yes | M4_tables.md |
+| M4 | 5 ch | C10 | Decoder (dec-*, mpp_*) | 8.767 ± 0.590 | 8.767 ± 0.590 | yes | M4_tables.md |
+| M4 | 5 ch | C10 | Preprocessing (pre-*) | 1.310 ± 0.040 | 1.310 ± 0.040 | yes | M4_tables.md |
+| M4 | 5 ch | C10 | Rest (bench_main, metrics) | 0.117 ± 0.012 | 0.117 ± 0.012 | yes | M4_tables.md |
