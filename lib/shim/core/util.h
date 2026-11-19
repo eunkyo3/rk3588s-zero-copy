@@ -6,9 +6,14 @@
 #pragma once
 
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <stdexcept>
 
+// The standard headers above are the measured header's too: included here first, so none of them is
+// read while `die` is a macro.
 #define die rkzc_measured_die
 #include "../../../src/core/util.h"
 #undef die

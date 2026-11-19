@@ -1,5 +1,9 @@
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <exception>
+#include <mutex>
+#include <thread>
 
 #include "core/video_source.h"
 #include "engine.h"
@@ -25,9 +29,29 @@ Status check_model(const std::string& model_path, ModelInfo* info) {
     return st;
 }
 
-Status check_source(const std::string& url, SourceInfo* info) {
+Status check_source(const std::string& url, SourceInfo* info, int timeout_s) {
     Status st;
     std::atomic<bool> stop{false};
+    // A watchdog: VideoSource has no time limit of its own once packets arrive. Setting `stop` ends its
+    // loop and, through FFmpeg's interrupt callback, a read or a connect that is blocked.
+    std::mutex m;
+    std::condition_variable cv;
+    bool finished = false, timed_out = false;
+    std::thread watchdog([&] {
+        std::unique_lock<std::mutex> lk(m);
+        if (!cv.wait_for(lk, std::chrono::seconds(timeout_s), [&] { return finished; })) {
+            timed_out = true;
+            stop = true;
+        }
+    });
+    auto end_watchdog = [&] {
+        {
+            std::lock_guard<std::mutex> lk(m);
+            finished = true;
+        }
+        cv.notify_all();
+        watchdog.join();
+    };
     int frames = 0, width = 0, height = 0;
     bool drm_prime = false;
     try {
@@ -45,13 +69,16 @@ Status check_source(const std::string& url, SourceInfo* info) {
             },
             [] {});
     } catch (const std::exception& ex) {
+        end_watchdog();
         st.ok = false;
-        st.message = ex.what();
+        st.message = timed_out ? "no answer from " + url + " within " + std::to_string(timeout_s) + " s" : ex.what();
         return st;
     }
+    end_watchdog();
     if (frames == 0) {
         st.ok = false;
-        st.message = "no frame decoded from " + url;
+        st.message = timed_out ? "no frame decoded from " + url + " within " + std::to_string(timeout_s) + " s"
+                               : "no frame decoded from " + url;
     } else if (!drm_prime) {
         st.ok = false;
         st.message = "the decoder's frames are not DRM PRIME for " + url;

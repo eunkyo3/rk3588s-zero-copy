@@ -36,6 +36,7 @@ RKZC_API const char* version();
 RKZC_API Status check_model(const std::string& model_path, ModelInfo* info = nullptr);
 
 // Opens an H.264 input (an rtsp:// URL or a file) with the hardware decoder and decodes one frame.
-RKZC_API Status check_source(const std::string& url, SourceInfo* info = nullptr);
+// Gives up after timeout_s seconds: a stream can connect and deliver packets that never decode.
+RKZC_API Status check_source(const std::string& url, SourceInfo* info = nullptr, int timeout_s = 10);
 
 }  // namespace rkzc

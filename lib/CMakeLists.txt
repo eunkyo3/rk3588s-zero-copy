@@ -44,10 +44,12 @@ add_library(rkzc SHARED
     ${MEASURED}/preprocess/zero_copy_rga.cpp
     src/check.cpp
     src/engine.cpp)
-# shim/ must stay before ${MEASURED}: it replaces core/util.h's die() (see shim/core/util.h).
+# shim/ must come before ${MEASURED}: it replaces core/util.h's die() (see shim/core/util.h).
+# tests/no_opencv.sh fails if the exiting die() got in after all.
 target_include_directories(rkzc
     PUBLIC include
-    PRIVATE shim ${MEASURED} src ${RKNN_INCLUDE_DIR})
+    PRIVATE ${MEASURED} src ${RKNN_INCLUDE_DIR})
+target_include_directories(rkzc BEFORE PRIVATE shim)
 target_compile_definitions(rkzc PRIVATE RKZC_VERSION="${PROJECT_VERSION}")
 target_link_libraries(rkzc PRIVATE PkgConfig::FFMPEG PkgConfig::RGA PkgConfig::DRM ${RKNNRT} pthread)
 set_target_properties(rkzc PROPERTIES

@@ -31,7 +31,7 @@ model  FAILED  /nope.rknn: cannot read /nope.rknn
 - **등록된 코드는 건드리지 않는다.** `src/`, `tools/`, `scripts/`, `tests/`, 루트 `CMakeLists.txt`는 `freeze-m3`와 같고, 다르면 `scripts/reproduce_m1.sh`가 실행을 거부한다. 그래서 라이브러리는 `lib/`의 별도 빌드이며, `bench_main`은 전과 똑같이 빌드된다.
 - **같은 소스 파일을 다시 컴파일한다.** `lib/CMakeLists.txt`는 `../src`의 파일 여덟 개를 그대로 컴파일한다. 디코더 입력, NPU 컨텍스트, 슬롯 풀, 변형 C의 백엔드, 후처리 세 가지다. 변형 A와 B(OpenCV가 필요하다), 그리고 벤치마크의 타임라인, 기록, 보고서는 뺀다.
 - **종료 대신 오류.** 측정한 소스는 `core/util.h`의 `die()`를 부르고, 이것은 메시지를 찍고 종료한다. `lib/shim/core/util.h`가 라이브러리의 include 경로에서 먼저 잡히며, 여기서는 `die()`가 예외를 던진다. 라이브러리는 경계에서 이 예외를 잡아 `Status`로 반환한다.
-- **공개 헤더**(`include/rkzc/rkzc.h`)는 FFmpeg, RGA, RKNN 헤더를 포함하지 않는다. 라이브러리는 `rkzc::` 함수만 내보낸다.
+- **공개 헤더**(`include/rkzc/rkzc.h`)는 FFmpeg, RGA, RKNN 헤더를 포함하지 않는다. 라이브러리가 내보내는 함수는 `rkzc::`뿐이고(표준 라이브러리의 약한 템플릿 인스턴스는 제외), `exit` 호출이 없다.
 
 ## 파일
 
@@ -46,11 +46,11 @@ model  FAILED  /nope.rknn: cannot read /nope.rknn
 
 ## 알려진 한계
 
-- **여는 데 실패하면, 실패한 단계의 자원 하나가 샐 수 있다**(예: 할당했지만 아직 등록하지 않은 슬롯). 그 전에 연 것은 모두 해제된다. 이것을 막으려면 공유하는 파일을 고쳐야 한다.
-- **프로세스가 여전히 끝나는 실패가 하나 있다.** 디코더가 DRM PRIME 프레임을 제공하지 않으면 FFmpeg 콜백 안에서 `die()`가 불리는데, 예외는 FFmpeg의 C 코드를 넘어올 수 없다. `h264_rkmpp`는 항상 DRM PRIME을 제공한다.
+- **여는 데 실패하면, 실패한 단계가 쥐고 있던 것이 샐 수 있다.** RGA가 슬롯을 거부하면 그 슬롯의 버퍼와 매핑이, 출력 확인의 실행이 실패하면 거기서 쓰던 별도 RKNN 컨텍스트가 샌다. 앞 단계가 끝낸 것은 해제된다. NPU나 커널이 실패해야 일어나는 일이며, 막으려면 공유하는 파일을 고쳐야 한다.
+- **동작이 정의되지 않는 실패가 하나 있다.** 디코더가 DRM PRIME 프레임을 제공하지 않으면 `die()`가 FFmpeg 콜백 안에서, FFmpeg의 C 코드를 가로질러 예외를 던진다. 프로세스가 끝날 수도 있고, FFmpeg의 상태가 반쯤 만들어진 채 남을 수도 있다. `h264_rkmpp`는 항상 DRM PRIME을 제공한다.
 - **워커 스레드의 실패**(`prepare`, `bind`, `rknn_run`)는 이 두 확인 함수가 거치지 않는 경로다. 3단계의 검출기가 잡아야 한다.
 - **아래 라이브러리들**(MPP, RKNN, FFmpeg)**이 stderr에 직접 출력한다.**
-- **`-fPIC`로 컴파일한다.** 측정한 빌드는 그렇지 않았다. 나머지 옵션은 같다. 이것이 CPU 시간을 바꾸는지는 재지 않았다.
+- **`-fPIC`와 숨김 가시성(hidden visibility)으로 컴파일한다.** 측정한 빌드는 그렇지 않았다. 경고와 프레임 포인터 옵션은 같다. 이것이 CPU 시간을 바꾸는지는 재지 않았다.
 
 ## 확인한 것
 
@@ -58,5 +58,7 @@ M3의 초기화된 NanoPi R6C에서(2026-11-19), `models/yolov8n_i8.rknn`과 보
 
 - `ctest`: 2개 중 2개 통과.
 - 없는 모델, 모델이 아닌 파일, 없는 소스, 영상이 아닌 파일이 각각 오류를 반환했고, 같은 프로세스가 그 뒤에 모델과 소스를 두 번 열었다.
+- 연결만 받고 응답하지 않는 서버는 1초 제한 시간에 실패했다(1.0초 뒤).
 - `rkzc-check`가 한 프로세스에서 모델과 소스를 20번 열고 닫았다.
-- `ldd`에 OpenCV가 없다. 내보낸 함수는 `rkzc::check_model`, `rkzc::check_source`, `rkzc::version`이다.
+- `ldd`에 OpenCV가 없다. 내보낸 함수는 `rkzc::check_model`, `rkzc::check_source`, `rkzc::version`이다. 미정의 심볼에 `exit`와 `abort`가 없다.
+- 첫 버전의 독립 리뷰가 `check_source`에 제한 시간이 없다는 점을 찾았고, 머지 전에 추가했다.

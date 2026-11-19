@@ -31,7 +31,7 @@ model  FAILED  /nope.rknn: cannot read /nope.rknn
 - **The registered code is not touched.** `src/`, `tools/`, `scripts/`, `tests/` and the root `CMakeLists.txt` equal `freeze-m3`'s, and `scripts/reproduce_m1.sh` refuses to run otherwise. So the library is a separate build in `lib/`, and `bench_main` is built exactly as before.
 - **The same source files, compiled again.** `lib/CMakeLists.txt` compiles eight files of `../src` unchanged: the decoder input, the NPU contexts, the slot pool, variant C's backend and the three post-processings. It leaves out variants A and B (which need OpenCV) and the benchmark's timeline, records and reports.
 - **Errors instead of exits.** The measured sources call `die()` from `core/util.h`, which prints and exits. `lib/shim/core/util.h` comes first on the library's include path and makes `die()` throw; the library catches it at its boundary and returns a `Status`.
-- **The public header** (`include/rkzc/rkzc.h`) includes no FFmpeg, RGA or RKNN header. The library exports `rkzc::` functions only.
+- **The public header** (`include/rkzc/rkzc.h`) includes no FFmpeg, RGA or RKNN header. Of functions, the library exports only `rkzc::` ones (the standard library's weak template instances aside), and it has no call to `exit`.
 
 ## Files
 
@@ -46,11 +46,11 @@ model  FAILED  /nope.rknn: cannot read /nope.rknn
 
 ## Known limits
 
-- **A failed open can leak the one resource whose step failed** (for example a slot that was allocated but not yet registered). Everything opened before it is freed. Closing this needs a change in the shared files.
-- **One failure still ends the process:** if the decoder does not offer DRM PRIME frames, `die()` is called inside an FFmpeg callback, and an exception cannot cross FFmpeg's C code. `h264_rkmpp` always offers them.
+- **A failed open can leak what the failing step held:** a slot's buffer and mapping if the RGA refuses it, or the extra RKNN context of the output check if its run fails. What earlier steps finished is freed. These need the NPU or the kernel to fail; closing them needs a change in the shared files.
+- **One failure is undefined behaviour:** if the decoder does not offer DRM PRIME frames, `die()` throws inside an FFmpeg callback, through FFmpeg's C code. The process may end, or FFmpeg's state may be left half-built. `h264_rkmpp` always offers them.
 - **Failures on the worker threads** (`prepare`, `bind`, `rknn_run`) are not reached by these two checks. The detector of step 3 has to catch them.
 - **The libraries underneath print** to stderr on their own (MPP, RKNN, FFmpeg).
-- **Compiled with `-fPIC`,** which the measured build was not. The other options are the same. Whether that changes CPU time has not been measured.
+- **Compiled with `-fPIC` and hidden visibility,** which the measured build was not; the warning and frame-pointer options are the same. Whether that changes CPU time has not been measured.
 
 ## Checked
 
@@ -58,5 +58,7 @@ On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn` and a 
 
 - `ctest`: 2 of 2 passed.
 - A missing model, a file that is not a model, a missing source and a file that is not a video each returned an error, and the same process then opened the model and the source twice.
+- A server that accepts the connection and never answers failed at the 1 s time limit (after 1.0 s).
 - `rkzc-check` opened and closed the model and the source 20 times in one process.
-- `ldd` shows no OpenCV; the exported functions are `rkzc::check_model`, `rkzc::check_source` and `rkzc::version`.
+- `ldd` shows no OpenCV; the exported functions are `rkzc::check_model`, `rkzc::check_source` and `rkzc::version`; `exit` and `abort` are not among the undefined symbols.
+- An independent review of the first version found the missing time limit in `check_source`; it was added before this was merged.

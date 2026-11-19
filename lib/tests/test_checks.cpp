@@ -1,8 +1,12 @@
 // The library returns errors where bench_main exits, and stays usable afterwards.
 // Usage: test_checks MODEL.rknn VIDEO   (a model the board can run, and an H.264 file or rtsp:// URL)
 // It runs on the board: it needs the NPU, the RGA and the hardware decoder.
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -44,6 +48,22 @@ int main(int argc, char** argv) {
     expect(!st.ok && !st.message.empty(), "a missing source is an error", st.message);
     st = rkzc::check_source(model);  // exists, but is not a video
     expect(!st.ok && !st.message.empty(), "a file that is not a video is an error", st.message);
+
+    // A server that accepts the connection and never answers: the time limit must end the check.
+    const int srv = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    socklen_t len = sizeof addr;
+    expect(srv >= 0 && bind(srv, reinterpret_cast<sockaddr*>(&addr), sizeof addr) == 0 && listen(srv, 4) == 0 &&
+               getsockname(srv, reinterpret_cast<sockaddr*>(&addr), &len) == 0,
+           "a silent server");
+    const auto t0 = std::chrono::steady_clock::now();
+    st = rkzc::check_source("rtsp://127.0.0.1:" + std::to_string(ntohs(addr.sin_port)) + "/x", nullptr, 1);
+    const double waited = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    expect(!st.ok && waited < 3.0, "a source that never answers fails at the time limit (1 s)",
+           st.message + ", after " + std::to_string(waited) + " s");
+    close(srv);
 
     for (int round = 1; round <= 2; round++) {  // after the failures, and again after a clean close
         rkzc::ModelInfo m;
