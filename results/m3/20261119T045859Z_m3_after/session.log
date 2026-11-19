@@ -1,0 +1,19 @@
+2026-11-19T04:59:05Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-19T04:59:07Z starting the stream server
+2026-11-19T04:59:13Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261119T045909Z-375224, clock offset -0.0 ms
+2026-11-19T04:59:13Z idle for 600 s
+2026-11-19T05:09:13Z soc-thermal baseline 36522 m°C
+2026-11-19T05:09:13Z m3_after: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-19T05:09:14Z 01_m3_after_B_8ch_r1: B, 8 ch, main
+2026-11-19T05:11:36Z 01_m3_after_B_8ch_r1: valid
+2026-11-19T05:12:36Z 02_m3_after_C_8ch_r1: C, 8 ch, main
+2026-11-19T05:14:59Z 02_m3_after_C_8ch_r1: valid
+2026-11-19T05:16:00Z 03_m3_after_C_8ch_r2: C, 8 ch, main
+2026-11-19T05:18:23Z 03_m3_after_C_8ch_r2: valid
+2026-11-19T05:19:23Z 04_m3_after_B_8ch_r2: B, 8 ch, main
+2026-11-19T05:21:46Z 04_m3_after_B_8ch_r2: valid
+2026-11-19T05:22:47Z 05_m3_after_B_8ch_r3: B, 8 ch, main
+2026-11-19T05:25:10Z 05_m3_after_B_8ch_r3: valid
+2026-11-19T05:26:10Z 06_m3_after_C_8ch_r3: C, 8 ch, main
+2026-11-19T05:28:33Z 06_m3_after_C_8ch_r3: valid
+2026-11-19T05:28:33Z stopping the stream server
