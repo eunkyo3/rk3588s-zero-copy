@@ -187,6 +187,20 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
     - Its rows give the `calib_npu` session, both labels, and the SHA-256 of the build's four post-processing objects.
   - **Smoke tests:** `--calib <dir>` makes an M4 sweep a smoke test that takes that session's labels. Without it, a smoke test takes the session that decides if there is one, and otherwise the label `unknown`.
 
+### M3: H1's point before and after the board's reset ([prereg/M3.md](../../prereg/M3.md))
+
+How to set up a board and run M3's sweeps is in [reproduce.md](reproduce.md).
+
+- **The sweeps (§3):** `m3_before` and `m3_after`, each B and C at 8 channels main, unstaggered, with `bench_main`'s defaults (§1), 3 repetitions. `scripts/reproduce_m1.sh before|after` runs them.
+- **Outside the order of the other sweeps.** Neither waits for them or for their redos, and they do not wait for M3's.
+  - **`m3_before`** refuses a board that has a setup record in `results/m3/`.
+  - **`m3_after`** needs the latest setup record of `scripts/setup_board.sh` to have passed on a fresh board (`result` `ok`, `fresh` `yes`). An earlier one that passed does not count.
+  - **Both** need `freeze-m3`'s row in [env.md](env.md#registration) and pass its commit to every run (`--freeze-m3-commit`, run kind `m3`).
+- **The inventory (§4):** the session records it and its diff from `inventory_m1.txt`. It stops only if a key of `M3_PINNED` differs, and writes those keys to `inventory_pinned.txt`. It also writes the package list, `dpkg.tsv`.
+- **`result.csv`:** M3's rows give the setup records the session found, whether the inventory equals M1's, and how many of its lines changed.
+- **The comparison (§2, §6):** `python3 tools/m3_report.py --session <dir>` prints one session against M1, and `python3 tools/m3_report.py --out <file>` gives the tables of every M3 session ([tests](../../tests/test_m3.py)).
+- **Smoke tests:** `scripts/reproduce_m1.sh before smoke` runs the sweep with 60 s idle, 10 s windows and a 30 s gate, into `results/check/<UTC>_m3_before_smoke/`.
+
 ### Time
 
 - A protocol run takes about 2.5 minutes, and the gate adds at least 60 s.
@@ -221,4 +235,6 @@ M4's accuracy (§2) has its own note: [m4_accuracy.md](m4_accuracy.md).
 | `tools/m4_order.py` | M4's accuracy passes and wiring check as their records show them, and the `calib_npu` session's gate ([tests](../../tests/test_m4_order.py)) |
 | `results/check/<UTC>_m4_default_c/` | M4's default path before `freeze-m4` (M4 §8 step 3) |
 | `tools/m4_checks.py` | the verdicts of M4's checks before `freeze-m4` ([tests](../../tests/test_m4_checks.py)) |
+| `results/m3/<UTC>_m3_before/`, `…_m3_after/`, `…_setup/` | M3's two sessions and the setup of the reset board ([reproduce.md](reproduce.md)) |
+| `scripts/setup_board.sh`, `scripts/reproduce_m1.sh`, `tools/m3_report.py` | M3's setup, its one command, and its comparison ([tests](../../tests/test_m3.py)) |
 | `tools/stream_session.py sweep`, `h3` | runs a session of a sweep, or of H3 ([tests](../../tests/test_stream_session.py)) |

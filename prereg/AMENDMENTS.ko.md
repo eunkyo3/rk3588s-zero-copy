@@ -546,3 +546,86 @@
     - 시험 실행은 [m4_accuracy.md](../docs/notes/m4_accuracy.ko.md)가 적는다. 그 값은 쓰지 않는다.
 - Affected data: 없음.
 - Release: `amend-A14`. `freeze-m4`는 이 항목을 더하는 PR의 머지 커밋에 붙인다. 그 `created_at`이 M4 실행의 기준 시각이다.
+
+## A15 — 2026-11-18 — M3: `freeze-m3`와 함께 등록하는 값
+- Change: [M3.md](M3.ko.md)를 등록하고 그 §8 2단계의 값을 정한다. M3.md는 바뀌지 않는다.
+  - **한 단계:** `prereg-m3`, `amend-A15`, `freeze-m3`는 모두 한 커밋에 붙는다. M3.md와 이 항목을 더하는 PR의 머지 커밋이다.
+  - **코드:** M3의 도구를 더하는 커밋 `0114c2431dfcc9927b77d5d266204960bae61b85`.
+    - **도는 코드:** 두 스윕은 `src/`, `tools/`, `scripts/`, `tests/`, `CMakeLists.txt`가 이 커밋과 같은 코드로 돈다. 두 스크립트가 이를 `freeze-m3`의 커밋과 대조한다(M3 §3, §4).
+    - **`freeze-m4`의 코드에 비해:** `src/app/bench_main.cpp`에 실행 종류 `m3`, `--freeze-m3-commit`, 헤더 필드 `freeze_m3_commit`이 생긴다. `src/`와 `CMakeLists.txt`의 다른 것은 바뀌지 않는다.
+    - **도구:**
+      - `tools/stream_session.py`에 스윕 `m3_before`와 `m3_after`가 생긴다.
+      - `tools/check_prereg_order.py`에 M3의 순서 점검이 생긴다.
+      - `tools/setup/build_ffmpeg_rockchip.sh`는 git의 해시 약어를 8자로 고정한다(아래).
+      - 새 파일: `tools/m3_report.py`, `scripts/setup_board.sh`, `scripts/reproduce_m1.sh`, `tests/test_m3.py`.
+  - **실행(§1):**
+    - **넘기는 옵션:** 세션 도구는 `--variant B`나 `--variant C`, `--channels 8`, `--condition main`, `--warmup 20`, `--duration 120`, `--run-kind m3`을 넘긴다. `docs/notes/env.md`의 Registration 표에서 읽은 `freeze-m3`의 커밋도 `--freeze-m3-commit`으로 넘긴다.
+    - **기본값:** 다른 옵션은 넘기지 않으므로 `--post m1`, `--stagger off`, `--prep-threads 2`, `--cores a76`, `models/yolov8n_i8.rknn`은 기본값 그대로다.
+    - **거부:** `bench_main`은 이 가운데 하나라도 다른 종류 `m3` 실행을 거부한다.
+  - **고정한 인벤토리 키(§4):** `tools/inventory.sh`의 다음 25개 키 중 하나라도 [inventory_m1.txt](../docs/notes/inventory_m1.txt)와 다르면 세션이 멈춘다. 목록은 `tools/stream_session.py`의 `M3_PINNED`이다.
+    - `kernel`, `boot_firmware`, `rknpu_driver`, `rga_driver`;
+    - `ffmpeg`, `ffmpeg_configuration`, `h264_rkmpp_default_*` 네 개;
+    - `librknnrt`, `librga`, `rknn_header *` 세 개;
+    - `cmake_build_type`, `core_cxx_flags`, `core_cxx_includes`, `bench_main_cxx_flags`, `bench_main_cxx_includes`, `core_cxx_defines`;
+    - `model`;
+    - `lib /usr/lib/librknnrt.so`, `lib /usr/lib/aarch64-linux-gnu/librga.so.2.1.0`, `lib /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.0`.
+  - **고정하지 않음:** 나머지 36개 키는 기록하고 보고한다.
+    - `os`와 `ffmpeg_built_with`;
+    - `CMAKE_*` 도구 네 개;
+    - 링크 줄 `link_bench_main`. 그 라이브러리 경로는 고정한 키와 패키지에서 나온다;
+    - Ubuntu 패키지와 ffmpeg-rockchip 자체 라이브러리의 `lib` 줄 29개.
+  - **깨끗한 보드 판정 파일(§3):**
+    - `/var/lib/rk3588s-bench/setup-started`. 설정이 첫 변경 전에 쓴다;
+    - `/opt/ffmpeg-rockchip`, `/opt/rknpu2`, `/usr/lib/librknnrt.so`, `/home/pi/.ssh/bench_stream`, `/etc/systemd/timesyncd.conf.d/50-bench.conf`.
+
+    이 가운데 하나도 찾지 못한 설정은 `fresh: yes`로 기록한다. 보드의 기본 이미지에는 하나도 없다. M1을 위해 설정한 보드에는 첫째를 뺀 전부가 있다.
+  - **설정이 확인하는 것(§3):**
+    - rknn-toolkit2 `v2.3.2`의 `librknnrt.so` 2.3.2(`rknpu2/runtime/Linux/librknn_api/aarch64/`): SHA-256 `d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8`. 보드의 것과 같다;
+    - Release `data-model-yolov8n_i8-04a76611`의 모델: `04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee`;
+    - 스트림 PC의 영상 manifest `media/bench/manifest.tsv`: `fcd33374d77ede742ef3a646ac870f9ab6d8e16c605f31b122f607ec78cbbf93`. 보드와 PC에서 같다;
+    - 패키지 단계 뒤, 커널과 librga, MPP 라이브러리의 SHA-256을 `inventory_m1.txt`와 대조.
+  - **설정이 설치하는 것(§3):**
+    - `apt-get upgrade`, 그다음 이미지 자체의 소스(`mirrors.ustc.edu.cn`, `ubuntu-ports`)에서 `build-essential cmake git pkg-config libdrm-dev libopencv-dev binutils wget ca-certificates python3`;
+    - M1과 같은 커밋 `8b4385e985c0a50bf7d3f96cf3cb6d0b63c53e6c`의 ffmpeg-rockchip.
+  - **초기화(§3):** FriendlyElec의 `/usr/local/bin/firstboot`, 그다음 재부팅. data 파티션(커널 명령줄의 `data=`)에 표시를 하고, 다음 부팅이 그것을 지운다.
+  - **이 등록 전의 개발 실행(§8 1단계).** 모두 실행 종류 `check`다.
+    - **스모크 테스트** [results/check/20261118T091529Z_m3_before_smoke](../results/check/20261118T091529Z_m3_before_smoke). 도구 커밋 전(`db0308f…-dirty`)에 돌렸다. 반복 3회를 모두 마쳤고, 무효 실행이 없었으며, 인벤토리가 M1과 같았다.
+    - **chroot 시험 1**, 09:22–09:27 UTC:
+      - 패키지 단계는 통과했다.
+      - ffmpeg 단계에서 내 감시가 시험을 멈췄다. 실제 루트 파일 시스템과 같이 쓰는 data 파티션의 여유가 700 MB 아래로 내려갔기 때문이다.
+      - 스크립트의 앞 버전이 기록을 chroot 안에 실행 종류 `m3`로 썼다. 그래서 그 기록은 남기지 않고, 이 줄들로 대신한다.
+    - **chroot 시험 1을 정리하다가** 호스트의 `/sys`와 `/dev` 하위 마운트가 내려갔다. debugfs, `/dev/pts`, cgroup 트리도 그 안에 있다.
+      - **원인:** 시험이 `/sys`를 재귀적으로 bind했는데, 호스트의 마운트는 공유(shared)였다.
+      - **복구:** 09:41 UTC에 보드를 재부팅해 되돌렸다. 돌던 측정은 없었고, 디스크의 내용은 바뀌지 않았다.
+      - **그 뒤로:** 시험은 chroot에 새 private 파일 시스템을 마운트한다.
+    - **chroot 시험 2**, [results/check/20261118T093021Z_m3_setup](../results/check/20261118T093021Z_m3_setup): 기록 단계 전까지 모두 통과했다. 시험 1의 정리 뒤로 debugfs가 없어서 기록 단계가 실패했다.
+    - **chroot 시험 3**, [results/check/20261118T094315Z_m3_setup](../results/check/20261118T094315Z_m3_setup): 기록 단계 전까지 모두 통과했다. 기록 단계는 고정한 키 하나, `ffmpeg`에서 실패했다.
+      - M1의 빌드는 `ffmpeg version 8b4385e9`, 이 빌드는 `8b4385e`였다.
+      - 커밋은 같다. FFmpeg의 버전 문자열은 git의 약어 해시이고, git은 그 길이를 클론의 크기로 정한다. M1의 소스 폴더는 스크립트의 얕은 fetch보다 큰 클론이었다.
+      - **수정:** `tools/setup/build_ffmpeg_rockchip.sh`가 이제 약어를 8자로 고정한다.
+    - **도구 커밋 전, 도구와 M3.md의 검토.** 그 결과로 바꾼 것:
+      - 클론의 커밋, 그리고 그 코드가 `freeze-m3`의 것과 같은지 확인;
+      - 첫 변경 전에 쓰는 설정 자신의 판정 파일;
+      - 가장 최근의 설정 기록만 셈;
+      - 네트워크와 스트림 PC 단계를 먼저;
+      - apt가 묻지 않고, 다른 apt를 기다림;
+      - 이미지가 제공하는 고정 키를 일찍 확인;
+      - 부팅 시각을 `/proc/stat`에서;
+      - 스크립트를 실행 가능하게 커밋;
+      - 스윕이 끝나기 전에는 결과를 내지 않고, `m3_before`는 기술적으로 보고;
+      - §2 확률에 대한 단서.
+    - **도구 커밋 `0114c24`에서:**
+      - **스모크 테스트** [results/check/20261118T100910Z_m3_before_smoke](../results/check/20261118T100910Z_m3_before_smoke): 반복 3회를 모두 마쳤고, 무효 실행이 없었으며, 인벤토리가 M1과 같았다.
+      - **chroot 시험 4**, [results/check/20261118T101519Z_m3_setup](../results/check/20261118T101519Z_m3_setup): 결과 `ok`, 깨끗한 보드, 550초.
+        - **단계:** 패키지 201초, librknnrt 2초, ffmpeg 310초, 모델 1초, 빌드 32초, 기록 4초.
+        - **고정 키:** 모두 M1과 같다.
+        - **다른 키:** 61개 중 10개.
+          - `os`(Ubuntu 24.04.5 대 24.04.4);
+          - libavutil의 SHA-256. libavcodec, libavformat, libswresample은 M1과 바이트까지 같다;
+          - libc6 `2.39-0ubuntu8.12` 대 `8.9`, 5줄;
+          - libX11, liblzma, zlib의 보안 업데이트.
+        - **다루지 못한 것:** chroot에서는 네트워크와 스트림 PC 단계를 시험할 수 없다(`--no-services`).
+    - **그 값:** 스모크 테스트의 CPU와 지연은 10초 창에서 나왔다. 어느 것과도 비교하지 않는다.
+- Reason: M3의 계획과 값을, 도구를 쓰고 시험하고 검토한 뒤, M3의 어떤 실행보다도 먼저 함께 등록한다.
+- Affected data: 없음.
+- Release: `amend-A15`. `prereg-m3`와 `freeze-m3`는 같은 커밋, 곧 이 항목을 더하는 PR의 머지 커밋에 붙는다. `freeze-m3`의 `created_at`이 M3 실행의 기준 시각이다.

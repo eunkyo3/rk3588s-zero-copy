@@ -24,6 +24,9 @@ if [ ! -d "$SRC/.git" ]; then
 fi
 git -C "$SRC" fetch -q --depth 1 origin "$REF"
 git -C "$SRC" checkout -q --detach FETCH_HEAD
+# ffmpeg's version string is git's abbreviated hash, whose length git picks from the clone's size. M1's build
+# reads "8b4385e9" (docs/notes/inventory_m1.txt); a shallow clone gives "8b4385e". Fix it at 8 (M3 §4).
+git -C "$SRC" config core.abbrev 8
 
 cd "$SRC"
 ./configure \

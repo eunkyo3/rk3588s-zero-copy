@@ -187,6 +187,20 @@ M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko
     - 그 행에는 `calib_npu` 세션, 두 라벨, 이 빌드의 후처리 오브젝트 네 개의 SHA-256이 있다.
   - **스모크 테스트:** `--calib <디렉터리>`를 주면 M4 스윕은 그 세션의 라벨을 쓰는 스모크 테스트가 된다. 주지 않으면 스모크 테스트는 정하는 세션이 있으면 그것을, 없으면 라벨 `unknown`을 쓴다.
 
+### M3: 보드 초기화 전과 후의 H1 지점([prereg/M3.md](../../prereg/M3.ko.md))
+
+보드를 설정하고 M3의 스윕을 돌리는 방법은 [reproduce.md](reproduce.ko.md)에 있다.
+
+- **스윕(§3):** `m3_before`와 `m3_after`. 각각 주 조건 8채널에서 B와 C를, 엇갈림 없이 `bench_main`의 기본값으로(§1) 3회 반복한다. `scripts/reproduce_m1.sh before|after`가 돌린다.
+- **다른 스윕의 순서 밖에 있다.** 다른 스윕이나 그 재실행을 기다리지 않고, 다른 스윕도 M3의 것을 기다리지 않는다.
+  - **`m3_before`**는 `results/m3/`에 설정 기록이 있는 보드를 거부한다.
+  - **`m3_after`**에는 `scripts/setup_board.sh`의 가장 최근 설정 기록이 깨끗한 보드에서 통과한 것(`result` `ok`, `fresh` `yes`)이어야 한다. 앞서 통과한 기록은 세지 않는다.
+  - **둘 다** [env.md](env.ko.md#등록)에 `freeze-m3`의 행이 있어야 하고, 모든 실행에 그 커밋을 넘긴다(`--freeze-m3-commit`, 실행 종류 `m3`).
+- **인벤토리(§4):** 세션이 인벤토리와, `inventory_m1.txt`와의 diff를 기록한다. `M3_PINNED`의 키가 다를 때만 멈추고, 그 키를 `inventory_pinned.txt`에 쓴다. 패키지 목록 `dpkg.tsv`도 쓴다.
+- **`result.csv`:** M3의 행은 세션이 찾은 설정 기록, 인벤토리가 M1의 것과 같은지, 몇 줄이 바뀌었는지를 준다.
+- **비교(§2, §6):** `python3 tools/m3_report.py --session <디렉터리>`는 세션 하나를 M1과 비교해 출력하고, `python3 tools/m3_report.py --out <파일>`은 모든 M3 세션의 표를 만든다([테스트](../../tests/test_m3.py)).
+- **스모크 테스트:** `scripts/reproduce_m1.sh before smoke`는 유휴 60초, 창 10초, 게이트 30초로 스윕을 돌리고 `results/check/<UTC>_m3_before_smoke/`에 기록한다.
+
 ### 시간
 
 - 프로토콜대로의 실행 한 번은 약 2.5분이고, 냉각 대기 관문이 최소 60초를 더한다.
@@ -221,4 +235,6 @@ M4의 정확도(§2)는 따로 노트가 있다: [m4_accuracy.md](m4_accuracy.ko
 | `tools/m4_order.py` | 기록으로 본 M4의 정확도 패스와 배선 점검, 그리고 `calib_npu` 세션의 관문([테스트](../../tests/test_m4_order.py)) |
 | `results/check/<UTC>_m4_default_c/` | `freeze-m4` 전 M4의 기본 경로(M4 §8 3단계) |
 | `tools/m4_checks.py` | `freeze-m4` 전 M4 점검들의 판정([테스트](../../tests/test_m4_checks.py)) |
+| `results/m3/<UTC>_m3_before/`, `…_m3_after/`, `…_setup/` | M3의 세션 두 개와 초기화한 보드의 설정([reproduce.md](reproduce.ko.md)) |
+| `scripts/setup_board.sh`, `scripts/reproduce_m1.sh`, `tools/m3_report.py` | M3의 설정, 명령 하나, 비교([테스트](../../tests/test_m3.py)) |
 | `tools/stream_session.py sweep`, `h3` | 스윕이나 H3의 세션 하나를 돌린다([테스트](../../tests/test_stream_session.py)) |

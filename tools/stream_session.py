@@ -54,6 +54,16 @@ Subcommands:
                without it, rule 3 does not judge its runs, as for an unknown label (M4 §5).
                Both M4 commands first check the two models' SHA-256 against M4 §1, and every M4 run's header
                against its arm's model and post-processing.
+  sweep m3_before, m3_after
+               M3's reproduction of prereg/M3.md §1 and §3, run kind m3: M1's B and C at 8 channels main
+               (H1's point, unstaggered, the defaults), 3 repetitions, B->C, C->B, B->C. m3_before runs on the
+               board as it is, before its reset; m3_after on the reset board that scripts/setup_board.sh set up.
+               Each run passes freeze-m3's commit from docs/notes/env.md. A session starts only once freeze-m3
+               has its row there. m3_before refuses a board with a setup record in results/m3/ (<UTC>_setup);
+               m3_after needs the board's latest one to have passed on a fresh board (M3 §3). Neither waits
+               for the other sweeps, nor for their redos.
+               The session records the board's inventory and its diff from docs/notes/inventory_m1.txt, and
+               stops only if a key that M3 §4 pins differs (M3_PINNED); the other lines are recorded.
   h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
@@ -61,7 +71,7 @@ Subcommands:
 Each session:
   - first records the board's software, build and model (tools/inventory.sh), and stops if they differ
     from docs/notes/inventory_m1.txt, writing inventory.diff, or if that file is not the one AMENDMENTS
-    A10 fixes;
+    A10 fixes (an m3 session stops only for the keys M3 §4 pins, and keeps the diff);
   - fixes the clocks (tools/set_perf_mode.sh) and records the environment (tools/collect_env.sh);
   - checks the SHA-256 of the stream PC's mediamtx and ffmpeg against A10, then starts
     stream-server/publish.sh there with the M1 assignment, with its log in UTC and
@@ -83,6 +93,7 @@ Which rules apply:
   - sweep runs: rules 1, 2 and 4, and rule 3 at unsaturated conditions (§6.2 with L = 32, A9): every
     count but 32 at the main condition, every auxiliary and every A count.
   - m2-check runs: rules 1, 2, 3 and 4 (8 channels main is unsaturated, M2 §5.2).
+  - m3 sweep runs: rules 1, 2, 3 and 4 (8 channels main is unsaturated, §6.2 with A7).
   - m4 sweep and m4-check runs: rules 1, 2 and 4, and rule 3 only for an arm whose label at the point is
     unsaturated (M4 §3.2). A saturated or unknown label leaves rule 3 out, and the runs are still made. A run
     whose header is not its arm's, or that bench_main refuses before it makes the run's directory, stops the
@@ -118,7 +129,9 @@ from the login session (setsid nohup):
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py loop-check [--set 4k] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py thermal --limit L [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {main,aux,reference,4k,k4,a55,bdirect_main,
-                                                                   bdirect_aux,m2_main,m2_aux,m4_main,m4_aux}
+                                                                   bdirect_aux,m2_main,m2_aux,m4_main,m4_aux,
+                                                                   m3_before,m3_after}
+  (scripts/reproduce_m1.sh runs the m3 sweeps)
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py m2-check [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py m4-check [--calib DIR] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
@@ -183,7 +196,21 @@ PREREG_V1_COMMIT = "87fe874b4f196dafd48f6a175b2d7604625aedba"  # docs/notes/env.
 FREEZE_M1_COMMIT = "2eec964d27545e081a44bc5ead01bbfcd2905a54"  # docs/notes/env.md; every run carries it
 PREREG_M2_COMMIT = "5d9d6d04e50f17d52980dc5b958c7071d7107176"  # docs/notes/env.md; M2's headers carry it (M2 §5.1)
 PREREG_M4_COMMIT = "8638685d9ef806a85e5042d7cc10febdd5ae93a9"  # docs/notes/env.md; M4's headers carry it (M4 §4)
-ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's and freeze-m4's commits
+ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's, freeze-m4's and freeze-m3's commits
+M3_SETUP = "setup"  # results/m3/<UTC>_setup: a record of scripts/setup_board.sh (prereg/M3.md §3)
+M3_PINNED = (  # prereg/M3.md §4: the inventory keys (tools/inventory.sh) that must equal inventory_m1.txt's
+    # the image's kernel, drivers and boot firmware
+    "kernel", "boot_firmware", "rknpu_driver", "rga_driver",
+    # ffmpeg-rockchip's commit, configuration and h264_rkmpp's defaults (h264_rkmpp_default_*)
+    "ffmpeg", "ffmpeg_configuration", "h264_rkmpp_default_",
+    # the NPU runtime, librga and the RKNN headers (rknn_header *)
+    "librknnrt", "librga", "rknn_header ",
+    # the build's type, flags, include paths and defines
+    "cmake_build_type", "core_cxx_flags", "core_cxx_includes", "bench_main_cxx_flags", "bench_main_cxx_includes",
+    "core_cxx_defines",
+    # the model, and the files of the NPU runtime, librga and MPP
+    "model", "lib /usr/lib/librknnrt.so", "lib /usr/lib/aarch64-linux-gnu/librga.so.2.1.0",
+    "lib /usr/lib/aarch64-linux-gnu/librockchip_mpp.so.0")
 POST_OBJECTS = {  # M2 §4: the post-processing objects of libcore, by their key in m2_equivalence.csv
     "sha256_yolov8_post_o": "build/CMakeFiles/core.dir/src/core/yolov8_post.cpp.o",
     "sha256_yolov8_post_neon_o": "build/CMakeFiles/core.dir/src/core/yolov8_post_neon.cpp.o",
@@ -218,6 +245,9 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     # prereg/M4.md §3.2: C8 (YOLOv8n, Cp's post-processing) against C10 (YOLOv10n, yolov10_post)
     "m4_main": ((8,), "main", ("C8", "C10"), "m4"),
     "m4_aux": ((5,), "aux", ("C8", "C10"), "m4"),
+    # prereg/M3.md §1 and §3: M1's B and C at H1's point, before and after the board's reset
+    "m3_before": ((8,), "main", ("B", "C"), "m3"),
+    "m3_after": ((8,), "main", ("B", "C"), "m3"),
 }
 ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"],  # A12
         "Cp": ["--variant", "C", "--post", "neon"],  # M2 §1
@@ -236,6 +266,7 @@ H3_PHASES = ("h3_search", "h3_confirm")
 ORDER = ("main", "aux", "h3", "reference", "4k", "k4", "a55", "bdirect_main", "bdirect_aux",  # comparison.md
          "m2_main", "m2_aux",  # M2 §5.3: main first
          "m4_main", "m4_aux")  # M4 §3.3: main first
+M3_SWEEPS = ("m3_before", "m3_after")  # M3 §3: outside ORDER; m3_after's gate is the setup record
 SESSION_NAME = r"\d{8}T\d{6}Z_"  # results/<kind>/<UTC>_<sweep or h3>
 
 LOG_LINE = re.compile(r"^(\d{4}/\d\d/\d\d \d\d:\d\d:\d\d) (\w+) (.*)$")
@@ -435,6 +466,43 @@ def m2_session(args):
 def is_m4(name):
     """Whether name is a sweep of M4 (run kind m4, M4 §4)."""
     return name in SWEEPS and SWEEPS[name][3] == "m4"
+
+
+def is_m3(name):
+    """Whether name is a sweep of M3 (run kind m3, M3 §4)."""
+    return name in SWEEPS and SWEEPS[name][3] == "m3"
+
+
+def m3_session(args):
+    """Whether a session is M3's: its runs pass freeze-m3's commit, and its inventory check keeps to M3 §4."""
+    return is_m3(getattr(args, "sweep", None))
+
+
+def inventory_keyed(text):
+    """{key: value} of tools/inventory.sh's "key: value" lines. A key may hold spaces ("lib /path")."""
+    out = {}
+    for line in text.splitlines():
+        k, sep, v = line.partition(": ")
+        if sep:
+            out[k] = v
+    return out
+
+
+def pinned(key):
+    """Whether an inventory key is one M3 §4 pins: an exact key of M3_PINNED, or one that starts with an entry
+    ending in "_" or " "."""
+    return any(key == p or (p[-1] in "_ " and key.startswith(p)) for p in M3_PINNED)
+
+
+def m3_inventory_problems(now, reference):
+    """M3 §4: the pinned keys whose value differs from the reference, or that one side lacks."""
+    a, b = inventory_keyed(reference), inventory_keyed(now)
+    problems = []
+    for k in sorted(set(a) | set(b)):
+        if not pinned(k) or a.get(k) == b.get(k):
+            continue
+        problems.append(f"{k}: {a.get(k, '(none)')} -> {b.get(k, '(none)')}")
+    return problems
 
 
 def m4_phase(phase):
@@ -1011,6 +1079,7 @@ class Session:
         self.server_launched = False
         self.launcher_pid = None
         self.server_started = False
+        self.freeze_m3 = "none"  # start() sets freeze-m3's commit for an m3 session (M3 §4)
         self.last_end = None
         self.invalid_x2 = []
         self.run_header = None  # the first run's header, for result.csv
@@ -1123,9 +1192,21 @@ class Session:
         a = self.args
         if self.sh(["tools/inventory.sh"], self.out / "inventory.txt", err_file=self.out / "inventory.err") != 0:
             raise Stop("inventory.sh failed: see inventory.err")
-        diff = inventory_diff((self.out / "inventory.txt").read_text(), Path(INVENTORY).read_text())
+        now, reference = (self.out / "inventory.txt").read_text(), Path(INVENTORY).read_text()
+        diff = inventory_diff(now, reference)
         if diff:
             (self.out / "inventory.diff").write_text(diff)
+        if m3_session(a):  # M3 §6: every package and its version, to compare the board before and after its reset
+            with open(self.out / "dpkg.tsv", "w", encoding="utf-8") as f:
+                subprocess.run(["dpkg-query", "-W", "-f", "${Package}\t${Version}\t${db:Status-Abbrev}\n"],
+                               stdout=f, check=False)
+        if diff and m3_session(a):  # M3 §4: only the pinned keys stop it; the rest is recorded and reported
+            problems = m3_inventory_problems(now, reference)
+            if problems:
+                (self.out / "inventory_pinned.txt").write_text("".join(f"{p}\n" for p in problems))
+                raise Stop(f"a key that M3 §4 pins differs from {INVENTORY}: " + "; ".join(problems))
+            self.say(f"the inventory differs from {INVENTORY} in lines that M3 §4 does not pin: see inventory.diff")
+        elif diff:
             raise Stop(f"the board's software, build or model differs from {INVENTORY} (A10): see inventory.diff")
         if self.sh(["tools/set_perf_mode.sh"], self.out / "perf_mode.txt") != 0:
             raise Stop("set_perf_mode.sh failed: " + (self.out / "perf_mode.txt").read_text())
@@ -1139,6 +1220,7 @@ class Session:
             raise Stop("env.txt has no trip point for soc-thermal")
         self.code_commit = build_commit()
         self.freeze_m2, self.freeze_m4 = session_freezes(a)
+        self.freeze_m3 = freeze_m3_commit() if m3_session(a) else "none"  # M3 §4; none before it (smoke tests)
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
@@ -1275,6 +1357,7 @@ class Session:
                "--run-kind", run_kind, "--repetition", str(repetition), "--freeze-commit", FREEZE_M1_COMMIT,
                *(["--freeze-m2-commit", self.freeze_m2] if is_m2(phase) else []),  # M2 §5.1; M1's as before
                *(["--freeze-m4-commit", self.freeze_m4] if m4_phase(phase) else []),  # M4 §4
+               *(["--freeze-m3-commit", self.freeze_m3] if is_m3(phase) else []),  # M3 §4
                "--out", str(run_dir)]
         start = dt.datetime.now(dt.timezone.utc)
         # Just before the bench, after the gate and the checks: if the session dies during the run,
@@ -1428,10 +1511,11 @@ class Session:
                       for arm in M4_MODELS for k in ("model_sha256", "post")}
         else:
             m4, models = {}, {"model_sha256": h.get("model_sha256", "")}
+        m3 = {"freeze_m3_commit": self.freeze_m3} if m3_session(a) else {}  # M3 §4
         header = {"start_time_utc": min(starts) if starts else "", "ntp_synchronized": h.get("ntp_synchronized", ""),
                   "prereg_v1_commit": h.get("prereg_v1_commit", ""), "freeze_m1_commit": h.get("freeze_m1_commit", ""),
                   **{k: h.get(k, "") for k in m2},  # M2 §5.1, from the first run's header
-                  **m4, "run_kind": run_kind, **models, "decoder": h.get("decoder", ""),
+                  **m4, **m3, "run_kind": run_kind, **models, "decoder": h.get("decoder", ""),
                   "code_commit": self.code_commit, "amendment": h.get("amendment", ""), "session": self.out.name,
                   "cooling": os.environ["COOLING"], "ambient_c": os.environ["AMBIENT_C"]}
         rows = rows + [("invalid_x2_runs", " ".join(self.invalid_x2) or "none"),
@@ -1555,6 +1639,45 @@ def freeze_m4_commit():
     return freeze_m4_registration()[0]
 
 
+def freeze_m3_commit():
+    """freeze-m3's tag commit from the Registration table of docs/notes/env.md, or "none" before it (M3 §4)."""
+    try:
+        text = Path(ENV_MD).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        raise Stop(f"cannot read {ENV_MD}: {e!r}") from None
+    return registration_rows(text).get("freeze-m3", ("none", None))[0]
+
+
+def m3_setup_records(root=Path("results", "m3")):
+    """[(directory, {key: value of setup.csv's header and table})] of the setup records in results/m3/
+    (<UTC>_setup, scripts/setup_board.sh), by name (UTC)."""
+    out = []
+    for d in sorted(root.glob(f"*_{M3_SETUP}")):
+        f = d / "setup.csv"
+        if d.is_dir() and re.fullmatch(SESSION_NAME + M3_SETUP, d.name) and f.exists():
+            header, rows = summary_values(f)
+            out.append((d, {**header, **rows}))
+    return out
+
+
+def m3_order_problem(name, records=None):
+    """Why an M3 protocol session of name cannot start now (M3 §3, §4), or None."""
+    if freeze_m3_commit() == "none":
+        return (f"freeze-m3 comes before M3's runs, and {ENV_MD} has no row for it with its commit and created_at "
+                "(M3 §4)")
+    records = m3_setup_records() if records is None else records
+    if name == "m3_before" and records:
+        return (f"m3_before runs on the board before its reset, and results/m3/ has a setup record "
+                f"({records[-1][0].name}): this board was set up again (M3 §3)")
+    if name == "m3_after":  # the latest setup is the board's: an older one that passed does not count
+        if not records or records[-1][1].get("result") != "ok" or records[-1][1].get("fresh") != "yes":
+            return ("m3_after needs the latest setup record in results/m3/<UTC>_setup to be one that "
+                    "scripts/setup_board.sh passed on a freshly reset board (result ok, fresh yes; M3 §3)")
+    if progress(name) == "complete":
+        return f"{name} is complete"
+    return None
+
+
 def session_freezes(args):
     """(freeze-m2's commit, freeze-m4's commit) that a session's runs pass. M2's sweeps take freeze-m2's;
     m2-check runs before it and passes none (M2 §7). M4's sessions, m4-check too, take freeze-m4's, which is
@@ -1645,15 +1768,17 @@ def write_idle_baseline(s, run_kind):
     start, t0, stat0, sched0, t1, stat1, sched1 = s.idle
     rows = [("window_s", f"{t1 - t0:.1f}")] + idle_rows(proc_stat_nonidle(stat0), proc_stat_nonidle(stat1),
                                                        1.0 / os.sysconf("SC_CLK_TCK"))
-    if m2_session(s.args) or m4_session(s.args):  # M2 §3.2, M4 §3.3; none without /proc/schedstat.
-        rows += schedstat_rows(sched0, sched1)  # M1's sessions keep their rows.
+    # M2 §3.2, M4 §3.3, M3 §6; none without /proc/schedstat. M1's sessions keep their rows.
+    if m2_session(s.args) or m4_session(s.args) or m3_session(s.args):
+        rows += schedstat_rows(sched0, sched1)
     amendments = re.findall(r"^## (A\d+) ", Path("prereg/AMENDMENTS.md").read_text(encoding="utf-8"), re.M)
     ntp = subprocess.run(["timedatectl", "show", "-p", "NTPSynchronized", "--value"], capture_output=True,
                          text=True).stdout.strip()
     m2 = {"prereg_m2_commit": PREREG_M2_COMMIT, "freeze_m2_commit": s.freeze_m2} if m2_session(s.args) else {}
     m4 = {"prereg_m4_commit": PREREG_M4_COMMIT, "freeze_m4_commit": s.freeze_m4} if m4_session(s.args) else {}
+    m3 = {"freeze_m3_commit": s.freeze_m3} if m3_session(s.args) else {}
     header = {"start_time_utc": f"{start:%Y-%m-%dT%H:%M:%SZ}", "ntp_synchronized": ntp,
-              "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, **m2, **m4,
+              "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, **m2, **m4, **m3,
               "run_kind": run_kind,
               "measurement": "idle baseline of system CPU (PROTOCOL §7.2), not a run", "code_commit": s.code_commit,
               "amendment": amendments[-1] if amendments else "none"}
@@ -1691,7 +1816,20 @@ def cmd_sweep(s):
                         ("repetitions_run_here", " ".join(done_here) or "none"),
                         ("repetitions_left", " ".join(left) or "none")]
                        + (list(post_object_hashes().items()) if is_m2(a.sweep) else [])  # M2 §4
-                       + (m4_rows(s) if is_m4(a.sweep) else []), s.run_kind)
+                       + (m4_rows(s) if is_m4(a.sweep) else [])
+                       + (m3_rows(s) if is_m3(a.sweep) else []), s.run_kind)
+
+
+def m3_rows(s):
+    """M3's rows of result.csv: the setup record the session took, and whether the inventory equals M1's (M3 §3,
+    §4)."""
+    setup = m3_setup_records()
+    diff = s.out / "inventory.diff"
+    changed = sum(1 for line in diff.read_text().splitlines()
+                  if line[:1] in "+-" and line[:3] not in ("+++", "---")) if diff.exists() else 0
+    return [("setup_records", " ".join(d.name for d, _ in setup) or "none"),
+            ("inventory_same_as_m1", "no" if diff.exists() else "yes"),
+            ("inventory_changed_lines", str(changed))]
 
 
 def m4_rows(s):
@@ -1869,12 +2007,13 @@ def main(argv):
     signal.signal(signal.SIGHUP, on_signal)
     try:
         this = (args.sweep or "h3") if args.command in ("sweep", "h3") and not smoke else None
-        waiting = [w for w in redo_pending() if w != this]
+        # M3's sweeps stand outside the others' order (M3 §3): they do not wait for the others' redos.
+        waiting = [] if is_m3(args.sweep) else [w for w in redo_pending() if w != this]
         if waiting:
             raise Stop(f"not starting: {', '.join(waiting)} has a repetition to redo, so its next session comes "
                        "first (docs/notes/comparison.md)")
         if this:
-            problem = order_problem(this)
+            problem = m3_order_problem(this) if is_m3(this) else order_problem(this)
             if problem:
                 raise Stop(f"not starting: {problem} (docs/notes/comparison.md)")
         # Not freeze-m2 or freeze-m4: the checks come before them.
