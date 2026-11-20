@@ -1,0 +1,41 @@
+# rkzc-detect as a service: reads /etc/rkzc/detect.toml, writes JSON lines to the socket named there
+# (by default /run/rkzc/detect.sock), logs to the journal.
+#   systemctl enable --now rkzc-detect
+#   journalctl -u rkzc-detect -f
+[Unit]
+Description=rkzc-detect: object detection on RTSP streams (RK3588 zero-copy path)
+Documentation=https://github.com/eunkyo3/rk3588s-zero-copy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/rkzc-detect --config /etc/rkzc/detect.toml
+# A source that is down is retried inside the program. A restart is for the program's own failure;
+# status 2 is a configuration that cannot be used, which a restart does not mend.
+Restart=on-failure
+RestartSec=5
+RestartPreventExitStatus=2
+# The program stops on SIGTERM and delivers the frames it was inferring first.
+TimeoutStopSec=20
+
+# No fixed account: a user made for the run, in the groups that own the devices of the path
+# (/dev/dma_heap, /dev/mpp_service, /dev/rga: video; the NPU's /dev/dri/renderD*: render).
+DynamicUser=yes
+SupplementaryGroups=video render
+# /run/rkzc for the socket; removed when the service stops.
+RuntimeDirectory=rkzc
+RuntimeDirectoryMode=0755
+# The model's default place, readable by the service.
+StateDirectory=rkzc
+
+NoNewPrivileges=yes
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

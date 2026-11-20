@@ -1,0 +1,46 @@
+# rkzc-detect's configuration. The service reads /etc/rkzc/detect.toml.
+# Check it without starting anything:  rkzc-detect --config /etc/rkzc/detect.toml --check
+#
+# The format is a subset of TOML: comments, [sections], strings, integers, true/false and arrays of
+# strings. A key the program does not know is an error.
+
+# The model: a .rknn file, YOLOv8 or YOLOv10 as exported by rknn_model_zoo. One model for all sources.
+model = "/var/lib/rkzc/yolov8n_i8.rknn"
+
+# One entry per channel: H.264 over RTSP, or an H.264 file. All of one aspect ratio.
+sources = [
+    "rtsp://192.168.1.10:554/stream1",
+]
+
+# Infer one frame in this many. 6 gives 5 inferences per second from a 30 fps stream.
+every_nth_frame = 6
+
+# "auto" picks by the model's outputs: "neon" for YOLOv8, "v10" for YOLOv10. "m1" is the scalar YOLOv8
+# post-processing. The thresholds are fixed: confidence 0.25, NMS IoU 0.45 (YOLOv8).
+post = "auto"
+
+# Start a file again when it ends. Without it, the program exits when every file has ended.
+loop_files = false
+
+[output]
+# "stdout", or "unix:/path": a Unix socket that every connected client reads the lines from, e.g.
+#   nc -U /run/rkzc/detect.sock
+# A client that stops reading is disconnected.
+to = "unix:/run/rkzc/detect.sock"
+# The socket file's permissions. "0666": any local user may read the detections.
+socket_mode = "0666"
+# Write a line for a frame with no detection too.
+empty_frames = true
+# Write source events (opened, lost, ended, error) as lines too. They always go to the log.
+events = true
+
+[reconnect]
+# The wait before a source is opened again: it starts here and doubles up to max_ms while no frame comes.
+initial_ms = 1000
+max_ms = 30000
+# A source that is open and gives no frame for this long is closed and opened again.
+stall_timeout_ms = 10000
+
+[log]
+# A log line per channel with its counters, this often. 0: only when stopping.
+stats_every_s = 60

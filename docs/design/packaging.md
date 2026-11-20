@@ -130,7 +130,7 @@ These change the design, and they are the owner's to answer:
 1. Read the licences of librknnrt and ffmpeg-rockchip, and settle "bundle or fetch". **Done:** [licences.md](licences.md).
 2. Split C's path out of `core` into a library target without OpenCV, with errors instead of aborts. `bench_main` keeps its behaviour, checked by the existing tests and a smoke run. **Done:** [lib/](../../lib/README.md), a separate build that compiles the measured sources unchanged. The registered code was not edited, so `bench_main` needed no new check.
 3. Add the run-until-stopped mode, reconnection and the detection callback; add the equivalence test against `bench_main`. **Done:** `rkzc::Detector` in [lib/](../../lib/README.md). The equivalence test compares with the registered `tools/demo_detect`, which writes the detections; `bench_main` records only their count.
-4. Write `rkzc-detect` and its service file.
+4. Write `rkzc-detect` and its service file. **Done:** [lib/](../../lib/README.md#the-program-rkzc-detect). The configuration is a subset of TOML; the output is JSON lines on stdout or a Unix socket; the service was run on the board from a test prefix.
 5. Write the packaging script, with the `copyright` file and ffmpeg-rockchip's source archive; install the `.deb` on a reset board, the way M3 did its setup.
 6. Decide whether to measure the packaged path, and register a plan if so.
 
