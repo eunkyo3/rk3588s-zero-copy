@@ -1,5 +1,5 @@
-# librkzc: variant C's path as a library (docs/design/packaging.md, steps 2 and 3), with its C interface
-# and the Python module that uses it (python/).
+# librkzc: variant C's path as a library (docs/design/packaging.md, steps 2 and 3), with its C interface,
+# the Python module that uses it (python/), and the program rkzc-detect with its service file (step 4).
 #
 # This is a build of its own, not a subdirectory of the root one. The root CMakeLists.txt, src/, tools/,
 # scripts/ and tests/ are the registered code: scripts/reproduce_m1.sh refuses to run unless they equal
@@ -28,6 +28,11 @@ set(RKZC_TEST_VIDEO "" CACHE STRING "a short H.264 file for the board tests (a f
 set(RKZC_TEST_OBJECTS_VIDEO "" CACHE FILEPATH "an H.264 file of at least 10 s with objects the model detects")
 set(RKZC_DEMO_DETECT "" CACHE FILEPATH "the root build's demo_detect, for the equivalence test")
 set(ENV{PKG_CONFIG_PATH} "${RKZC_FFMPEG_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+
+# Installed files find librkzc next to them and the FFmpeg libraries where they were built against; the
+# package of step 5 sets RKZC_FFMPEG_DIR to where it puts them.
+include(GNUInstallDirs)
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR};${RKZC_FFMPEG_DIR}/lib")
 
 find_package(PkgConfig REQUIRED)
 find_package(Python3 COMPONENTS Interpreter)
@@ -75,11 +80,30 @@ target_link_libraries(rkzc-check PRIVATE rkzc)
 add_executable(rkzc-jsonl examples/detect_jsonl.cpp)
 target_link_libraries(rkzc-jsonl PRIVATE rkzc)
 
+# The program: a configuration file in, JSON lines out. It uses the public header only.
+add_executable(rkzc-detect tools/rkzc_detect.cpp tools/detect_config.cpp tools/line_output.cpp)
+target_link_libraries(rkzc-detect PRIVATE rkzc pthread)
+configure_file(dist/rkzc-detect.service.in rkzc-detect.service @ONLY)
+
+# What step 5's package takes. The Python module, the model and /etc/rkzc/detect.toml are not installed
+# from here. The unit's ExecStart is fixed when configuring: configure with the prefix the files will
+# run from (CMAKE_INSTALL_PREFIX), not with `cmake --install --prefix`.
+install(TARGETS rkzc rkzc-detect rkzc-check
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES include/rkzc/rkzc.h include/rkzc/rkzc_c.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rkzc)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/rkzc-detect.service DESTINATION lib/systemd/system)
+install(FILES dist/detect.toml DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/rkzc/examples)
+
 # The tests see the public header only: they get no FFmpeg, RGA or RKNN include directory.
 add_executable(test_checks tests/test_checks.cpp)
 target_link_libraries(test_checks PRIVATE rkzc)
 add_executable(test_detector tests/test_detector.cpp)
 target_link_libraries(test_detector PRIVATE rkzc)
+# The header's Config only: it links no board library.
+add_executable(test_detect_config tests/test_detect_config.cpp tools/detect_config.cpp tools/line_output.cpp)
+target_include_directories(test_detect_config PRIVATE tools include)
+target_link_libraries(test_detect_config PRIVATE pthread)
 # C, not C++: the C header must compile as C.
 add_executable(test_c_api tests/test_c_api.c)
 target_link_libraries(test_c_api PRIVATE rkzc)
@@ -87,6 +111,7 @@ target_link_libraries(test_c_api PRIVATE rkzc)
 enable_testing()
 add_test(NAME no_opencv
     COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/no_opencv.sh $<TARGET_FILE:rkzc> $<TARGET_FILE:rkzc-check>)
+add_test(NAME detect_config COMMAND test_detect_config ${CMAKE_CURRENT_SOURCE_DIR}/dist/detect.toml)
 if(RKZC_TEST_MODEL AND RKZC_TEST_VIDEO)
     add_test(NAME checks COMMAND test_checks ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
     add_test(NAME detector COMMAND test_detector ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
@@ -103,6 +128,10 @@ if(RKZC_TEST_MODEL AND RKZC_TEST_VIDEO)
         set_tests_properties(python PROPERTIES
             ENVIRONMENT "RKZC_LIBRARY=$<TARGET_FILE:rkzc>;PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/python"
             TIMEOUT 300)
+        add_test(NAME rkzc_detect
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_rkzc_detect.py
+                    $<TARGET_FILE:rkzc-detect> ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO} ${RKZC_TEST_OBJECTS_VIDEO})
+        set_tests_properties(rkzc_detect PROPERTIES TIMEOUT 300)
     endif()
     # A test that hangs is a failure within minutes, not after ctest's 25.
     set_tests_properties(checks detector c_api PROPERTIES TIMEOUT 300)

@@ -2,9 +2,9 @@
 
 # librkzc
 
-Variant C's path of this repository — hardware decode, letterbox on the RGA, inference on the NPU, no CPU copy of the pixels — as a library. Steps 2 and 3 of [docs/design/packaging.md](../docs/design/packaging.md): the path is split from the benchmark, needs no OpenCV, returns errors where the benchmark exits, runs until stopped, reconnects, and hands out the detections.
+Variant C's path of this repository — hardware decode, letterbox on the RGA, inference on the NPU, no CPU copy of the pixels — as a library. Steps 2 to 4 of [docs/design/packaging.md](../docs/design/packaging.md): the path is split from the benchmark, needs no OpenCV, returns errors where the benchmark exits, runs until stopped, reconnects, and hands out the detections.
 
-**State:** a working detector with C++, C and Python interfaces. There is no installed program or package yet (steps 4 and 5). Nothing about its CPU time or latency is measured.
+**State:** a working detector with C++, C and Python interfaces, and a program with a service file. There is no package yet (step 5). Nothing about its CPU time or latency is measured.
 
 ## Use
 
@@ -62,6 +62,31 @@ with rkzc.Detector(["rtsp://10.88.0.1:8554/ch1"], "models/yolov8n_i8.rknn", on_f
 - **A started detector lives until it is stopped or closed,** also when the program drops its last reference; the ones still running are closed when the interpreter exits. One that is not running is freed as soon as it is dropped.
 - [python/examples/detect_jsonl.py](python/examples/detect_jsonl.py) prints the same JSON lines as the C++ example.
 
+## The program: `rkzc-detect`
+
+The detector as a program for someone who wants it to run: a configuration file in, JSON lines out, until it is stopped (step 4).
+
+```sh
+rkzc-detect --config detect.toml --check    # reads the file, opens the detector as a run would, and every source once
+rkzc-detect --config detect.toml            # runs until SIGTERM or Ctrl-C
+```
+
+- **The configuration** is a small file ([dist/detect.toml](dist/detect.toml) is the commented example): the model, the sources, the sampling, the output, the reconnection waits. The format is a subset of TOML read without a library; a key the program does not know is an error with its line number.
+- **The output** is one JSON object per line, on stdout or on a Unix socket that any number of clients read:
+
+  ```json
+  {"channel":0,"seq":12,"pts_us":400000,"time_ms":1795135300305,"width":1920,"height":1080,"detections":[{"class":0,"name":"person","score":0.8411,"x":408.60,"y":415.60,"w":104.73,"h":298.37}]}
+  {"event":"source_lost","channel":0,"time_ms":1795135300456,"message":"..."}
+  ```
+
+  `x`, `y`, `w`, `h` are in the source frame's pixels; `time_ms` is the wall clock when the line was written. To read the socket: `nc -U /run/rkzc/detect.sock`.
+- **A socket client that stops reading is disconnected** once its buffer is full (a few hundred lines); the program does not wait for it, and a reader should drop a last line that has no newline. A client beyond `max_clients` (16) is closed at once. stdout does wait for its reader, and a reader that goes away ends the program.
+- **Who may read the socket** is set by `socket_group` and `socket_mode`; the example lets the group `video` in. Connecting needs the write bit.
+- **A user and password in a source's URL** are replaced by `***` in the program's log and in every line it writes. The configuration file holds them in the clear: the example says how to keep it from other users.
+- **Exit status:** 0 when stopped or when every source has ended; 1 for a failure while running; 2 for a configuration that cannot be used.
+- **As a service:** [dist/rkzc-detect.service.in](dist/rkzc-detect.service.in) runs it with `/etc/rkzc/detect.toml` as a user made for the run, in the groups `video` and `render` that own the path's devices. The socket is `/run/rkzc/detect.sock`; the log goes to the journal. It is restarted after a failure, but not after status 2. `cmake --install` installs the library, the headers, the programs, the unit and the example; it installs neither `/etc/rkzc/detect.toml` nor a model. The unit's path to the program is fixed when configuring (`CMAKE_INSTALL_PREFIX`). The package of step 5 is to do all of this for the user.
+- **Not there:** MQTT, HTTP, drawn boxes, recording, a reload without a restart. Each of the first four can be a reader of the lines.
+
 ## Build and test
 
 On the board, after `scripts/setup_board.sh` (it needs ffmpeg-rockchip, librknnrt and the RKNN headers):
@@ -76,7 +101,7 @@ cmake --build build-lib -j4
 (cd build-lib && ctest --output-on-failure)
 ```
 
-It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?) and `rkzc-jsonl` (the example). The Python test needs `python3` and nothing installed.
+It produces `librkzc.so`, `rkzc-detect` (the program), `rkzc-check` (can this board run a model and a source?) and `rkzc-jsonl` (the example). The Python test needs `python3` and nothing installed.
 
 ## How it shares the measured code
 
@@ -100,7 +125,9 @@ It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?
 | `src/detector.cpp` | the pipeline: decode, sample, prepare, infer, post-process, call back |
 | `src/check.cpp` | `check_model`, `check_source` |
 | `tools/rkzc_check.cpp`, `examples/detect_jsonl.cpp` | `rkzc-check`, `rkzc-jsonl` |
-| `tests/` | `test_checks`, `test_detector`, `test_c_api`, `test_python.py`, `equivalence.sh` (board); `no_opencv.sh`; `rtsp_interruptions.sh` (manual, on a PC) |
+| `tools/rkzc_detect.cpp`, `tools/detect_config.*`, `tools/line_output.*` | `rkzc-detect`: the program, its configuration reader, its output |
+| `dist/detect.toml`, `dist/rkzc-detect.service.in` | the example configuration and the service file |
+| `tests/` | `test_checks`, `test_detector`, `test_c_api`, `test_python.py`, `test_rkzc_detect.py`, `equivalence.sh` (board); `test_detect_config`; `no_opencv.sh`; `rtsp_interruptions.sh` (manual, on a PC) |
 
 ## Known limits
 
@@ -114,6 +141,12 @@ It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?
 - **Python callbacks run under Python's global lock,** one at a time, and the library waits for each. What a callback costs in CPU time or in dropped frames has not been measured; a slow one drops frames like a slow C++ one. A callback also waits for the lock while another Python thread holds it, so CPU-bound Python elsewhere in the process delays every callback.
 - **The Python module is not installable yet:** there is no `pyproject.toml`; the package of step 5 is to put it on the system's path.
 - **The library's threads block the program's signals** (all but the faults a thread causes itself), so that a handler such as Python's for Ctrl-C runs on the program's own threads and does not interrupt a read in the pipeline. Whether an interrupted read would have done harm was not tested.
+- **`rkzc-detect`'s configuration is a subset of TOML:** no floats, dates, inline tables, nested sections, dotted or quoted keys, multi-line strings, `0x`/`0o`/`0b` integers, or escapes other than `\"` `\\` `\n` `\t`; an array holds strings only. The thresholds cannot be set, since the library fixes them.
+- **The service was run from a test prefix, not from a package,** on the one image of M3. It runs as a user made for the run, which also makes the system read-only to it, with no access to home directories and a private `/tmp`; it was not hardened further. The model's place under the service (`/var/lib/rkzc`) was not used in the test.
+- **Status 2 stops the service for good, also for a passing cause:** a model that fails to load because memory is short at that moment is not retried.
+- **The libraries underneath may print a source's URL themselves.** In the test with a URL that could not be reached they did not; other failures were not tried.
+- **On stdout, a reader that stays and stops reading** holds the program: it then cannot stop cleanly either, and under systemd is killed after 20 s. The socket has no such reader.
+- **Each socket client costs a file descriptor and up to about 400 KiB of kernel memory,** and every line is sent to every client inside the detector's callback; hence the limit on clients.
 - **On `stop()` the decoders close while already prepared frames are still being inferred.** The benchmark keeps its inputs open until the pipeline has drained. Frames waiting for preprocessing are let through first, so no frame holds a decoder buffer when its decoder closes.
 - **Not the measured configuration in three ways:** it is compiled with `-fPIC` and hidden visibility; it pins nothing, where `bench_main` pins its process, and so MPP's, FFmpeg's and librknnrt's threads, to the A76 cores 4 to 7; and it adds the callback, the coordinate mapping and a monitor thread. What these do to CPU time or latency has not been measured. A program that wants the benchmark's placement can pin itself before `Detector::open`.
 
@@ -121,7 +154,7 @@ It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?
 
 On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn`, a 2 s 1080p H.264 file made on the board, and one of the benchmark's videos (`pexels_29130409.mp4`):
 
-- `ctest`: 6 of 6 passed (2026-11-20; 4 of 4 before the C and Python interfaces).
+- `ctest`: 8 of 8 passed (2026-11-20; 4 of 4 before the C and Python interfaces, 6 of 6 before the program).
 - An independent review found no blocker; its points (no stall limit, a test that could not tell whether buffers were released, the undisclosed pinning, and smaller ones) are addressed in the code and in this file.
 - **Against the registered `tools/demo_detect`** on the first 300 frames of the video (50 sampled frames): the same 806 detections, with the same classes and scores and boxes that agree after mapping to the source frame. This held with M1's post-processing and with the library's default (neon). On a portrait version of the clip, where the letterbox bars are at the sides: the same 367 detections (the test encodes this clip anew each run, so the count moves by one or two).
 - **Errors:** a missing or wrong model, a missing source, a file that is not a video, a server that never answers and a wrong configuration each came back as an error; the same process went on.
@@ -151,4 +184,12 @@ On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn`, a 2 s
   - **Eight looped channels for 20 s from Python:** 100 frames sampled and delivered on each channel, none dropped. This is not a measurement.
   - **From C:** `tests/test_c_api.c`, compiled as C99 without extensions, opened, played a file, counted the frames and closed; `rkzc_stop` and `rkzc_close` called from the callback did nothing and the frames went on.
   - **The fields of a detection,** read from Python and from C on the benchmark video (217 detections): every class, score and box in its range.
+- **An independent review of `rkzc-detect`** found no blocker. Its points are addressed: a camera's password went out in event lines and the log; clients were unlimited and a failed accept spun; `--check` passed configurations a run refused; the socket's mode could not let a chosen group in under the service; three tests that could pass or fail for the wrong reason; and smaller ones.
+- **`rkzc-detect`** (2026-11-20, same board, model and videos):
+  - **The configuration reader and the output's text functions:** 50 cases, among them 39 files that must be refused, each with the expected reason, 35 of them with the line (a missing key has none, and the too-large integer is checked by its reason); the shipped example parses. The same test passed on a PC with the address and undefined-behaviour sanitizers.
+  - **Exit statuses:** 2 for no arguments, a missing or misspelt configuration, a missing model, a socket that cannot be made and a group that does not exist; `--check` gave 0 for a good file, and 1 for a missing source and for a post-processing that does not fit the model, which a run refused with 2.
+  - **On stdout:** a file played once gave 10 well-formed frame lines and the two event lines, and the program exited with status 0. With events and empty frames turned off, the one frame with a detection was the one line. A reader that closed the pipe ended the program with status 1.
+  - **A password in a URL:** with a source `rtsp://someone:hunter2@...` that could not be reached, the 10 error lines and the program's log showed `rtsp://***@...`, and the password was nowhere in the output.
+  - **On the socket:** the file had the mode and group asked for; a second program on the same socket was refused; a file left by a program that was gone did not stop the start; two clients each got well-formed lines of both channels with detections; with `max_clients = 3` a third client was served and a fourth closed without a line; a client that never read was disconnected, and only it, while the other two read 601 lines; SIGTERM ended the program with status 0 in 0.16 s and the socket file was removed.
+  - **As a service,** installed for the test under `/opt/rkzc-test` and removed afterwards, with the configuration `root:video 0640` and the example's socket settings: it started, ran as a user made for the run with the groups 44 and 992 (`video`, `render`), and user `pi` read 30 frame lines of two channels with 498 detections from `/run/rkzc/detect.sock` (`video`, `0660`). `systemctl stop` returned in 0.19 s with status 0. Killed with SIGKILL, it was running again 9 s later under a new process. With an unknown key in the file it failed with status 2 and was not restarted.
 - `ldd` shows no OpenCV; `exit` and `abort` are not among the undefined symbols.
