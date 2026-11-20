@@ -1,0 +1,18 @@
+# start_time_utc: 2026-11-20T08:25:14Z
+# run_kind: check
+# prereg_m5_commit: 9ac3ec137504b65751c1232ad9add69f3d15f091
+# freeze_m5_commit: none
+# tool_commit: a8eaa31dbfd4afbcd7c77882fb41014996929e2a
+# tool_sha256: 5f419c1ce89d0416dbe979fba001811dc9f3c94a93b09941738244959ea1beba
+# amendment: A15
+# package_version: 0.1.1-1
+# package_sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+key,value
+package_files_identical,22
+result,passed
+video_sha256,e560dd8481d5fe1c615f208fae192fc7fd583097d202e785dc026eae8fb75b41
+frames_of_rkzc_jsonl,126
+frame_lines_of_the_service,126
+detections_compared,1810
+events,source_opened source_ended
+problems,0

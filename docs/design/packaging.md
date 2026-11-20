@@ -132,6 +132,6 @@ These change the design, and they are the owner's to answer:
 3. Add the run-until-stopped mode, reconnection and the detection callback; add the equivalence test against `bench_main`. **Done:** `rkzc::Detector` in [lib/](../../lib/README.md). The equivalence test compares with the registered `tools/demo_detect`, which writes the detections; `bench_main` records only their count.
 4. Write `rkzc-detect` and its service file. **Done:** [lib/](../../lib/README.md#the-program-rkzc-detect). The configuration is a subset of TOML; the output is JSON lines on stdout or a Unix socket; the service was run on the board from a test prefix.
 5. Write the packaging script, with the `copyright` file and ffmpeg-rockchip's source archive; install the `.deb` on a reset board, the way M3 did its setup. **Done:** `lib/packaging/build_deb.sh` and [install.md](../install.md). The board was not reset again: the package was installed in a chroot of the board's base image, the way M3 tested its setup before the reset, and then on the live board with the service, and purged.
-6. Decide whether to measure the packaged path, and register a plan if so.
+6. Decide whether to measure the packaged path, and register a plan if so. **Decided:** it is measured, as M5 ([prereg/M5.md](../../prereg/M5.md)). `rkzc` 0.1.1 adds the three fields the measurement reads, and the tool is in [lib/measure/](../../lib/measure/README.md).
 
 Each step is a pull request of its own.

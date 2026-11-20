@@ -1,0 +1,5 @@
+mpp[66159]: mpp_platform: client 18 driver is not ready!
+mpp[66159]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+rkzc-jsonl: channel 0: source opened: /home/pi/m5-aux/objects.mp4
+rkzc-jsonl: channel 0: source ended: /home/pi/m5-aux/objects.mp4
+rkzc-jsonl: channel 0: decoded 752, sampled 126, inferred 126, dropped 0, errors 0, reconnects 0
