@@ -16,7 +16,9 @@
  *   rkzc_close(det);
  *
  * Functions that can fail return 1 on success and 0 on failure (rkzc_open: a null pointer), and write the
- * reason into `error` (always terminated, cut to error_size; `error` may be null).
+ * reason into `error` (cut to error_size and terminated when error_size > 0; `error` may be null).
+ *
+ * The structures have no size field: a change to one is a new library version (soname).
  */
 #ifndef RKZC_C_H
 #define RKZC_C_H
@@ -92,8 +94,8 @@ typedef struct rkzc_source_info {
     int32_t width, height;
 } rkzc_source_info;
 
-/* The callbacks come from the library's threads, one at a time. Do not call rkzc_stop or rkzc_close from
- * one. */
+/* The callbacks come from the library's threads, one at a time. rkzc_stop and rkzc_close do nothing when
+ * called from the detector's own callback; do not call rkzc_start or rkzc_wait there. */
 typedef void (*rkzc_frame_fn)(const rkzc_frame* frame, void* user);
 typedef void (*rkzc_event_fn)(const rkzc_event* event, void* user);
 
@@ -105,7 +107,7 @@ RKZC_C_API rkzc_detector* rkzc_open(const rkzc_config* config, char* error, size
 /* Stops if running, then frees. A null pointer is allowed. */
 RKZC_C_API void rkzc_close(rkzc_detector* detector);
 
-/* Set before rkzc_start. */
+/* Set before rkzc_start, and not changed after it. A null callback clears. */
 RKZC_C_API void rkzc_on_frame(rkzc_detector* detector, rkzc_frame_fn callback, void* user);
 RKZC_C_API void rkzc_on_event(rkzc_detector* detector, rkzc_event_fn callback, void* user);
 

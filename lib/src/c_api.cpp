@@ -5,12 +5,15 @@
 #include <exception>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include "rkzc/rkzc.h"
 #include "rkzc/rkzc_c.h"
 
 // rkzc_frame hands out rkzc::Detection's array as rkzc_detection's.
 static_assert(sizeof(rkzc_detection) == sizeof(rkzc::Detection), "Detection layouts differ");
+static_assert(alignof(rkzc_detection) == alignof(rkzc::Detection), "Detection layouts differ");
+static_assert(std::is_standard_layout<rkzc::Detection>::value, "Detection is not standard layout");
 static_assert(offsetof(rkzc_detection, x) == offsetof(rkzc::Detection, x), "Detection layouts differ");
 static_assert(offsetof(rkzc_detection, y) == offsetof(rkzc::Detection, y), "Detection layouts differ");
 static_assert(offsetof(rkzc_detection, w) == offsetof(rkzc::Detection, w), "Detection layouts differ");
@@ -30,6 +33,15 @@ struct rkzc_detector {
 };
 
 namespace {
+
+// The detector whose callback this thread is in, so that rkzc_stop and rkzc_close can refuse there:
+// stop() joins the calling thread's own thread.
+thread_local const rkzc_detector* t_in_callback = nullptr;
+struct InCallback {
+    const rkzc_detector* before;
+    explicit InCallback(const rkzc_detector* d) : before(t_in_callback) { t_in_callback = d; }
+    ~InCallback() { t_in_callback = before; }
+};
 
 void set_error(char* error, size_t size, const std::string& message) {
     if (error && size > 0)
@@ -107,10 +119,13 @@ rkzc_detector* rkzc_open(const rkzc_config* config, char* error, size_t error_si
 }
 
 void rkzc_close(rkzc_detector* detector) {
-    try {
-        delete detector;
+    if (!detector || t_in_callback == detector)
+        return;
+    try {  // here, not in the destructor, which cannot throw
+        detector->det->stop();
     } catch (...) {
     }
+    delete detector;
 }
 
 void rkzc_on_frame(rkzc_detector* detector, rkzc_frame_fn callback, void* user) {
@@ -121,7 +136,8 @@ void rkzc_on_frame(rkzc_detector* detector, rkzc_frame_fn callback, void* user) 
             detector->det->on_frame(nullptr);
             return;
         }
-        detector->det->on_frame([callback, user](const rkzc::Frame& f) {
+        detector->det->on_frame([detector, callback, user](const rkzc::Frame& f) {
+            const InCallback mark(detector);
             rkzc_frame out;
             out.channel = f.channel;
             out.width = f.width;
@@ -145,7 +161,8 @@ void rkzc_on_event(rkzc_detector* detector, rkzc_event_fn callback, void* user) 
             detector->det->on_event(nullptr);
             return;
         }
-        detector->det->on_event([callback, user](const rkzc::Event& e) {
+        detector->det->on_event([detector, callback, user](const rkzc::Event& e) {
+            const InCallback mark(detector);
             rkzc_event out;
             out.kind = static_cast<int32_t>(e.kind);
             out.channel = e.channel;
@@ -171,7 +188,7 @@ int rkzc_start(rkzc_detector* detector, char* error, size_t error_size) {
 }
 
 void rkzc_stop(rkzc_detector* detector) {
-    if (!detector)
+    if (!detector || t_in_callback == detector)
         return;
     try {
         detector->det->stop();

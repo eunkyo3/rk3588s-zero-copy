@@ -18,6 +18,7 @@ endif()
 # apart from -fPIC.
 add_compile_options(-Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls)
 set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_EXTENSIONS OFF)
 
 # Not "FFMPEG_PREFIX": pkg_check_modules(FFMPEG ...) writes a cache entry of that name itself.
 set(RKZC_FFMPEG_DIR /opt/ffmpeg-rockchip CACHE PATH "ffmpeg-rockchip install prefix")
@@ -29,6 +30,7 @@ set(RKZC_DEMO_DETECT "" CACHE FILEPATH "the root build's demo_detect, for the eq
 set(ENV{PKG_CONFIG_PATH} "${RKZC_FFMPEG_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
 find_package(PkgConfig REQUIRED)
+find_package(Python3 COMPONENTS Interpreter)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil)
 pkg_check_modules(RGA REQUIRED IMPORTED_TARGET librga)
 pkg_check_modules(DRM REQUIRED IMPORTED_TARGET libdrm)
@@ -88,17 +90,22 @@ add_test(NAME no_opencv
 if(RKZC_TEST_MODEL AND RKZC_TEST_VIDEO)
     add_test(NAME checks COMMAND test_checks ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
     add_test(NAME detector COMMAND test_detector ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
-    add_test(NAME c_api COMMAND test_c_api ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
+    add_test(NAME c_api COMMAND test_c_api ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO} ${RKZC_TEST_OBJECTS_VIDEO})
     # With the objects video, the Python example's lines are compared with the C++ example's too.
     set(PYTHON_TEST_EXTRA "")
     if(RKZC_TEST_OBJECTS_VIDEO)
         set(PYTHON_TEST_EXTRA ${RKZC_TEST_OBJECTS_VIDEO} $<TARGET_FILE:rkzc-jsonl>)
     endif()
-    add_test(NAME python
-        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_python.py ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO}
-                ${PYTHON_TEST_EXTRA})
-    set_tests_properties(python PROPERTIES
-        ENVIRONMENT "RKZC_LIBRARY=$<TARGET_FILE:rkzc>;PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/python")
+    if(Python3_FOUND)
+        add_test(NAME python
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_python.py ${RKZC_TEST_MODEL}
+                    ${RKZC_TEST_VIDEO} ${PYTHON_TEST_EXTRA})
+        set_tests_properties(python PROPERTIES
+            ENVIRONMENT "RKZC_LIBRARY=$<TARGET_FILE:rkzc>;PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/python"
+            TIMEOUT 300)
+    endif()
+    # A test that hangs is a failure within minutes, not after ctest's 25.
+    set_tests_properties(checks detector c_api PROPERTIES TIMEOUT 300)
 endif()
 if(RKZC_TEST_MODEL AND RKZC_TEST_OBJECTS_VIDEO AND RKZC_DEMO_DETECT)
     add_test(NAME equivalence

@@ -5,6 +5,8 @@
 // stopped, a source that ends or fails is opened again, a frame that fails is skipped, and the
 // detections are handed out in the source frame's coordinates.
 #include <pthread.h>
+#include <signal.h>
+#include <cxxabi.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -82,6 +84,8 @@ struct Detector::Impl {
             return;
         try {
             event_cb(Event{kind, channel, message});
+        } catch (abi::__forced_unwind&) {  // the thread is being ended (pthread_exit in a callback)
+            throw;
         } catch (...) {  // the callback's own failure must not end a pipeline thread
         }
     }
@@ -318,6 +322,8 @@ void Detector::Impl::npu_loop(int k) {
             if (frame_cb) {
                 try {
                     frame_cb(frame);
+                } catch (abi::__forced_unwind&) {
+                    throw;
                 } catch (...) {
                     callback_failed = true;
                 }
@@ -390,6 +396,14 @@ Status Detector::start() {
     if (d.started)
         return Status{false, "a Detector starts once"};
     d.started = true;
+    // The library's threads, and those MPP, FFmpeg and librknnrt start from them, take no signal meant
+    // for the program: a handler installed without SA_RESTART (Python's SIGINT) would otherwise break
+    // a read or an ioctl in the pipeline. The faults a thread causes itself stay unblocked.
+    sigset_t block, before;
+    sigfillset(&block);
+    for (int sig : {SIGSEGV, SIGBUS, SIGFPE, SIGILL, SIGABRT, SIGTRAP, SIGSYS})
+        sigdelset(&block, sig);
+    pthread_sigmask(SIG_BLOCK, &block, &before);
     const int n = static_cast<int>(d.ch.size());
     for (int p = 0; p < kPreprocessThreads; p++)
         d.pre.emplace_back([&d, p] {
@@ -404,6 +418,7 @@ Status Detector::start() {
     for (int i = 0; i < n; i++)
         d.decoders.emplace_back([&d, i] { d.decode_loop(i); });
     d.monitor = std::thread([&d] { d.monitor_loop(); });
+    pthread_sigmask(SIG_SETMASK, &before, nullptr);
     return Status{};
 }
 

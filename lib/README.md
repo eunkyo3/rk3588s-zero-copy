@@ -57,8 +57,9 @@ with rkzc.Detector(["rtsp://10.88.0.1:8554/ch1"], "models/yolov8n_i8.rknn", on_f
 
 - **Finding the library:** there is no package yet, so the module is used from the source tree: `PYTHONPATH=lib/python`, and `RKZC_LIBRARY=build-lib/librkzc.so.0` (otherwise `librkzc.so.0` on the loader's path).
 - **The options** are `rkzc::Config`'s, as keyword arguments; `det.stats()`, `rkzc.check_model()` and `rkzc.check_source()` are there too. A failure raises `rkzc.Error` with the library's reason.
-- **An exception in a callback** is printed and counted in `det.callback_errors`; the detector goes on.
-- **A started detector lives until it is closed,** also when the program drops its last reference; the ones still running are closed when the interpreter exits.
+- **An exception in a callback** is printed and counted in `det.callback_errors`; the detector goes on. The library does not see it: the frame counts as inferred, and there is no `FRAME_ERROR` event as there is for a C++ callback that throws.
+- **From a callback,** `stats()` works; `start()`, `stop()`, `close()` and `wait()` are refused.
+- **A started detector lives until it is stopped or closed,** also when the program drops its last reference; the ones still running are closed when the interpreter exits. One that is not running is freed as soon as it is dropped.
 - [python/examples/detect_jsonl.py](python/examples/detect_jsonl.py) prints the same JSON lines as the C++ example.
 
 ## Build and test
@@ -110,8 +111,9 @@ It produces `librkzc.so`, `rkzc-check` (can this board run a model and a source?
 - **One failure is undefined behaviour:** if the decoder does not offer DRM PRIME frames, `die()` throws inside an FFmpeg callback. `h264_rkmpp` always offers them.
 - **The libraries underneath print** to stderr on their own (MPP, RKNN, FFmpeg).
 - **Reconnection was tested against one RTSP server (mediamtx) on a wired link,** not against a camera, Wi-Fi or packet loss. The table under "Checked" is from a manual test, not from `ctest`.
-- **Python callbacks run under Python's global lock,** one at a time, and the library waits for each. What a callback costs in CPU time or in dropped frames has not been measured; a slow one drops frames like a slow C++ one.
+- **Python callbacks run under Python's global lock,** one at a time, and the library waits for each. What a callback costs in CPU time or in dropped frames has not been measured; a slow one drops frames like a slow C++ one. A callback also waits for the lock while another Python thread holds it, so CPU-bound Python elsewhere in the process delays every callback.
 - **The Python module is not installable yet:** there is no `pyproject.toml`; the package of step 5 is to put it on the system's path.
+- **The library's threads block the program's signals** (all but the faults a thread causes itself), so that a handler such as Python's for Ctrl-C runs on the program's own threads and does not interrupt a read in the pipeline. Whether an interrupted read would have done harm was not tested.
 - **On `stop()` the decoders close while already prepared frames are still being inferred.** The benchmark keeps its inputs open until the pipeline has drained. Frames waiting for preprocessing are let through first, so no frame holds a decoder buffer when its decoder closes.
 - **Not the measured configuration in three ways:** it is compiled with `-fPIC` and hidden visibility; it pins nothing, where `bench_main` pins its process, and so MPP's, FFmpeg's and librknnrt's threads, to the A76 cores 4 to 7; and it adds the callback, the coordinate mapping and a monitor thread. What these do to CPU time or latency has not been measured. A program that wants the benchmark's placement can pin itself before `Detector::open`.
 
@@ -138,11 +140,15 @@ On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn`, a 2 s
   - **The stall limit did not act in that run:** at its default of 10 s, the server or FFmpeg ended the read first. In a second run with the limit at 3 s, a frozen server and a frozen publisher were each noticed after 3.0 s, and the blocked network read returned 0.04 s after the monitor asked.
   - **How long the reopening takes** depends on where the retry wait stands when the source returns: up to the cap, 30 s by default.
 - **Eight looped channels for 30 s:** 152 frames sampled and delivered on each channel, none dropped, no error. This is not a measurement.
+- **An independent review of the C and Python interfaces** found no blocker. Its points are addressed: a lock that a garbage collection could take twice, a second `close()` that returned before the detector had stopped, two statements here that the tests did not show (they do now), and smaller ones.
 - **The C and Python interfaces** (2026-11-20, same board, model and videos):
   - **Python against C++:** `python/examples/detect_jsonl.py` and `rkzc-jsonl` printed the same lines for the 34 frames both saw of the benchmark video, 535 detections.
-  - **Callbacks:** a callback that raised on every frame was counted 8 times in 8 frames and the detector went on; `stop()` from a callback was refused; `stats()` from a callback worked while the main thread was inside `stop()`, which returned in 0.02 s.
-  - **A detector whose last reference was dropped** went on delivering and was closed by the function that runs at exit; no file descriptor was left open.
-  - **Ctrl-C:** the Python example, sent SIGINT while waiting, stopped and exited with status 0 in 0.19 s.
+  - **Callbacks:** a callback that raised on every frame was counted 8 times in 8 frames and the detector went on; `stop()`, `start()` and `close()` from a callback were refused. A callback that was held until the main thread was inside `stop()` then called `stats()` and got its answer; `stop()` returned after it, in 0.30 s.
+  - **Two threads closing at once:** no frame arrived after the second `close()` returned.
+  - **A detector whose last reference was dropped** went on delivering until it was closed; no file descriptor was left open. Three detectors dropped without being started were freed at once.
+  - **At exit:** a program that returned with a detector running exited with status 0, and so did one whose main thread returned 0, 0.1 and 0.3 s into another thread's `close()`.
+  - **Ctrl-C:** the Python example, sent SIGINT while waiting, stopped and exited with status 0 in 0.20 s.
   - **Eight looped channels for 20 s from Python:** 100 frames sampled and delivered on each channel, none dropped. This is not a measurement.
-  - **From C:** `tests/test_c_api.c`, compiled as C99, opened, played a file, counted the frames and closed.
+  - **From C:** `tests/test_c_api.c`, compiled as C99 without extensions, opened, played a file, counted the frames and closed; `rkzc_stop` and `rkzc_close` called from the callback did nothing and the frames went on.
+  - **The fields of a detection,** read from Python and from C on the benchmark video (217 detections): every class, score and box in its range.
 - `ldd` shows no OpenCV; `exit` and `abort` are not among the undefined symbols.

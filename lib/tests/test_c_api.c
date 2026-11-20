@@ -1,12 +1,14 @@
 /* The C header from C: it must compile as C, and the calls must work without a C++ caller.
- * Usage: test_c_api MODEL.rknn VIDEO.mp4 */
+ * Usage: test_c_api MODEL.rknn VIDEO.mp4 [OBJECTS.mp4]
+ * With OBJECTS (a video with objects the model detects) the detections' fields are checked too. */
 #include <stdio.h>
 #include <string.h>
 
 #include "rkzc/rkzc_c.h"
 
 static int failures = 0;
-static int frames = 0, detections = 0, ended = 0;
+static int frames = 0, detections = 0, ended = 0, out_of_range = 0, stop_ignored = 0;
+static rkzc_detector* running = NULL;
 
 static void check(int ok, const char* what) {
     printf("%s%s\n", ok ? "ok:   " : "FAIL: ", what);
@@ -18,6 +20,17 @@ static void on_frame(const rkzc_frame* f, void* user) {
     int* counter = (int*)user;
     (*counter)++;
     detections += f->count;
+    for (int i = 0; i < f->count; i++) {
+        const rkzc_detection* d = &f->detections[i];
+        if (d->cls < 0 || d->cls >= 80 || d->score < 0.25f || d->score > 1.0f || d->w <= 0 || d->h <= 0 ||
+            d->x <= -1 || d->y <= -1 || d->x + d->w >= f->width + 1 || d->y + d->h >= f->height + 1)
+            out_of_range++;
+    }
+    if (running) { /* from the detector's own callback these two do nothing */
+        rkzc_stop(running);
+        rkzc_close(running);
+        stop_ignored++;
+    }
 }
 
 static void on_event(const rkzc_event* e, void* user) {
@@ -27,8 +40,8 @@ static void on_event(const rkzc_event* e, void* user) {
 }
 
 int main(int argc, char** argv) {
-    if (argc != 3) {
-        fprintf(stderr, "usage: %s MODEL.rknn VIDEO.mp4\n", argv[0]);
+    if (argc != 3 && argc != 4) {
+        fprintf(stderr, "usage: %s MODEL.rknn VIDEO.mp4 [OBJECTS.mp4]\n", argv[0]);
         return 2;
     }
     char why[256];
@@ -71,6 +84,40 @@ int main(int argc, char** argv) {
         check(rkzc_stats(det, st, 2) == 1 && st[0].inferred == frames && frames > 0 && ended == 1,
               "the frames delivered equal the stats; one source-ended event");
         printf("      %d frames, %d detections\n", frames, detections);
+        rkzc_close(det);
+    }
+
+    /* A looped file: wait times out, stop and close from the callback are ignored, a callback can be
+     * cleared, and stats respects its capacity. With OBJECTS: the detections' fields are in range. */
+    const char* two[] = {argc == 4 ? argv[3] : argv[2], argv[2]};
+    cfg.sources = two;
+    cfg.source_count = 2;
+    cfg.loop_files = 1;
+    det = rkzc_open(&cfg, why, sizeof why);
+    check(det != NULL, "open with two looped channels");
+    if (det) {
+        int looped = 0;
+        frames = detections = out_of_range = 0;
+        rkzc_on_frame(det, on_frame, &looped);
+        rkzc_on_event(det, on_event, NULL);
+        rkzc_on_event(det, NULL, NULL);
+        running = det;
+        check(rkzc_start(det, why, sizeof why) == 1, "start");
+        check(rkzc_wait(det, 3000) == 0, "wait: 3 s passed, a looped file does not end");
+        rkzc_channel_stats st[2];
+        memset(st, 0, sizeof st);
+        check(rkzc_stats(det, st, 0) == 0 && rkzc_stats(det, st, 1) == 1 && st[1].decoded == 0 &&
+                  rkzc_stats(det, st, 2) == 2 && st[1].decoded > 0,
+              "stats fills no more than its capacity");
+        check(looped >= 10 && stop_ignored == looped && st[0].connected == 1,
+              "stop and close from the callback were ignored: the frames went on");
+        running = NULL;
+        rkzc_stop(det);
+        check(rkzc_wait(det, 0) == 1, "wait after stop returns 1");
+        check(ended == 1, "the cleared event callback was not called");
+        check(out_of_range == 0 && (argc != 4 || detections > 20),
+              "every detection's class, score and box in range");
+        printf("      %d frames, %d detections\n", looped, detections);
         rkzc_close(det);
     }
     rkzc_close(NULL);
