@@ -42,8 +42,9 @@ fi
 [ "$(id -u)" -eq 0 ] || { echo "rkzc-fetch-model: run as root (it writes to $DIR)" >&2; exit 2; }
 mkdir -p "$DIR"
 tmp=$(mktemp "$DIR/.model.XXXXXX")
-trap 'rm -f "$tmp"' EXIT
-if ! wget -q --no-hsts -O "$tmp" "$BASE/$release/$file"; then
+trap 'rm -f "$tmp" "$tmp.licence"' EXIT
+trap 'exit 1' INT TERM HUP  # so that the EXIT trap runs for a signal too
+if ! wget -nv --no-hsts --timeout=20 --tries=3 -O "$tmp" "$BASE/$release/$file"; then
     echo "rkzc-fetch-model: the download failed: $BASE/$release/$file" >&2
     exit 1
 fi
@@ -54,8 +55,11 @@ if [ "$got" != "$sha" ]; then
 fi
 chmod 0644 "$tmp"
 mv "$tmp" "$DIR/$file"
-trap - EXIT
-wget -q --no-hsts -O "$DIR/LICENSE-AGPL-3.0.txt" "$BASE/$release/LICENSE-AGPL-3.0.txt" ||
+if wget -nv --no-hsts --timeout=20 --tries=3 -O "$tmp.licence" "$BASE/$release/LICENSE-AGPL-3.0.txt"; then
+    chmod 0644 "$tmp.licence"
+    mv "$tmp.licence" "$DIR/LICENSE-AGPL-3.0.txt"
+else
     echo "rkzc-fetch-model: the licence text could not be fetched; it is at https://www.gnu.org/licenses/agpl-3.0.txt" >&2
+fi
 echo "rkzc-fetch-model: installed $DIR/$file"
 echo "  in /etc/rkzc/detect.toml:  model = \"$DIR/$file\""

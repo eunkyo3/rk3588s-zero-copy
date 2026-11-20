@@ -1,8 +1,23 @@
 #!/bin/sh
 set -e
-if [ "$1" = remove ] || [ "$1" = deconfigure ]; then
+case "$1" in
+remove)
     if [ -d /run/systemd/system ]; then
         systemctl disable --now rkzc-detect.service >/dev/null 2>&1 || true
     fi
-fi
+    # What is not one of the package's files and would keep dpkg from removing its directories: the
+    # runtime that rkzc-fetch-runtime downloaded, and Python's cache of the module.
+    rm -f /opt/rkzc/lib/librknnrt.so /opt/rkzc/lib/.librknnrt.*
+    rm -rf /usr/lib/python3/dist-packages/rkzc/__pycache__
+    ;;
+upgrade)
+    rm -rf /usr/lib/python3/dist-packages/rkzc/__pycache__
+    ;;
+deconfigure)
+    # For a while only: the service stops and stays enabled.
+    if [ -d /run/systemd/system ]; then
+        systemctl stop rkzc-detect.service >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
 exit 0

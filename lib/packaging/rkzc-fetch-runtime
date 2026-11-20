@@ -4,6 +4,7 @@
 # pass it on (see /usr/share/doc/rkzc/copyright). The package's install runs this; run it again by hand
 # if the board was offline then:
 #   sudo rkzc-fetch-runtime
+# It uses wget, which reads the proxy from the environment (https_proxy), not from apt's configuration.
 # To install without the network, put a librknnrt.so 2.3.2 for aarch64 with this SHA-256 at the path
 # below yourself.
 set -eu
@@ -23,8 +24,10 @@ fi
 mkdir -p "$DIR"
 tmp=$(mktemp "$DIR/.librknnrt.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
+trap 'exit 1' INT TERM HUP  # so that the EXIT trap runs for a signal too
 echo "rkzc-fetch-runtime: downloading librknnrt $VERSION from Rockchip's repository"
-if ! wget -q --no-hsts -O "$tmp" "$URL"; then
+# A network that drops packets must not hold the install for long: three tries of 20 s each.
+if ! wget -nv --no-hsts --timeout=20 --tries=3 -O "$tmp" "$URL"; then
     echo "rkzc-fetch-runtime: the download failed: $URL" >&2
     exit 1
 fi

@@ -42,7 +42,7 @@ Two things are new against the proposal: the RKNN **headers** are restricted too
   1. the texts of LGPL v3 and GPL v3 (`COPYING.LGPLv3`, `COPYING.GPLv3`), and a notice that the package uses FFmpeg under LGPL v3;
   2. the exact source: the commit, the `configure` line, and the build script. The simplest safe form is a source archive of that commit as an asset of the same Release as the `.deb`, not only a link to someone else's repository;
   3. the libraries as separate `.so` files that the user can replace with their own build. `/opt/rkzc/lib` with an rpath does this.
-- **What the build links from Ubuntu:** zlib, liblzma, libX11/libxcb and libdrm, found by `configure` automatically and linked dynamically. They stay Ubuntu's packages (`Depends:` of the `.deb`), not bundled. A leaner `configure` line would drop some, but it would no longer be the measured build.
+- **What the build links from Ubuntu:** zlib, liblzma, libX11/libxcb and libdrm, found by `configure` automatically and linked dynamically. (As packaged in step 5: the four bundled libraries need zlib, liblzma and libdrm; libX11 and libxcb are needed only by FFmpeg's parts that are not bundled.) They stay Ubuntu's packages (`Depends:` of the `.deb`), not bundled. A leaner `configure` line would drop some, but it would no longer be the measured build.
 - **Building at install instead** (6 minutes on the board) avoids distributing FFmpeg binaries at all. It is the fallback, not the choice: it needs a compiler on the user's board and makes the install slow and fragile.
 
 ## MPP and librga: the image's

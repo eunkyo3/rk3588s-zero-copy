@@ -12,16 +12,21 @@ This is the project's reading (docs/design/licences.md in the repository), not l
    Files: /opt/rkzc/lib/libavcodec.so.*, libavformat.so.*, libavutil.so.*, libswresample.so.*
    Licence: GNU Lesser General Public License, version 3 or later. This build was configured with
           --enable-version3 and without --enable-gpl or --enable-nonfree. The texts are beside this
-          file: COPYING.LGPLv3 and COPYING.GPLv3 (the LGPL v3 adds to the GPL v3).
+          file: COPYING.LGPLv3 and COPYING.GPLv3 (the LGPL v3 adds to the GPL v3); on Debian and
+          Ubuntu also /usr/share/common-licenses/LGPL-3 and GPL-3.
    Source: https://github.com/nyanmisaka/ffmpeg-rockchip, commit @FFMPEG_COMMIT@.
           The exact source is the archive @FFMPEG_ARCHIVE@,
-          published with this package in the same Release of the repository in 1.
+          published with this package in the same Release of the repository in 1
+          (https://github.com/eunkyo3/rk3588s-zero-copy/releases).
    Configured with:
           @FFMPEG_CONFIGURE@
-   Changes: none to the source. In the installed libraries only the run path was changed, from the
-          build's directory to $ORIGIN (lib/packaging/set_runpath.py in the repository in 1).
+   Changes: none to the source. The installed libraries are the build's, with the run path changed
+          from the build's directory to $ORIGIN (lib/packaging/set_runpath.py in the repository in 1)
+          and the symbols that linking does not need stripped.
    To use your own build: replace the files in /opt/rkzc/lib with libraries of the same sonames.
-          rkzc links them dynamically and finds them there by its run path.
+          rkzc links them dynamically and finds them there by its run path. So that dpkg does not
+          put its own back at the next upgrade, divert each file first:
+            dpkg-divert --local --rename --add /opt/rkzc/lib/libavcodec.so.61
 
 3. Not in this package
    - Rockchip's NPU runtime, /opt/rkzc/lib/librknnrt.so: downloaded at install from

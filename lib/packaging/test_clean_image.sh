@@ -14,29 +14,41 @@
 #   test_clean_image.sh start
 #   test_clean_image.sh run RKZC.deb VIDEO.mp4        VIDEO: a short H.264 file (a few seconds)
 #   test_clean_image.sh stop
+# RKZC_IMAGE_DEVICE names the base image's partition if it is not /dev/mmcblk2p8 (the board's eMMC).
 # `run` needs the network (apt, Rockchip's repository, this repository's Releases). It prints what it
 # finds; a line that starts with FAIL is a failed check, and the exit status is then 1.
 set -eu
-LOWER=/mnt/rkzc-lower
-TMP=/mnt/rkzc-tmp
-ROOT=/mnt/rkzc-root
-DEVICE=/dev/mmcblk2p8
+# Everything is mounted under BASE, which is first bound onto itself and made private: no mount below
+# it is then copied into the mount namespaces of the board's services, where `stop` could not reach it.
+BASE=/mnt/rkzc
+LOWER=$BASE/lower
+TMP=$BASE/tmp
+ROOT=$BASE/root
+# The image as shipped: the lower layer of the host's own overlay root.
+DEVICE=${RKZC_IMAGE_DEVICE:-/dev/mmcblk2p8}
+mounted() { mountpoint -q "$1"; }
 
 case "${1:-}" in
 start)
+    [ -b "$DEVICE" ] || { echo "$DEVICE is not a block device (set RKZC_IMAGE_DEVICE)" >&2; exit 1; }
+    mkdir -p $BASE
+    if ! mounted $BASE; then
+        mount --bind $BASE $BASE
+        mount --make-private $BASE
+    fi
     mkdir -p $LOWER $TMP $ROOT
-    mountpoint -q $LOWER || mount -o ro $DEVICE $LOWER
-    mountpoint -q $TMP || mount -t tmpfs -o size=1500m rkzc-tmp $TMP
+    mounted $LOWER || mount -o ro $DEVICE $LOWER
+    mounted $TMP || mount -t tmpfs -o size=1500m rkzc-tmp $TMP
     mkdir -p $TMP/upper $TMP/work
-    mountpoint -q $ROOT || mount -t overlay overlay -o lowerdir=$LOWER,upperdir=$TMP/upper,workdir=$TMP/work $ROOT
-    mount --make-private $ROOT
-    mount -t proc proc $ROOT/proc
-    mount -t sysfs sysfs $ROOT/sys
-    mount -t debugfs debugfs $ROOT/sys/kernel/debug
-    mount --bind /dev $ROOT/dev
-    for m in proc sys sys/kernel/debug dev; do
-        mount --make-private $ROOT/$m
-    done
+    mounted $ROOT || mount -t overlay overlay -o lowerdir=$LOWER,upperdir=$TMP/upper,workdir=$TMP/work $ROOT
+    # Each once, also when `start` is run again.
+    mounted $ROOT/proc || mount -t proc proc $ROOT/proc
+    mounted $ROOT/sys || mount -t sysfs sysfs $ROOT/sys
+    mounted $ROOT/sys/kernel/debug || mount -t debugfs debugfs $ROOT/sys/kernel/debug
+    if ! mounted $ROOT/dev; then
+        mount --bind /dev $ROOT/dev
+        mount --make-private $ROOT/dev
+    fi
     rm -f $ROOT/etc/resolv.conf
     grep '^nameserver' /run/systemd/resolve/resolv.conf >$ROOT/etc/resolv.conf
     # No service is started by a package's scripts in the chroot.
@@ -70,8 +82,9 @@ for f in /opt/ffmpeg-rockchip /opt/rknpu2 /usr/lib/librknnrt.so /opt/rkzc /etc/r
 done
 [ "$failed" = 0 ] && ok "no FFmpeg build, no librknnrt, no rkzc in the image"
 dpkg-query -W -f '${Package} ${Version}\n' librga2 librockchip-mpp1 libdrm2 wget python3 2>&1 | sed 's/^/      /'
-find / -xdev \( -path /proc -o -path /sys -o -path /dev -o -path /tmp \) -prune -o -type f -print 2>/dev/null |
-    sort >/tmp/files_before.txt
+# Every file, directory and link, to compare after the purge.
+listing() { find / -xdev \( -path /proc -o -path /sys -o -path /dev -o -path /tmp \) -prune -o -print 2>/dev/null | sort; }
+listing >/tmp/files_before.txt
 
 echo "== offline: the install succeeds and says what is missing"
 https_proxy=http://127.0.0.1:9 http_proxy=http://127.0.0.1:9 dpkg -i /tmp/rkzc.deb >/tmp/offline.txt 2>&1
@@ -81,10 +94,11 @@ if [ $status -eq 0 ] && grep -q 'sudo rkzc-fetch-runtime' /tmp/offline.txt && [ 
 else
     fail "dpkg -i without the network: status $status"; cat /tmp/offline.txt
 fi
-if rkzc-detect --version >/tmp/out.txt 2>&1; then
-    fail "rkzc-detect ran without librknnrt"
-else
+rkzc-detect --version >/tmp/out.txt 2>&1
+if grep -q 'librknnrt.so: cannot open' /tmp/out.txt; then
     ok "without librknnrt the program does not start: $(head -n 1 /tmp/out.txt)"
+else
+    fail "without librknnrt: $(head -n 1 /tmp/out.txt)"
 fi
 expect "apt-get purge after the offline install" apt-get -y purge rkzc
 
@@ -134,7 +148,9 @@ pyframes=$(grep -c '"seq"' /tmp/out.txt || true)
     fail "the Python example printed $pyframes frames, the program $frames"
 
 echo "== the package's own files"
-expect "dpkg --verify rkzc" dpkg --verify rkzc
+# dpkg --verify exits 0 also when a file differs: its output says.
+changed=$(dpkg --verify rkzc 2>&1)
+[ -z "$changed" ] && ok "dpkg --verify rkzc: every file is as packaged" || fail "dpkg --verify rkzc: $changed"
 [ -f /usr/share/doc/rkzc/copyright ] && [ -f /usr/share/doc/rkzc/COPYING.LGPLv3 ] && ok "the copyright file and the LGPL text are installed" ||
     fail "the licence files are missing"
 
@@ -146,12 +162,13 @@ else
     fail "after remove: $(ls -d /etc/rkzc/detect.toml /var/lib/rkzc/yolov8n_i8.rknn /usr/bin/rkzc-detect /opt/rkzc 2>&1 | tr '\n' ' ')"
 fi
 expect "apt-get purge rkzc" apt-get -y purge rkzc
-find / -xdev \( -path /proc -o -path /sys -o -path /dev -o -path /tmp \) -prune -o -type f -print 2>/dev/null |
-    sort >/tmp/files_after.txt
-# apt's and dpkg's own records and caches change with any install.
-left=$(comm -13 /tmp/files_before.txt /tmp/files_after.txt |
-    grep -v -e '^/var/lib/dpkg/' -e '^/var/lib/apt/' -e '^/var/cache/' -e '^/var/log/' -e '__pycache__' -e '^/etc/ld.so.cache' || true)
-[ -z "$left" ] && ok "no file is left that was not there before" || fail "left behind: $left"
+listing >/tmp/files_after.txt
+# apt's and dpkg's own records and caches change with any install. Python was run as root above, so
+# the module's cache was written: the package must have removed it.
+differ=$(comm -3 /tmp/files_before.txt /tmp/files_after.txt |
+    grep -v -e '/var/lib/dpkg/' -e '/var/lib/apt/' -e '/var/cache/' -e '/var/log/' -e '/etc/ld.so.cache' || true)
+[ -z "$differ" ] && ok "after the purge the files, directories and links are those from before" ||
+    fail "added (right column) or missing (left) after the purge: $differ"
 for f in /opt/rkzc /etc/rkzc /var/lib/rkzc; do
     [ -e "$f" ] && fail "left behind: $f"
 done
@@ -161,14 +178,14 @@ EOF
     chroot $ROOT sh /tmp/inside.sh
     ;;
 stop)
-    for m in dev sys/kernel/debug sys proc; do
-        mountpoint -q $ROOT/$m && umount $ROOT/$m
+    for m in $ROOT/dev $ROOT/sys/kernel/debug $ROOT/sys $ROOT/proc $ROOT $TMP $LOWER; do
+        if mounted $m; then umount $m; fi
     done
-    mountpoint -q $ROOT && umount $ROOT
-    mountpoint -q $TMP && umount $TMP
-    mountpoint -q $LOWER && umount $LOWER
     rmdir $LOWER $TMP $ROOT 2>/dev/null || true
-    echo "mounts left under /mnt: $(grep -c ' /mnt/rkzc' /proc/mounts || true)"
+    if mounted $BASE; then umount $BASE; fi
+    rmdir $BASE 2>/dev/null || true
+    # In this namespace, and in every other process's.
+    echo "mounts left here: $(grep -c " $BASE" /proc/mounts || true); in any process: $(cat /proc/[0-9]*/mountinfo 2>/dev/null | grep -c " $BASE" || true)"
     ;;
 *)
     echo "usage: $0 start | run RKZC.deb VIDEO.mp4 | stop" >&2

@@ -9,13 +9,17 @@ if [ "$1" = configure ]; then
     fi
     if [ -d /run/systemd/system ]; then
         systemctl daemon-reload || true
+        # After an upgrade: a running service goes on with the new files.
+        if [ -n "$2" ]; then
+            systemctl try-restart rkzc-detect.service || true
+        fi
     fi
     if [ -z "$2" ]; then
         cat <<'MSG'
 rkzc is installed. Next:
   sudo rkzc-fetch-model yolov8n            a model (AGPL 3.0), into /var/lib/rkzc
   sudoedit /etc/rkzc/detect.toml           your cameras
-  rkzc-detect --config /etc/rkzc/detect.toml --check
+  sudo rkzc-detect --config /etc/rkzc/detect.toml --check
   sudo systemctl enable --now rkzc-detect
   nc -U /run/rkzc/detect.sock              the detections, as a member of the group video
 MSG

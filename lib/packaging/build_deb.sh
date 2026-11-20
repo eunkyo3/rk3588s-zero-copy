@@ -9,6 +9,7 @@
 # Output: OUT_DIR/rkzc_<version>_arm64.deb, OUT_DIR/ffmpeg-rockchip-<commit>.tar.gz, OUT_DIR/SHA256SUMS
 set -eu
 export LC_ALL=C
+umask 022  # the files written here go into the package with these permissions
 
 TOP=$(cd "$(dirname "$0")/../.." && pwd)
 PKG=$TOP/lib/packaging
@@ -26,7 +27,8 @@ VERSION=$(sed -n 's/^project(rkzc VERSION \([0-9.]*\) .*/\1/p' "$TOP/lib/CMakeLi
 ffgit() { git -c safe.directory="$FFMPEG_SRC" -C "$FFMPEG_SRC" "$@"; }
 FFMPEG_COMMIT=$(ffgit rev-parse HEAD)
 RKZC_COMMIT=${RKZC_COMMIT:-$(git -C "$TOP" rev-parse HEAD 2>/dev/null || echo unknown)}
-if [ "$RKZC_COMMIT" != unknown ] && [ -n "$(git -C "$TOP" status --porcelain 2>/dev/null)" ]; then
+# Tracked files only: the output directory may lie in the checkout.
+if [ "$RKZC_COMMIT" != unknown ] && [ -n "$(git -C "$TOP" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
     RKZC_COMMIT=$RKZC_COMMIT-dirty
 fi
 # The installed FFmpeg must be the build of that source: its version string carries the commit.
@@ -34,8 +36,21 @@ fi
     echo "build_deb: $FFMPEG_PREFIX is not a build of $FFMPEG_SRC at $FFMPEG_COMMIT" >&2
     exit 1
 }
+# The archive made below is that commit: the tree that was built must have no change of its own.
+ffgit diff --quiet HEAD || { echo "build_deb: $FFMPEG_SRC has local changes; the source archive would not be what was built" >&2; exit 1; }
 # The configure line as FFmpeg recorded it, with the build's directories as they were.
 FFMPEG_CONFIGURE=$("$FFMPEG_PREFIX/bin/ffmpeg" -hide_banner -version | sed -n 's/^configuration: //p')
+# The copyright file says LGPL v3: that holds for this configuration only.
+case "$FFMPEG_CONFIGURE" in
+*--enable-gpl* | *--enable-nonfree*) echo "build_deb: this FFmpeg is not an LGPL build: $FFMPEG_CONFIGURE" >&2; exit 1 ;;
+*--enable-version3*) ;;
+*) echo "build_deb: this FFmpeg was not configured with --enable-version3: $FFMPEG_CONFIGURE" >&2; exit 1 ;;
+esac
+# The same commit gives the same timestamps in the package.
+if [ "$RKZC_COMMIT" != unknown ] && [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
+    SOURCE_DATE_EPOCH=$(git -C "$TOP" log -1 --format=%ct 2>/dev/null || true)
+fi
+[ -z "${SOURCE_DATE_EPOCH:-}" ] || export SOURCE_DATE_EPOCH
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -72,7 +87,23 @@ done
 bundled=$(cd "$stage$RUNTIME_LIBDIR" && ls)
 [ -n "$bundled" ] || { echo "build_deb: no FFmpeg library was found to bundle" >&2; exit 1; }
 chmod 0644 "$stage$RUNTIME_LIBDIR"/*
+# The run path is rewritten inside the libraries' string table. A linker may store a shorter string
+# as the tail of a longer one, so a symbol's name could share those bytes: the symbols and versions
+# must read the same before and after.
+symbols() { ( cd "$stage$RUNTIME_LIBDIR" && for so in $bundled; do readelf -W --dyn-syms -V "$so"; readelf -d "$so" | grep -E 'NEEDED|SONAME'; done ); }
+symbols >"$work/symbols.before"
 ( cd "$stage$RUNTIME_LIBDIR" && python3 "$PKG/set_runpath.py" '$ORIGIN' $bundled ) >"$work/runpath.log"
+symbols >"$work/symbols.after"
+cmp -s "$work/symbols.before" "$work/symbols.after" || {
+    echo "build_deb: rewriting the run path changed a library's symbols; it shares its string with one" >&2
+    diff "$work/symbols.before" "$work/symbols.after" | head -n 10 >&2
+    exit 1
+}
+# What the copyright file names, and nothing of Rockchip's.
+[ "$(echo $bundled)" = "libavcodec.so.61 libavformat.so.61 libavutil.so.59 libswresample.so.5" ] || {
+    echo "build_deb: the bundled libraries are not the four the copyright file names: $(echo $bundled)" >&2
+    exit 1
+}
 strip --strip-unneeded "$stage$RUNTIME_LIBDIR"/* "$libdir"/librkzc.so.0.* "$stage/usr/bin/rkzc-detect" \
     "$stage/usr/bin/rkzc-check"
 
@@ -93,6 +124,10 @@ install -m 0644 "$FFMPEG_SRC/COPYING.LGPLv3" "$FFMPEG_SRC/COPYING.GPLv3" "$doc/"
 install -m 0644 "$TOP/tools/setup/build_ffmpeg_rockchip.sh" "$doc/build_ffmpeg_rockchip.sh"
 if grep -q '@[A-Z_]*@' "$doc/copyright"; then
     echo "build_deb: a placeholder is left in the copyright file" >&2
+    exit 1
+fi
+if [ -n "$(find "$stage" -name 'librknn*' -o -name 'rknn_*.h' -o -name '*.rknn')" ]; then
+    echo "build_deb: a file of Rockchip's runtime or a model is in the package" >&2
     exit 1
 fi
 

@@ -15,7 +15,7 @@ wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.0/
 sudo apt install ./rkzc_0.1.0-1_arm64.deb
 ```
 
-- **The install needs the network:** it downloads Rockchip's NPU runtime (`librknnrt.so` 2.3.2) from Rockchip's repository and checks its SHA-256. The package cannot carry that file, since its licence does not allow passing it on. If the board is offline, the install still succeeds and says so; run `sudo rkzc-fetch-runtime` later.
+- **The install needs the network:** it downloads Rockchip's NPU runtime (`librknnrt.so` 2.3.2) from Rockchip's repository and checks its SHA-256. The package cannot carry that file, since its licence does not allow passing it on. If the board is offline, the install still succeeds and says so; run `sudo rkzc-fetch-runtime` later. The download gives up after three tries of 20 s. It uses `wget`, which takes a proxy from the environment (`https_proxy`), not from apt's configuration.
 - **It installs no other package** on the tested image: everything it depends on is in the image.
 - **Nothing starts by itself.** The service is installed disabled.
 
@@ -27,7 +27,7 @@ sudo apt install ./rkzc_0.1.0-1_arm64.deb
    sudo rkzc-fetch-model yolov8n      # or yolov10n; into /var/lib/rkzc
    ```
 
-   Your own `.rknn` works too, if it is a YOLOv8 or YOLOv10 export of rknn_model_zoo.
+   Your own `.rknn` works too, if it is a YOLOv8 or YOLOv10 export of rknn_model_zoo. Put it in `/var/lib/rkzc`, readable by all: the service cannot read home directories.
 2. **Your cameras,** in `/etc/rkzc/detect.toml`: H.264 over RTSP, all of one aspect ratio. The file explains every key.
 
    ```toml
@@ -41,10 +41,10 @@ sudo apt install ./rkzc_0.1.0-1_arm64.deb
 3. **Check** before starting anything:
 
    ```sh
-   rkzc-detect --config /etc/rkzc/detect.toml --check
+   sudo rkzc-detect --config /etc/rkzc/detect.toml --check
    ```
 
-   It loads the model and opens every source once, and says what failed.
+   It loads the model and opens every source once, and says what failed. Without `sudo` it needs a user in the groups `video` and `render`, which own the devices (`sudo usermod -aG video,render $USER`, then log in again); FriendlyElec's user `pi` is in both.
 4. **Start,** now and at every boot:
 
    ```sh
@@ -66,7 +66,7 @@ nc -U /run/rkzc/detect.sock
 
 - `x`, `y`, `w`, `h` are in the source frame's pixels; `x`, `y` is the box's top left corner.
 - A reader that stops reading is disconnected; connect again. Drop a last line that has no newline.
-- **From Python,** without the service, in your own program:
+- **From Python,** without the service, in your own program (as a user in the groups `video` and `render`):
 
   ```python
   import rkzc
@@ -100,7 +100,7 @@ It stops the service and removes the package's files, the downloaded runtime, th
 | The models | `/var/lib/rkzc`, downloaded by `rkzc-fetch-model` | AGPL 3.0; not in the package |
 
 - `/usr/share/doc/rkzc/copyright` on the board says the same in full, with the FFmpeg source's commit and configure line.
-- **The source of the bundled FFmpeg** is the archive `ffmpeg-rockchip-8b4385e9.tar.gz` in the same Release as the package. To use your own build, replace the libraries in `/opt/rkzc/lib` with ones of the same sonames.
+- **The source of the bundled FFmpeg** is the archive `ffmpeg-rockchip-8b4385e9.tar.gz` in the same Release as the package. To use your own build, replace the libraries in `/opt/rkzc/lib` with ones of the same sonames; divert each file first (`sudo dpkg-divert --local --rename --add /opt/rkzc/lib/libavcodec.so.61`, and so on), or dpkg puts its own back at the next upgrade.
 - The reasons are in [design/licences.md](design/licences.md).
 
 ## Build the package yourself
@@ -111,11 +111,11 @@ On a board set up by `scripts/setup_board.sh` (it has the compiler, ffmpeg-rockc
 lib/packaging/build_deb.sh dist
 ```
 
-It writes the `.deb`, the FFmpeg source archive and `SHA256SUMS` into `dist/`, and needs no root. `lib/packaging/test_clean_image.sh` installs a package inside a chroot of the board's base image, to try it on a clean image without resetting the board.
+It writes the `.deb`, the FFmpeg source archive and `SHA256SUMS` into `dist/`, and needs no root. `lib/packaging/test_clean_image.sh`, run as root, installs a package inside a chroot of the board's base image, to try it on a clean image without resetting the board.
 
 ## Known limits
 
 - **One board and one image were tested.** Another RK3588 board or image may work; the package only says when it sees another image or NPU driver.
 - **The install depends on Rockchip's repository** staying where it is. If the tag moves or the file changes, `rkzc-fetch-runtime` fails with a clear message, and the file must be placed by hand.
-- **Upgrades from one version of the package to the next** have not been tried: there is one version.
+- **Upgrades from one version of the package to the next** have not been tried: there is one version. The scripts are written for it (a running service is restarted, the runtime, the models and the configuration stay).
 - The library's and the program's own limits are in [lib/README.md](../lib/README.md#known-limits).

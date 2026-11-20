@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 if [ "$1" = remove ] || [ "$1" = purge ]; then
-    # What rkzc-fetch-runtime downloaded: not one of the package's files, so dpkg does not know it.
-    rm -f /opt/rkzc/lib/librknnrt.so
+    # Again, for a removal that did not pass through this version's prerm.
+    rm -f /opt/rkzc/lib/librknnrt.so /opt/rkzc/lib/.librknnrt.*
     rmdir /opt/rkzc/lib /opt/rkzc 2>/dev/null || true
     if [ -d /run/systemd/system ]; then
         systemctl daemon-reload || true
@@ -10,7 +10,8 @@ if [ "$1" = remove ] || [ "$1" = purge ]; then
 fi
 if [ "$1" = purge ]; then
     # The fetched models and their licence text; a model the user put there goes too, as purge means.
-    rm -rf /var/lib/rkzc
+    # Not across a mount: a volume mounted there is the user's.
+    rm -rf --one-file-system /var/lib/rkzc 2>/dev/null || true
     rmdir /etc/rkzc 2>/dev/null || true
 fi
 exit 0
