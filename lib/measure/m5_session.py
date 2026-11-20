@@ -308,8 +308,11 @@ def plan():
 
 
 class CpuWatch(threading.Thread):
-    """M5 §8 step 3, "The tool against bench_main": once per second, bench_main's utime + stime from /proc
-    with the CLOCK_REALTIME time of the read. On cpu0, where bench_main's own metrics thread is."""
+    """M5 §8 step 3, "The tool against bench_main": bench_main's utime + stime from /proc with the
+    CLOCK_REALTIME time of the read, ten times per second. On cpu0, where bench_main's own metrics thread is.
+    M5 has one read per second. The first check showed that this cannot bracket the window's end: bench_main
+    exits within half a second of it, so the last one-second read came before the end and there was none
+    after it (20261120T081615Z_m5_check, run 02). AMENDMENTS A16 records the change."""
 
     def __init__(self):
         super().__init__(daemon=True)
@@ -321,7 +324,7 @@ class CpuWatch(threading.Thread):
         except OSError:
             pass
         pid = None
-        while not self.done.wait(1.0):
+        while not self.done.wait(0.1):
             if pid is None:
                 found = processes({"bench_main"})
                 pid = found[0][0] if found else None
