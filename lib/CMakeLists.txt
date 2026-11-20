@@ -1,4 +1,5 @@
-# librkzc: variant C's path as a library (docs/design/packaging.md, steps 2 and 3).
+# librkzc: variant C's path as a library (docs/design/packaging.md, steps 2 and 3), with its C interface
+# and the Python module that uses it (python/).
 #
 # This is a build of its own, not a subdirectory of the root one. The root CMakeLists.txt, src/, tools/,
 # scripts/ and tests/ are the registered code: scripts/reproduce_m1.sh refuses to run unless they equal
@@ -6,7 +7,7 @@
 # here.
 #   cmake -S lib -B build-lib && cmake --build build-lib -j4
 cmake_minimum_required(VERSION 3.18)
-project(rkzc VERSION 0.1.0 LANGUAGES CXX)
+project(rkzc VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,6 +17,7 @@ endif()
 # The measured build's options (root CMakeLists.txt), so the shared sources are compiled the same way
 # apart from -fPIC.
 add_compile_options(-Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls)
+set(CMAKE_C_STANDARD 99)
 
 # Not "FFMPEG_PREFIX": pkg_check_modules(FFMPEG ...) writes a cache entry of that name itself.
 set(RKZC_FFMPEG_DIR /opt/ffmpeg-rockchip CACHE PATH "ffmpeg-rockchip install prefix")
@@ -45,6 +47,7 @@ add_library(rkzc SHARED
     ${MEASURED}/core/yolov8_post_neon.cpp
     ${MEASURED}/core/yolov10_post.cpp
     ${MEASURED}/preprocess/zero_copy_rga.cpp
+    src/c_api.cpp
     src/check.cpp
     src/detector.cpp
     src/engine.cpp)
@@ -75,6 +78,9 @@ add_executable(test_checks tests/test_checks.cpp)
 target_link_libraries(test_checks PRIVATE rkzc)
 add_executable(test_detector tests/test_detector.cpp)
 target_link_libraries(test_detector PRIVATE rkzc)
+# C, not C++: the C header must compile as C.
+add_executable(test_c_api tests/test_c_api.c)
+target_link_libraries(test_c_api PRIVATE rkzc)
 
 enable_testing()
 add_test(NAME no_opencv
@@ -82,6 +88,17 @@ add_test(NAME no_opencv
 if(RKZC_TEST_MODEL AND RKZC_TEST_VIDEO)
     add_test(NAME checks COMMAND test_checks ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
     add_test(NAME detector COMMAND test_detector ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
+    add_test(NAME c_api COMMAND test_c_api ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO})
+    # With the objects video, the Python example's lines are compared with the C++ example's too.
+    set(PYTHON_TEST_EXTRA "")
+    if(RKZC_TEST_OBJECTS_VIDEO)
+        set(PYTHON_TEST_EXTRA ${RKZC_TEST_OBJECTS_VIDEO} $<TARGET_FILE:rkzc-jsonl>)
+    endif()
+    add_test(NAME python
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_python.py ${RKZC_TEST_MODEL} ${RKZC_TEST_VIDEO}
+                ${PYTHON_TEST_EXTRA})
+    set_tests_properties(python PROPERTIES
+        ENVIRONMENT "RKZC_LIBRARY=$<TARGET_FILE:rkzc>;PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/python")
 endif()
 if(RKZC_TEST_MODEL AND RKZC_TEST_OBJECTS_VIDEO AND RKZC_DEMO_DETECT)
     add_test(NAME equivalence
