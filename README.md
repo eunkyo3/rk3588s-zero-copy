@@ -168,7 +168,7 @@ Registration has two stages. `prereg-v1` fixes the hypotheses and protocol. `fre
 - **Before M1's comparison runs:** the calibration of M1-3 ([docs/notes/calibration.md](docs/notes/calibration.md)) and the equivalence of M1-4 ([docs/notes/equivalence.md](docs/notes/equivalence.md)).
 - **M4's notes:** the exploration ([docs/notes/m4_exploration.md](docs/notes/m4_exploration.md)), and the accuracy tooling and checks ([docs/notes/m4_accuracy.md](docs/notes/m4_accuracy.md)).
 - **Background:** existing ways to feed decoded frames to the RKNN NPU, published measurements, and whether the runtime behaviours this project ran into are documented elsewhere ([docs/notes/background.md](docs/notes/background.md)).
-- **After the milestones:** a proposal for shipping variant C's path as a library, a program and a `.deb` ([docs/design/packaging.md](docs/design/packaging.md)). Nothing in it is built or measured yet.
+- **After the milestones:** variant C's path as a library, a program and a `.deb` for the NanoPi R6C: [docs/install.md](docs/install.md) to install it, [lib/README.md](lib/README.md) for what it is, [docs/design/packaging.md](docs/design/packaging.md) for the design. It is built and checked on the board; nothing about its CPU time or latency is measured.
 
 ## Build and run
 

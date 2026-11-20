@@ -42,7 +42,7 @@
   1. LGPL v3과 GPL v3의 전문(`COPYING.LGPLv3`, `COPYING.GPLv3`), 그리고 패키지가 FFmpeg을 LGPL v3으로 쓴다는 고지.
   2. 정확한 소스: 커밋, `configure` 줄, 빌드 스크립트. 가장 안전하고 간단한 형태는 그 커밋의 소스 압축 파일을 `.deb`와 같은 Release에 함께 올리는 것이다. 남의 저장소 링크만으로 끝내지 않는다.
   3. 사용자가 자기 빌드로 바꿀 수 있는 별도 `.so` 파일. `/opt/rkzc/lib`와 rpath가 이 조건을 채운다.
-- **이 빌드가 Ubuntu에서 링크하는 것:** zlib, liblzma, libX11/libxcb, libdrm. `configure`가 자동으로 찾아 동적으로 링크한다. 이들은 Ubuntu 패키지로 두고(`.deb`의 `Depends:`) 담지 않는다. `configure` 줄을 줄이면 일부를 뺄 수 있지만, 그러면 측정한 빌드가 아니게 된다.
+- **이 빌드가 Ubuntu에서 링크하는 것:** zlib, liblzma, libX11/libxcb, libdrm. `configure`가 자동으로 찾아 동적으로 링크한다. (5단계에서 패키지로 만든 결과: 함께 넣는 라이브러리 네 개는 zlib, liblzma, libdrm이 필요하다. libX11과 libxcb는 넣지 않는 FFmpeg 부분에만 필요하다.) 이들은 Ubuntu 패키지로 두고(`.deb`의 `Depends:`) 담지 않는다. `configure` 줄을 줄이면 일부를 뺄 수 있지만, 그러면 측정한 빌드가 아니게 된다.
 - **설치할 때 빌드하는 방법**(보드에서 6분)을 쓰면 FFmpeg 바이너리를 아예 배포하지 않는다. 이것은 대안으로만 둔다. 사용자 보드에 컴파일러가 필요하고, 설치가 느리고 깨지기 쉬워진다.
 
 ## MPP와 librga: 이미지의 것

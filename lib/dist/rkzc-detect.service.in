@@ -30,8 +30,8 @@ SupplementaryGroups=video render
 # under the state directory could not be reached by its readers.
 RuntimeDirectory=rkzc
 RuntimeDirectoryMode=0755
-# The model's default place, readable by the service.
-StateDirectory=rkzc
+# The model's default place, /var/lib/rkzc, is the package's own directory, readable by all: no
+# StateDirectory, which would move it under a path only root can enter.
 
 NoNewPrivileges=yes
 ProtectHome=yes

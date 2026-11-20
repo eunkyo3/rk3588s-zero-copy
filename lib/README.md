@@ -2,9 +2,9 @@
 
 # librkzc
 
-Variant C's path of this repository — hardware decode, letterbox on the RGA, inference on the NPU, no CPU copy of the pixels — as a library. Steps 2 to 4 of [docs/design/packaging.md](../docs/design/packaging.md): the path is split from the benchmark, needs no OpenCV, returns errors where the benchmark exits, runs until stopped, reconnects, and hands out the detections.
+Variant C's path of this repository — hardware decode, letterbox on the RGA, inference on the NPU, no CPU copy of the pixels — as a library. Steps 2 to 5 of [docs/design/packaging.md](../docs/design/packaging.md): the path is split from the benchmark, needs no OpenCV, returns errors where the benchmark exits, runs until stopped, reconnects, and hands out the detections.
 
-**State:** a working detector with C++, C and Python interfaces, and a program with a service file. There is no package yet (step 5). Nothing about its CPU time or latency is measured.
+**State:** a working detector with C++, C and Python interfaces, a program with a service file, and a `.deb` that installs them: [docs/install.md](../docs/install.md). Nothing about its CPU time or latency is measured.
 
 ## Use
 
@@ -55,7 +55,7 @@ with rkzc.Detector(["rtsp://10.88.0.1:8554/ch1"], "models/yolov8n_i8.rknn", on_f
     det.wait(60)                          # seconds; Ctrl-C works while waiting
 ```
 
-- **Finding the library:** there is no package yet, so the module is used from the source tree: `PYTHONPATH=lib/python`, and `RKZC_LIBRARY=build-lib/librkzc.so.0` (otherwise `librkzc.so.0` on the loader's path).
+- **Finding the library:** the package installs the module and the library where Python and the loader find them. From the source tree: `PYTHONPATH=lib/python`, and `RKZC_LIBRARY=build-lib/librkzc.so.0` (otherwise `librkzc.so.0` on the loader's path).
 - **The options** are `rkzc::Config`'s, as keyword arguments; `det.stats()`, `rkzc.check_model()` and `rkzc.check_source()` are there too. A failure raises `rkzc.Error` with the library's reason.
 - **An exception in a callback** is printed and counted in `det.callback_errors`; the detector goes on. The library does not see it: the frame counts as inferred, and there is no `FRAME_ERROR` event as there is for a C++ callback that throws.
 - **From a callback,** `stats()` works; `start()`, `stop()`, `close()` and `wait()` are refused.
@@ -84,7 +84,7 @@ rkzc-detect --config detect.toml            # runs until SIGTERM or Ctrl-C
 - **Who may read the socket** is set by `socket_group` and `socket_mode`; the example lets the group `video` in. Connecting needs the write bit.
 - **A user and password in a source's URL** are replaced by `***` in the program's log and in every line it writes. The configuration file holds them in the clear: the example says how to keep it from other users.
 - **Exit status:** 0 when stopped or when every source has ended; 1 for a failure while running; 2 for a configuration that cannot be used.
-- **As a service:** [dist/rkzc-detect.service.in](dist/rkzc-detect.service.in) runs it with `/etc/rkzc/detect.toml` as a user made for the run, in the groups `video` and `render` that own the path's devices. The socket is `/run/rkzc/detect.sock`; the log goes to the journal. It is restarted after a failure, but not after status 2. `cmake --install` installs the library, the headers, the programs, the unit and the example; it installs neither `/etc/rkzc/detect.toml` nor a model. The unit's path to the program is fixed when configuring (`CMAKE_INSTALL_PREFIX`). The package of step 5 is to do all of this for the user.
+- **As a service:** [dist/rkzc-detect.service.in](dist/rkzc-detect.service.in) runs it with `/etc/rkzc/detect.toml` as a user made for the run, in the groups `video` and `render` that own the path's devices. The socket is `/run/rkzc/detect.sock`; the log goes to the journal. It is restarted after a failure, but not after status 2. `cmake --install` installs the library, the headers, the programs, the unit and the example; it installs neither `/etc/rkzc/detect.toml` nor a model. The unit's path to the program is fixed when configuring (`CMAKE_INSTALL_PREFIX`). The package does all of this for the user ([docs/install.md](../docs/install.md)).
 - **Not there:** MQTT, HTTP, drawn boxes, recording, a reload without a restart. Each of the first four can be a reader of the lines.
 
 ## Build and test
@@ -127,6 +127,10 @@ It produces `librkzc.so`, `rkzc-detect` (the program), `rkzc-check` (can this bo
 | `tools/rkzc_check.cpp`, `examples/detect_jsonl.cpp` | `rkzc-check`, `rkzc-jsonl` |
 | `tools/rkzc_detect.cpp`, `tools/detect_config.*`, `tools/line_output.*` | `rkzc-detect`: the program, its configuration reader, its output |
 | `dist/detect.toml`, `dist/rkzc-detect.service.in` | the example configuration and the service file |
+| `packaging/build_deb.sh`, `packaging/debian/` | builds the `.deb` and FFmpeg's source archive; the control file, the install and removal scripts, the copyright file |
+| `packaging/rkzc-fetch-runtime`, `packaging/rkzc-fetch-model` | the installed commands that download librknnrt and a model |
+| `packaging/set_runpath.py` | sets the bundled FFmpeg libraries' run path to `$ORIGIN` |
+| `packaging/test_clean_image.sh` | a manual test: the package in a chroot of the board's base image |
 | `tests/` | `test_checks`, `test_detector`, `test_c_api`, `test_python.py`, `test_rkzc_detect.py`, `equivalence.sh` (board); `test_detect_config`; `no_opencv.sh`; `rtsp_interruptions.sh` (manual, on a PC) |
 
 ## Known limits
@@ -139,7 +143,7 @@ It produces `librkzc.so`, `rkzc-detect` (the program), `rkzc-check` (can this bo
 - **The libraries underneath print** to stderr on their own (MPP, RKNN, FFmpeg).
 - **Reconnection was tested against one RTSP server (mediamtx) on a wired link,** not against a camera, Wi-Fi or packet loss. The table under "Checked" is from a manual test, not from `ctest`.
 - **Python callbacks run under Python's global lock,** one at a time, and the library waits for each. What a callback costs in CPU time or in dropped frames has not been measured; a slow one drops frames like a slow C++ one. A callback also waits for the lock while another Python thread holds it, so CPU-bound Python elsewhere in the process delays every callback.
-- **The Python module is not installable yet:** there is no `pyproject.toml`; the package of step 5 is to put it on the system's path.
+- **The Python module is installed by the `.deb` only:** there is no `pyproject.toml`, so no `pip install`.
 - **The library's threads block the program's signals** (all but the faults a thread causes itself), so that a handler such as Python's for Ctrl-C runs on the program's own threads and does not interrupt a read in the pipeline. Whether an interrupted read would have done harm was not tested.
 - **`rkzc-detect`'s configuration is a subset of TOML:** no floats, dates, inline tables, nested sections, dotted or quoted keys, multi-line strings, `0x`/`0o`/`0b` integers, or escapes other than `\"` `\\` `\n` `\t`; an array holds strings only. The thresholds cannot be set, since the library fixes them.
 - **The service was run from a test prefix, not from a package,** on the one image of M3. It runs as a user made for the run, which also makes the system read-only to it, with no access to home directories and a private `/tmp`; it was not hardened further. The model's place under the service (`/var/lib/rkzc`) was not used in the test.
@@ -192,4 +196,10 @@ On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn`, a 2 s
   - **A password in a URL:** with a source `rtsp://someone:hunter2@...` that could not be reached, the 10 error lines and the program's log showed `rtsp://***@...`, and the password was nowhere in the output.
   - **On the socket:** the file had the mode and group asked for; a second program on the same socket was refused; a file left by a program that was gone did not stop the start; two clients each got well-formed lines of both channels with detections; with `max_clients = 3` a third client was served and a fourth closed without a line; a client that never read was disconnected, and only it, while the other two read 601 lines; SIGTERM ended the program with status 0 in 0.16 s and the socket file was removed.
   - **As a service,** installed for the test under `/opt/rkzc-test` and removed afterwards, with the configuration `root:video 0640` and the example's socket settings: it started, ran as a user made for the run with the groups 44 and 992 (`video`, `render`), and user `pi` read 30 frame lines of two channels with 498 detections from `/run/rkzc/detect.sock` (`video`, `0660`). `systemctl stop` returned in 0.19 s with status 0. Killed with SIGKILL, it was running again 9 s later under a new process. With an unknown key in the file it failed with status 2 and was not restarted.
+- **An independent review of the packaging** found no blocker. Its points are addressed: the run-path rewrite could have damaged a library whose symbol shared the string (the build now compares the symbols before and after); the build did not check that the FFmpeg is an LGPL build, nor that its source tree is unchanged; the download could hold an install for long on a network that drops packets; Python's cache of the module was left after a purge, and the test hid it; the chroot test's mounts could have stayed in other processes; two checks of that test could not fail; and smaller ones.
+- **The package** (2026-11-20, `rkzc_0.1.0-1_arm64.deb`, 6.3 MB, built on the board by `packaging/build_deb.sh`):
+  - **In a chroot of the board's base image** (`packaging/test_clean_image.sh`; the image has no FFmpeg build and no librknnrt), 21 checks, all passed: `dpkg -i` without the network succeeded and named `rkzc-fetch-runtime`, and the program then failed for the missing librknnrt, as said; `apt-get install` installed no other package and fetched librknnrt; every library of the programs was found in `/opt/rkzc/lib`; `rkzc-fetch-model` fetched the model; `rkzc-check` loaded it on the NPU and decoded a file; `rkzc-detect` read the installed configuration and played a file to 10 frame lines; the Python module and its example gave the same 10 frames; `dpkg --verify` reported no file; after `apt-get remove` the configuration and the model were still there; after `apt-get purge` the files, directories and links were those from before the install (apt's and dpkg's own records aside), also Python's cache written as root. After `stop`, no mount of the test was left in any process.
+  - **On the live board:** `apt install` added one package; with the service enabled, user `pi` read 30 frame lines of two channels from the socket, with `nc` and from Python; a C program compiled against the installed header ran; `systemctl stop` returned in 0.18 s with status 0; the same package installed again over the running service restarted it and kept the configuration, the runtime and the model; a purge while the service ran stopped it; afterwards the list of packages and the files under `/etc`, `/opt`, `/usr` and `/var/lib` were the same as before.
+  - **The refusal:** on a PC, the pre-install script ended with status 1 and its message, and with status 0 under `RKZC_FORCE=1`.
+  - **Not tried:** an upgrade between two versions, an install on a network that drops packets, another board or image.
 - `ldd` shows no OpenCV; `exit` and `abort` are not among the undefined symbols.

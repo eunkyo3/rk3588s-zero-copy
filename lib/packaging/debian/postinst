@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    # Rockchip's runtime is not in the package (its licence does not allow it): fetched here. An offline
+    # install is not failed for it; the programs say what is missing until it is fetched.
+    if ! /usr/sbin/rkzc-fetch-runtime; then
+        echo "rkzc: librknnrt.so could not be fetched. The programs do not start without it." >&2
+        echo "rkzc: with the network up, run:  sudo rkzc-fetch-runtime" >&2
+    fi
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        # After an upgrade: a running service goes on with the new files.
+        if [ -n "$2" ]; then
+            systemctl try-restart rkzc-detect.service || true
+        fi
+    fi
+    if [ -z "$2" ]; then
+        cat <<'MSG'
+rkzc is installed. Next:
+  sudo rkzc-fetch-model yolov8n            a model (AGPL 3.0), into /var/lib/rkzc
+  sudoedit /etc/rkzc/detect.toml           your cameras
+  sudo rkzc-detect --config /etc/rkzc/detect.toml --check
+  sudo systemctl enable --now rkzc-detect
+  nc -U /run/rkzc/detect.sock              the detections, as a member of the group video
+MSG
+    fi
+fi
+exit 0

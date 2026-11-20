@@ -2,7 +2,7 @@
 
 # Design: shipping the zero-copy path as a library, a program and a package
 
-**Status:** a proposal, for discussion. Nothing here is built or decided, and nothing here is measured. The names (`rkzc`, `rkzc-detect`) are placeholders.
+**Status:** the proposal as it was written, with what became of it. Steps 1 to 5 of "Suggested steps" are done, each marked there; [install.md](../install.md) is the result for a user. Where the result differs from the proposal, the step says so. Nothing here is measured.
 
 **The goal:** someone with a NanoPi R6C installs one package and gets variant C's path — hardware decode (MPP), conversion and letterbox on the RGA, inference on the NPU, with no CPU copy of the pixels — either as a program that runs, or as a library to build on.
 
@@ -106,7 +106,7 @@ The hard part of installation is not this repository's code. M3's setup script s
   - **librknnrt** is fetched at install from Rockchip's repository. Its licence grants no right to redistribute, and the RKNN headers forbid copying, so neither is in the package or in this repository.
   - **The models** are AGPL 3.0 and stay outside the package.
   - **This repository** is Apache 2.0.
-- **Versions:** the package states the image it was tested on (`rom-version` 20251222, kernel 6.1.141, rknpu driver 0.9.8) and refuses, with a clear message, on a kernel driver or runtime it does not know. M3's pinned inventory keys are the starting list.
+- **Versions:** the package states the image it was tested on (`rom-version` 20251222, kernel 6.1.141, rknpu driver 0.9.8) and refuses, with a clear message, on a kernel driver or runtime it does not know. M3's pinned inventory keys are the starting list. (As built: it refuses a board without the hardware or the kernel's devices, and only says so when the image or the NPU driver is another one. The runtime is always the one it fetches.)
 - **Built how:** on the board, or in an arm64 container, by a script in the repository; published as a Release asset. No apt repository at first.
 
 ## What the package would and would not promise
@@ -131,7 +131,7 @@ These change the design, and they are the owner's to answer:
 2. Split C's path out of `core` into a library target without OpenCV, with errors instead of aborts. `bench_main` keeps its behaviour, checked by the existing tests and a smoke run. **Done:** [lib/](../../lib/README.md), a separate build that compiles the measured sources unchanged. The registered code was not edited, so `bench_main` needed no new check.
 3. Add the run-until-stopped mode, reconnection and the detection callback; add the equivalence test against `bench_main`. **Done:** `rkzc::Detector` in [lib/](../../lib/README.md). The equivalence test compares with the registered `tools/demo_detect`, which writes the detections; `bench_main` records only their count.
 4. Write `rkzc-detect` and its service file. **Done:** [lib/](../../lib/README.md#the-program-rkzc-detect). The configuration is a subset of TOML; the output is JSON lines on stdout or a Unix socket; the service was run on the board from a test prefix.
-5. Write the packaging script, with the `copyright` file and ffmpeg-rockchip's source archive; install the `.deb` on a reset board, the way M3 did its setup.
+5. Write the packaging script, with the `copyright` file and ffmpeg-rockchip's source archive; install the `.deb` on a reset board, the way M3 did its setup. **Done:** `lib/packaging/build_deb.sh` and [install.md](../install.md). The board was not reset again: the package was installed in a chroot of the board's base image, the way M3 tested its setup before the reset, and then on the live board with the service, and purged.
 6. Decide whether to measure the packaged path, and register a plan if so.
 
 Each step is a pull request of its own.

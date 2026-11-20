@@ -1,0 +1,34 @@
+#!/bin/sh
+# Before the files are unpacked: is this a board the package can work on? A board without the hardware is
+# refused; another image, kernel driver or library version than the tested one is said and let through.
+# RKZC_FORCE=1 skips the refusal (to unpack the files elsewhere, e.g. to look at them).
+set -e
+[ "$1" = install ] || [ "$1" = upgrade ] || exit 0
+
+refuse() {
+    echo "rkzc: $1" >&2
+    if [ "${RKZC_FORCE:-0}" = 1 ]; then
+        echo "rkzc: RKZC_FORCE=1: installing anyway" >&2
+        return 0
+    fi
+    echo "rkzc: not installed. This package is for an RK3588 board with Rockchip's kernel (tested: NanoPi R6C," >&2
+    echo "rkzc: FriendlyElec Ubuntu 24.04 image 20251222). RKZC_FORCE=1 installs the files anyway." >&2
+    exit 1
+}
+note() { echo "rkzc: note: $1 The package was not tested with it." >&2; }
+
+compatible=/proc/device-tree/compatible
+if ! { [ -r $compatible ] && tr '\0' '\n' <$compatible | grep -q 'rockchip,rk3588'; }; then
+    refuse "this is not an RK3588 board (/proc/device-tree/compatible does not name rockchip,rk3588)"
+fi
+for dev in /dev/mpp_service /dev/rga /dev/dma_heap/system; do
+    [ -e "$dev" ] || refuse "$dev is missing: the kernel has no driver for the hardware decoder, the RGA or dma-heap"
+done
+ls /dev/dri/renderD* >/dev/null 2>&1 || refuse "/dev/dri has no render node: the kernel has no NPU driver"
+
+rom=
+if [ -r /etc/rom-version ]; then rom=$(tr -d ',\n' </etc/rom-version); fi
+[ "$rom" = 20251222 ] || note "the image is '${rom:-not FriendlyElec}', not FriendlyElec's 20251222."
+npu=$(sed -n 's/^RKNPU driver: v//p' /sys/kernel/debug/rknpu/version 2>/dev/null || true)
+[ -z "$npu" ] || [ "$npu" = 0.9.8 ] || note "the NPU driver is $npu, not 0.9.8."
+exit 0

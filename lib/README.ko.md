@@ -2,9 +2,9 @@
 
 # librkzc
 
-이 저장소의 변형 C 경로(하드웨어 디코딩, RGA 레터박스, NPU 추론, 픽셀의 CPU 복사 없음)를 라이브러리로 만든 것이다. [docs/design/packaging.ko.md](../docs/design/packaging.ko.md)의 2단계부터 4단계에 해당한다. 경로를 벤치마크에서 분리했고, OpenCV가 필요 없으며, 벤치마크가 종료하던 자리에서 오류를 반환하고, 멈출 때까지 실행하며, 재연결하고, 검출 결과를 내준다.
+이 저장소의 변형 C 경로(하드웨어 디코딩, RGA 레터박스, NPU 추론, 픽셀의 CPU 복사 없음)를 라이브러리로 만든 것이다. [docs/design/packaging.ko.md](../docs/design/packaging.ko.md)의 2단계부터 5단계에 해당한다. 경로를 벤치마크에서 분리했고, OpenCV가 필요 없으며, 벤치마크가 종료하던 자리에서 오류를 반환하고, 멈출 때까지 실행하며, 재연결하고, 검출 결과를 내준다.
 
-**상태:** C++, C, 파이썬 인터페이스로 동작하는 검출기와, 서비스 파일을 갖춘 프로그램이 있다. 패키지는 아직 없다(5단계). CPU 시간이나 지연은 측정한 것이 없다.
+**상태:** C++, C, 파이썬 인터페이스로 동작하는 검출기, 서비스 파일을 갖춘 프로그램, 그리고 이들을 설치하는 `.deb`가 있다. 설치 방법은 [docs/install.ko.md](../docs/install.ko.md)에 있다. CPU 시간이나 지연은 측정한 것이 없다.
 
 ## 사용
 
@@ -55,7 +55,7 @@ with rkzc.Detector(["rtsp://10.88.0.1:8554/ch1"], "models/yolov8n_i8.rknn", on_f
     det.wait(60)                          # 초 단위. 기다리는 동안 Ctrl-C가 듣는다
 ```
 
-- **라이브러리를 찾는 방법:** 아직 패키지가 없어서 모듈을 소스 트리에서 쓴다. `PYTHONPATH=lib/python`, `RKZC_LIBRARY=build-lib/librkzc.so.0`으로 지정한다(지정하지 않으면 로더 경로의 `librkzc.so.0`).
+- **라이브러리를 찾는 방법:** 패키지는 모듈과 라이브러리를 파이썬과 로더가 찾는 자리에 설치한다. 소스 트리에서 쓸 때는 `PYTHONPATH=lib/python`, `RKZC_LIBRARY=build-lib/librkzc.so.0`으로 지정한다(지정하지 않으면 로더 경로의 `librkzc.so.0`).
 - **옵션**은 `rkzc::Config`의 것을 키워드 인자로 준다. `det.stats()`, `rkzc.check_model()`, `rkzc.check_source()`도 있다. 실패하면 라이브러리가 준 이유를 담아 `rkzc.Error`를 던진다.
 - **콜백에서 난 예외**는 출력하고 `det.callback_errors`에 센다. 검출기는 계속 돈다. 라이브러리는 이 예외를 보지 못한다. 그 프레임은 추론된 것으로 세어지고, 예외를 던진 C++ 콜백과 달리 `FRAME_ERROR` 이벤트가 없다.
 - **콜백 안에서는** `stats()`를 부를 수 있다. `start()`, `stop()`, `close()`, `wait()`는 거부된다.
@@ -84,7 +84,7 @@ rkzc-detect --config detect.toml            # SIGTERM이나 Ctrl-C까지 실행�
 - **소켓을 누가 읽을 수 있는지**는 `socket_group`과 `socket_mode`로 정한다. 예시는 `video` 그룹에 허용한다. 접속하려면 쓰기 권한 비트가 필요하다.
 - **소스 URL에 든 사용자와 비밀번호**는 프로그램의 로그와 모든 출력 줄에서 `***`로 바뀐다. 설정 파일에는 그대로 들어 있다. 다른 사용자가 못 읽게 하는 방법은 예시 파일에 적었다.
 - **종료 상태:** 멈췄거나 모든 소스가 끝나면 0, 실행 중 실패는 1, 쓸 수 없는 설정은 2다.
-- **서비스로:** [dist/rkzc-detect.service.in](dist/rkzc-detect.service.in)은 `/etc/rkzc/detect.toml`로 프로그램을 실행한다. 실행할 때 만들어지는 사용자로 돌고, 경로의 장치를 소유한 `video`와 `render` 그룹에 넣는다. 소켓은 `/run/rkzc/detect.sock`이고 로그는 저널로 간다. 실패하면 다시 시작하지만 상태 2에서는 다시 시작하지 않는다. `cmake --install`은 라이브러리, 헤더, 프로그램, 서비스 파일, 예시를 설치한다. `/etc/rkzc/detect.toml`과 모델은 설치하지 않는다. 서비스 파일에 적히는 프로그램 경로는 configure할 때(`CMAKE_INSTALL_PREFIX`) 정해진다. 5단계의 패키지가 이 모든 일을 사용자 대신 할 예정이다.
+- **서비스로:** [dist/rkzc-detect.service.in](dist/rkzc-detect.service.in)은 `/etc/rkzc/detect.toml`로 프로그램을 실행한다. 실행할 때 만들어지는 사용자로 돌고, 경로의 장치를 소유한 `video`와 `render` 그룹에 넣는다. 소켓은 `/run/rkzc/detect.sock`이고 로그는 저널로 간다. 실패하면 다시 시작하지만 상태 2에서는 다시 시작하지 않는다. `cmake --install`은 라이브러리, 헤더, 프로그램, 서비스 파일, 예시를 설치한다. `/etc/rkzc/detect.toml`과 모델은 설치하지 않는다. 서비스 파일에 적히는 프로그램 경로는 configure할 때(`CMAKE_INSTALL_PREFIX`) 정해진다. 패키지가 이 모든 일을 사용자 대신 한다([docs/install.ko.md](../docs/install.ko.md)).
 - **없는 것:** MQTT, HTTP, 박스 그리기, 녹화, 재시작 없는 설정 다시 읽기. 앞의 네 가지는 이 줄들을 읽는 별도 프로그램으로 만들 수 있다.
 
 ## 빌드와 테스트
@@ -127,6 +127,10 @@ cmake --build build-lib -j4
 | `tools/rkzc_check.cpp`, `examples/detect_jsonl.cpp` | `rkzc-check`, `rkzc-jsonl` |
 | `tools/rkzc_detect.cpp`, `tools/detect_config.*`, `tools/line_output.*` | `rkzc-detect`: 프로그램, 설정 읽기, 출력 |
 | `dist/detect.toml`, `dist/rkzc-detect.service.in` | 설정 예시와 서비스 파일 |
+| `packaging/build_deb.sh`, `packaging/debian/` | `.deb`와 FFmpeg 소스 아카이브를 만든다. 제어 파일, 설치·제거 스크립트, copyright 파일 |
+| `packaging/rkzc-fetch-runtime`, `packaging/rkzc-fetch-model` | librknnrt와 모델을 내려받는, 설치되는 명령 |
+| `packaging/set_runpath.py` | 함께 넣는 FFmpeg 라이브러리의 실행 경로를 `$ORIGIN`으로 바꾼다 |
+| `packaging/test_clean_image.sh` | 수동 테스트: 보드 기본 이미지의 chroot에 패키지를 설치해 본다 |
 | `tests/` | `test_checks`, `test_detector`, `test_c_api`, `test_python.py`, `test_rkzc_detect.py`, `equivalence.sh`(보드용), `test_detect_config`, `no_opencv.sh`, `rtsp_interruptions.sh`(PC에서 하는 수동 테스트) |
 
 ## 알려진 한계
@@ -139,7 +143,7 @@ cmake --build build-lib -j4
 - **아래 라이브러리들**(MPP, RKNN, FFmpeg)**이 stderr에 직접 출력한다.**
 - **재연결은 유선으로 연결한 RTSP 서버 하나(mediamtx)로 테스트했다.** 카메라, Wi-Fi, 패킷 손실로는 테스트하지 않았다. "확인한 것"의 표는 `ctest`가 아니라 수동 테스트의 결과다.
 - **파이썬 콜백은 파이썬의 전역 잠금 아래에서** 한 번에 하나씩 실행되고, 라이브러리는 콜백이 끝나기를 기다린다. 콜백이 CPU 시간이나 프레임 손실에 주는 영향은 측정하지 않았다. 느린 콜백은 느린 C++ 콜백과 마찬가지로 프레임을 버리게 만든다. 다른 파이썬 스레드가 잠금을 쥐고 있으면 콜백도 기다리므로, 같은 프로세스에서 CPU를 많이 쓰는 파이썬 코드는 모든 콜백을 늦춘다.
-- **파이썬 모듈은 아직 설치할 수 없다.** `pyproject.toml`이 없다. 5단계의 패키지가 시스템 경로에 놓을 예정이다.
+- **파이썬 모듈은 `.deb`로만 설치된다.** `pyproject.toml`이 없어서 `pip install`은 안 된다.
 - **라이브러리의 스레드는 프로그램의 신호를 막아 둔다**(스레드 자신이 일으키는 오류 신호는 제외). 그래서 파이썬의 Ctrl-C 처리기 같은 것은 프로그램 자신의 스레드에서 실행되고, 파이프라인의 읽기를 끊지 않는다. 끊긴 읽기가 실제로 문제를 일으켰을지는 테스트하지 않았다.
 - **`rkzc-detect`의 설정은 TOML의 부분집합이다.** 실수, 날짜, 인라인 테이블, 중첩 섹션, 점으로 이은 키나 따옴표 친 키, 여러 줄 문자열, `0x`/`0o`/`0b` 정수, `\"` `\\` `\n` `\t` 외의 이스케이프가 없고, 배열에는 문자열만 넣을 수 있다. 임계값은 라이브러리가 고정하므로 설정할 수 없다.
 - **서비스는 패키지가 아니라 테스트용 경로에 설치해서 돌렸고,** M3의 이미지 하나에서만 확인했다. 실행할 때 만들어지는 사용자로 돌며, 그래서 시스템이 읽기 전용으로 보이고, 홈 디렉터리에 접근할 수 없고, 전용 `/tmp`를 쓴다. 그 이상의 격리는 하지 않았다. 서비스에서 모델을 두는 자리(`/var/lib/rkzc`)는 테스트에서 쓰지 않았다.
@@ -192,4 +196,10 @@ M3의 초기화된 NanoPi R6C에서(2026-11-19), `models/yolov8n_i8.rknn`, 보�
   - **URL의 비밀번호:** 접속할 수 없는 소스 `rtsp://someone:hunter2@...`를 넣었을 때 오류 줄 10개와 프로그램의 로그에는 `rtsp://***@...`로 나왔고, 비밀번호는 출력 어디에도 없었다.
   - **소켓:** 소켓 파일은 지정한 모드와 그룹을 가졌다. 같은 소켓으로 띄운 두 번째 프로그램은 거부됐다. 사라진 프로그램이 남긴 소켓 파일은 시작을 막지 않았다. 클라이언트 두 개가 각각 두 채널의 형식이 맞는 줄을 검출과 함께 받았다. `max_clients = 3`에서 세 번째 클라이언트는 줄을 받았고 네 번째는 한 줄도 못 받고 닫혔다. 한 번도 읽지 않는 클라이언트는 그것만 끊겼고, 그동안 나머지 둘은 601줄을 읽었다. SIGTERM을 받자 0.16초 만에 상태 0으로 종료했고 소켓 파일은 지워졌다.
   - **서비스로:** 테스트를 위해 `/opt/rkzc-test`에 설치했다가 지웠다. 설정 파일은 `root:video 0640`으로 두고 소켓 설정은 예시 그대로 썼다. 서비스가 시작됐고, 실행할 때 만들어진 사용자와 그룹 44, 992(`video`, `render`)로 돌았다. 사용자 `pi`가 `/run/rkzc/detect.sock`(`video`, `0660`)에서 두 채널의 프레임 줄 30개(검출 498개)를 읽었다. `systemctl stop`은 0.19초 만에 상태 0으로 끝났다. SIGKILL로 죽이자 9초 뒤에는 새 프로세스로 다시 돌고 있었다. 파일에 모르는 키를 넣자 상태 2로 실패했고 다시 시작되지 않았다.
+- **패키징의 독립 리뷰**에서 막아야 할 문제는 나오지 않았다. 지적된 점은 반영했다. 실행 경로를 고쳐 쓸 때, 심볼이 그 문자열을 함께 쓰는 라이브러리라면 망가질 수 있었다(이제 빌드가 고치기 전후의 심볼을 비교한다). 빌드가 FFmpeg이 LGPL 빌드인지, 소스 트리가 바뀌지 않았는지 확인하지 않았다. 패킷을 버리는 네트워크에서는 내려받기가 설치를 오래 붙잡을 수 있었다. purge 뒤에 파이썬의 모듈 캐시가 남았고, 테스트가 그것을 가리고 있었다. chroot 테스트의 마운트가 다른 프로세스에 남을 수 있었다. 그 테스트의 확인 두 개는 실패할 수가 없었다. 그 밖의 작은 것들도 있었다.
+- **패키지**(2026-11-20, `rkzc_0.1.0-1_arm64.deb`, 6.3 MB, 보드에서 `packaging/build_deb.sh`로 빌드):
+  - **보드 기본 이미지의 chroot에서**(`packaging/test_clean_image.sh`. 이 이미지에는 FFmpeg 빌드도 librknnrt도 없다) 21개 항목을 확인했고 모두 통과했다. 네트워크 없이 한 `dpkg -i`는 성공했고 `rkzc-fetch-runtime`을 안내했으며, 그 상태의 프로그램은 안내대로 librknnrt가 없어 실패했다. `apt-get install`은 다른 패키지를 설치하지 않았고 librknnrt를 내려받았다. 프로그램이 필요한 라이브러리는 모두 `/opt/rkzc/lib`에서 찾아졌다. `rkzc-fetch-model`이 모델을 받았다. `rkzc-check`가 모델을 NPU에 올리고 파일을 디코딩했다. `rkzc-detect`는 설치된 설정을 읽었고, 파일을 재생해 프레임 줄 10개를 냈다. 파이썬 모듈과 예제도 같은 10프레임을 냈다. `dpkg --verify`는 달라진 파일을 보고하지 않았다. `apt-get remove` 뒤에는 설정과 모델이 남아 있었다. `apt-get purge` 뒤에는 파일, 디렉터리, 링크가 설치 전과 같았다(apt와 dpkg 자신의 기록은 제외). root로 쓴 파이썬 캐시도 남지 않았다. `stop` 뒤에는 어떤 프로세스에도 테스트의 마운트가 남지 않았다.
+  - **실제 보드에서:** `apt install`은 패키지 하나만 추가했다. 서비스를 활성화한 상태에서 사용자 `pi`가 소켓에서 두 채널의 프레임 줄 30개를 `nc`와 파이썬으로 읽었다. 설치된 헤더로 컴파일한 C 프로그램이 실행됐다. `systemctl stop`은 0.18초 만에 상태 0으로 끝났다. 서비스가 도는 중에 같은 패키지를 다시 설치하자 서비스가 다시 시작됐고, 설정, 런타임, 모델은 그대로였다. 서비스가 도는 중에 purge하면 서비스가 멈췄다. 그 뒤 패키지 목록과 `/etc`, `/opt`, `/usr`, `/var/lib` 아래의 파일은 전과 같았다.
+  - **설치 거부:** PC에서 설치 전 스크립트는 메시지와 함께 상태 1로 끝났고, `RKZC_FORCE=1`에서는 상태 0으로 끝났다.
+  - **해 보지 않은 것:** 두 버전 사이의 업그레이드, 패킷을 버리는 네트워크에서의 설치, 다른 보드나 이미지.
 - `ldd`에 OpenCV가 없다. 미정의 심볼에 `exit`와 `abort`가 없다.

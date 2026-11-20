@@ -29,10 +29,12 @@ set(RKZC_TEST_OBJECTS_VIDEO "" CACHE FILEPATH "an H.264 file of at least 10 s wi
 set(RKZC_DEMO_DETECT "" CACHE FILEPATH "the root build's demo_detect, for the equivalence test")
 set(ENV{PKG_CONFIG_PATH} "${RKZC_FFMPEG_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
-# Installed files find librkzc next to them and the FFmpeg libraries where they were built against; the
-# package of step 5 sets RKZC_FFMPEG_DIR to where it puts them.
+# Installed files find librkzc next to them, and the FFmpeg libraries and librknnrt in
+# RKZC_RUNTIME_LIBDIR: by default where FFmpeg was built against; the package (packaging/build_deb.sh)
+# names the directory it puts them in.
+set(RKZC_RUNTIME_LIBDIR "${RKZC_FFMPEG_DIR}/lib" CACHE PATH "where the installed files find FFmpeg and librknnrt")
 include(GNUInstallDirs)
-set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR};${RKZC_FFMPEG_DIR}/lib")
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR};${RKZC_RUNTIME_LIBDIR}")
 
 find_package(PkgConfig REQUIRED)
 find_package(Python3 COMPONENTS Interpreter)
