@@ -160,7 +160,7 @@ flowchart TB
 | M2 | 후처리 최적화, 동일 모델 | 공개, CPU 가설 두 개 모두 채택 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2)([`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)과 함께) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.ko.md) |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | 보고함, 판정 없음(가설 없음) | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4)([`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)와 함께) | [`v0.4-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.4-m4) | [M4](docs/report/M4.ko.md) |
 | M3 | 초기화한 보드에서 H1 지점을 명령 하나로 재현 | 공개: 재현됨, 네 값 모두 M1의 ±10% 안([prereg/M3.md](prereg/M3.ko.md)) | [`prereg-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m3), [`freeze-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m3) ([`amend-A15`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A15) 포함) | [`v0.3-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.3-m3) | [M3](docs/report/M3.ko.md) |
-| M5 | 패키지로 만든 경로(`rkzc`)를 H1 지점에서 B, C와 비교 | 계획 작성됨. `prereg-m5`를 공개하면 등록된다. 아직 측정한 것은 없다([prereg/M5.md](prereg/M5.ko.md)) | — | — | — |
+| M5 | 패키지로 만든 경로(`rkzc`)를 H1 지점에서 B, C와 비교 | 계획 등록됨(1단계). 2단계와 실행은 아직이며 측정한 것은 없다([prereg/M5.md](prereg/M5.ko.md)) | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5) | — | — |
 
 - **순서:** M4를 M3보다 먼저 한다.
 - **결과:** M1의 결과는 위의 [M1 결과](#m1-결과)에, 각 마일스톤의 결과는 그 보고서에 있다.
