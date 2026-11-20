@@ -1,0 +1,39 @@
+#!/bin/sh
+# Downloads Rockchip's NPU runtime, librknnrt.so, from Rockchip's own repository into /opt/rkzc/lib and
+# checks it against its SHA-256. The package cannot carry the file: its licence grants no right to
+# pass it on (see /usr/share/doc/rkzc/copyright). The package's install runs this; run it again by hand
+# if the board was offline then:
+#   sudo rkzc-fetch-runtime
+# To install without the network, put a librknnrt.so 2.3.2 for aarch64 with this SHA-256 at the path
+# below yourself.
+set -eu
+VERSION=2.3.2
+URL=https://raw.githubusercontent.com/airockchip/rknn-toolkit2/v$VERSION/rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so
+SHA256=d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8
+DIR=/opt/rkzc/lib
+FILE=$DIR/librknnrt.so
+
+sha_of() { sha256sum "$1" | cut -c1-64; }
+
+if [ -f "$FILE" ] && [ "$(sha_of "$FILE")" = "$SHA256" ]; then
+    echo "rkzc-fetch-runtime: $FILE is librknnrt $VERSION already"
+    exit 0
+fi
+[ "$(id -u)" -eq 0 ] || { echo "rkzc-fetch-runtime: run as root" >&2; exit 2; }
+mkdir -p "$DIR"
+tmp=$(mktemp "$DIR/.librknnrt.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+echo "rkzc-fetch-runtime: downloading librknnrt $VERSION from Rockchip's repository"
+if ! wget -q --no-hsts -O "$tmp" "$URL"; then
+    echo "rkzc-fetch-runtime: the download failed: $URL" >&2
+    exit 1
+fi
+got=$(sha_of "$tmp")
+if [ "$got" != "$SHA256" ]; then
+    echo "rkzc-fetch-runtime: the file has SHA-256 $got, not $SHA256; it was not installed" >&2
+    exit 1
+fi
+chmod 0644 "$tmp"
+mv "$tmp" "$FILE"
+trap - EXIT
+echo "rkzc-fetch-runtime: installed $FILE"

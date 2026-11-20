@@ -1,0 +1,23 @@
+Package: rkzc
+Version: @VERSION@
+Architecture: arm64
+Maintainer: eunkyo3 <eunkyo3@users.noreply.github.com>
+Section: video
+Priority: optional
+Installed-Size: @INSTALLED_SIZE@
+Depends: @SHLIBS_DEPENDS@, wget, ca-certificates
+Recommends: python3
+Suggests: netcat-openbsd
+Homepage: https://github.com/eunkyo3/rk3588s-zero-copy
+Description: object detection on RTSP streams with RK3588's zero-copy path
+ Hardware decode (MPP), letterbox on the RGA and inference on the NPU of an
+ RK3588 board, with no CPU copy of the pixels between them.
+ .
+ The package holds the program rkzc-detect with its systemd service (a
+ configuration file in, JSON lines out), the library librkzc with its C++, C
+ and Python interfaces, and ffmpeg-rockchip's libraries (LGPL v3) in
+ /opt/rkzc/lib.
+ .
+ Rockchip's NPU runtime librknnrt is downloaded from Rockchip at install; a
+ model is fetched by the separate command rkzc-fetch-model. Neither is in the
+ package. Tested on a NanoPi R6C with FriendlyElec's Ubuntu 24.04 image.

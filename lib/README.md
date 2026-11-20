@@ -2,9 +2,9 @@
 
 # librkzc
 
-Variant C's path of this repository — hardware decode, letterbox on the RGA, inference on the NPU, no CPU copy of the pixels — as a library. Steps 2 to 4 of [docs/design/packaging.md](../docs/design/packaging.md): the path is split from the benchmark, needs no OpenCV, returns errors where the benchmark exits, runs until stopped, reconnects, and hands out the detections.
+Variant C's path of this repository — hardware decode, letterbox on the RGA, inference on the NPU, no CPU copy of the pixels — as a library. Steps 2 to 5 of [docs/design/packaging.md](../docs/design/packaging.md): the path is split from the benchmark, needs no OpenCV, returns errors where the benchmark exits, runs until stopped, reconnects, and hands out the detections.
 
-**State:** a working detector with C++, C and Python interfaces, and a program with a service file. There is no package yet (step 5). Nothing about its CPU time or latency is measured.
+**State:** a working detector with C++, C and Python interfaces, a program with a service file, and a `.deb` that installs them: [docs/install.md](../docs/install.md). Nothing about its CPU time or latency is measured.
 
 ## Use
 
@@ -127,6 +127,10 @@ It produces `librkzc.so`, `rkzc-detect` (the program), `rkzc-check` (can this bo
 | `tools/rkzc_check.cpp`, `examples/detect_jsonl.cpp` | `rkzc-check`, `rkzc-jsonl` |
 | `tools/rkzc_detect.cpp`, `tools/detect_config.*`, `tools/line_output.*` | `rkzc-detect`: the program, its configuration reader, its output |
 | `dist/detect.toml`, `dist/rkzc-detect.service.in` | the example configuration and the service file |
+| `packaging/build_deb.sh`, `packaging/debian/` | builds the `.deb` and FFmpeg's source archive; the control file, the install and removal scripts, the copyright file |
+| `packaging/rkzc-fetch-runtime`, `packaging/rkzc-fetch-model` | the installed commands that download librknnrt and a model |
+| `packaging/set_runpath.py` | sets the bundled FFmpeg libraries' run path to `$ORIGIN` |
+| `packaging/test_clean_image.sh` | a manual test: the package in a chroot of the board's base image |
 | `tests/` | `test_checks`, `test_detector`, `test_c_api`, `test_python.py`, `test_rkzc_detect.py`, `equivalence.sh` (board); `test_detect_config`; `no_opencv.sh`; `rtsp_interruptions.sh` (manual, on a PC) |
 
 ## Known limits
@@ -192,4 +196,8 @@ On the reset NanoPi R6C of M3 (2026-11-19), with `models/yolov8n_i8.rknn`, a 2 s
   - **A password in a URL:** with a source `rtsp://someone:hunter2@...` that could not be reached, the 10 error lines and the program's log showed `rtsp://***@...`, and the password was nowhere in the output.
   - **On the socket:** the file had the mode and group asked for; a second program on the same socket was refused; a file left by a program that was gone did not stop the start; two clients each got well-formed lines of both channels with detections; with `max_clients = 3` a third client was served and a fourth closed without a line; a client that never read was disconnected, and only it, while the other two read 601 lines; SIGTERM ended the program with status 0 in 0.16 s and the socket file was removed.
   - **As a service,** installed for the test under `/opt/rkzc-test` and removed afterwards, with the configuration `root:video 0640` and the example's socket settings: it started, ran as a user made for the run with the groups 44 and 992 (`video`, `render`), and user `pi` read 30 frame lines of two channels with 498 detections from `/run/rkzc/detect.sock` (`video`, `0660`). `systemctl stop` returned in 0.19 s with status 0. Killed with SIGKILL, it was running again 9 s later under a new process. With an unknown key in the file it failed with status 2 and was not restarted.
+- **The package** (2026-11-20, `rkzc_0.1.0-1_arm64.deb`, 6.3 MB, built on the board by `packaging/build_deb.sh`):
+  - **In a chroot of the board's base image** (`packaging/test_clean_image.sh`; the image has no FFmpeg build and no librknnrt): `dpkg -i` without the network succeeded and named `rkzc-fetch-runtime`; `apt-get install` installed no other package and fetched librknnrt; every library of the programs was found in `/opt/rkzc/lib`; `rkzc-fetch-model` fetched the model; `rkzc-check` loaded it on the NPU and decoded a file; `rkzc-detect` read the installed configuration and played a file to 10 frame lines; the Python module and its example gave the same 10 frames; after `apt-get remove` the configuration and the model were still there, and after `apt-get purge` no file was left that was not there before.
+  - **On the live board:** `apt install` added one package; with the service enabled, user `pi` read 30 frame lines of two channels from the socket, with `nc` and from Python; a C program compiled against the installed header ran; `systemctl stop` returned in 0.17 s with status 0; a purge while the service ran stopped it; afterwards the list of packages and the files under `/etc`, `/opt`, `/usr` and `/var/lib` were the same as before.
+  - **The refusal:** on a PC, the pre-install script ended with status 1 and its message, and with status 0 under `RKZC_FORCE=1`.
 - `ldd` shows no OpenCV; `exit` and `abort` are not among the undefined symbols.

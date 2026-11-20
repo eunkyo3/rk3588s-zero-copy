@@ -1,0 +1,61 @@
+#!/bin/sh
+# Downloads one of this project's converted models into /var/lib/rkzc and checks it against its SHA-256.
+# The package carries no model: the models are under the GNU AGPL 3.0, the package is not.
+#   sudo rkzc-fetch-model yolov8n      the model M1 to M3 measured
+#   sudo rkzc-fetch-model yolov10n     the model M4 measured
+# Your own .rknn works too: name it in /etc/rkzc/detect.toml.
+set -eu
+BASE=https://github.com/eunkyo3/rk3588s-zero-copy/releases/download
+DIR=/var/lib/rkzc
+
+case "${1:-}" in
+yolov8n)
+    release=data-model-yolov8n_i8-04a76611
+    file=yolov8n_i8.rknn
+    sha=04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+    from="Ultralytics YOLOv8"
+    ;;
+yolov10n)
+    release=data-model-yolov10n_i8-6a6442e1
+    file=yolov10n_i8.rknn
+    sha=6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81
+    from="THU-MIG YOLOv10"
+    ;;
+*)
+    echo "usage: rkzc-fetch-model yolov8n|yolov10n" >&2
+    exit 2
+    ;;
+esac
+
+sha_of() { sha256sum "$1" | cut -c1-64; }
+
+cat <<EOF
+rkzc-fetch-model: $file derives from $from and is licensed under the GNU AGPL 3.0.
+  Using it on your own board for yourself or for research places no practical burden on you.
+  Offering a service over a network with it, or shipping it in a product, brings the AGPL's
+  obligations. The licence text is fetched next to the model.
+EOF
+if [ -f "$DIR/$file" ] && [ "$(sha_of "$DIR/$file")" = "$sha" ]; then
+    echo "rkzc-fetch-model: $DIR/$file is there already"
+    exit 0
+fi
+[ "$(id -u)" -eq 0 ] || { echo "rkzc-fetch-model: run as root (it writes to $DIR)" >&2; exit 2; }
+mkdir -p "$DIR"
+tmp=$(mktemp "$DIR/.model.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+if ! wget -q --no-hsts -O "$tmp" "$BASE/$release/$file"; then
+    echo "rkzc-fetch-model: the download failed: $BASE/$release/$file" >&2
+    exit 1
+fi
+got=$(sha_of "$tmp")
+if [ "$got" != "$sha" ]; then
+    echo "rkzc-fetch-model: the file has SHA-256 $got, not $sha; it was not installed" >&2
+    exit 1
+fi
+chmod 0644 "$tmp"
+mv "$tmp" "$DIR/$file"
+trap - EXIT
+wget -q --no-hsts -O "$DIR/LICENSE-AGPL-3.0.txt" "$BASE/$release/LICENSE-AGPL-3.0.txt" ||
+    echo "rkzc-fetch-model: the licence text could not be fetched; it is at https://www.gnu.org/licenses/agpl-3.0.txt" >&2
+echo "rkzc-fetch-model: installed $DIR/$file"
+echo "  in /etc/rkzc/detect.toml:  model = \"$DIR/$file\""
