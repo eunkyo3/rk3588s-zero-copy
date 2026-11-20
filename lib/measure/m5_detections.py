@@ -88,6 +88,15 @@ def main(argv):
 
     def record(rows):
         mm.write_keyed(out / "m5_detections.csv", header, [("package_files_identical", same)] + rows)
+    try:
+        return compare_programs(args, out, shipped, record)
+    except Exception as e:  # whatever went wrong, the check was not made, and its record says so
+        print(f"m5_detections: {e!r}", file=sys.stderr)
+        record([("result", f"not made: {e!r}")])
+        return 2
+
+
+def compare_programs(args, out, shipped, record):
     r = subprocess.run([args.jsonl, "--model", str(m5.MODEL), "--every", str(mm.EVERY), args.video],
                        capture_output=True, text=True, timeout=300)
     (out / "rkzc_jsonl.jsonl").write_text(r.stdout)
@@ -97,10 +106,10 @@ def main(argv):
         print(f"m5_detections: rkzc-jsonl gave status {r.returncode} and {len(reference)} frames", file=sys.stderr)
         record([("result", f"not made: rkzc-jsonl gave status {r.returncode} and {len(reference)} frames")])
         return 2
-    shutil.copyfile(args.video, COPY)
-    os.chmod(COPY, 0o644)
     data = b""
     try:
+        shutil.copyfile(args.video, COPY)
+        os.chmod(COPY, 0o644)
         m5.CONFIG.write_text(m5.config_for(shipped, [str(COPY)]), encoding="utf-8")
         (out / "detect.toml").write_text(m5.CONFIG.read_text(encoding="utf-8"))
         m5.must(["systemctl", "start", m5.UNIT], timeout=90)

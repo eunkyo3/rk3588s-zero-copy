@@ -36,13 +36,15 @@ sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(HERE))
 import stream_session as ss  # noqa: E402
 import m5_metrics as mm  # noqa: E402
+import m5_session as m5  # noqa: E402  (session_key)
+import m1_phases  # noqa: E402  (the registered phase definitions, for B and C)
 
 ARMS = ("B", "C", "P", "P4")
 PHASE, CHANNELS = "m5", 8
 THRESHOLD = 0.25  # §2: H1's
 CV_FLAG = 0.10  # PROTOCOL §9.3, on process CPU (M5 §4)
-T975 = {1: 12.706, 2: 4.303, 3: 3.182}  # the t quantile of a two-sided 95% interval, by degrees of freedom
 CLUSTERS = ("0-3", "4-5", "6-7")
+T975 = {1: 12.706, 2: 4.303, 3: 3.182}  # the t quantile of a two-sided 95% interval, by degrees of freedom
 # (key, title, unit, digits) of the values reported per run and compared in pairs (§6).
 METRICS = (("process_cpu_s", "Process CPU", "s", 3),
            ("schedstat_total_s", "System CPU, /proc/schedstat, less idle", "s", 3),
@@ -50,7 +52,10 @@ METRICS = (("process_cpu_s", "Process CPU", "s", 3),
            ("latency_p50_ms", "Latency p50", "ms", 3), ("latency_p99_ms", "Latency p99", "ms", 3),
            ("inference_fps_min", "Inference rate, lowest channel", "fps", 3),
            ("drop_rate", "Drop rate", "", 5), ("temp_max_mc", "Highest temperature", "m°C", 0),
-           ("rss_max_kb", "VmRSS, highest", "kB", 0))
+           ("rss_max_kb", "VmRSS, highest", "kB", 0),
+           ("arrival_spread_ms", "Arrival phases, spread", "ms", 1), ("arrival_drift_ms", "Arrival phases, drift", "ms", 1),
+           *((f"{p}_{c}_s", f"System CPU, {t}, cpu{c}, less idle", "s", 3)
+             for p, t in (("schedstat", "/proc/schedstat"), ("system", "/proc/stat")) for c in CLUSTERS))
 
 
 def keyed(path):
@@ -109,6 +114,10 @@ def run_values(run_dir):
                    decoder_drops=number(s.get("decoder_drops")))
         out.update(less_idle(s, "schedstat", base, window_s))
         out.update(less_idle(s, "system", base, window_s))
+        try:  # M2 §3.1's phases from bench_main's frames, by the registered tools/m1_phases.py
+            out["arrival_spread_ms"], out["arrival_drift_ms"] = m1_phases.run_phases(run_dir, 5, CHANNELS)[:2]
+        except (OSError, ValueError, KeyError):
+            pass
         for k in ("cpu_check", "cpu_check_difference_s"):
             if k in rows:
                 out[k] = rows[k]
@@ -128,6 +137,8 @@ def run_values(run_dir):
                decoder_drops=number(rows["decoder_drops"]), a55_share=number(rows["a55_share"]),
                tool_cpu_s=float(rows["tool_cpu_s"]), first_lines_s=float(rows["first_lines_s"]),
                service_dropped=number(rows.get("service_dropped")), service_errors=number(rows.get("service_errors")),
+               arrival_spread_ms=number(rows.get("arrival_phase_spread_ms")),
+               arrival_drift_ms=number(rows.get("arrival_phase_drift_ms")),
                field_problems="; ".join(mm.field_problems(frames)) or "none",
                affinity=rows.get("affinity_w", "") + " / " + rows.get("affinity_e", ""))
     out.update(less_idle(rows, "schedstat", base, window_s))
@@ -150,11 +161,8 @@ def session_runs(session):
 def current_sessions(session_dirs):
     """The sessions that ran the package and the tool of the latest one (M5 §5, §9: after a change to
     either, the sweep is rerun whole, and the superseded runs stay where they are)."""
-    def key(d):
-        h = ss.read_header(Path(d) / "m5_session.csv") if (Path(d) / "m5_session.csv").exists() else {}
-        return h.get("tool_commit"), h.get("package_sha256")
     dirs = sorted(session_dirs, key=lambda d: Path(d).name)
-    return [d for d in dirs if key(d) == key(dirs[-1])] if dirs else []
+    return [d for d in dirs if m5.session_key(d) == m5.session_key(dirs[-1])] if dirs else []
 
 
 def counting_runs(session_dirs):
@@ -245,8 +253,7 @@ def fmt(x, digits=3):
 
 def runs_table(runs):
     cols = ["session", "run", "arm", "repetition", "attempt", "valid"] + [k for k, *_ in METRICS] + \
-           ["process_cpu_less_metrics_s", "a55_share", "tool_cpu_s", "schedstat_0-3_s", "schedstat_4-5_s",
-            "schedstat_6-7_s", "decoder_drops", "recomputed", "cpu_check", "cpu_check_difference_s", "reasons"]
+           ["process_cpu_less_metrics_s", "a55_share", "tool_cpu_s", "decoder_drops", "recomputed", "cpu_check", "cpu_check_difference_s", "reasons"]
     lines = ["\t".join(cols)]
     for r in runs:
         lines.append("\t".join(fmt(r.get(c), 5 if c == "drop_rate" else 3) if isinstance(r.get(c), float)

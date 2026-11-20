@@ -200,17 +200,29 @@ def latest_amendment():
     return found[-1] if found else "none"
 
 
+def tool_sha256():
+    """One SHA-256 over the tool's files: every .py of lib/measure/ and package.txt, by name. The sweep's
+    sessions are those of one tool and one package; a commit that changes neither (a record, a document)
+    leaves this value as it was, where the commit's own hash would not."""
+    h = hashlib.sha256()
+    for p in sorted(list(HERE.glob("*.py")) + [HERE / "package.txt"]):
+        data = p.read_bytes().replace(b"\r\n", b"\n") if p.exists() else b""
+        h.update(f"{p.name}\0{len(data)}\0".encode() + data)
+    return h.hexdigest()
+
+
 def session_key(d):
-    """(tool commit, package SHA-256) a session ran with, from its record or from one of its runs'."""
+    """(the tool's SHA-256, the package's SHA-256) a session ran with, from its record, which it writes
+    before its idle period, or from one of its runs'."""
     for f in [Path(d) / "m5_session.csv"] + sorted(Path(d).glob("*/m5_run.csv")):
         if f.exists():
             h = ss.read_header(f)
-            return h.get("tool_commit"), h.get("package_sha256")
+            return h.get("tool_sha256"), h.get("package_sha256")
     return None, None
 
 
 def m5_sessions(key, current=None):
-    """The sweep's sessions that ran this tool commit and package: lib/measure/results/<UTC>_m5, by name
+    """The sweep's sessions that ran this tool and package: lib/measure/results/<UTC>_m5, by name
     (UTC), not the current one. After a change to either, the sweep is rerun whole (M5 §5, §9); the sessions
     of the earlier ones stay where they are and are not read."""
     return sorted(d for d in RESULTS.glob("*_m5") if d.is_dir() and re.fullmatch(ss.SESSION_NAME + "m5", d.name)
@@ -220,7 +232,8 @@ def m5_sessions(key, current=None):
 def m5_header(start, run_kind, freeze_m5, tool_commit, package_version, package_sha256):
     """M5's header (§8 step 2), the fields every record has."""
     return {"start_time_utc": stamp(start), "run_kind": run_kind, "prereg_m5_commit": PREREG_M5_COMMIT,
-            "freeze_m5_commit": freeze_m5, "tool_commit": tool_commit, "amendment": latest_amendment(),
+            "freeze_m5_commit": freeze_m5, "tool_commit": tool_commit, "tool_sha256": tool_sha256(),
+            "amendment": latest_amendment(),
             "package_version": package_version, "package_sha256": package_sha256}
 
 
@@ -345,6 +358,7 @@ class M5Session(ss.Session):
         super().__init__(args)
         self.package = {}
         self.pinned = False
+        self.recorded = False  # the session's final record is written
 
     # -- the package, before the idle period (M5 §4)
 
@@ -361,6 +375,10 @@ class M5Session(ss.Session):
         deb = Path(self.args.deb)
         version, want = recorded_package(deb)
         same = installed_as_packaged(deb, version)
+        state = service_state()
+        if state != ["inactive", "disabled"]:
+            raise ss.Stop(f"the service is {state[0]} and {state[1]}; M5 §4 has it stopped and disabled")
+        self.no_bench_process()
         shipped = shipped_config(deb)
         config = config_for(shipped, SOURCES)
         CONFIG.write_text(config, encoding="utf-8")
@@ -369,10 +387,6 @@ class M5Session(ss.Session):
         if DROPIN.exists():
             self.say(f"removing {DROPIN}, left by an earlier session")
         self.set_dropin(False)
-        state = service_state()
-        if state != ["inactive", "disabled"]:
-            raise ss.Stop(f"the service is {state[0]} and {state[1]}; M5 §4 has it stopped and disabled")
-        self.no_bench_process()
         libs = sorted(p for p in Path("/opt/rkzc/lib").iterdir() if p.is_file() and not p.is_symlink())
         self.package = {"package_version": version, "package_sha256": want, "package_files_identical": str(same),
                         "model_sha256": MODEL_SHA256,
@@ -391,10 +405,10 @@ class M5Session(ss.Session):
                 DROPIN.parent.rmdir()
         must(["systemctl", "daemon-reload"])
         show = unit_show("DropInPaths", "CPUAffinity")
-        got = (str(DROPIN) in show.get("DropInPaths", "").split(), show.get("CPUAffinity", ""))
-        if got != (on, "4-7" if on else ""):
+        got = (set(show.get("DropInPaths", "").split()), show.get("CPUAffinity", ""))
+        if got != (({str(DROPIN)}, "4-7") if on else (set(), "")):  # nothing else differs (M5 §1)
             raise ss.Stop(f"the unit has drop-ins `{show.get('DropInPaths', '')}` and CPUAffinity `{got[1]}`; "
-                          + ("P4 has this tool's drop-in and 4-7" if on else "P has neither"))
+                          + ("P4 has this tool's drop-in alone, and 4-7" if on else "P has neither"))
 
     def no_bench_process(self):
         """M5 §4, the gate: no bench_main and no rkzc-detect process exists."""
@@ -518,9 +532,11 @@ class M5Session(ss.Session):
         code, _, err = out_of(["systemctl", "start", UNIT], timeout=90)
         if code != 0:
             o.reasons.append(f"the service did not start: {err.strip()[-200:]} (rule 2)")
+            (run_dir / "unit.txt").write_text(f"start failed: {err.strip()[-500:]}\n")
+            self.stop_service_recorded(run_dir, marks)
             return "failed: systemctl start"
         show = unit_show("MainPID", "ExecMainStartTimestampMonotonic", "ExecMainStartTimestamp", "NRestarts",
-                         "InvocationID")
+                         "InvocationID", "DropInPaths", "CPUAffinity")
         (run_dir / "unit.txt").write_text("".join(f"start {k}={v}\n" for k, v in show.items()))
         pid, t_svc = int(show["MainPID"]), int(show["ExecMainStartTimestampMonotonic"]) * 1000
         marks.update(t_svc_ns=t_svc, main_pid=pid, svc_start=show.get("ExecMainStartTimestamp", ""),
@@ -543,7 +559,11 @@ class M5Session(ss.Session):
 
         def sample(k):
             now = mono_ns()
-            for tid in os.listdir(task):
+            try:
+                tids = os.listdir(task)
+            except OSError:  # the process has gone; the loop's own check says so
+                tids = []
+            for tid in tids:
                 text = stat_of(task / tid / "stat")
                 if text:
                     name, ticks, cpu = mm.stat_fields(text)
@@ -690,8 +710,13 @@ class M5Session(ss.Session):
         out_of(["journalctl", "--sync"])
         since = int(marks["t_svc_ns"] / 1e9 - (time.clock_gettime(time.CLOCK_MONOTONIC) - time.time())) - 2 \
             if "t_svc_ns" in marks else int(time.time()) - 600
-        code, out, err = out_of(["journalctl", "-u", UNIT, "-o", "json", "--no-pager", "--since", f"@{since}"],
-                                timeout=120)
+        for _ in range(6):  # the program's last lines can reach the journal a moment after its exit
+            code, out, err = out_of(["journalctl", "-u", UNIT, "-o", "json", "--no-pager", "--since", f"@{since}"],
+                                    timeout=120)
+            if code != 0 or mm.stop_log(mm.journal_entries(out))[1] is not None:
+                break
+            time.sleep(0.5)
+            out_of(["journalctl", "--sync"])
         (run_dir / "journal.jsonl").write_text(out if code == 0 else "", encoding="utf-8")
         if code != 0:
             raise ss.Stop(f"journalctl: {err.strip()[-200:]}")
@@ -774,7 +799,7 @@ class M5Session(ss.Session):
     # -- the session's record
 
     def key(self):
-        return self.tool_commit, self.package["package_sha256"]
+        return tool_sha256(), self.package["package_sha256"]
 
     def write_session(self, rows):
         a = self.args
@@ -788,7 +813,7 @@ class M5Session(ss.Session):
                        ("freeze_m3_commit", self.freeze_m3), ("build_commit", getattr(self, "code_commit", "unknown")),
                        *[(k, v) for k, v in self.package.items() if k.startswith("package_")]]
         mm.write_keyed(self.out / "m5_session.csv", header, rows)
-        print(read(self.out / "m5_session.csv"), end="")
+        self.say("session record: " + "; ".join(f"{k} {v}" for k, v in rows[:4]))
 
 
 def cmd_sweep(s):
@@ -813,6 +838,7 @@ def cmd_sweep(s):
         s.write_session([("session_status", status), ("earlier_sessions", " ".join(d.name for d in earlier) or "none"),
                          ("repetitions_run_here", " ".join(done_here) or "none"),
                          ("repetitions_left", " ".join(left) or "none")])
+        s.recorded = True
 
 
 def cmd_check(s):
@@ -823,6 +849,7 @@ def cmd_check(s):
         status = "completed"
     finally:
         s.write_session([("session_status", status), ("arms", " ".join(s.args.arms))])
+        s.recorded = True
 
 
 def main(argv):
@@ -869,7 +896,9 @@ def main(argv):
         if args.command == "sweep":
             complete, _ = ss.sweep_state(ss.load_records(m5_sessions(s.key(), s.out), (PHASE,)), ARMS)
             if all((c, r) in complete for c, r, _ in plan()):
-                raise ss.Stop("the sweep is complete for this tool commit and package")
+                raise ss.Stop("the sweep is complete for this tool and package")
+        # Now, so that a session that dies still says which tool and package it ran (session_key).
+        s.write_session([("session_status", "running, or it died")])
     except (ss.Stop, OSError) as e:
         print(f"m5_session: not starting: {e}", file=sys.stderr)
         if s is not None:  # nothing ran: leave no session behind for the next one to read
@@ -886,9 +915,11 @@ def main(argv):
         s.say(f"stopped: {e}")
         status = 1
     finally:
-        if not (s.out / "m5_session.csv").exists():  # it stopped before its first run: still a record with a header
-            s.write_session([("session_status", "stopped before its first run")])
-        s.end()
+        try:
+            if not s.recorded:
+                s.write_session([("session_status", "stopped before its first run")])
+        finally:
+            s.end()
     return status
 
 

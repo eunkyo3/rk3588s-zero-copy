@@ -34,14 +34,15 @@
 보드에서 root로, 저장소에서, 패키지를 설치하고 모델을 받아 두고 서비스는 멈추고 비활성화한 상태로 실행한다.
 
 ```sh
-COOLING="<text>" AMBIENT_C=<°C> python3 lib/measure/m5_session.py sweep --deb rkzc_0.1.1-1_arm64.deb
-COOLING="<text>" AMBIENT_C=<°C> python3 lib/measure/m5_session.py check --deb rkzc_0.1.1-1_arm64.deb \
+COOLING="<text>" AMBIENT_C=<°C> python3 lib/measure/m5_session.py sweep --deb ~/rkzc-work/dist/rkzc_0.1.1-1_arm64.deb
+COOLING="<text>" AMBIENT_C=<°C> python3 lib/measure/m5_session.py check --deb ~/rkzc-work/dist/rkzc_0.1.1-1_arm64.deb \
     --duration 10 [--arms B C P P4] [--cpu-check]
 ```
 
 - **유휴 구간 전에** 세션은 `.deb`가 기록된 그 파일인지, 그 안의 모든 파일이 설치된 파일과 같은지, 모델이 M1의 것인지 확인한다. `/etc/rkzc/detect.toml`은 패키지가 넣은 파일에서 `sources`만 바꿔 쓴다.
 - **모든 세션**은 작업 트리가 깨끗해야 한다. 도구는 한 커밋의 도구다.
 - **스윕**은 `freeze-m5`의 행이 `docs/notes/env.md`에 있고 프로토콜의 설정일 때만 시작한다. 같은 도구 커밋과 패키지로 돌린 이전 세션을 읽어 끝내지 못한 것을 다시 한다.
+- **`.deb`**는 저장소 체크아웃 밖에 둔다. 세션은 깨끗하지 않은 작업 트리를 거부한다.
 - **드롭인** `CPUAffinity=4-7`은 P4 실행 동안에만 있다. 세션은 끝날 때, 일찍 멈출 때도, 이를 지운다.
 
 ## 실행의 기록

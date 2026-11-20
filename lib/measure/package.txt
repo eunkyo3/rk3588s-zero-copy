@@ -1,0 +1,4 @@
+version: 0.1.1-1
+sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+built_from: 3fdc5caa9ea98e214a4cd4eebe734a61ceffc5d8
+file: rkzc_0.1.1-1_arm64.deb

@@ -554,15 +554,20 @@ class Summary(unittest.TestCase):
                                     ("20261121T050000Z_m5", "b", "x"), ("20261121T020000Z_m5", "b", "y")):
                 d = Path(tmp) / name
                 d.mkdir()
-                mm.write_keyed(d / "m5_session.csv", {"tool_commit": tool, "package_sha256": sha}, [])
+                mm.write_keyed(d / "m5_session.csv", {"tool_sha256": tool, "package_sha256": sha}, [])
                 dirs.append(d)
             self.assertEqual([d.name for d in m5_summary.current_sessions(dirs)],
                              ["20261121T030000Z_m5", "20261121T050000Z_m5"])
             self.assertEqual(m5.session_key(dirs[0]), ("a", "x"))
             (dirs[0] / "m5_session.csv").unlink()  # a session that died: one of its runs tells
             (dirs[0] / "01_m5_B_8ch_r1").mkdir()
-            mm.write_keyed(dirs[0] / "01_m5_B_8ch_r1" / "m5_run.csv", {"tool_commit": "c", "package_sha256": "z"}, [])
+            mm.write_keyed(dirs[0] / "01_m5_B_8ch_r1" / "m5_run.csv", {"tool_sha256": "c", "package_sha256": "z"}, [])
             self.assertEqual(m5.session_key(dirs[0]), ("c", "z"))
+            # The summary reads a died session's key as the session tool does.
+            mm.write_keyed(dirs[0] / "01_m5_B_8ch_r1" / "m5_run.csv", {"tool_sha256": "b", "package_sha256": "x"}, [])
+            self.assertEqual(len(m5_summary.current_sessions(dirs)), 3)
+            self.assertRegex(m5.tool_sha256(), "^[0-9a-f]{64}$")
+            self.assertEqual(m5.m5_header(m5.utc(0), "check", "none", "c", "v", "s")["tool_sha256"], m5.tool_sha256())
 
     def test_headline_and_pairs(self):
         c = self.counting([44, 44, 44], [19, 19, 19], [24, 24, 24])
