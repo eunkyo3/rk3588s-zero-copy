@@ -1,7 +1,8 @@
 // rkzc-detect: the detector as a program. A configuration file in, JSON lines out, until it is told to stop.
 //
 //   rkzc-detect --config FILE            run
-//   rkzc-detect --config FILE --check    read the file, load the model, open every source once, and say
+//   rkzc-detect --config FILE --check    read the file, open the detector as a run would, open every
+//                                        source once, and print what was found (status 1 if one failed)
 //   rkzc-detect --version
 //
 // Output lines (stdout or a Unix socket, see the configuration):
@@ -9,15 +10,18 @@
 //    "detections":[{"class":0,"name":"person","score":0.87,"x":100.0,"y":50.5,"w":80.0,"h":200.0}]}
 //   {"event":"source_lost","channel":0,"time_ms":1763600000456,"message":"..."}
 // x, y, w, h are in the source frame's pixels; time_ms is the wall clock when the line was written.
+// A user and password in a source's URL are replaced by *** in every line and in the log.
 // The log goes to stderr (under systemd: the journal).
 //
-// Exit status: 0 stopped by SIGTERM or SIGINT, or every source ended; 1 a failure while running;
-// 2 the configuration cannot be used (a bad file, a model that does not load, a socket that cannot be
-// opened). The service file does not restart on 2.
+// Exit status: 0 stopped by a signal (SIGTERM, SIGINT, SIGHUP, SIGQUIT), or every source ended; 1 a
+// failure while running; 2 the configuration cannot be used (a bad file, a model that does not load, a
+// socket that cannot be opened). The service file does not restart on 2, also when the model failed
+// to load for a passing reason such as memory.
 #include <signal.h>
 #include <time.h>
 
 #include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -31,6 +35,7 @@ namespace {
 using rkzc_detect::DetectConfig;
 using rkzc_detect::json_escape;
 using rkzc_detect::LineOutput;
+using rkzc_detect::redact_credentials;
 
 long long wall_ms() {
     timespec ts;
@@ -62,11 +67,16 @@ void append_frame(const rkzc::Frame& f, std::string* line) {
                   f.channel, static_cast<long long>(f.seq), static_cast<long long>(f.pts_us), wall_ms(), f.width,
                   f.height);
     *line = buf;
+    int written = 0;
     for (int i = 0; i < f.count; i++) {
         const rkzc::Detection& d = f.detections[i];
+        // "nan" or "inf" would not be JSON.
+        if (!std::isfinite(d.score) || !std::isfinite(d.x) || !std::isfinite(d.y) || !std::isfinite(d.w) ||
+            !std::isfinite(d.h))
+            continue;
         std::snprintf(buf, sizeof buf,
                       "%s{\"class\":%d,\"name\":\"%s\",\"score\":%.4f,\"x\":%.2f,\"y\":%.2f,\"w\":%.2f,\"h\":%.2f}",
-                      i ? "," : "", d.cls, rkzc::class_name(d.cls), d.score, d.x, d.y, d.w, d.h);
+                      written++ ? "," : "", d.cls, rkzc::class_name(d.cls), d.score, d.x, d.y, d.w, d.h);
         *line += buf;
     }
     *line += "]}";
@@ -82,13 +92,24 @@ int check(const DetectConfig& cfg) {
     else
         std::printf("model  FAILED  %s: %s\n", cfg.detector.model.c_str(), st.message.c_str());
     failed |= !st.ok;
+    if (st) {
+        // What a run does first: the same call, so what it would refuse is refused here.
+        const auto det = rkzc::Detector::open(cfg.detector, &st);
+        if (det)
+            std::printf("detector ok    post \"%s\", every %d frames\n", cfg.detector.post.c_str(),
+                        cfg.detector.every_nth_frame);
+        else
+            std::printf("detector FAILED  %s\n", st.message.c_str());
+        failed |= !st.ok;
+    }
     for (const std::string& source : cfg.detector.sources) {
         rkzc::SourceInfo s;
         st = rkzc::check_source(source, &s);
+        const std::string shown = redact_credentials(source);
         if (st)
-            std::printf("source ok      %s: %dx%d\n", source.c_str(), s.width, s.height);
+            std::printf("source ok      %s: %dx%d\n", shown.c_str(), s.width, s.height);
         else
-            std::printf("source FAILED  %s: %s\n", source.c_str(), st.message.c_str());
+            std::printf("source FAILED  %s: %s\n", shown.c_str(), redact_credentials(st.message).c_str());
         failed |= !st.ok;
     }
     return failed ? 1 : 0;
@@ -105,8 +126,9 @@ void log_stats(const rkzc::Detector& det, LineOutput& out, bool is_socket) {
                      static_cast<long long>(s.errors), static_cast<long long>(s.decode_errors),
                      static_cast<long long>(s.reconnects));
     if (is_socket)
-        std::fprintf(stderr, "rkzc-detect: output: %d clients, %lld disconnected for not reading\n", out.clients(),
-                     out.disconnected());
+        std::fprintf(stderr,
+                     "rkzc-detect: output: %d clients, %lld disconnected for not reading, %lld refused as too many\n",
+                     out.clients(), out.disconnected(), out.refused());
 }
 
 int usage() {
@@ -151,6 +173,8 @@ int main(int argc, char** argv) {
     sigemptyset(&stop_signals);
     sigaddset(&stop_signals, SIGINT);
     sigaddset(&stop_signals, SIGTERM);
+    sigaddset(&stop_signals, SIGHUP);
+    sigaddset(&stop_signals, SIGQUIT);
     pthread_sigmask(SIG_BLOCK, &stop_signals, nullptr);
     signal(SIGPIPE, SIG_IGN);
 
@@ -161,7 +185,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     LineOutput out;
-    if (!out.open(cfg.output, cfg.socket_mode, &error)) {
+    if (!out.open(cfg.output, cfg.socket, &error)) {
         std::fprintf(stderr, "rkzc-detect: %s\n", error.c_str());
         return 2;
     }
@@ -178,13 +202,14 @@ int main(int argc, char** argv) {
             output_failed = true;
     });
     det->on_event([&](const rkzc::Event& e) {
-        std::fprintf(stderr, "rkzc-detect: channel %d: %s: %s\n", e.channel, event_name(e.kind), e.message.c_str());
+        const std::string message = redact_credentials(e.message);
+        std::fprintf(stderr, "rkzc-detect: channel %d: %s: %s\n", e.channel, event_name(e.kind), message.c_str());
         if (!cfg.events)
             return;
         const std::string event_line = std::string("{\"event\":\"") + event_name(e.kind) +
                                        "\",\"channel\":" + std::to_string(e.channel) +
                                        ",\"time_ms\":" + std::to_string(wall_ms()) + ",\"message\":\"" +
-                                       json_escape(e.message) + "\"}";
+                                       json_escape(message) + "\"}";
         if (!out.write(event_line))
             output_failed = true;
     });
@@ -204,7 +229,8 @@ int main(int argc, char** argv) {
         const timespec one_second = {1, 0};
         const int sig = sigtimedwait(&stop_signals, nullptr, &one_second);
         if (sig > 0) {
-            std::fprintf(stderr, "rkzc-detect: %s, stopping\n", sig == SIGTERM ? "SIGTERM" : "SIGINT");
+            std::fprintf(stderr, "rkzc-detect: %s, stopping\n",
+                         sig == SIGTERM ? "SIGTERM" : sig == SIGINT ? "SIGINT" : sig == SIGHUP ? "SIGHUP" : "SIGQUIT");
             break;
         }
         if (output_failed) {

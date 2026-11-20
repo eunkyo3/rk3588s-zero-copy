@@ -85,7 +85,9 @@ add_executable(rkzc-detect tools/rkzc_detect.cpp tools/detect_config.cpp tools/l
 target_link_libraries(rkzc-detect PRIVATE rkzc pthread)
 configure_file(dist/rkzc-detect.service.in rkzc-detect.service @ONLY)
 
-# What step 5's package takes. The Python module and the model are not installed from here yet.
+# What step 5's package takes. The Python module, the model and /etc/rkzc/detect.toml are not installed
+# from here. The unit's ExecStart is fixed when configuring: configure with the prefix the files will
+# run from (CMAKE_INSTALL_PREFIX), not with `cmake --install --prefix`.
 install(TARGETS rkzc rkzc-detect rkzc-check
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -98,9 +100,10 @@ add_executable(test_checks tests/test_checks.cpp)
 target_link_libraries(test_checks PRIVATE rkzc)
 add_executable(test_detector tests/test_detector.cpp)
 target_link_libraries(test_detector PRIVATE rkzc)
-add_executable(test_detect_config tests/test_detect_config.cpp tools/detect_config.cpp)
-target_include_directories(test_detect_config PRIVATE tools)
-target_link_libraries(test_detect_config PRIVATE rkzc)
+# The header's Config only: it links no board library.
+add_executable(test_detect_config tests/test_detect_config.cpp tools/detect_config.cpp tools/line_output.cpp)
+target_include_directories(test_detect_config PRIVATE tools include)
+target_link_libraries(test_detect_config PRIVATE pthread)
 # C, not C++: the C header must compile as C.
 add_executable(test_c_api tests/test_c_api.c)
 target_link_libraries(test_c_api PRIVATE rkzc)

@@ -85,6 +85,8 @@ struct Parser {
                     out->push_back('\n');
                 else if (e == 't')
                     out->push_back('\t');
+                else if (static_cast<unsigned char>(e) < 0x20)
+                    return fail("a string is not closed");
                 else
                     return fail(std::string("the escape \\") + e + " is not supported");
             } else {
@@ -105,8 +107,10 @@ struct Parser {
             p++;
             for (;;) {
                 skip(true);
-                if (end())
-                    return fail("an array is not closed");
+                if (end()) {
+                    line = v->line;
+                    return fail("the array that starts here is not closed");
+                }
                 if (t[p] == ']') {
                     p++;
                     return true;
@@ -118,8 +122,10 @@ struct Parser {
                     return false;
                 v->a.push_back(item);
                 skip(true);
-                if (end())
-                    return fail("an array is not closed");
+                if (end()) {
+                    line = v->line;
+                    return fail("the array that starts here is not closed");
+                }
                 if (peek() == ',')
                     p++;
                 else if (peek() != ']')
@@ -140,12 +146,21 @@ struct Parser {
         size_t digits = (word[0] == '-' || word[0] == '+') ? 1 : 0;
         if (digits == word.size())
             return fail("'" + word + "' is not a value");
-        for (size_t i = digits; i < word.size(); i++)
-            if (!std::isdigit(static_cast<unsigned char>(word[i])))
-                return fail("'" + word + "' is not a string (in quotes), an integer, true or false");
+        std::string number = word.substr(0, digits);
+        for (size_t i = digits; i < word.size(); i++) {
+            const bool digit = std::isdigit(static_cast<unsigned char>(word[i])) != 0;
+            // 30_000: an underscore between two digits, as TOML allows.
+            const bool separator = word[i] == '_' && i > digits && i + 1 < word.size() &&
+                                   std::isdigit(static_cast<unsigned char>(word[i - 1])) &&
+                                   std::isdigit(static_cast<unsigned char>(word[i + 1]));
+            if (!digit && !separator)
+                return fail("'" + word + "' is not a string (in quotes), a decimal integer, true or false");
+            if (digit)
+                number.push_back(word[i]);
+        }
         errno = 0;
         v->kind = Value::Int;
-        v->i = std::strtoll(word.c_str(), nullptr, 10);
+        v->i = std::strtoll(number.c_str(), nullptr, 10);
         if (errno != 0)
             return fail("'" + word + "' is too large");
         return true;
@@ -187,7 +202,9 @@ bool parse_toml_subset(const std::string& text, std::map<std::string, Value>* ou
             ok = ps.bare_key(&key);
             if (ok) {
                 ps.skip(false);
-                if (ps.peek() != '=')
+                if (ps.peek() == '.')
+                    ok = ps.fail("dotted keys are not supported: put the key under a [" + key + "] header");
+                else if (ps.peek() != '=')
                     ok = ps.fail("'=' was expected after the key " + key);
             }
             if (ok) {
@@ -271,17 +288,32 @@ bool parse_detect_config(const std::string& text, DetectConfig* out, std::string
         return false;
     DetectConfig c;
     Value slot;
+    const auto line_of = [&table](const std::string& key) {
+        const auto it = table.find(key);
+        return it == table.end() ? 0 : it->second.line;
+    };
+    const int post_line = line_of("post");
+    const int max_line = line_of("reconnect.max_ms"), initial_line = line_of("reconnect.initial_ms");
+    const int mode_line = line_of("output.socket_mode"), group_line = line_of("output.socket_group");
+    const int clients_line = line_of("output.max_clients");
     if (const Value* v = take(table, "model", Value::String, &slot, error))
         c.detector.model = v->s;
     if (const Value* v = take(table, "sources", Value::StringArray, &slot, error))
         c.detector.sources = v->a;
     if (const Value* v = take(table, "post", Value::String, &slot, error))
         c.detector.post = v->s;
+    if (error->empty() && post_line && c.detector.post != "auto" && c.detector.post != "m1" &&
+        c.detector.post != "neon" && c.detector.post != "v10")
+        *error = "line " + std::to_string(post_line) + ": post must be \"auto\", \"m1\", \"neon\" or \"v10\"";
     take_int(table, "every_nth_frame", 1, 100000, &c.detector.every_nth_frame, error);
     take_bool(table, "loop_files", &c.detector.loop_files, error);
     take_int(table, "reconnect.initial_ms", 1, 3600000, &c.detector.reconnect_initial_ms, error);
     take_int(table, "reconnect.max_ms", 1, 3600000, &c.detector.reconnect_max_ms, error);
     take_int(table, "reconnect.stall_timeout_ms", 1, 3600000, &c.detector.stall_timeout_ms, error);
+    if (error->empty() && c.detector.reconnect_initial_ms > c.detector.reconnect_max_ms)
+        *error = "line " + std::to_string(max_line ? max_line : initial_line) +
+                 ": reconnect.initial_ms (" + std::to_string(c.detector.reconnect_initial_ms) +
+                 ") is larger than reconnect.max_ms (" + std::to_string(c.detector.reconnect_max_ms) + ")";
     if (const Value* v = take(table, "output.to", Value::String, &slot, error)) {
         c.output = v->s;
         const bool is_unix = c.output.rfind("unix:", 0) == 0;
@@ -293,24 +325,37 @@ bool parse_detect_config(const std::string& text, DetectConfig* out, std::string
             *error = "line " + std::to_string(v->line) + ": the socket path is longer than 107 bytes";
     }
     if (const Value* v = take(table, "output.socket_mode", Value::String, &slot, error)) {
-        char* rest = nullptr;
-        const long mode = std::strtol(v->s.c_str(), &rest, 8);
-        if (v->s.empty() || *rest != '\0' || mode < 0 || mode > 0777) {
+        bool octal = v->s.size() == 3 || v->s.size() == 4;
+        for (const char ch : v->s)
+            octal = octal && ch >= '0' && ch <= '7';
+        const long mode = octal ? std::strtol(v->s.c_str(), nullptr, 8) : -1;
+        if (mode < 0 || mode > 0777) {
             if (error->empty())
                 *error = "line " + std::to_string(v->line) +
-                         ": output.socket_mode must be an octal string such as \"0660\"";
+                         ": output.socket_mode must be three or four octal digits in quotes, such as \"0660\"";
         } else {
-            c.socket_mode = static_cast<int>(mode);
+            c.socket.mode = static_cast<int>(mode);
         }
     }
+    if (const Value* v = take(table, "output.socket_group", Value::String, &slot, error))
+        c.socket.group = v->s;
+    take_int(table, "output.max_clients", 1, 1000, &c.socket.max_clients, error);
+    // A socket setting with stdout as the output is a mistake about where the lines go.
+    const int socket_key_line = mode_line ? mode_line : group_line ? group_line : clients_line;
+    if (error->empty() && socket_key_line && c.output == "stdout")
+        *error = "line " + std::to_string(socket_key_line) +
+                 ": a socket setting needs output.to = \"unix:/path\"";
     take_bool(table, "output.empty_frames", &c.empty_frames, error);
     take_bool(table, "output.events", &c.events, error);
     take_int(table, "log.stats_every_s", 0, 86400, &c.stats_every_s, error);
     if (!error->empty())
         return false;
     if (!table.empty()) {
-        const auto& unknown = *table.begin();
-        *error = "line " + std::to_string(unknown.second.line) + ": unknown key " + unknown.first;
+        const auto* unknown = &*table.begin();  // the first in the file, not in the alphabet
+        for (const auto& entry : table)
+            if (entry.second.line < unknown->second.line)
+                unknown = &entry;
+        *error = "line " + std::to_string(unknown->second.line) + ": unknown key " + unknown->first;
         return false;
     }
     if (c.detector.model.empty()) {

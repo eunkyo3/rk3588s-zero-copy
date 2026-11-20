@@ -1,5 +1,6 @@
 # rkzc-detect as a service: reads /etc/rkzc/detect.toml, writes JSON lines to the socket named there
-# (by default /run/rkzc/detect.sock), logs to the journal.
+# (the example names /run/rkzc/detect.sock; with no output named, the lines go to the journal), and logs
+# to the journal.
 #   systemctl enable --now rkzc-detect
 #   journalctl -u rkzc-detect -f
 [Unit]
@@ -19,11 +20,14 @@ RestartPreventExitStatus=2
 # The program stops on SIGTERM and delivers the frames it was inferring first.
 TimeoutStopSec=20
 
-# No fixed account: a user made for the run, in the groups that own the devices of the path
-# (/dev/dma_heap, /dev/mpp_service, /dev/rga: video; the NPU's /dev/dri/renderD*: render).
+# No fixed account: a user made for the run, in the groups the path's devices need on the tested image
+# (/dev/dma_heap: video; the NPU's /dev/dri/renderD*: render). A user made for the run also means a
+# read-only system outside the directories below. The configuration must be readable by this user:
+# by all, or by the group video.
 DynamicUser=yes
 SupplementaryGroups=video render
-# /run/rkzc for the socket; removed when the service stops.
+# /run/rkzc for the socket; removed when the service stops. A socket under /tmp (private here) or
+# under the state directory could not be reached by its readers.
 RuntimeDirectory=rkzc
 RuntimeDirectoryMode=0755
 # The model's default place, readable by the service.
