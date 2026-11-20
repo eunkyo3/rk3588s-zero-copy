@@ -88,6 +88,10 @@ class Reader(threading.Thread):
 def frame_ok(obj):
     return (isinstance(obj.get("channel"), int) and isinstance(obj.get("seq"), int)
             and isinstance(obj.get("pts_us"), int) and obj.get("time_ms", 0) > 1.7e12 and obj.get("width", 0) > 0
+            # 0.1.1: both CLOCK_MONOTONIC, the result after the decoder; the channel's decoder errors so far
+            and isinstance(obj.get("capture_ns"), int) and isinstance(obj.get("out_ns"), int)
+            and 0 < obj["capture_ns"] < obj["out_ns"] < obj["capture_ns"] + 60 * 10**9
+            and isinstance(obj.get("decode_errors"), int) and obj["decode_errors"] >= 0
             and obj.get("height", 0) > 0 and isinstance(obj.get("detections"), list)
             and all(set(d) == {"class", "name", "score", "x", "y", "w", "h"} and 0 <= d["class"] < 80
                     and isinstance(d["name"], str) and 0.25 <= d["score"] <= 1 and d["w"] > 0 and d["h"] > 0

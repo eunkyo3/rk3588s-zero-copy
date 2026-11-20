@@ -75,11 +75,11 @@ rkzc-detect --config detect.toml            # runs until SIGTERM or Ctrl-C
 - **The output** is one JSON object per line, on stdout or on a Unix socket that any number of clients read:
 
   ```json
-  {"channel":0,"seq":12,"pts_us":400000,"time_ms":1795135300305,"width":1920,"height":1080,"detections":[{"class":0,"name":"person","score":0.8411,"x":408.60,"y":415.60,"w":104.73,"h":298.37}]}
+  {"channel":0,"seq":12,"pts_us":400000,"time_ms":1795135300305,"capture_ns":5000123456789,"out_ns":5000153456789,"decode_errors":0,"width":1920,"height":1080,"detections":[{"class":0,"name":"person","score":0.8411,"x":408.60,"y":415.60,"w":104.73,"h":298.37}]}
   {"event":"source_lost","channel":0,"time_ms":1795135300456,"message":"..."}
   ```
 
-  `x`, `y`, `w`, `h` are in the source frame's pixels; `time_ms` is the wall clock when the line was written. To read the socket: `nc -U /run/rkzc/detect.sock`.
+  `x`, `y`, `w`, `h` are in the source frame's pixels; `time_ms` is the wall clock when the line was written. From 0.1.1 a frame line also has `capture_ns` and `out_ns`, both `CLOCK_MONOTONIC` in nanoseconds: when the frame left the decoder and when its result reached the program, so their difference is the frame's latency. `decode_errors` is the channel's count of decoder errors so far. To read the socket: `nc -U /run/rkzc/detect.sock`.
 - **A socket client that stops reading is disconnected** once its buffer is full (a few hundred lines); the program does not wait for it, and a reader should drop a last line that has no newline. A client beyond `max_clients` (16) is closed at once. stdout does wait for its reader, and a reader that goes away ends the program.
 - **Who may read the socket** is set by `socket_group` and `socket_mode`; the example lets the group `video` in. Connecting needs the write bit.
 - **A user and password in a source's URL** are replaced by `***` in the program's log and in every line it writes. The configuration file holds them in the clear: the example says how to keep it from other users.

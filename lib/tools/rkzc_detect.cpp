@@ -6,10 +6,14 @@
 //   rkzc-detect --version
 //
 // Output lines (stdout or a Unix socket, see the configuration):
-//   {"channel":0,"seq":12,"pts_us":400000,"time_ms":1763600000123,"width":1920,"height":1080,
+//   {"channel":0,"seq":12,"pts_us":400000,"time_ms":1763600000123,"capture_ns":5000123456789,
+//    "out_ns":5000153456789,"decode_errors":0,"width":1920,"height":1080,
 //    "detections":[{"class":0,"name":"person","score":0.87,"x":100.0,"y":50.5,"w":80.0,"h":200.0}]}
 //   {"event":"source_lost","channel":0,"time_ms":1763600000456,"message":"..."}
 // x, y, w, h are in the source frame's pixels; time_ms is the wall clock when the line was written.
+// capture_ns and out_ns are CLOCK_MONOTONIC in nanoseconds: when the frame left the decoder, and when
+// its result reached this program (taken first in the frame callback), so out_ns - capture_ns is the
+// frame's latency. decode_errors is the channel's count of decoder errors so far.
 // A user and password in a source's URL are replaced by *** in every line and in the log.
 // The log goes to stderr (under systemd: the journal).
 //
@@ -43,6 +47,12 @@ long long wall_ms() {
     return static_cast<long long>(ts.tv_sec) * 1000 + ts.tv_nsec / 1000000;
 }
 
+long long monotonic_ns() {
+    timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return static_cast<long long>(ts.tv_sec) * 1000000000LL + ts.tv_nsec;
+}
+
 const char* event_name(rkzc::EventKind k) {
     switch (k) {
     case rkzc::EventKind::SourceOpened:
@@ -59,13 +69,13 @@ const char* event_name(rkzc::EventKind k) {
     return "unknown";
 }
 
-void append_frame(const rkzc::Frame& f, std::string* line) {
-    char buf[256];
+void append_frame(const rkzc::Frame& f, long long out_ns, long long decode_errors, std::string* line) {
+    char buf[384];  // the longest values of every field fit
     std::snprintf(buf, sizeof buf,
-                  "{\"channel\":%d,\"seq\":%lld,\"pts_us\":%lld,\"time_ms\":%lld,\"width\":%d,\"height\":%d,"
-                  "\"detections\":[",
-                  f.channel, static_cast<long long>(f.seq), static_cast<long long>(f.pts_us), wall_ms(), f.width,
-                  f.height);
+                  "{\"channel\":%d,\"seq\":%lld,\"pts_us\":%lld,\"time_ms\":%lld,\"capture_ns\":%lld,"
+                  "\"out_ns\":%lld,\"decode_errors\":%lld,\"width\":%d,\"height\":%d,\"detections\":[",
+                  f.channel, static_cast<long long>(f.seq), static_cast<long long>(f.pts_us), wall_ms(),
+                  static_cast<long long>(f.capture_ns), out_ns, decode_errors, f.width, f.height);
     *line = buf;
     int written = 0;
     for (int i = 0; i < f.count; i++) {
@@ -195,9 +205,11 @@ int main(int argc, char** argv) {
     // The callbacks come one at a time, so `line` is reused.
     std::string line;
     det->on_frame([&](const rkzc::Frame& f) {
+        const long long out_ns = monotonic_ns();  // first: the end of the frame's latency
         if (f.count == 0 && !cfg.empty_frames)
             return;
-        append_frame(f, &line);
+        const long long decode_errors = det->stats()[f.channel].decode_errors;
+        append_frame(f, out_ns, decode_errors, &line);
         if (!out.write(line))
             output_failed = true;
     });
