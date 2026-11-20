@@ -20,10 +20,13 @@ exported=$(printf '%s
 ' "$symbols" | awk '$2 == "T"' | cut -d' ' -f3- | sed 's/(.*//')
 printf '%s
 ' "$exported" | grep -q '^rkzc::check_model$' || { echo "FAIL: rkzc::check_model is not exported" >&2; exit 1; }
+# rkzc_...: the C interface (include/rkzc/rkzc_c.h).
+printf '%s
+' "$exported" | grep -q '^rkzc_open$' || { echo "FAIL: rkzc_open is not exported" >&2; exit 1; }
 others=$(printf '%s
-' "$exported" | grep -v '^rkzc::' || true)
+' "$exported" | grep -v -e '^rkzc::' -e '^rkzc_[a-z_]*$' || true)
 if [ -n "$others" ]; then
-    echo "FAIL: $1 exports functions outside rkzc::" >&2
+    echo "FAIL: $1 exports functions outside rkzc:: and rkzc_" >&2
     printf '%s
 ' "$others" | head >&2
     exit 1

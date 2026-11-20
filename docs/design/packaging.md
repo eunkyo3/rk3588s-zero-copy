@@ -121,7 +121,7 @@ These change the design, and they are the owner's to answer:
 
 1. **Scope of boards:** the NanoPi R6C with FriendlyElec's image only, or other RK3588 boards and images too? The second multiplies the version checks.
 2. **Models:** YOLOv8n and YOLOv10n only, or any `.rknn` with user-supplied post-processing? The second makes the callback hand out raw tensors.
-3. **Language:** is C++ enough, or is a C or Python binding needed from the start?
+3. **Language:** is C++ enough, or is a C or Python binding needed from the start? **Answered (2026-11-19): a Python binding is wanted.** Done as a C interface and a `ctypes` module: [lib/](../../lib/README.md#c-and-python).
 4. **Output of the program:** are JSON lines enough as a first step?
 5. **Camera input:** only RTSP and files, or MIPI/USB cameras too? The measured path starts at a hardware decoder; a raw camera frame enters at the RGA and was never measured here.
 
