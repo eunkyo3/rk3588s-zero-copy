@@ -132,6 +132,6 @@ public:
 3. 멈출 때까지 도는 모드, 재연결, 검출 콜백을 더한다. `bench_main`과의 동등성 테스트를 더한다. **완료:** [lib/](../../lib/README.ko.md)의 `rkzc::Detector`. 동등성 테스트는 등록된 `tools/demo_detect`와 비교한다. `demo_detect`는 검출 결과를 파일로 쓰고, `bench_main`은 개수만 기록하기 때문이다.
 4. `rkzc-detect`와 서비스 파일을 쓴다. **완료:** [lib/](../../lib/README.ko.md#프로그램-rkzc-detect). 설정은 TOML의 부분집합이고, 출력은 stdout이나 Unix 소켓으로 내는 JSON 줄이다. 서비스는 보드에서 테스트용 경로에 설치해 실행해 봤다.
 5. 패키징 스크립트를 쓴다. `copyright` 파일과 ffmpeg-rockchip의 소스 압축 파일을 포함한다. M3가 설정을 시험한 것처럼, 초기화한 보드에 `.deb`를 설치해 본다. **완료:** `lib/packaging/build_deb.sh`와 [install.ko.md](../install.ko.md). 보드를 다시 초기화하지는 않았다. M3가 초기화 전에 설정을 시험한 방식대로 보드 기본 이미지의 chroot에 패키지를 설치했고, 이어서 실제 보드에 설치해 서비스를 돌린 뒤 제거했다.
-6. 패키지한 경로를 잴지 정하고, 잰다면 계획을 등록한다.
+6. 패키지한 경로를 잴지 정하고, 잰다면 계획을 등록한다. **정함:** M5로 잰다([prereg/M5.md](../../prereg/M5.ko.md)). `rkzc` 0.1.1이 측정이 읽는 필드 세 개를 더하고, 도구는 [lib/measure/](../../lib/measure/README.ko.md)에 있다.
 
 각 단계는 PR 하나씩이다.

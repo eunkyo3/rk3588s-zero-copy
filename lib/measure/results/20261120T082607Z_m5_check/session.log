@@ -1,0 +1,18 @@
+2026-11-20T08:26:09Z package rkzc 0.1.1-1 (d88a13c82781…): 22 files as packaged, 5 libraries hashed
+2026-11-20T08:26:09Z session record: session_status running, or it died; invalid_x2_runs none; protocol_settings no: idle_s 120 (protocol 600); duration 10 (protocol 120); check: arms B C P P4, with the CPU check; freeze_m3_commit none
+2026-11-20T08:26:13Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-20T08:26:14Z starting the stream server
+2026-11-20T08:26:20Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261120T082615Z-398170, clock offset 0.0 ms
+2026-11-20T08:26:20Z idle for 120 s
+2026-11-20T08:28:20Z soc-thermal baseline 36091 m°C
+2026-11-20T08:28:21Z 01_m5_B_8ch_r1: B, 8 ch, main
+2026-11-20T08:28:53Z 01_m5_B_8ch_r1: valid
+2026-11-20T08:29:53Z 02_m5_C_8ch_r1: C, 8 ch, main
+2026-11-20T08:30:26Z 02_m5_C_8ch_r1: cpu_check_tool_s 1.635, cpu_check_bench_main_s 1.630, cpu_check_difference_s +0.005, cpu_check_samples 318, cpu_check passed
+2026-11-20T08:30:26Z 02_m5_C_8ch_r1: valid
+2026-11-20T08:31:26Z 03_m5_P_8ch_r1: P, 8 ch, main
+2026-11-20T08:32:03Z 03_m5_P_8ch_r1: valid
+2026-11-20T08:33:03Z 04_m5_P4_8ch_r1: P4, 8 ch, main
+2026-11-20T08:33:40Z 04_m5_P4_8ch_r1: valid
+2026-11-20T08:33:40Z session record: session_status completed; arms B C P P4; invalid_x2_runs none; protocol_settings no: idle_s 120 (protocol 600); duration 10 (protocol 120); check: arms B C P P4, with the CPU check
+2026-11-20T08:33:40Z stopping the stream server

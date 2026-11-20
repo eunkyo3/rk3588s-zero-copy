@@ -75,11 +75,11 @@ rkzc-detect --config detect.toml            # SIGTERM이나 Ctrl-C까지 실행�
 - **출력**은 한 줄에 JSON 객체 하나다. stdout으로 내거나, 여러 클라이언트가 읽을 수 있는 Unix 소켓으로 낸다.
 
   ```json
-  {"channel":0,"seq":12,"pts_us":400000,"time_ms":1795135300305,"width":1920,"height":1080,"detections":[{"class":0,"name":"person","score":0.8411,"x":408.60,"y":415.60,"w":104.73,"h":298.37}]}
+  {"channel":0,"seq":12,"pts_us":400000,"time_ms":1795135300305,"capture_ns":5000123456789,"out_ns":5000153456789,"decode_errors":0,"width":1920,"height":1080,"detections":[{"class":0,"name":"person","score":0.8411,"x":408.60,"y":415.60,"w":104.73,"h":298.37}]}
   {"event":"source_lost","channel":0,"time_ms":1795135300456,"message":"..."}
   ```
 
-  `x`, `y`, `w`, `h`는 원본 프레임의 픽셀 단위다. `time_ms`는 줄을 쓴 시점의 벽시계 시각이다. 소켓은 `nc -U /run/rkzc/detect.sock`으로 읽을 수 있다.
+  `x`, `y`, `w`, `h`는 원본 프레임의 픽셀 단위다. `time_ms`는 줄을 쓴 시점의 벽시계 시각이다. 0.1.1부터 프레임 줄에는 `capture_ns`와 `out_ns`도 있다. 둘 다 나노초 단위의 `CLOCK_MONOTONIC`으로, 프레임이 디코더를 떠난 때와 그 결과가 프로그램에 닿은 때이며, 둘의 차가 그 프레임의 지연이다. `decode_errors`는 그 채널에서 지금까지 난 디코더 오류의 수다. 소켓은 `nc -U /run/rkzc/detect.sock`으로 읽을 수 있다.
 - **읽기를 멈춘 소켓 클라이언트는 버퍼가 차면(수백 줄) 끊는다.** 프로그램은 그 클라이언트를 기다리지 않는다. 읽는 쪽은 줄바꿈 없이 끝난 마지막 줄을 버려야 한다. `max_clients`(16)를 넘는 클라이언트는 바로 닫는다. stdout은 읽는 쪽을 기다리며, 읽는 쪽이 사라지면 프로그램이 끝난다.
 - **소켓을 누가 읽을 수 있는지**는 `socket_group`과 `socket_mode`로 정한다. 예시는 `video` 그룹에 허용한다. 접속하려면 쓰기 권한 비트가 필요하다.
 - **소스 URL에 든 사용자와 비밀번호**는 프로그램의 로그와 모든 출력 줄에서 `***`로 바뀐다. 설정 파일에는 그대로 들어 있다. 다른 사용자가 못 읽게 하는 방법은 예시 파일에 적었다.
