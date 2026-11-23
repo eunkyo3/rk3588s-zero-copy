@@ -11,8 +11,8 @@
 ## Install
 
 ```sh
-wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.0/rkzc_0.1.0-1_arm64.deb
-sudo apt install ./rkzc_0.1.0-1_arm64.deb
+wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.1/rkzc_0.1.1-1_arm64.deb
+sudo apt install ./rkzc_0.1.1-1_arm64.deb
 ```
 
 - **The install needs the network:** it downloads Rockchip's NPU runtime (`librknnrt.so` 2.3.2) from Rockchip's repository and checks its SHA-256. The package cannot carry that file, since its licence does not allow passing it on. If the board is offline, the install still succeeds and says so; run `sudo rkzc-fetch-runtime` later. The download gives up after three tries of 20 s. It uses `wget`, which takes a proxy from the environment (`https_proxy`), not from apt's configuration.

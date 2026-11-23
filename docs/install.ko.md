@@ -11,8 +11,8 @@
 ## 설치
 
 ```sh
-wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.0/rkzc_0.1.0-1_arm64.deb
-sudo apt install ./rkzc_0.1.0-1_arm64.deb
+wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.1/rkzc_0.1.1-1_arm64.deb
+sudo apt install ./rkzc_0.1.1-1_arm64.deb
 ```
 
 - **설치에는 네트워크가 필요하다.** Rockchip의 NPU 런타임(`librknnrt.so` 2.3.2)을 Rockchip 저장소에서 내려받아 SHA-256을 확인한다. 이 파일은 라이선스가 재배포를 허용하지 않아 패키지에 넣을 수 없다. 보드가 오프라인이면 설치는 그대로 성공하고 그 사실을 알려 준다. 나중에 `sudo rkzc-fetch-runtime`을 실행하면 된다. 내려받기는 20초씩 세 번 시도하고 포기한다. `wget`을 쓰므로 프록시는 apt 설정이 아니라 환경 변수(`https_proxy`)에서 읽는다.

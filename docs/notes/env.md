@@ -22,6 +22,8 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 | [`amend-A15`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A15) | `dec7c90c5d4e1addc94ebeb2d7ad4d5e8c7670f2` | 2026-11-19T00:21:17Z |
 | [`freeze-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m3) | `dec7c90c5d4e1addc94ebeb2d7ad4d5e8c7670f2` | 2026-11-19T00:21:17Z |
 | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5) | `9ac3ec137504b65751c1232ad9add69f3d15f091` | 2026-11-20T04:09:11Z |
+| [`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) | `e959531f4d08054527440a57806d1ccd3f7961e6` | 2026-11-23T00:05:11Z |
+| [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) | `e959531f4d08054527440a57806d1ccd3f7961e6` | 2026-11-23T00:05:11Z |
 
 `created_at` is the reference time (PROTOCOL §1). The tagged commit is the merge of PR #1, whose committer date (2026-10-30T01:58:11Z) is not used. `amend-A8` is the Release of an amendment made before `freeze-m1`, so that the check it registers has a reference time ([A8](../../prereg/AMENDMENTS.md)). Its tagged commit is the merge of PR #12. GitHub gives that commit's time as the Release's `created_at`; the Release was published at 2026-11-03T01:40:12Z. The check started at 02:19:49Z, after both.
 
@@ -40,6 +42,8 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 `prereg-m3`, `amend-A15` and `freeze-m3` all tag the merge of PR #83, which adds [prereg/M3.md](../../prereg/M3.md) and A15: M3 is registered in one stage (M3 §8). Here too GitHub gives the commit's time as `created_at`; the Releases were published at 2026-11-19T00:28:55Z, 00:28:59Z and 00:29:02Z. Every M3 run and setup record starts after both, which `tools/check_prereg_order.py` checks, and names `freeze-m3`'s commit in its header (M3 §4). The session tool and both scripts read that commit from this table.
 
 `prereg-m5` is stage 1 of M5's pre-registration, [prereg/M5.md](../../prereg/M5.md). It tags the merge of PR #95. Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-20T04:10:17Z. Every M5 check run that names `prereg-m5` in its header starts after both, which M5's own order check under `lib/measure/` checks: the registered `tools/check_prereg_order.py` knows no run kind `m5` (M5 §8).
+
+`amend-A16` and `freeze-m5` both tag the merge of PR #97, which adds A16, the measuring tool under [lib/measure/](../../lib/measure/README.md) and the source of `rkzc` 0.1.1: stage 2 of M5's registration (M5 §8 step 4). Here too GitHub gives the commit's time as `created_at`; the Releases were published at 2026-11-23T00:08:08Z and 00:08:11Z, after the package's Release [`rkzc-v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/rkzc-v0.1.1) at 00:08:05Z (M5 §8 step 2). Every session of M5's sweep starts after both, which `lib/measure/m5_order.py` checks, and the session tool starts a sweep only once `freeze-m5` has its row in this table.
 
 ## Board baseline
 
