@@ -22,6 +22,8 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 | [`amend-A15`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A15) | `dec7c90c5d4e1addc94ebeb2d7ad4d5e8c7670f2` | 2026-11-19T00:21:17Z |
 | [`freeze-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m3) | `dec7c90c5d4e1addc94ebeb2d7ad4d5e8c7670f2` | 2026-11-19T00:21:17Z |
 | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5) | `9ac3ec137504b65751c1232ad9add69f3d15f091` | 2026-11-20T04:09:11Z |
+| [`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) | `e959531f4d08054527440a57806d1ccd3f7961e6` | 2026-11-23T00:05:11Z |
+| [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) | `e959531f4d08054527440a57806d1ccd3f7961e6` | 2026-11-23T00:05:11Z |
 
 기준 시각은 `created_at`이다(PROTOCOL §1). 태그가 가리키는 커밋은 PR #1의 머지 커밋이며, 그 커미터 날짜(2026-10-30T01:58:11Z)는 쓰지 않는다. `amend-A8`은 `freeze-m1` 전에 만든 수정 기록의 Release로, 그 항목이 등록하는 검사에 기준 시각을 주기 위한 것이다([A8](../../prereg/AMENDMENTS.ko.md)). 태그가 가리키는 커밋은 PR #12의 머지 커밋이다. GitHub는 그 커밋의 시각을 Release의 `created_at`으로 주며, Release는 2026-11-03T01:40:12Z에 공개됐다. 검사는 둘 다 지난 02:19:49Z에 시작했다.
 
@@ -40,6 +42,8 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 `prereg-m3`, `amend-A15`, `freeze-m3`는 모두 PR #83의 머지 커밋을 가리키며, 그 PR이 [prereg/M3.md](../../prereg/M3.ko.md)와 A15를 더한다. M3는 한 단계로 등록한다(M3 §8). 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-19T00:28:55Z, 00:28:59Z, 00:29:02Z에 공개됐다. 모든 M3 실행과 설정 기록은 둘 다 지난 뒤에 시작하며 `tools/check_prereg_order.py`가 이를 검사하고, 머리말에 `freeze-m3`의 커밋을 적는다(M3 §4). 세션 도구와 두 스크립트가 그 커밋을 이 표에서 읽는다.
 
 `prereg-m5`는 M5 사전 등록의 1단계인 [prereg/M5.md](../../prereg/M5.ko.md)다. PR #95의 머지 커밋을 가리킨다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-20T04:10:17Z에 공개됐다. 머리말에 `prereg-m5`를 적는 모든 M5 점검 실행은 둘 다 지난 뒤에 시작하며, `lib/measure/` 아래에 두는 M5 자체의 순서 검사가 이를 검사한다. 등록된 `tools/check_prereg_order.py`는 실행 종류 `m5`를 모르기 때문이다(M5 §8).
+
+`amend-A16`과 `freeze-m5`는 둘 다 PR #97의 머지 커밋을 가리키며, 그 PR이 A16, [lib/measure/](../../lib/measure/README.ko.md) 아래의 측정 도구, `rkzc` 0.1.1의 소스를 더한다. M5 등록의 2단계다(M5 §8 4단계). 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-23T00:08:08Z와 00:08:11Z에 공개됐다. 패키지의 Release [`rkzc-v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/rkzc-v0.1.1)이 00:08:05Z에 먼저 공개됐다(M5 §8 2단계). M5 본 측정의 모든 세션은 둘 다 지난 뒤에 시작하며 `lib/measure/m5_order.py`가 이를 검사한다. 세션 도구는 `freeze-m5`의 행이 이 표에 있어야 본 측정을 시작한다.
 
 ## 보드 기준선
 
