@@ -1,0 +1,16 @@
+start MainPID=75736
+start NRestarts=0
+start ExecMainStartTimestamp=Mon 2026-11-23 00:56:27.969222 UTC
+start ExecMainStartTimestampMonotonic=332166276918
+start CPUAffinity=4-7
+start DropInPaths=/etc/systemd/system/rkzc-detect.service.d/affinity.conf
+start InvocationID=9a3cd728c0fd4926a3f087f962462629
+before_stop MainPID=75736
+before_stop NRestarts=0
+before_stop ActiveState=active
+after_stop Result=success
+after_stop NRestarts=0
+after_stop ExecMainExitTimestamp=
+after_stop ExecMainCode=0
+after_stop ExecMainStatus=0
+after_stop ActiveState=inactive

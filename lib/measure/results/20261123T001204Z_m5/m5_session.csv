@@ -1,0 +1,26 @@
+# start_time_utc: 2026-11-23T00:12:04Z
+# run_kind: m5
+# prereg_m5_commit: 9ac3ec137504b65751c1232ad9add69f3d15f091
+# freeze_m5_commit: e959531f4d08054527440a57806d1ccd3f7961e6
+# tool_commit: 3f04ea111ff3caf7ee15cf1d4a51bb8913ad67a3
+# tool_sha256: 5f419c1ce89d0416dbe979fba001811dc9f3c94a93b09941738244959ea1beba
+# amendment: A16
+# package_version: 0.1.1-1
+# package_sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+# session: 20261123T001204Z_m5
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 22
+# warmup_s: 20
+# duration_s: 120
+key,value
+session_status,completed
+earlier_sessions,none
+repetitions_run_here,r1 r2 r3
+repetitions_left,none
+invalid_x2_runs,none
+protocol_settings,yes
+freeze_m3_commit,dec7c90c5d4e1addc94ebeb2d7ad4d5e8c7670f2
+build_commit,593fe58ae03f9c6782fefe3837dfd68945ce9d55
+package_version,0.1.1-1
+package_sha256,d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+package_files_identical,22

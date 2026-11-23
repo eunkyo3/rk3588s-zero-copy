@@ -1,0 +1,80 @@
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60336] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60318] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60350] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60362] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60316] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60368] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60348] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 10.88.0.2:60358] opened
+2026/11/23 00:25:41 INF [path ch2] runOnDemand command started
+2026/11/23 00:25:41 INF [path ch5] runOnDemand command started
+2026/11/23 00:25:41 INF [path ch7] runOnDemand command started
+2026/11/23 00:25:41 INF [path ch8] runOnDemand command started
+2026/11/23 00:25:41 INF [path ch1] runOnDemand command started
+2026/11/23 00:25:41 INF [path ch4] runOnDemand command started
+2026/11/23 00:25:41 INF [path ch6] runOnDemand command started
+2026/11/23 00:25:41 INF [path ch3] runOnDemand command started
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:47950] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:47952] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:47962] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:47964] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:47976] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:47984] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:47996] opened
+2026/11/23 00:25:41 INF [RTSP] [conn 127.0.0.1:48000] opened
+2026/11/23 00:25:41 INF [RTSP] [session 78169ca6] created by 127.0.0.1:47950
+2026/11/23 00:25:41 INF [RTSP] [session b8863093] created by 127.0.0.1:47952
+2026/11/23 00:25:41 INF [path ch7] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 6047d5be] created by 127.0.0.1:47962
+2026/11/23 00:25:41 INF [RTSP] [session 78169ca6] is publishing to path 'ch7'
+2026/11/23 00:25:41 INF [RTSP] [session 654b51f4] created by 127.0.0.1:47964
+2026/11/23 00:25:41 INF [path ch3] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session b8863093] is publishing to path 'ch3'
+2026/11/23 00:25:41 INF [RTSP] [session bec3ec61] created by 10.88.0.2:60362
+2026/11/23 00:25:41 INF [RTSP] [session e932144a] created by 10.88.0.2:60316
+2026/11/23 00:25:41 INF [path ch4] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 654b51f4] is publishing to path 'ch4'
+2026/11/23 00:25:41 INF [path ch8] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 6047d5be] is publishing to path 'ch8'
+2026/11/23 00:25:41 INF [RTSP] [session bec3ec61] is reading from path 'ch7', with TCP, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session e932144a] is reading from path 'ch3', with TCP, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 48fcb58c] created by 10.88.0.2:60358
+2026/11/23 00:25:41 INF [RTSP] [session 3ae65f9b] created by 10.88.0.2:60368
+2026/11/23 00:25:41 INF [RTSP] [session 3ae65f9b] is reading from path 'ch8', with TCP, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 48fcb58c] is reading from path 'ch4', with TCP, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 10a33a63] created by 127.0.0.1:47984
+2026/11/23 00:25:41 INF [RTSP] [session d8ba0175] created by 127.0.0.1:47976
+2026/11/23 00:25:41 INF [path ch1] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 10a33a63] is publishing to path 'ch1'
+2026/11/23 00:25:41 INF [path ch2] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session d8ba0175] is publishing to path 'ch2'
+2026/11/23 00:25:41 INF [RTSP] [session 61358f1f] created by 10.88.0.2:60318
+2026/11/23 00:25:41 INF [RTSP] [session 1e4786a1] created by 127.0.0.1:48000
+2026/11/23 00:25:41 INF [RTSP] [session 629f945f] created by 127.0.0.1:47996
+2026/11/23 00:25:41 INF [RTSP] [session 284eead8] created by 10.88.0.2:60336
+2026/11/23 00:25:41 INF [RTSP] [session 61358f1f] is reading from path 'ch1', with TCP, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 284eead8] is reading from path 'ch2', with TCP, 1 track (H264)
+2026/11/23 00:25:41 INF [path ch6] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 629f945f] is publishing to path 'ch6'
+2026/11/23 00:25:41 INF [path ch5] stream is available and online, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session 1e4786a1] is publishing to path 'ch5'
+2026/11/23 00:25:41 INF [RTSP] [session fb7860bb] created by 10.88.0.2:60350
+2026/11/23 00:25:41 INF [RTSP] [session fb7860bb] is reading from path 'ch5', with TCP, 1 track (H264)
+2026/11/23 00:25:41 INF [RTSP] [session a7eb8346] created by 10.88.0.2:60348
+2026/11/23 00:25:41 INF [RTSP] [session a7eb8346] is reading from path 'ch6', with TCP, 1 track (H264)
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60318] closed: read tcp 10.88.0.1:8554->10.88.0.2:60318: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session 61358f1f] destroyed: not in use
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60336] closed: read tcp 10.88.0.1:8554->10.88.0.2:60336: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session 284eead8] destroyed: not in use
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60316] closed: read tcp 10.88.0.1:8554->10.88.0.2:60316: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session e932144a] destroyed: not in use
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60358] closed: read tcp 10.88.0.1:8554->10.88.0.2:60358: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session 48fcb58c] destroyed: not in use
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60350] closed: read tcp 10.88.0.1:8554->10.88.0.2:60350: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session fb7860bb] destroyed: not in use
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60348] closed: read tcp 10.88.0.1:8554->10.88.0.2:60348: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session a7eb8346] destroyed: not in use
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60362] closed: read tcp 10.88.0.1:8554->10.88.0.2:60362: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session bec3ec61] destroyed: not in use
+2026/11/23 00:28:02 INF [RTSP] [conn 10.88.0.2:60368] closed: read tcp 10.88.0.1:8554->10.88.0.2:60368: read: connection reset by peer
+2026/11/23 00:28:02 INF [RTSP] [session 3ae65f9b] destroyed: not in use

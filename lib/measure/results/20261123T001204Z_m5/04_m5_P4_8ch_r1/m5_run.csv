@@ -1,0 +1,106 @@
+# start_time_utc: 2026-11-23T00:32:31Z
+# run_kind: m5
+# prereg_m5_commit: 9ac3ec137504b65751c1232ad9add69f3d15f091
+# freeze_m5_commit: e959531f4d08054527440a57806d1ccd3f7961e6
+# tool_commit: 3f04ea111ff3caf7ee15cf1d4a51bb8913ad67a3
+# tool_sha256: 5f419c1ce89d0416dbe979fba001811dc9f3c94a93b09941738244959ea1beba
+# amendment: A16
+# package_version: 0.1.1-1
+# package_sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+# arm: P4
+# repetition: 1
+# attempt: 1
+# session: 20261123T001204Z_m5
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 22
+# warmup_s: 20
+# duration_s: 120
+key,value
+valid,1
+reasons,none
+warnings,none
+gate_soc_mc,34230
+window_s,120
+process_cpu_s,18.240
+read_w_late_ms,0.799
+read_e_late_ms,0.769
+tool_cpu_s,1.480
+first_lines_s,2.510
+thread_cpu_s,18.210
+thread_cpu_a55_s,0.000
+a55_share,0.0000
+thread_00,npu-0 73567 2.52
+thread_01,npu-2 73569 2.11
+thread_02,npu-1 73568 2.07
+thread_03,dec-4 73573 1.04
+thread_04,dec-1 73570 1.01
+thread_05,dec-3 73572 0.99
+thread_06,dec-7 73576 0.99
+thread_07,dec-5 73574 0.98
+thread_08,dec-8 73577 0.85
+thread_09,dec-6 73575 0.82
+thread_10,dec-2 73571 0.78
+thread_11,mpp_dec_parser 73620 0.39
+system_cpu0_s,2.830
+system_cpu1_s,1.970
+system_cpu2_s,0.310
+system_cpu3_s,0.180
+system_cpu4_s,3.280
+system_cpu5_s,5.220
+system_cpu6_s,5.450
+system_cpu7_s,3.370
+system_cpu0-3_s,5.290
+system_cpu4-5_s,8.500
+system_cpu6-7_s,8.820
+system_cpu_total_s,22.610
+schedstat_cpu0_s,2.894
+schedstat_cpu1_s,0.567
+schedstat_cpu2_s,0.312
+schedstat_cpu3_s,0.263
+schedstat_cpu4_s,4.552
+schedstat_cpu5_s,4.780
+schedstat_cpu6_s,4.863
+schedstat_cpu7_s,4.408
+schedstat_cpu0-3_s,4.035
+schedstat_cpu4-5_s,9.332
+schedstat_cpu6-7_s,9.272
+schedstat_cpu_total_s,22.639
+inference_fps_min,5.000
+inference_fps_max,5.000
+inference_fps_below_4.75,none
+sampled_in_window,4800
+missing_in_window,0
+drop_rate,0.00000
+decoder_drops,0
+drift_end_max_s,-0.0002
+processed_in_window,4800
+arrival_phase_ms,97.1 95.1 92.0 105.3 109.2 96.0 91.5 105.3
+arrival_phase_spread_ms,17.7
+arrival_phase_drift_ms,0.1
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,38846
+rss_window_start_kb,231856
+rss_window_end_kb,231856
+rss_window_max_kb,231856
+service_decoded,34493
+service_inferred,5752
+service_dropped,0
+service_errors,0
+service_decode_errors,0
+service_reconnects,0
+service_output,0 0 0
+affinity_w,"32 threads: 4,5,6,7"
+affinity_e,"32 threads: 4,5,6,7"
+warmup_start_utc,2026-11-23T00:32:34.399Z
+window_start_utc,2026-11-23T00:32:54.399Z
+window_end_utc,2026-11-23T00:34:54.399Z
+svc_start_utc,2026-11-23T00:32:31.889Z

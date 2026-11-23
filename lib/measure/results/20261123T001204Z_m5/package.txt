@@ -1,0 +1,9 @@
+package_version: 0.1.1-1
+package_sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+package_files_identical: 22
+model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+lib /opt/rkzc/lib/libavcodec.so.61: afec896b13eab298ce377e7b75401e14abd41b012f78e87421ea58b72d1c2485
+lib /opt/rkzc/lib/libavformat.so.61: e617aa2149de51756c63e40a339db1ae57186f6c86466c17a760766f1c9a9445
+lib /opt/rkzc/lib/libavutil.so.59: 751863690c45e59191ae4ab38783803544e5416ea508c2af7d18f2045911d9a7
+lib /opt/rkzc/lib/librknnrt.so: d31fc19c85b85f6091b2bd0f6af9d962d5264a4e410bfb536402ec92bac738e8
+lib /opt/rkzc/lib/libswresample.so.5: e2bbfe80ea74573a313dd0040f1d32f60a7f2719bf5a17a51fb2f7e2767d747f
