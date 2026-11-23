@@ -11,8 +11,8 @@
 **측정한 것:** 이 저장소의 보드에서 한 지점(1080p RTSP 8채널, 채널당 초당 5회 추론)을 쟀다. [M5 보고서](report/M5.ko.md)에 있다.
 
 - **설치 그대로일 때** 서비스의 프로세스 CPU는 벤치마크의 CPU 경로(B)보다 38.5% 낮았고, 제로카피 변형(C)보다 39.8% 높았다. CPU 시간의 절반 가까이를 A55 코어에서 썼다.
-- **A76 코어에 고정했을 때**는 B보다 58.6% 낮았고 C와 비슷했다. 드롭인 파일 하나로 된다. `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`에 `[Service]`와 `CPUAffinity=4-7` 두 줄을 쓰고, `sudo systemctl daemon-reload` 뒤 서비스를 다시 시작한다.
-- **지연:** C와의 차이는 3회 실행으로 가릴 수 있는 범위 안이었고, 보고서는 지연에 대해 결론을 내리지 않는다.
+- **A76 코어로 제한했을 때**는 B보다 58.6% 낮았고 C와 비슷했다. 드롭인 파일 하나로 된다. `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`에 `[Service]`와 `CPUAffinity=4-7` 두 줄을 쓰고, `sudo systemctl daemon-reload` 뒤 서비스를 다시 시작한다.
+- **지연:** 보고서는 결론을 내리지 않는다. 서비스의 지연은 벤치마크와 같은 지점에서 잰 것이 아니고, 3회 실행으로는 구간이 넓다.
 - 이 숫자들에 무엇이 섞여 있고 무엇을 다루지 않는지는 보고서에 있다.
 
 ## 설치

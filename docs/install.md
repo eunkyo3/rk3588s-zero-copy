@@ -12,7 +12,7 @@
 
 - **As installed,** the service used 38.5% less process CPU than the benchmark's CPU path (B), and 39.8% more than its zero-copy variant (C). Close to half of its CPU time was spent on the A55 cores.
 - **Restricted to the A76 cores,** it used 58.6% less than B and about as much as C. That is one drop-in file, `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`, with the two lines `[Service]` and `CPUAffinity=4-7`, then `sudo systemctl daemon-reload` and a restart of the service.
-- **Latency:** the differences from C were within what 3 runs can show, and the report draws no conclusion on it.
+- **Latency:** the report draws no conclusion. The service's latency is not taken at the same point as the benchmark's, and 3 runs give wide intervals.
 - The report says what these numbers mix and what they do not cover.
 
 ## Install
