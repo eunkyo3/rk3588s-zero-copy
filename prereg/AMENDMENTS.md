@@ -629,3 +629,78 @@ Each entry has this form:
 - Reason: M3's plan and its values are registered together, after the tools were written, tested and reviewed, and before any of M3's runs.
 - Affected data: none.
 - Release: `amend-A15`. `prereg-m3` and `freeze-m3` tag the same commit, the merge of the pull request that adds this entry. `freeze-m3`'s `created_at` is the reference time for M3's runs.
+
+## A16 — 2026-11-20 — M5: the values fixed before `freeze-m5`
+- Change: fixes the values of [M5.md](M5.md) §8 step 4, and changes one sentence of its §8 step 3 (the check "The tool against `bench_main`"). Nothing else in M5.md changes.
+  - **The package (§8 step 2):** `rkzc_0.1.1-1_arm64.deb`, SHA-256 `d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241`, built on the board by `lib/packaging/build_deb.sh` from commit `3fdc5caa9ea98e214a4cd4eebe734a61ceffc5d8`. [lib/measure/package.txt](../lib/measure/package.txt) records it, and the tool refuses any other file.
+    - **Its source against 0.1.0's** (`rkzc-v0.1.0`, built from `0b6f5bd`): `lib/tools/rkzc_detect.cpp` gains the three fields and their comment, and `lib/CMakeLists.txt` the version. `lib/src/`, `lib/shim/`, `lib/include/`, `lib/python/`, `lib/packaging/` and `lib/dist/` are unchanged.
+    - **Its files against 0.1.0's:** both hold 30. `librkzc.so.0.1.0` is now `librkzc.so.0.1.1`. Six differ in content: `rkzc-detect`, `rkzc-check`, `librkzc.so.0.1.1`, and `control`, `md5sums` and `copyright`, which carry the version, the checksums and the source commit. The other 24 are byte-identical, the four FFmpeg libraries, the unit file and the shipped configuration among them.
+    - **Fixed when:** the SHA-256 was committed (`a44d742`) before the service was first started. Before that the package's own test `lib/tests/test_rkzc_detect.py` ran the installed program directly, not as the service: 32 of its 33 checks passed. The one that failed needs a video with a frame that has no detection, and the video given had none.
+    - **The package did not change after it was fixed.**
+  - **The tool (§8 step 2):** commit `a8eaa31dbfd4afbcd7c77882fb41014996929e2a`, under [lib/measure/](../lib/measure/README.md).
+    - **Its content:** one SHA-256 over every `.py` of `lib/measure/` and `package.txt`: `5f419c1ce89d0416dbe979fba001811dc9f3c94a93b09941738244959ea1beba`. Every record's header carries it (`tool_sha256`) next to the commit the board had checked out (`tool_commit`). The sweep's sessions run from the commit that adds `freeze-m5`'s row to `docs/notes/env.md`, which is later than `a8eaa31`; the content must be this one.
+    - **One change after it was fixed.** The tool was first fixed at `a44d742` (content `c67fdcde…`), before the service's first start. The first check session showed a defect of the check "The tool against `bench_main`", and `a8eaa31` fixes it (below). Every check of step 3 was then redone with `a8eaa31`.
+    - **What it takes from the registered `tools/stream_session.py`,** imported and unchanged: the session's start, the gate, the clock exchange, the idle baselines, every B and C run with its judgement and its repeat, `runs.tsv` and `started.tsv`, the server log's parsing with rule 4's events, and the bookkeeping of repetitions across sessions.
+      - **How:** the tool adds one entry, `m5`, to the imported table `SWEEPS`, with M3's kind. So a session keeps to M3 §4's pinned inventory keys, and B and C run with M3 §1's options and M3 §3's validity rules.
+      - **Options passed to `bench_main`:** `--variant`, `--channels 8`, `--source`, `--condition main`, `--warmup 20`, `--duration 120`, `--run-kind check`, `--repetition` and `--out`, as §1 says. As in M3's runs, also `--freeze-commit` with `freeze-m1`'s commit and `--freeze-m3-commit` with `freeze-m3`'s. These two are header fields.
+    - **What it implements itself:**
+      - the checks that the `.deb` is the recorded one, that each of its files equals the installed one, and that the model is M1's;
+      - `/etc/rkzc/detect.toml`, written from the package's shipped copy with only `sources` changed;
+      - P4's drop-in, its removal and the `daemon-reload` after each change;
+      - the service's run: the start, the socket's reader, the timed reads, the one-second samples, the stop and the unit's journal;
+      - §3's values and §4's rules 1, 2, 3 and 5 for the service, computed from the run's stored files (`m5_metrics.py`);
+      - rule 4 for the service: the reading of the server's log follows the registered tool's `judge` line for line, and the events come from its `server_events`, from `t_svc` to `t_e`;
+      - M5's header beside every run, the order of the arms, and the session's own record;
+      - the order check (`m5_order.py`), which uses the registered order checker's two readers;
+      - the summary (`m5_summary.py`): the runs that count, §2's verdicts and §6's values. It was written, reviewed and committed with the tool, before any run. It runs on the PC, since §3's latency percentiles need numpy and the board has none.
+  - **The change to §8 step 3:** "the tool also reads `bench_main`'s utime + stime from `/proc` once per second" becomes "ten times per second". The rest of the check stands: interpolation at `bench_main`'s `window_start_utc` and `window_end_utc`, and agreement within 0.1 s.
+    - **Why:** `bench_main` exits within half a second of its window's end. In the first check session its last one-second read came 0.59 s before the end and none came after, so there was nothing to interpolate between.
+    - **This is the thread that reads `bench_main`'s CPU in a check session.** It does not run in the sweep, and nothing of the service's measurement changes.
+  - **Readings of M5.md** where its text leaves a choice. The tool had them before its first run:
+    - **"Between `t_svc` and `t_e`" in rule 2:** the tool reads until `t_e` + 2 s, so a connection the service closes in those 2 s, or a main process that is another one at the stop, also makes the run invalid.
+    - **A journal without the program's stop log** makes the run invalid by rule 2: the two client counters could not be read.
+    - **A line that is not JSON,** other than a last line cut by the tool's own close, makes the run invalid by rule 2: the tool has not read every line.
+    - **A clock that could not be read** counts as below its fixed value (rule 1).
+    - **The one-second samples "in the window"** are those from `t_w` to `t_e`, both included, as `bench_main` takes its own.
+    - **Receive drift:** a channel's lines "in the window" are those with `out_ns` inside it, as for the latency and the rate.
+    - **Decoder drops:** the difference of `decode_errors` between the two lines is added when it is positive.
+    - **Arrival phases** are those of `tools/m1_phases.py`, which M2 §3.1 names: each channel's phase and drift, and the run's spread, with `capture_ns` as `t0`, over the lines with `out_ns` in the window. For B and C the summary calls that script.
+    - **Per-thread CPU and the share on cpu0–3** come from the one-second samples, a few milliseconds after the timed reads. Process CPU comes from the timed reads.
+    - **The sweep's sessions** are those that ran this tool's content and this package. After a change to either, the sweep starts again, and the earlier sessions stay where they are.
+    - **The CV flag** of §9.3 is raised above 10%, for B and for the hypothesis's arm.
+    - **A check session's ambient temperature** is recorded as "not reported": the operator reports it for the sweep's sessions.
+  - **The checks of step 3,** all of run kind `check`, naming `prereg-m5` and the package's SHA-256.
+    - **With the tool at `a44d742`:**
+      - **Detections,** [20261120T081511Z_m5_detections](../lib/measure/results/20261120T081511Z_m5_detections): passed. This was the service's first start.
+      - **One run of each arm,** [20261120T081615Z_m5_check](../lib/measure/results/20261120T081615Z_m5_check): all four valid. The tool against `bench_main` could not be judged (above).
+    - **With the tool at `a8eaa31`,** all redone:
+      - **Detections,** [20261120T082514Z_m5_detections](../lib/measure/results/20261120T082514Z_m5_detections): passed. `rkzc-jsonl`, built from `3fdc5ca`, and the service read the same file once, with 1 frame in 6: 126 frames, and the same 1,810 detections.
+      - **One run of each arm** with a 10 s window, [20261120T082607Z_m5_check](../lib/measure/results/20261120T082607Z_m5_check), in the order B, C, P, P4: all four valid at the first attempt.
+      - **Fields:** in both service runs of each session, `out_ns − capture_ns` is positive for every line, `capture_ns` increases with `seq`, and no channel's `decode_errors` decreases.
+      - **The tool against `bench_main`,** on the C run: 1.635 s from the tool's reads against `bench_main`'s 1.630 s. The difference of 0.005 s is within 0.1 s.
+      - **Affinity:** all 32 threads of the P run were allowed cpu0–7, and all 32 of the P4 run cpu4–7 only, at both ends of the window.
+      - **The timed reads** came 0.5 ms after `t_w` and `t_e` in both service runs, against the limit of 50 ms.
+    - **Their values,** from 10 s windows. Nothing M5.md fixes changes because of them (§5):
+
+      | Session | Arm | Process CPU (s) | Latency p50 (ms) | Latency p99 (ms) | Share of P's CPU on cpu0–3 |
+      |---|---|---|---|---|---|
+      | `a44d742` | B | 3.65 | 35.4 | 49.0 | |
+      | `a44d742` | C | 1.58 | 24.7 | 32.1 | |
+      | `a44d742` | P | 2.26 | 30.8 | 44.7 | 0.52 |
+      | `a44d742` | P4 | 1.62 | 29.5 | 44.7 | 0.00 |
+      | `a8eaa31` | B | 3.69 | 36.7 | 49.2 | |
+      | `a8eaa31` | C | 1.63 | 30.5 | 44.7 | |
+      | `a8eaa31` | P | 2.25 | 30.9 | 47.3 | 0.49 |
+      | `a8eaa31` | P4 | 1.50 | 30.4 | 44.2 | 0.00 |
+
+    - **Every run:** inference at 5.000 fps on every channel, no drop, no decoder drop, and the service's values recomputed by the summary equal the session's.
+    - **The unit's journal is stored with each service run.** It holds systemd's own line of the CPU time the service consumed. The tool does not read that line, and I have not read it.
+  - **Reviews of the tool before it was fixed:** three passes by an independent reviewer. The first asked for changes (6 defects, 9 risks), the second too (2 defects in the bookkeeping across sessions, 3 smaller ones), and the third approved `a44d742`. The change of `a8eaa31` came after and was not reviewed separately; it is the one interval.
+  - **Library versions, clocks and cooling:**
+    - **Clocks:** A7's values, as `tools/set_perf_mode.sh` set and read them.
+    - **Cooling:** A9's.
+    - **Inventory:** every key M3 §4 pins equals `docs/notes/inventory_m1.txt`. Ten other lines differ, as after M3's reset (A15): `os`, libavutil's file, and Ubuntu's libc, libX11, liblzma and zlib.
+    - **The package's own libraries** in `/opt/rkzc/lib` are hashed per session (`package.txt` in the session's record). `bench_main` does not load them.
+- Reason: M5 §8 step 4. The package and the tool were fixed before the service's first start, and the checks of step 3 passed before `freeze-m5`.
+- Affected data: none. The first check session's runs are kept and listed above; no run of the sweep has been made.
+- Release: `amend-A16`. `freeze-m5` tags the same commit, the merge of the pull request that adds this entry; its `created_at` is the reference time for M5's runs. The Release `rkzc-v0.1.1`, with the file of the SHA-256 above, is published before both (§8 step 2).

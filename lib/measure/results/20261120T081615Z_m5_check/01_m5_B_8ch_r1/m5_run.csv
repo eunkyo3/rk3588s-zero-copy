@@ -1,0 +1,22 @@
+# start_time_utc: 2026-11-20T08:18:29Z
+# run_kind: check
+# prereg_m5_commit: 9ac3ec137504b65751c1232ad9add69f3d15f091
+# freeze_m5_commit: none
+# tool_commit: a44d742c4de8a500211756bcc08af3e24a58733d
+# tool_sha256: c67fdcdea65265fdeacf870bbd01ebcad9f296583eb21178a56ba94d02690673
+# amendment: A15
+# package_version: 0.1.1-1
+# package_sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+# arm: B
+# repetition: 1
+# attempt: 1
+# session: 20261120T081615Z_m5_check
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: not reported (check session)
+# warmup_s: 20
+# duration_s: 10
+key,value
+valid,1
+reasons,none
+warnings,none
+gate_soc_mc,37000

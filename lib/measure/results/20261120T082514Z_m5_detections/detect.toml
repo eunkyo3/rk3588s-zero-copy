@@ -1,0 +1,57 @@
+# rkzc-detect's configuration. The service reads /etc/rkzc/detect.toml.
+# Check it without starting anything:  rkzc-detect --config /etc/rkzc/detect.toml --check
+#
+# The format is a subset of TOML: comments, [sections], strings, integers, true/false and arrays of
+# strings. A key the program does not know is an error.
+#
+# If a source's URL holds a password, keep this file from other users. The service reads it through its
+# group `video`:  chown root:video /etc/rkzc/detect.toml && chmod 0640 /etc/rkzc/detect.toml
+# The program itself replaces the user and password by *** in its log and in the lines it writes.
+
+# Paths are absolute: the service's working directory is /.
+# The model: a .rknn file, YOLOv8 or YOLOv10 as exported by rknn_model_zoo. One model for all sources.
+model = "/var/lib/rkzc/yolov8n_i8.rknn"
+
+# One entry per channel: H.264 over RTSP, or an H.264 file. All of one aspect ratio.
+sources = [
+    "/var/lib/rkzc/m5_detections_check.mp4",
+]
+
+# Infer one frame in this many. 6 gives 5 inferences per second from a 30 fps stream.
+every_nth_frame = 6
+
+# "auto" picks by the model's outputs: "neon" for YOLOv8, "v10" for YOLOv10. "m1" is the scalar YOLOv8
+# post-processing. The thresholds are fixed: confidence 0.25, NMS IoU 0.45 (YOLOv8).
+post = "auto"
+
+# Start a file again when it ends. Without it, the program exits when every file has ended.
+loop_files = false
+
+[output]
+# "stdout", or "unix:/path": a Unix socket that every connected client reads the lines from, e.g.
+#   nc -U /run/rkzc/detect.sock
+# A client that stops reading is disconnected; a reader should drop a last line that has no newline.
+# Without this key the lines go to stdout, which under the service is the journal.
+to = "unix:/run/rkzc/detect.sock"
+# Who may connect: the socket file's group and mode. Connecting needs the write bit, so "0660" lets the
+# group in and "0666" every local user. The group must be one the program is in; the service is in
+# `video` and `render`, and its own group exists only while it runs.
+socket_group = "video"
+socket_mode = "0660"
+# A client beyond this many is closed at once.
+max_clients = 16
+# Write a line for a frame with no detection too.
+empty_frames = true
+# Write source events (opened, lost, ended, error) as lines too. They always go to the log.
+events = true
+
+[reconnect]
+# The wait before a source is opened again: it starts here and doubles up to max_ms while no frame comes.
+initial_ms = 1000
+max_ms = 30000
+# A source that is open and gives no frame for this long is closed and opened again.
+stall_timeout_ms = 10000
+
+[log]
+# A log line per channel with its counters, this often. 0: only when stopping.
+stats_every_s = 60

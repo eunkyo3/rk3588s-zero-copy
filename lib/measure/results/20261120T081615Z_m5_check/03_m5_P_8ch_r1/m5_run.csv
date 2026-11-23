@@ -1,0 +1,106 @@
+# start_time_utc: 2026-11-20T08:21:36Z
+# run_kind: check
+# prereg_m5_commit: 9ac3ec137504b65751c1232ad9add69f3d15f091
+# freeze_m5_commit: none
+# tool_commit: a44d742c4de8a500211756bcc08af3e24a58733d
+# tool_sha256: c67fdcdea65265fdeacf870bbd01ebcad9f296583eb21178a56ba94d02690673
+# amendment: A15
+# package_version: 0.1.1-1
+# package_sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+# arm: P
+# repetition: 1
+# attempt: 1
+# session: 20261120T081615Z_m5_check
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: not reported (check session)
+# warmup_s: 20
+# duration_s: 10
+key,value
+valid,1
+reasons,none
+warnings,none
+gate_soc_mc,37000
+window_s,10
+process_cpu_s,2.260
+read_w_late_ms,0.373
+read_e_late_ms,0.421
+tool_cpu_s,0.120
+first_lines_s,2.592
+thread_cpu_s,2.300
+thread_cpu_a55_s,1.200
+a55_share,0.5217
+thread_00,npu-1 65137 0.33
+thread_01,npu-2 65138 0.33
+thread_02,npu-0 65136 0.32
+thread_03,dec-8 65146 0.19
+thread_04,dec-2 65140 0.15
+thread_05,dec-6 65144 0.12
+thread_06,dec-3 65141 0.08
+thread_07,dec-5 65143 0.08
+thread_08,mpp_dec_parser 65150 0.08
+thread_09,dec-1 65139 0.07
+thread_10,dec-4 65142 0.07
+thread_11,dec-7 65145 0.07
+system_cpu0_s,0.300
+system_cpu1_s,0.320
+system_cpu2_s,0.160
+system_cpu3_s,0.220
+system_cpu4_s,0.100
+system_cpu5_s,0.080
+system_cpu6_s,0.030
+system_cpu7_s,0.360
+system_cpu0-3_s,1.000
+system_cpu4-5_s,0.180
+system_cpu6-7_s,0.390
+system_cpu_total_s,1.570
+schedstat_cpu0_s,0.416
+schedstat_cpu1_s,0.341
+schedstat_cpu2_s,0.400
+schedstat_cpu3_s,0.448
+schedstat_cpu4_s,0.245
+schedstat_cpu5_s,0.243
+schedstat_cpu6_s,0.173
+schedstat_cpu7_s,0.322
+schedstat_cpu0-3_s,1.605
+schedstat_cpu4-5_s,0.488
+schedstat_cpu6-7_s,0.495
+schedstat_cpu_total_s,2.589
+inference_fps_min,5.000
+inference_fps_max,5.000
+inference_fps_below_4.75,none
+sampled_in_window,400
+missing_in_window,0
+drop_rate,0.00000
+decoder_drops,0
+drift_end_max_s,0.0003
+processed_in_window,400
+arrival_phase_ms,55.5 59.2 47.8 47.8 53.2 51.3 49.2 55.9
+arrival_phase_spread_ms,11.4
+arrival_phase_drift_ms,0.4
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,40692
+rss_window_start_kb,231524
+rss_window_end_kb,231524
+rss_window_max_kb,231524
+service_decoded,8098
+service_inferred,1352
+service_dropped,0
+service_errors,0
+service_decode_errors,0
+service_reconnects,0
+service_output,1 0 0
+affinity_w,"32 threads: 0,1,2,3,4,5,6,7"
+affinity_e,"32 threads: 0,1,2,3,4,5,6,7"
+warmup_start_utc,2026-11-20T08:21:39.433Z
+window_start_utc,2026-11-20T08:21:59.434Z
+window_end_utc,2026-11-20T08:22:09.434Z
+svc_start_utc,2026-11-20T08:21:36.842Z

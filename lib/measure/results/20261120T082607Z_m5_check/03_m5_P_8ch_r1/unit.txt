@@ -1,0 +1,16 @@
+start MainPID=67788
+start NRestarts=0
+start ExecMainStartTimestamp=Fri 2026-11-20 08:31:26.982458 UTC
+start ExecMainStartTimestampMonotonic=100265290154
+start CPUAffinity=
+start DropInPaths=
+start InvocationID=6a803e9d878d4397bacc7bb97314bd8f
+before_stop MainPID=67788
+before_stop NRestarts=0
+before_stop ActiveState=active
+after_stop Result=success
+after_stop NRestarts=0
+after_stop ExecMainExitTimestamp=
+after_stop ExecMainCode=0
+after_stop ExecMainStatus=0
+after_stop ActiveState=inactive
