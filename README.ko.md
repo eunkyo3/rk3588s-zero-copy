@@ -160,7 +160,7 @@ flowchart TB
 | M2 | 후처리 최적화, 동일 모델 | 공개, CPU 가설 두 개 모두 채택 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2)([`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)과 함께) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.ko.md) |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | 보고함, 판정 없음(가설 없음) | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4)([`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)와 함께) | [`v0.4-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.4-m4) | [M4](docs/report/M4.ko.md) |
 | M3 | 초기화한 보드에서 H1 지점을 명령 하나로 재현 | 공개: 재현됨, 네 값 모두 M1의 ±10% 안([prereg/M3.md](prereg/M3.ko.md)) | [`prereg-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m3), [`freeze-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m3) ([`amend-A15`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A15) 포함) | [`v0.3-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.3-m3) | [M3](docs/report/M3.ko.md) |
-| M5 | 패키지로 만든 경로(`rkzc`)를 H1 지점에서 B, C와 비교 | 등록됨(두 단계 모두). 실행은 아직이며 측정한 것은 없다([prereg/M5.md](prereg/M5.ko.md)) | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5), [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) ([`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) 포함) | — | — |
+| M5 | 패키지로 만든 경로(`rkzc`)를 H1 지점에서 B, C와 비교 | 측정함: 두 가설 모두 채택. 서비스의 프로세스 CPU는 B보다 설치 그대로일 때 38.5%, A76 코어에 고정했을 때 58.6% 낮았다. C와 비교하면 각각 39.8% 높고 5.9% 낮았다([prereg/M5.md](prereg/M5.ko.md)) | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5), [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) ([`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) 포함) | — | [M5](docs/report/M5.ko.md) |
 
 - **순서:** M4를 M3보다 먼저 한다.
 - **결과:** M1의 결과는 위의 [M1 결과](#m1-결과)에, 각 마일스톤의 결과는 그 보고서에 있다.
@@ -169,7 +169,7 @@ flowchart TB
 - **M1 비교 실행 전:** M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md))과 M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)).
 - **M4 노트:** 탐색([docs/notes/m4_exploration.ko.md](docs/notes/m4_exploration.ko.md)), 그리고 정확도 도구와 점검([docs/notes/m4_accuracy.ko.md](docs/notes/m4_accuracy.ko.md)).
 - **배경:** 디코딩된 프레임을 RKNN NPU에 넣는 기존 방법, 공개된 측정값, 이 프로젝트가 겪은 런타임 동작이 다른 곳에 문서화돼 있는지([docs/notes/background.ko.md](docs/notes/background.ko.md)).
-- **마일스톤 이후:** 변형 C의 경로를 NanoPi R6C용 라이브러리, 프로그램, `.deb`로 만들었다. 설치 방법은 [docs/install.ko.md](docs/install.ko.md), 구성은 [lib/README.ko.md](lib/README.ko.md), 설계는 [docs/design/packaging.ko.md](docs/design/packaging.ko.md)에 있다. 보드에서 빌드하고 확인했다. CPU 시간이나 지연은 측정하지 않았다.
+- **마일스톤 이후:** 변형 C의 경로를 NanoPi R6C용 라이브러리, 프로그램, `.deb`로 만들었다. 설치 방법은 [docs/install.ko.md](docs/install.ko.md), 구성은 [lib/README.ko.md](lib/README.ko.md), 설계는 [docs/design/packaging.ko.md](docs/design/packaging.ko.md)에 있다. 보드에서 빌드하고 확인했다. M5가 그 서비스를 H1 지점에서 측정했다: [docs/report/M5.ko.md](docs/report/M5.ko.md).
 
 ## 빌드와 실행
 

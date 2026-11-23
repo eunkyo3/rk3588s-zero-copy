@@ -4,7 +4,7 @@
 
 이 저장소의 변형 C 경로(하드웨어 디코딩, RGA 레터박스, NPU 추론, 픽셀의 CPU 복사 없음)를 라이브러리로 만든 것이다. [docs/design/packaging.ko.md](../docs/design/packaging.ko.md)의 2단계부터 5단계에 해당한다. 경로를 벤치마크에서 분리했고, OpenCV가 필요 없으며, 벤치마크가 종료하던 자리에서 오류를 반환하고, 멈출 때까지 실행하며, 재연결하고, 검출 결과를 내준다.
 
-**상태:** C++, C, 파이썬 인터페이스로 동작하는 검출기, 서비스 파일을 갖춘 프로그램, 그리고 이들을 설치하는 `.deb`가 있다. 설치 방법은 [docs/install.ko.md](../docs/install.ko.md)에 있다. CPU 시간이나 지연은 측정한 것이 없다.
+**상태:** C++, C, 파이썬 인터페이스로 동작하는 검출기, 서비스 파일을 갖춘 프로그램, 그리고 이들을 설치하는 `.deb`가 있다. 설치 방법은 [docs/install.ko.md](../docs/install.ko.md)에 있다. M5가 서비스를 한 지점에서 측정했다: [docs/report/M5.ko.md](../docs/report/M5.ko.md).
 
 ## 사용
 

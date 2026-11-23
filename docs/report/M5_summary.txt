@@ -1,0 +1,78 @@
+session	run	arm	repetition	attempt	valid	process_cpu_s	schedstat_total_s	system_total_s	latency_p50_ms	latency_p99_ms	inference_fps_min	drop_rate	temp_max_mc	rss_max_kb	arrival_spread_ms	arrival_drift_ms	schedstat_0-3_s	schedstat_4-5_s	schedstat_6-7_s	system_0-3_s	system_4-5_s	system_6-7_s	process_cpu_less_metrics_s	a55_share	tool_cpu_s	decoder_drops	recomputed	cpu_check	cpu_check_difference_s	reasons
+20261123T001204Z_m5	01_m5_B_8ch_r1	B	1	1	True	43.340	45.352	35.320	34.256	47.676	5.000	0.00000	39769.000	241368.000	10.583	0.249	2.182	21.182	21.988	1.300	16.700	17.320	43.250			0.000				none
+20261123T001204Z_m5	02_m5_C_8ch_r1	C	1	1	True	19.020	21.070	8.690	30.797	43.998	5.000	0.00000	38846.000	237796.000	6.900	0.067	2.189	9.482	9.398	1.390	3.670	3.630	18.910			0.000				none
+20261123T001204Z_m5	03_m5_P_8ch_r1	P	1	1	True	26.700	29.908	36.530	31.305	48.546	5.000	0.00000	39769.000	231492.000	6.700	0.200	17.063	6.703	6.142	23.670	7.960	4.900		0.422	1.470	0.000	same			none
+20261123T001204Z_m5	04_m5_P4_8ch_r1	P4	1	1	True	18.240	21.867	21.800	25.857	35.086	5.000	0.00000	38846.000	231856.000	17.700	0.100	3.648	9.063	9.156	4.850	8.240	8.710		0.000	1.480	0.000	same			none
+20261123T001204Z_m5	05_m5_P4_8ch_r2	P4	2	1	True	17.790	21.113	8.210	30.050	44.816	5.000	0.00000	38846.000	231232.000	6.600	0.100	3.360	8.628	9.124	2.980	2.440	2.790		0.000	1.450	0.000	same			none
+20261123T001204Z_m5	06_m5_P_8ch_r2	P	2	1	True	27.340	30.415	15.140	31.865	47.591	5.000	0.00000	39769.000	232440.000	7.200	0.300	18.584	6.025	5.807	9.550	2.810	2.780		0.506	1.450	0.000	same			none
+20261123T001204Z_m5	07_m5_C_8ch_r2	C	2	1	True	19.680	21.610	53.460	30.716	45.227	5.000	0.00000	39769.000	237540.000	6.147	0.097	2.083	9.419	10.107	5.770	23.590	24.100	19.570			0.000				none
+20261123T001204Z_m5	08_m5_B_8ch_r2	B	2	1	True	43.840	45.876	34.620	35.870	50.518	5.000	0.00000	40692.000	242896.000	5.963	0.202	2.197	21.795	21.884	2.210	16.280	16.130	43.740			0.000				none
+20261123T001204Z_m5	09_m5_C_8ch_r3	C	3	1	True	19.050	21.228	22.780	28.921	41.959	5.000	0.00000	39769.000	237136.000	16.857	0.146	2.334	9.475	9.418	2.330	12.130	8.320	18.940			0.000				none
+20261123T001204Z_m5	10_m5_B_8ch_r3	B	3	1	True	44.020	45.786	51.610	36.184	47.505	5.000	0.00000	40692.000	240880.000	10.135	0.279	1.976	21.432	22.378	1.710	25.780	24.120	43.920			0.000				none
+20261123T001204Z_m5	11_m5_P4_8ch_r3	P4	3	1	True	18.310	21.646	14.000	28.495	36.916	5.000	0.00000	39769.000	231812.000	14.500	0.200	3.367	8.734	9.545	4.570	4.750	4.680		0.000	1.550	0.000	same			none
+20261123T001204Z_m5	12_m5_P_8ch_r3	P	3	1	True	26.680	30.079	53.070	32.268	47.475	5.000	0.00000	39769.000	230688.000	8.200	0.200	17.416	5.756	6.907	26.640	13.500	12.930		0.442	1.440	0.000	same			none
+sessions: 20261123T001204Z_m5
+superseded sessions (another tool commit or package): none
+complete repetitions: [1, 2, 3]
+runs that count: r1 B: 20261123T001204Z_m5/01_m5_B_8ch_r1, r1 C: 20261123T001204Z_m5/02_m5_C_8ch_r1, r1 P: 20261123T001204Z_m5/03_m5_P_8ch_r1, r1 P4: 20261123T001204Z_m5/04_m5_P4_8ch_r1, r2 B: 20261123T001204Z_m5/08_m5_B_8ch_r2, r2 C: 20261123T001204Z_m5/07_m5_C_8ch_r2, r2 P: 20261123T001204Z_m5/06_m5_P_8ch_r2, r2 P4: 20261123T001204Z_m5/05_m5_P4_8ch_r2, r3 B: 20261123T001204Z_m5/10_m5_B_8ch_r3, r3 C: 20261123T001204Z_m5/09_m5_C_8ch_r3, r3 P: 20261123T001204Z_m5/12_m5_P_8ch_r3, r3 P4: 20261123T001204Z_m5/11_m5_P4_8ch_r3
+M5-H1 (P): B 43.733 s, P 26.907 s, (B - P) / B = 0.3848; spec-literal adopted, practical adopted; secondary B 45.671 s, P 30.134 s; CV B 0.0081, P 0.0140; flags: none
+  headline: (P - C) / C = 0.3977; (B - P) / (B - C) = 0.6873
+M5-H2 (P4): B 43.733 s, P4 18.113 s, (B - P4) / B = 0.5858; spec-literal adopted, practical adopted; secondary B 45.671 s, P4 21.542 s; CV B 0.0081, P4 0.0156; flags: none
+  headline: (P4 - C) / C = -0.0590; (B - P4) / (B - C) = 1.0464
+  P - C, Process CPU: 7.680 7.660 7.630; mean 7.657 ± 0.063 s
+  (P - C) / C per repetition, Process CPU: 0.4038 0.3892 0.4005; mean 0.3978
+  P - C, System CPU, /proc/schedstat, less idle: 8.838 8.805 8.851; mean 8.831 ± 0.059 s
+  (P - C) / C per repetition, System CPU, /proc/schedstat, less idle: 0.4195 0.4075 0.4169; mean 0.4146
+  P - C, System CPU, /proc/stat, less idle: 27.840 -38.320 30.290; mean 6.603 ± 96.700 s
+  (P - C) / C per repetition, System CPU, /proc/stat, less idle: 3.2037 -0.7168 1.3297; mean 1.2722
+  P - C, Latency p50: 0.508 1.149 3.347; mean 1.668 ± 3.699 ms
+  P - C, Latency p99: 4.548 2.364 5.516; mean 4.143 ± 4.012 ms
+  P - C, Inference rate, lowest channel: 0.000 0.000 0.000; mean 0.000 ± 0.000 fps
+  P - C, Drop rate: 0.00000 0.00000 0.00000; mean 0.00000 ± 0.00000 
+  P - C, Highest temperature: 923 0 0; mean 308 ± 1324 m°C
+  P - C, VmRSS, highest: -6304 -5100 -6448; mean -5951 ± 1839 kB
+  P - C, Arrival phases, spread: -0.2 1.1 -8.7; mean -2.6 ± 13.1 ms
+  P - C, Arrival phases, drift: 0.1 0.2 0.1; mean 0.1 ± 0.2 ms
+  P - C, System CPU, /proc/schedstat, cpu0-3, less idle: 14.874 16.501 15.082; mean 15.486 ± 2.200 s
+  P - C, System CPU, /proc/schedstat, cpu4-5, less idle: -2.779 -3.394 -3.719; mean -3.297 ± 1.186 s
+  P - C, System CPU, /proc/schedstat, cpu6-7, less idle: -3.256 -4.300 -2.511; mean -3.356 ± 2.233 s
+  P - C, System CPU, /proc/stat, cpu0-3, less idle: 22.280 3.780 24.310; mean 16.790 ± 28.104 s
+  P - C, System CPU, /proc/stat, cpu4-5, less idle: 4.290 -20.780 1.370; mean -5.040 ± 34.058 s
+  P - C, System CPU, /proc/stat, cpu6-7, less idle: 1.270 -21.320 4.610; mean -5.147 ± 35.043 s
+  P4 - C, Process CPU: -0.780 -1.890 -0.740; mean -1.137 ± 1.622 s
+  (P4 - C) / C per repetition, Process CPU: -0.0410 -0.0960 -0.0388; mean -0.0586
+  P4 - C, System CPU, /proc/schedstat, less idle: 0.797 -0.497 0.418; mean 0.239 ± 1.653 s
+  (P4 - C) / C per repetition, System CPU, /proc/schedstat, less idle: 0.0378 -0.0230 0.0197; mean 0.0115
+  P4 - C, System CPU, /proc/stat, less idle: 13.110 -45.250 -8.780; mean -13.640 ± 73.243 s
+  (P4 - C) / C per repetition, System CPU, /proc/stat, less idle: 1.5086 -0.8464 -0.3854; mean 0.0923
+  P4 - C, Latency p50: -4.940 -0.666 -0.426; mean -2.010 ± 6.310 ms
+  P4 - C, Latency p99: -8.912 -0.411 -5.043; mean -4.789 ± 10.574 ms
+  P4 - C, Inference rate, lowest channel: 0.000 0.000 0.000; mean 0.000 ± 0.000 fps
+  P4 - C, Drop rate: 0.00000 0.00000 0.00000; mean 0.00000 ± 0.00000 
+  P4 - C, Highest temperature: 0 -923 0; mean -308 ± 1324 m°C
+  P4 - C, VmRSS, highest: -5940 -6308 -5324; mean -5857 ± 1235 kB
+  P4 - C, Arrival phases, spread: 10.8 0.5 -2.4; mean 3.0 ± 17.2 ms
+  P4 - C, Arrival phases, drift: 0.0 0.0 0.1; mean 0.0 ± 0.1 ms
+  P4 - C, System CPU, /proc/schedstat, cpu0-3, less idle: 1.459 1.277 1.033; mean 1.256 ± 0.531 s
+  P4 - C, System CPU, /proc/schedstat, cpu4-5, less idle: -0.419 -0.791 -0.741; mean -0.650 ± 0.502 s
+  P4 - C, System CPU, /proc/schedstat, cpu6-7, less idle: -0.242 -0.983 0.127; mean -0.366 ± 1.404 s
+  P4 - C, System CPU, /proc/stat, cpu0-3, less idle: 3.460 -2.790 2.240; mean 0.970 ± 8.230 s
+  P4 - C, System CPU, /proc/stat, cpu4-5, less idle: 4.570 -21.150 -7.380; mean -7.987 ± 31.975 s
+  P4 - C, System CPU, /proc/stat, cpu6-7, less idle: 5.080 -21.310 -3.640; mean -6.623 ± 33.403 s
+  P4 - P, Process CPU: -8.460 -9.550 -8.370; mean -8.793 ± 1.632 s
+  P4 - P, System CPU, /proc/schedstat, less idle: -8.041 -9.302 -8.433; mean -8.592 ± 1.603 s
+  P4 - P, System CPU, /proc/stat, less idle: -14.730 -6.930 -39.070; mean -20.243 ± 41.648 s
+  P4 - P, Latency p50: -5.447 -1.814 -3.772; mean -3.678 ± 4.517 ms
+  P4 - P, Latency p99: -13.461 -2.775 -10.559; mean -8.932 ± 13.728 ms
+  P4 - P, Inference rate, lowest channel: 0.000 0.000 0.000; mean 0.000 ± 0.000 fps
+  P4 - P, Drop rate: 0.00000 0.00000 0.00000; mean 0.00000 ± 0.00000 
+  P4 - P, Highest temperature: -923 -923 0; mean -615 ± 1324 m°C
+  P4 - P, VmRSS, highest: 364 -1208 1124; mean 93 ± 2955 kB
+  P4 - P, Arrival phases, spread: 11.0 -0.6 6.3; mean 5.6 ± 14.5 ms
+  P4 - P, Arrival phases, drift: -0.1 -0.2 0.0; mean -0.1 ± 0.2 ms
+  P4 - P, System CPU, /proc/schedstat, cpu0-3, less idle: -13.415 -15.224 -14.049; mean -14.229 ± 2.280 s
+  P4 - P, System CPU, /proc/schedstat, cpu4-5, less idle: 2.360 2.603 2.978; mean 2.647 ± 0.773 s
+  P4 - P, System CPU, /proc/schedstat, cpu6-7, less idle: 3.014 3.317 2.638; mean 2.990 ± 0.845 s
+  P4 - P, System CPU, /proc/stat, cpu0-3, less idle: -18.820 -6.570 -22.070; mean -15.820 ± 20.307 s
+  P4 - P, System CPU, /proc/stat, cpu4-5, less idle: 0.280 -0.370 -8.750; mean -2.947 ± 12.512 s
+  P4 - P, System CPU, /proc/stat, cpu6-7, less idle: 3.810 0.010 -8.250; mean -1.477 ± 15.318 s

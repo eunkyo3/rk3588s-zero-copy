@@ -4,7 +4,7 @@
 
 Variant C's path of this repository — hardware decode, letterbox on the RGA, inference on the NPU, no CPU copy of the pixels — as a library. Steps 2 to 5 of [docs/design/packaging.md](../docs/design/packaging.md): the path is split from the benchmark, needs no OpenCV, returns errors where the benchmark exits, runs until stopped, reconnects, and hands out the detections.
 
-**State:** a working detector with C++, C and Python interfaces, a program with a service file, and a `.deb` that installs them: [docs/install.md](../docs/install.md). Nothing about its CPU time or latency is measured.
+**State:** a working detector with C++, C and Python interfaces, a program with a service file, and a `.deb` that installs them: [docs/install.md](../docs/install.md). M5 measured the service at one point: [docs/report/M5.md](../docs/report/M5.md).
 
 ## Use
 

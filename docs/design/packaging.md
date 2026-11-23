@@ -2,7 +2,7 @@
 
 # Design: shipping the zero-copy path as a library, a program and a package
 
-**Status:** the proposal as it was written, with what became of it. Steps 1 to 5 of "Suggested steps" are done, each marked there; [install.md](../install.md) is the result for a user. Where the result differs from the proposal, the step says so. Nothing here is measured.
+**Status:** the proposal as it was written, with what became of it. Steps 1 to 5 of "Suggested steps" are done, each marked there; [install.md](../install.md) is the result for a user. Where the result differs from the proposal, the step says so. Nothing here is measured; the packaged path was measured afterwards, in M5 ([report](../report/M5.md)).
 
 **The goal:** someone with a NanoPi R6C installs one package and gets variant C's path — hardware decode (MPP), conversion and letterbox on the RGA, inference on the NPU, with no CPU copy of the pixels — either as a program that runs, or as a library to build on.
 
