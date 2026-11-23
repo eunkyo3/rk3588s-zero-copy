@@ -1,0 +1,34 @@
+2026-11-23T00:12:06Z package rkzc 0.1.1-1 (d88a13c82781…): 22 files as packaged, 5 libraries hashed
+2026-11-23T00:12:06Z session record: session_status running, or it died; invalid_x2_runs none; protocol_settings yes; freeze_m3_commit none
+2026-11-23T00:12:10Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-23T00:12:11Z starting the stream server
+2026-11-23T00:12:17Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261123T001213Z-439424, clock offset 0.2 ms
+2026-11-23T00:12:17Z idle for 600 s
+2026-11-23T00:22:17Z soc-thermal baseline 32168 m°C
+2026-11-23T00:22:17Z m5: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-23T00:22:18Z 01_m5_B_8ch_r1: B, 8 ch, main
+2026-11-23T00:24:40Z 01_m5_B_8ch_r1: valid
+2026-11-23T00:25:40Z 02_m5_C_8ch_r1: C, 8 ch, main
+2026-11-23T00:28:03Z 02_m5_C_8ch_r1: valid
+2026-11-23T00:29:04Z 03_m5_P_8ch_r1: P, 8 ch, main
+2026-11-23T00:31:31Z 03_m5_P_8ch_r1: valid
+2026-11-23T00:32:31Z 04_m5_P4_8ch_r1: P4, 8 ch, main
+2026-11-23T00:34:58Z 04_m5_P4_8ch_r1: valid
+2026-11-23T00:35:58Z 05_m5_P4_8ch_r2: P4, 8 ch, main
+2026-11-23T00:38:25Z 05_m5_P4_8ch_r2: valid
+2026-11-23T00:39:25Z 06_m5_P_8ch_r2: P, 8 ch, main
+2026-11-23T00:41:52Z 06_m5_P_8ch_r2: valid
+2026-11-23T00:42:52Z 07_m5_C_8ch_r2: C, 8 ch, main
+2026-11-23T00:45:15Z 07_m5_C_8ch_r2: valid
+2026-11-23T00:46:16Z 08_m5_B_8ch_r2: B, 8 ch, main
+2026-11-23T00:48:39Z 08_m5_B_8ch_r2: valid
+2026-11-23T00:49:40Z 09_m5_C_8ch_r3: C, 8 ch, main
+2026-11-23T00:52:02Z 09_m5_C_8ch_r3: valid
+2026-11-23T00:53:03Z 10_m5_B_8ch_r3: B, 8 ch, main
+2026-11-23T00:55:26Z 10_m5_B_8ch_r3: valid
+2026-11-23T00:56:27Z 11_m5_P4_8ch_r3: P4, 8 ch, main
+2026-11-23T00:58:54Z 11_m5_P4_8ch_r3: valid
+2026-11-23T00:59:55Z 12_m5_P_8ch_r3: P, 8 ch, main
+2026-11-23T01:02:22Z 12_m5_P_8ch_r3: valid
+2026-11-23T01:02:22Z session record: session_status completed; earlier_sessions none; repetitions_run_here r1 r2 r3; repetitions_left none
+2026-11-23T01:02:22Z stopping the stream server

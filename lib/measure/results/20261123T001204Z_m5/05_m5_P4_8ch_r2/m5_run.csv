@@ -1,0 +1,106 @@
+# start_time_utc: 2026-11-23T00:35:58Z
+# run_kind: m5
+# prereg_m5_commit: 9ac3ec137504b65751c1232ad9add69f3d15f091
+# freeze_m5_commit: e959531f4d08054527440a57806d1ccd3f7961e6
+# tool_commit: 3f04ea111ff3caf7ee15cf1d4a51bb8913ad67a3
+# tool_sha256: 5f419c1ce89d0416dbe979fba001811dc9f3c94a93b09941738244959ea1beba
+# amendment: A16
+# package_version: 0.1.1-1
+# package_sha256: d88a13c82781dd256f742aacfd87d9ad41016393361982180efeb183975a8241
+# arm: P4
+# repetition: 2
+# attempt: 1
+# session: 20261123T001204Z_m5
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 22
+# warmup_s: 20
+# duration_s: 120
+key,value
+valid,1
+reasons,none
+warnings,none
+gate_soc_mc,33307
+window_s,120
+process_cpu_s,17.790
+read_w_late_ms,0.669
+read_e_late_ms,0.672
+tool_cpu_s,1.450
+first_lines_s,2.488
+thread_cpu_s,17.790
+thread_cpu_a55_s,0.000
+a55_share,0.0000
+thread_00,npu-0 74034 2.23
+thread_01,npu-2 74036 2.10
+thread_02,npu-1 74035 2.01
+thread_03,dec-3 74039 0.94
+thread_04,dec-4 74040 0.94
+thread_05,dec-8 74044 0.93
+thread_06,dec-6 74042 0.92
+thread_07,dec-1 74037 0.90
+thread_08,dec-5 74041 0.86
+thread_09,dec-2 74038 0.84
+thread_10,dec-7 74043 0.84
+thread_11,mpp_dec_parser 74050 0.44
+system_cpu0_s,2.020
+system_cpu1_s,0.870
+system_cpu2_s,0.250
+system_cpu3_s,0.280
+system_cpu4_s,1.250
+system_cpu5_s,1.450
+system_cpu6_s,1.360
+system_cpu7_s,1.540
+system_cpu0-3_s,3.420
+system_cpu4-5_s,2.700
+system_cpu6-7_s,2.900
+system_cpu_total_s,9.020
+schedstat_cpu0_s,2.298
+schedstat_cpu1_s,0.498
+schedstat_cpu2_s,0.406
+schedstat_cpu3_s,0.545
+schedstat_cpu4_s,4.394
+schedstat_cpu5_s,4.503
+schedstat_cpu6_s,4.711
+schedstat_cpu7_s,4.529
+schedstat_cpu0-3_s,3.747
+schedstat_cpu4-5_s,8.897
+schedstat_cpu6-7_s,9.240
+schedstat_cpu_total_s,21.885
+inference_fps_min,5.000
+inference_fps_max,5.000
+inference_fps_below_4.75,none
+sampled_in_window,4800
+missing_in_window,0
+drop_rate,0.00000
+decoder_drops,0
+drift_end_max_s,0.0002
+processed_in_window,4800
+arrival_phase_ms,198.1 196.2 191.5 191.6 196.4 196.6 192.2 191.6
+arrival_phase_spread_ms,6.6
+arrival_phase_drift_ms,0.1
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,38846
+rss_window_start_kb,230492
+rss_window_end_kb,231232
+rss_window_max_kb,231232
+service_decoded,34496
+service_inferred,5752
+service_dropped,0
+service_errors,0
+service_decode_errors,0
+service_reconnects,0
+service_output,0 0 0
+affinity_w,"32 threads: 4,5,6,7"
+affinity_e,"32 threads: 4,5,6,7"
+warmup_start_utc,2026-11-23T00:36:00.693Z
+window_start_utc,2026-11-23T00:36:20.694Z
+window_end_utc,2026-11-23T00:38:20.694Z
+svc_start_utc,2026-11-23T00:35:58.206Z
