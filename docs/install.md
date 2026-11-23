@@ -6,7 +6,14 @@
 
 **What it was tested on:** one NanoPi R6C with FriendlyElec's Ubuntu 24.04 image (`rom-version` 20251222, kernel 6.1.141, NPU driver 0.9.8). The package refuses a board that is not an RK3588 or lacks the kernel's devices, and says so when the image or the NPU driver is another one.
 
-**What it does not promise:** the numbers of [M1](report/M1.md) on your board, cameras or model. Nothing about the packaged path's CPU time or latency has been measured.
+**What it does not promise:** the numbers of [M1](report/M1.md) on your board, cameras or model.
+
+**What was measured,** on this repository's board, at one point (8 channels of 1080p RTSP, 5 inferences per second each): the [M5 report](report/M5.md).
+
+- **As installed,** the service used 38.5% less process CPU than the benchmark's CPU path (B), and 39.8% more than its zero-copy variant (C). Close to half of its CPU time was spent on the A55 cores.
+- **Restricted to the A76 cores,** it used 58.6% less than B and about as much as C. That is one drop-in file, `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`, with the two lines `[Service]` and `CPUAffinity=4-7`, then `sudo systemctl daemon-reload` and a restart of the service.
+- **Latency:** the report draws no conclusion. The service's latency is not taken at the same point as the benchmark's, and 3 runs give wide intervals.
+- The report says what these numbers mix and what they do not cover.
 
 ## Install
 
