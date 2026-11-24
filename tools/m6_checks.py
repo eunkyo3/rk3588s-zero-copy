@@ -110,7 +110,7 @@ def unchanged_problems(objects, flags_m6, flags_ref, dump_m6, dump_ref):
         if d.get("frames") != str(FRAMES):
             problems.append(f"{name}'s dump has {d.get('frames')} frames, not {FRAMES}")
     for arm in OLD_ARMS:
-        for ext, what in ((".u8", "input tensors"), (".i8", "outputs"), (".jsonl", "detections")):
+        for ext, what in ((".u8", "input tensors"), (".i8", "outputs"), (".detections", "detections")):
             a, b = dump_m6.get(f"sha256_{arm}{ext}"), dump_ref.get(f"sha256_{arm}{ext}")
             if not a or a != b:
                 problems.append(f"{arm}: the {what} differ from freeze-m3's build's")

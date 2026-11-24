@@ -1,0 +1,24 @@
+2026-11-24T01:29:02Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-24T01:29:04Z starting the stream server
+2026-11-24T01:29:10Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261124T012905Z-458651, clock offset 0.1 ms
+2026-11-24T01:29:10Z idle for 600 s
+2026-11-24T01:39:10Z soc-thermal baseline 34230 m°C
+2026-11-24T01:39:11Z 01_m6_default_C_2ch: C, 2 ch, main
+2026-11-24T01:39:44Z 01_m6_default_C_2ch: valid
+2026-11-24T01:40:44Z 02_m6_check_B_8ch: B, 8 ch, main
+2026-11-24T01:41:16Z 02_m6_check_B_8ch: valid
+2026-11-24T01:42:17Z 03_m6_check_Bd_8ch: Bd, 8 ch, main
+2026-11-24T01:42:50Z 03_m6_check_Bd_8ch: valid
+2026-11-24T01:43:51Z 04_m6_check_Rc_8ch: Rc, 8 ch, main
+2026-11-24T01:44:24Z 04_m6_check_Rc_8ch: valid
+2026-11-24T01:45:24Z 05_m6_check_C_8ch: C, 8 ch, main
+2026-11-24T01:45:57Z 05_m6_check_C_8ch: valid
+2026-11-24T01:46:57Z 06_m6_check_By_8ch: By, 8 ch, main
+2026-11-24T01:47:29Z 06_m6_check_By_8ch: valid
+2026-11-24T01:48:30Z 07_m6_check_Cp_8ch: Cp, 8 ch, main
+2026-11-24T01:49:03Z 07_m6_check_Cp_8ch: valid
+2026-11-24T01:50:04Z 08_m6_check_Cpf_8ch: Cpf, 8 ch, main
+2026-11-24T01:50:37Z 08_m6_check_Cpf_8ch: valid
+2026-11-24T01:51:37Z 09_m6_check_Ct_8ch: Ct, 8 ch, main
+2026-11-24T01:52:10Z 09_m6_check_Ct_8ch: valid
+2026-11-24T01:52:10Z stopping the stream server

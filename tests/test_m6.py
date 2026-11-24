@@ -261,7 +261,7 @@ HASH = "a" * 64
 def dump(arms=("b", "bd", "c", "cp", "rc"), frames=100, **changed):
     rows = {"frames": str(frames)}
     for arm in arms:
-        for ext in (".u8", ".i8", ".jsonl"):
+        for ext in (".u8", ".i8", ".detections"):
             rows[f"sha256_{arm}{ext}"] = f"{'c' if arm in ('c', 'cp', 'rc') else 'b'}{ext[1]}".ljust(64, "0")
     rows.update(changed)
     return rows
@@ -300,7 +300,7 @@ class Unchanged(unittest.TestCase):
         self.assertTrue(self.problems(flags=("", "")))
 
     def test_data_that_differs(self):
-        for key in ("sha256_b.u8", "sha256_bd.i8", "sha256_c.jsonl", "sha256_cp.jsonl"):
+        for key in ("sha256_b.u8", "sha256_bd.i8", "sha256_c.detections", "sha256_cp.detections"):
             problems = self.problems(mine=dump(**{key: "f" * 64}))
             self.assertEqual(len(problems), 1, key)
         self.assertTrue(self.problems(ref=dump(("b", "bd", "c"))))  # an arm missing from the reference

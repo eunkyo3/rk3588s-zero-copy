@@ -1,0 +1,2 @@
+The files *.detections in m6/ and freeze_m3/ were written by tools/m6_arms_dump as *.jsonl, the name dump.csv gives them (sha256_<arm>.jsonl).
+They were renamed afterwards, their content unchanged: they have no header line, and tools/check_prereg_order.py takes a .jsonl without one for a results file with no header (PROTOCOL §1.4). The tool now writes the name .detections.

@@ -13,8 +13,9 @@
 // Usage: m6_arms_dump <video.mp4> <model.rknn> <out_dir> [frames=100]
 //   <out_dir>/<arm>.u8     every frame's input tensor, model_h x model_w x 3 uint8, in order
 //   <out_dir>/<arm>.i8     every frame's outputs as bound (NCHW INT8), one after the other, in order
-//   <out_dir>/<arm>.jsonl  one line per frame: {"frame", "pts", "detections"}, each detection
-//                          [class, score, x1, y1, x2, y2] with 9 significant digits
+//   <out_dir>/<arm>.detections  one line per frame: {"frame", "pts", "detections"}, each detection
+//                          [class, score, x1, y1, x2, y2] with 9 significant digits. No header line of
+//                          its own: the record's header is dump.csv's (PROTOCOL §1.4)
 //   <out_dir>/dump.csv     "# key: value" header lines (PROTOCOL §1.4, run kind check), then key,value:
 //                          the arms, the frames, and the SHA-256 of every file above
 // The arms are b, bd, c, cp and, in M6's build, rc. Exit code 0 when every frame was written.
@@ -127,7 +128,7 @@ int main(int argc, char** argv) {
         a->tensor.resize(size_t(a->npu.model_w()) * a->npu.model_h() * 3);
         a->tensors = open_out(out + "/" + a->name + ".u8");
         a->outputs = open_out(out + "/" + a->name + ".i8");
-        a->jsonl = open_out(out + "/" + a->name + ".jsonl");
+        a->jsonl = open_out(out + "/" + a->name + ".detections");
     }
 
     std::atomic<bool> stop{false};
@@ -175,7 +176,7 @@ int main(int argc, char** argv) {
         for (FILE* f : {a->tensors, a->outputs, a->jsonl})
             CHECK(!std::ferror(f) && std::fclose(f) == 0, "writing %s's files failed", a->name);
         names += std::string(names.empty() ? "" : " ") + a->name;
-        for (const char* ext : {".u8", ".i8", ".jsonl"})
+        for (const char* ext : {".u8", ".i8", ".detections"})
             rows.push_back({std::string("sha256_") + a->name + ext, file_sha256(out + "/" + a->name + ext)});
     }
     rows.insert(rows.begin(), {"arms", names});

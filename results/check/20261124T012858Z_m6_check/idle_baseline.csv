@@ -1,0 +1,37 @@
+# start_time_utc: 2026-11-24T01:37:10Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m6_commit: 5a17d375d9aab77a302ec2295df886ee1257f3fd
+# freeze_m6_commit: none
+# run_kind: check
+# measurement: idle baseline of system CPU (PROTOCOL §7.2), not a run
+# code_commit: 1bad68ad2ba04329ed5f197cedaecc4be56fca0d
+# amendment: A16
+key,value
+window_s,120.1
+system_cpu0_s,0.230
+system_cpu1_s,0.050
+system_cpu2_s,0.100
+system_cpu3_s,0.040
+system_cpu4_s,0.120
+system_cpu5_s,0.110
+system_cpu6_s,0.020
+system_cpu7_s,0.180
+system_cpu0-3_s,0.420
+system_cpu4-5_s,0.230
+system_cpu6-7_s,0.200
+system_cpu_total_s,0.850
+schedstat_version,15
+schedstat_cpu0_s,0.185
+schedstat_cpu1_s,0.054
+schedstat_cpu2_s,0.104
+schedstat_cpu3_s,0.089
+schedstat_cpu4_s,0.111
+schedstat_cpu5_s,0.126
+schedstat_cpu6_s,0.052
+schedstat_cpu7_s,0.172
+schedstat_cpu0-3_s,0.433
+schedstat_cpu4-5_s,0.237
+schedstat_cpu6-7_s,0.224
+schedstat_cpu_total_s,0.893
