@@ -4,7 +4,8 @@
 The runs that count (§4) are, per repetition and arm, the valid run of the session that completed the
 repetition (an invalid ×2 run counts as missing), as tools/stream_session.py's sweep_state completes them
 (tools/m3_report.py's counting_runs), over the arms the sweep runs: stream_session.m6_arms(), M6_ARMS without
-M6_NOT_RUN. Everything is computed from the records' values and rounded only where it is printed:
+M6_NOT_RUN. The sessions an amendment supersedes (stream_session.M6_SUPERSEDED, §5, §9) never count: their runs
+are listed in a section of their own.
   - the three hypotheses of §2, on process CPU (PROTOCOL §7.1), from the means of the runs that count:
       M6-H1  (B − Rc) / (B − C) ≥ 0.90   mixed if the same ratio on /proc/schedstat is on the other side of 0.90
       M6-H2  (Cpf − Cp) / Cp ≥ 0.20      mixed if Cpf − Cp has the other sign on /proc/schedstat
@@ -13,13 +14,16 @@ M6_NOT_RUN. Everything is computed from the records' values and rounded only whe
     one, except indeterminate when a run that counts of an arm the hypothesis names has a channel below 4.75 fps
     (PROTOCOL §7.4), when the mean drop rates (§7.5) of two arms it names differ by more than 1 percentage point
     either way, or when an arm it names has fewer than 3 runs that count (the spec-literal verdict then uses the
-    runs that exist, flagged). With no run that counts of a named arm, or a named arm not run, both verdicts are
-    indeterminate. Flagged too: a CV of process CPU above 10% for every named arm, and above 5% for B and By (§4);
+    runs that exist, flagged); for M6-H2 also when a run that counts of Cpf drops a frame (§5). With no run that
+    counts of a named arm, or a named arm not run, both verdicts are indeterminate. Flagged too: a CV of process
+    CPU above 10% for every named arm, and above 5% for B and By (§4).
+    The verdicts, the mixed labels and these rules are decided in exact arithmetic (fractions.Fraction) on the
+    records' decimal values: a value exactly at a threshold is at it;
   - §6's tables: the four cells of question 1 in seconds and as shares of B − C, also by thread group (the
     groups of tools/cpu_breakdown.py); the CPU path (question 2); the package's excess (question 3), with Cp and
     Cpf next to M5's P4 and P, across sessions; Ct's rknn_run values (§3); the paired differences of §6 with a
     descriptive 95% t interval (df = pairs − 1, none below 2 pairs); every arm's values; B and C next to M1's,
-    M3's and M5's at this point; and every run's values, valid or not, with its position in its session.
+    M3's and M5's at this point; and every run's values, valid or not, with its slot in its session.
 System CPU from /proc/schedstat (M2 §3.2) and from /proc/stat (PROTOCOL §7.2) is the window's sum minus the
 session's idle baseline (idle_baseline.csv) scaled to the window's length. Latency p50 and p99 (§7.3) and the
 stage times (tools/m1_stages.py's stages) are linear percentiles over the frames whose t4 is in the window; the
@@ -32,7 +36,7 @@ Usage, from the repository:
   python3 tools/m6_report.py [--out FILE]                  every M6 session, results/m6/<UTC>_m6, as Markdown
   python3 tools/m6_report.py --session DIR [--out FILE]    an m6 session with the earlier sessions of its sweep,
                                                            or a smoke test (results/check/<UTC>_m6_smoke) alone
-Exit 0, or 2 when a session cannot be read.
+Exit 0, or 2 when a session, or a run that counts, cannot be read.
 """
 import argparse
 import csv
@@ -41,10 +45,11 @@ import math
 import re
 import statistics
 import sys
+from fractions import Fraction
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import m3_report as m3r  # noqa: E402  (counting_runs, run_values, mean_sd, cv, fmt, pct, M1_SESSION, m3_sessions)
+import m3_report as m3r  # noqa: E402  (counting_runs, mean_sd, cv, fmt, pct, M1_SESSION, m3_sessions)
 import stream_session as ss  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -52,29 +57,33 @@ PHASE, CHANNELS = "m6", 8  # M6 §1: H1's point, 8 channels in the main conditio
 M5_SESSION = Path("lib/measure/results/20261123T001204Z_m5")  # M5's sweep (docs/report/M5_summary.txt)
 M5_ARMS = ("B", "C", "P", "P4")
 REPETITIONS = 3  # M6 §4: 8 arms × 3 repetitions
-MIN_FPS = 4.75  # M6 §2, PROTOCOL §7.4
-DROP_PP = 0.01  # M6 §2: mean drop rates more than 1 percentage point apart, in either direction
-FLOAT_TOLERANCE = 1e-9  # tools/m1_report.py's, for the drop-rate bound
-CV_LIMITS = {"B": (0.10, 0.05), "By": (0.10, 0.05)}  # M6 §4; every other arm a hypothesis names: 0.10
+MIN_FPS = Fraction(475, 100)  # M6 §2, PROTOCOL §7.4
+DROP_PP = Fraction(1, 100)  # M6 §2: mean drop rates more than 1 percentage point apart, in either direction
+CV_LIMITS = {"B": (Fraction(1, 10), Fraction(1, 20)), "By": (Fraction(1, 10), Fraction(1, 20))}  # M6 §4
+CV_DEFAULT = (Fraction(1, 10),)  # M6 §4: every other arm a hypothesis names
 T975 = {1: 12.706204736174698, 2: 4.302652729911275, 3: 3.182446305284263}  # t, 0.975, by df (tools/m2_report.py)
 CLUSTERS = ("0-3", "4-5", "6-7")
+READ_ERRORS = (OSError, ValueError, KeyError, TypeError, IndexError, ZeroDivisionError, csv.Error, ss.Stop)
 HYPOTHESES = {  # M6 §2: the arms each names, its threshold, its value
-    "M6-H1": (("B", "Rc", "C"), 0.90, "(B − Rc) / (B − C)"),
-    "M6-H2": (("Cp", "Cpf"), 0.20, "(Cpf − Cp) / Cp"),
-    "M6-H3": (("B", "By"), 0.10, "(B − By) / B"),
+    "M6-H1": (("B", "Rc", "C"), Fraction(9, 10), "(B − Rc) / (B − C)"),
+    "M6-H2": (("Cp", "Cpf"), Fraction(1, 5), "(Cpf − Cp) / Cp"),
+    "M6-H3": (("B", "By"), Fraction(1, 10), "(B − By) / B"),
 }
-NOTES = {  # M6 §2, "What the hypotheses can and cannot tell", reported with each hypothesis (§6)
-    "M6-H1": "Close to what M1.1 already showed: it tests the one cell M1.1 could not fill, and an adoption is the "
-             "expected result. Its ratio compares bundles (the copy, its sync pair and a cached destination for "
-             "RGA3), not a pure copy (§1).",
-    "M6-H2": "It tests the scheduler on this board, under this load and on this kernel, as M5-H1 did; Cpf's value "
-             "can move with anything else that runs on the board. An adoption says that the placement alone adds at "
-             "least 20% to bench_main's process CPU; how much of P's 48.5% it reproduces is (Cpf − Cp) / Cp next "
-             "to 0.485, across sessions, without a verdict. Cpf is not the package (§7).",
-    "M6-H3": "It is about one library called one way, with B's filter and B's thread count. A rejection does not "
-             "show that no CPU path is much faster than B's; an adoption does not show that By is the fastest. B "
-             "stays the registered reference; By is a further arm next to it.",
+NOTES = {  # M6 §2, "What an adoption says" and "What the hypotheses can and cannot tell", in its words (§6)
+    "M6-H1": ("M6-H1 is close to what M1.1 already showed. It tests the one cell M1.1 could not fill, and an "
+              "adoption is the expected result. Its ratio compares bundles, not a pure \"copy\" (§1).",),
+    "M6-H2": ("M6-H2 tests the scheduler on this board, under this load, on this kernel, as M5-H1 did. Cpf's value "
+              "can move with anything else that runs on the board.",
+              "What an adoption says: that the placement alone adds at least 20% to `bench_main`'s process CPU on "
+              "this board. How much of P's 48.5% it reproduces is reported as `(Cpf − Cp) / Cp` next to 0.485, "
+              "across sessions, without a verdict. Cpf is not the package (§7)."),
+    "M6-H3": ("M6-H3 is about one library called one way, with B's filter and B's thread count. A rejection does "
+              "not show that no CPU path is much faster than B's; an adoption does not show that By is the fastest. "
+              "A path that filters less, such as taking single pixels, would be cheaper and is not what By is.",
+              "B stays the registered reference. Whatever By shows, H1's verdict and M1's numbers stand. By is a "
+              "further arm next to B, not its replacement."),
 }
+SCOPE_NOTE = "One board, one image, one model, one point, file-backed RTSP streams at 1080p."  # M6 §2
 CELLS = (("B − Rc", "B", "Rc"), ("Bd − C", "Bd", "C"), ("B − Bd", "B", "Bd"), ("Rc − C", "Rc", "C"))  # §6, question 1
 PAIRS = (("B", "Rc"), ("Bd", "C"), ("B", "Bd"), ("Rc", "C"), ("B", "By"), ("By", "C"), ("Cp", "C"), ("Cpf", "Cp"),
          ("Ct", "C"), ("B", "C"))  # §6, the paired differences
@@ -111,9 +120,29 @@ CT_ROWS = (("rknn_run_cpu_s", "Thread CPU across rknn_run, NPU workers (s)", 3),
 LATENCY_NOTE = ("Latency in an unstaggered run depends on the channels' arrival phases, which are not controlled at "
                 "this point (M3 §2, M6 §3 and §6).")
 CORES_NOTE = "Cpf's and P's process CPU count cores of two kinds (M5 §2, M6 §1 and §6)."
+SLOT_NOTE = ("Slot: the run's place in its session's sequence (runs.tsv's seq); a repeat shares the slot of the run "
+             "it repeats.")
+
+
+class Unreadable(ValueError):
+    """A run's record that cannot be read."""
 
 
 # ---------------------------------------------------------------- one run
+
+def exact(x):
+    """A record's decimal string as the Fraction it writes; None for a missing, empty or nan value."""
+    try:
+        return Fraction(x)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
+def exact_mean(values):
+    """The mean in exact arithmetic (Fraction), None without a value."""
+    values = [Fraction(x) for x in values]
+    return sum(values, Fraction(0)) / len(values) if values else None
+
 
 def group(comm):
     """The thread group of a thread's name, as tools/cpu_breakdown.py's group (the M2 report's groups)."""
@@ -179,37 +208,48 @@ def read_idle(session_dir):
 
 def less_idle(values, idle, window_s):
     """{schedstat_<total or cluster>_s, system_<total or cluster>_s}: the window's sum of each system CPU measure
-    minus the idle baseline scaled from its own length to the window's (PROTOCOL §7.2, M2 §3.2); None where the
-    run or the baseline lacks it. values: {summary key: float}."""
+    minus the idle baseline scaled from its own length to the window's (PROTOCOL §7.2, M2 §3.2), in exact
+    arithmetic on the records' decimal values; None where the run or the baseline lacks it. values: {summary key:
+    Fraction}; window_s a Fraction."""
     out = {}
     for prefix in ("schedstat", "system"):
         for name in ("total",) + CLUSTERS:
             key = f"{prefix}_cpu_total_s" if name == "total" else f"{prefix}_cpu{name}_s"
             have = values.get(key) is not None and key in idle and "window_s" in idle
-            out[f"{prefix}_{name}_s"] = (values[key] - float(idle[key]) * window_s / float(idle["window_s"])
+            out[f"{prefix}_{name}_s"] = (values[key] - Fraction(idle[key]) * window_s / Fraction(idle["window_s"])
                                          if have else None)
     return out
 
 
 def run_values(run_dir, idle):
     """{key: value} of one run of bench_main, from its summary.csv, channels.csv, threads.csv and frames.csv: the
-    values §3 and §6 report, unrounded, None where a record lacks one. idle: its session's idle baseline."""
+    values §3 and §6 report, None where a record lacks one. The summary's and threads' values, the drop rate and
+    the inference rate are Fractions of the records' decimal values; the frames' are floats. idle: its session's
+    idle baseline. Raises whatever reading a partial record fails with."""
     run_dir = Path(run_dir)
-    s = m3r.run_values(run_dir)
-    warmup_ns = int(ss.read_header(run_dir / "summary.csv")["warmup_s"]) * 10**9
-    window_s = s["window_s"]
+    header, rows = ss.read_csv(run_dir / "summary.csv")
+    s = {r["key"]: exact(r["value"]) for r in rows}
+    if s.get("process_cpu_s") is None:
+        raise ValueError("summary.csv has no process_cpu_s")
+    window_s = s.get("window_s")
+    if not window_s:
+        raise ValueError("summary.csv has no window_s")
+    warmup_ns = int(header["warmup_s"]) * 10**9
     out = {k: s.get(k) for k in ("process_cpu_s", "process_cpu_a76_s", "process_cpu_a55_s",
-                                 "process_cpu_unattributed_s", "temp_max_mc", "rss_window_max_kb")}
-    out["drop_rate"] = s["q1_drops_in_window"] / s["sampled_in_window"] if s.get("sampled_in_window") else None
+                                 "process_cpu_unattributed_s", "temp_max_mc", "rss_window_max_kb",
+                                 "q1_drops_in_window")}
+    sampled = s.get("sampled_in_window")
+    out["drop_rate"] = out["q1_drops_in_window"] / sampled if out["q1_drops_in_window"] is not None and sampled \
+        else None
     out.update(less_idle(s, idle, window_s))
-    fps = [int(r["processed_in_window"]) / window_s for r in ss.read_csv(run_dir / "channels.csv")[1]]
+    fps = [Fraction(r["processed_in_window"]) / window_s for r in ss.read_csv(run_dir / "channels.csv")[1]]
     out["inference_fps_min"] = min(fps) if fps else None
-    out["inference_fps_mean"] = statistics.fmean(fps) if fps else None
-    groups = dict.fromkeys((g for g, _ in GROUPS), 0.0)
+    out["inference_fps_mean"] = exact_mean(fps)
+    groups = dict.fromkeys((g for g, _ in GROUPS), Fraction(0))
     for t in ss.read_csv(run_dir / "threads.csv")[1]:
-        groups[group(t["comm"])] += float(t["cpu_s_in_window"])
+        groups[group(t["comm"])] += Fraction(t["cpu_s_in_window"])
     out.update({f"threads_{g}_s": v for g, v in groups.items()})
-    out["threads_sum_s"] = sum(groups.values())
+    out["threads_sum_s"] = sum(groups.values(), Fraction(0))
     out["threads_remainder_s"] = out["process_cpu_s"] - out["threads_sum_s"]
     end_ns = warmup_ns + round(window_s * 10**9)
     frames = [f for f in ss.read_csv(run_dir / "frames.csv")[1] if warmup_ns <= int(f["t4_ns"]) < end_ns]
@@ -230,9 +270,10 @@ def run_values(run_dir, idle):
     if frames and "rknn_cpu_ns" in frames[0]:  # M6 §3, arm Ct: the frames of report.cpp's rknn_run_* rows
         cpu_ns = sum(int(f["rknn_cpu_ns"]) for f in frames)
         wall_ns = sum(int(f["t3_ns"]) - int(f["t2c_ns"]) for f in frames)
-        out.update(rknn_run_calls=len(frames), rknn_run_cpu_s=cpu_ns / 1e9,
-                   rknn_run_cpu_share=cpu_ns / 1e9 / out["process_cpu_s"] if out["process_cpu_s"] else None,
-                   rknn_run_cpu_mean_ms=cpu_ns / 1e6 / len(frames), rknn_run_wall_mean_ms=wall_ns / 1e6 / len(frames))
+        out.update(rknn_run_calls=len(frames), rknn_run_cpu_s=Fraction(cpu_ns, 10**9),
+                   rknn_run_cpu_share=Fraction(cpu_ns, 10**9) / out["process_cpu_s"] if out["process_cpu_s"] else None,
+                   rknn_run_cpu_mean_ms=Fraction(cpu_ns, 10**6 * len(frames)),
+                   rknn_run_wall_mean_ms=Fraction(wall_ns, 10**6 * len(frames)))
     return out
 
 
@@ -241,10 +282,19 @@ def service_values(run_dir, idle):
     CPU measures over the window of marks.csv, minus the idle baseline."""
     _, rows = ss.summary_values(Path(run_dir) / "m5_run.csv")
     _, marks = ss.summary_values(Path(run_dir) / "marks.csv")
-    window_s = (int(marks["t_e_ns"]) - int(marks["t_w_ns"])) / 1e9
-    values = {k: float(v) for k, v in rows.items()
+    window_s = Fraction(int(marks["t_e_ns"]) - int(marks["t_w_ns"]), 10**9)
+    values = {k: Fraction(v) for k, v in rows.items()
               if k.startswith(("schedstat_cpu", "system_cpu")) and k.endswith("_s")}
-    return {"process_cpu_s": float(rows["process_cpu_s"]), **less_idle(values, idle, window_s)}
+    return {"process_cpu_s": Fraction(rows["process_cpu_s"]), **less_idle(values, idle, window_s)}
+
+
+def read_values(reader, run_dir, idle):
+    """reader(run_dir, idle), run_values or service_values, with a failure to read raised as Unreadable, which
+    names the run."""
+    try:
+        return reader(run_dir, idle)
+    except READ_ERRORS as e:
+        raise Unreadable(f"{Path(run_dir).parent.name}/{Path(run_dir).name}: {type(e).__name__}: {e}") from None
 
 
 # ---------------------------------------------------------------- the sweep's runs
@@ -268,36 +318,81 @@ def order_position(repetition, arm):
     return order.index(arm) + 1 if arm in order else None
 
 
+def split_superseded(session_dirs):
+    """(the sessions whose runs can count, the superseded ones): a session that stream_session.M6_SUPERSEDED names
+    is superseded by an amendment (M6 §5, §9), and none of its runs counts. Read at run time."""
+    dirs = [Path(d) for d in session_dirs]
+    return [d for d in dirs if d.name not in ss.M6_SUPERSEDED], [d for d in dirs if d.name in ss.M6_SUPERSEDED]
+
+
+def attempts(session_dirs, counted):
+    """Every attempt of the sessions, in order (stream_session.load_records), with its runs.tsv row's slot, reasons
+    and trip samples, its place in its repetition's order, and its values. An attempt whose record cannot be read
+    gets {} and the problem, unless it counts (counted: {(session, name)}): then Unreadable."""
+    dirs = {Path(d).name: Path(d) for d in session_dirs}
+    rows = runs_rows(dirs.values())
+    idle = {name: read_idle(d) for name, d in dirs.items()}
+    out = []
+    for r in ss.load_records(list(dirs.values()), (PHASE,)):
+        key = (r["session"], r["name"])
+        row, run_dir, problem = rows.get(key, {}), dirs[r["session"]] / r["name"], ""
+        try:
+            values = read_values(run_values, run_dir, idle[r["session"]])
+        except Unreadable as e:
+            if key in counted:
+                raise Unreadable(f"a run that counts cannot be read: {e}") from None
+            values, problem = {}, ("no run directory" if not run_dir.is_dir() else f"record unreadable ({e})")
+        values.update(run=f"{r['session']}/{r['name']}", seq=row.get("seq", ""))
+        out.append(dict(r, values=values, counts=key in counted, seq=row.get("seq", ""), problem=problem,
+                        position=order_position(r["repetition"], r["variant"]),
+                        trip_samples=row.get("trip_samples", ""),
+                        reasons="the session ended during the run" if r["lost"] else row.get("reasons", "")))
+    return out
+
+
+def why_not(e, complete, completed_in, replaced_by):
+    """Why an attempt does not count (§4): lost, invalid, or a valid run whose repetition another session
+    completed (runs.tsv's replaces of the later session, else the session that completed it)."""
+    rep = e["repetition"]
+    if e["lost"]:
+        why = "lost"
+    elif not e["valid"]:
+        why = "invalid ×2: counts as missing" if e["attempt"] == 2 and completed_in.get(rep) == e["session"] \
+            else "invalid"
+    elif f"{e['session']}/{e['name']}" in replaced_by:
+        why = f"its repetition was rerun in {replaced_by[e['session'] + '/' + e['name']]} (runs.tsv replaces)"
+    elif rep in completed_in and completed_in[rep] != e["session"]:
+        why = f"repetition {rep} was completed in {completed_in[rep]}"
+    elif rep not in complete:
+        why = "its repetition is not complete"
+    else:
+        why = "another run of its arm and repetition counts"
+    return why + (f"; {e['problem']}" if e["problem"] and not e["lost"] else "")
+
+
 def collect(session_dirs):
-    """The sweep's runs: {"sessions", "arms", "complete": [repetitions], "counting": {(repetition, arm): values or
-    None}, "per_arm": {arm: [values of its runs that count]}, "every": [every attempt with its values]}. A run's
-    values carry its "run" (session/name) and "seq" (its position in its session)."""
-    sessions = [Path(d) for d in session_dirs]
+    """The sweep's runs: {"sessions", "superseded", "arms", "complete": [repetitions], "counting": {(repetition,
+    arm): values or None}, "per_arm": {arm: [values of its runs that count]}, "every": [every attempt],
+    "superseded_runs": [every attempt of the superseded sessions]}. A run's values carry its "run"
+    (session/name) and "seq" (its slot in its session); every attempt carries "why" it does not count."""
+    sessions, superseded = split_superseded(session_dirs)
     arms = ss.m6_arms()
     counting = m3r.counting_runs(sessions, PHASE, CHANNELS, arms)
     counted = {(d.parent.name, d.name) for d in counting.values() if d is not None}
-    idle = {d.name: read_idle(d) for d in sessions}
-    by_name = {d.name: d for d in sessions}
-    rows = runs_rows(sessions)
-    every, values_of = [], {}
-    for r in ss.load_records(sessions, (PHASE,)):
-        key = (r["session"], r["name"])
-        row = rows.get(key, {})
-        try:
-            values = run_values(by_name[r["session"]] / r["name"], idle[r["session"]])
-        except (OSError, ValueError, KeyError, ZeroDivisionError, ss.Stop):
-            if key in counted:  # a run that counts must be readable
-                raise
-            values = {}
-        values.update(run=f"{r['session']}/{r['name']}", seq=row.get("seq", ""))
-        values_of[key] = values
-        every.append(dict(r, values=values, counts=key in counted, seq=row.get("seq", ""),
-                          position=order_position(r["repetition"], r["variant"]),
-                          reasons="the session ended during the run" if r["lost"] else row.get("reasons", "")))
+    complete = sorted({rep for rep, _ in counting})
+    completed_in = {rep: d.parent.name for (rep, _), d in counting.items() if d is not None}
+    replaced_by = {old: s for (s, _), row in runs_rows(sessions).items() for old in (row.get("replaces") or "").split()}
+    every = attempts(sessions, counted)
+    for e in every:
+        e["why"] = "" if e["counts"] else why_not(e, complete, completed_in, replaced_by)
+    values_of = {(e["session"], e["name"]): e["values"] for e in every}
     by_rep = {k: (values_of[(d.parent.name, d.name)] if d is not None else None) for k, d in counting.items()}
     per_arm = {a: [v for (_, arm), v in sorted(by_rep.items()) if arm == a and v is not None] for a in arms}
-    return {"sessions": sessions, "arms": arms, "complete": sorted({rep for rep, _ in counting}),
-            "counting": by_rep, "per_arm": per_arm, "every": every}
+    old = attempts(superseded, set())
+    for e in old:
+        e["why"] = "superseded (M6 §5, §9)" + (f"; {e['problem']}" if e["problem"] and not e["lost"] else "")
+    return {"sessions": sessions, "superseded": superseded, "arms": arms, "complete": complete, "counting": by_rep,
+            "per_arm": per_arm, "every": every, "superseded_runs": old}
 
 
 # ---------------------------------------------------------------- the hypotheses
@@ -315,8 +410,8 @@ def value(name, m):
 
 def is_mixed(name, m, s):
     """§2's "Mixed" from the process CPU means m and the /proc/schedstat means s: for M6-H1 the same ratio on the
-    other side of 0.90, for M6-H2 and M6-H3 the difference with the other sign. None when M6-H1's ratio is
-    undefined on either."""
+    other side of 0.90, for M6-H2 and M6-H3 the difference with the other sign (a zero difference has no sign).
+    None when M6-H1's ratio is undefined on either."""
     threshold = HYPOTHESES[name][1]
     if name == "M6-H1":
         a, b = value(name, m), value(name, s)
@@ -325,44 +420,53 @@ def is_mixed(name, m, s):
     return (m[x] - m[y]) * (s[x] - s[y]) < 0
 
 
-def mean_of(runs, key):
-    """The mean of key over runs where it has a value, None without one."""
-    return m3r.mean_sd([v[key] for v in runs if v.get(key) is not None])[0]
+def not_run_why(arm):
+    """Why an arm is not run: stream_session.M6_NOT_RUN_WHY's sentence, read at run time."""
+    return ss.M6_NOT_RUN_WHY.get(arm) or "stream_session.M6_NOT_RUN_WHY gives no reason"
+
+
+def cv_above(values, limit):
+    """Whether the coefficient of variation (sample sd / mean, PROTOCOL §9.3) is above limit, in exact arithmetic:
+    the sample variance above (limit × mean)²; False below 2 values or with a mean of 0 or less."""
+    if len(values) < 2:
+        return False
+    m = exact_mean(values)
+    var = sum(((Fraction(x) - m) ** 2 for x in values), Fraction(0)) / (len(values) - 1)
+    return m > 0 and var > (limit * m) ** 2
 
 
 def cv_flags(arms, runs):
-    """§4's CV flag on process CPU (PROTOCOL §9.3): above 10% for every arm a hypothesis names, and above 5% for B
-    and By."""
+    """§4's CV flag on process CPU (PROTOCOL §9.3): above 10% for every arm a hypothesis names that has runs, and
+    above 5% for B and By."""
     out = []
     for a in arms:
-        c = m3r.cv([v["process_cpu_s"] for v in runs.get(a, [])])
-        out += [f"CV of {a}'s process CPU {100 * c:.2f}%, above {100 * limit:.0f}% (§4)"
-                for limit in CV_LIMITS.get(a, (0.10,)) if c is not None and c > limit]
+        cpu = [v["process_cpu_s"] for v in runs.get(a, [])]
+        c = m3r.cv([float(x) for x in cpu])
+        out += [f"CV of {a}'s process CPU {100 * c:.2f}%, above {100 * float(limit):.0f}% (§4)"
+                for limit in CV_LIMITS.get(a, CV_DEFAULT) if cv_above(cpu, limit)]
     return out
 
 
 def hypothesis(name, runs):
-    """§2's verdicts of one hypothesis. runs: {arm: [values of its runs that count]}. Returns a dict: the arms, their
-    numbers of runs ("n") and process CPU means, the value, "spec" and "practical", the /proc/schedstat means and
-    value, "mixed" (True, False, or None when it cannot be told) and the flags."""
+    """§2's verdicts of one hypothesis, in exact arithmetic. runs: {arm: [values of its runs that count]}. Returns a
+    dict: the arms, their numbers of runs ("n") and process CPU means, the value, "spec" and "practical", the
+    /proc/schedstat means and value, "mixed" (True, False, or None when it cannot be told) and the flags."""
     arms, threshold, formula = HYPOTHESES[name]
     n = {a: len(runs.get(a, [])) for a in arms}
     out = {"name": name, "arms": arms, "threshold": threshold, "formula": formula, "n": n, "means": {}, "value": None,
            "spec": "indeterminate", "practical": "indeterminate", "secondary": {}, "secondary_value": None,
            "mixed": None, "flags": []}
     flags = out["flags"]
+    flags += cv_flags(arms, runs)  # §4: for every named arm with runs, whatever follows
     absent = [a for a in arms if a in ss.M6_NOT_RUN]
     if absent:  # §2, §5: a hypothesis that names an arm that is not run is indeterminate
-        flags += [f"{a} is not run (§1, §5): both verdicts are indeterminate"
-                  + ("; the equivalence results that stopped it are in the amendment of §8 step 4" if a == "By" else "")
-                  for a in absent]
+        flags += [f"{a} is not run: {not_run_why(a)}; both verdicts are indeterminate (§2, §5)" for a in absent]
         return out
-    flags += cv_flags(arms, runs)
     empty = [a for a in arms if not n[a]]
     if empty:
         flags.append(f"no run that counts of {', '.join(empty)}: both verdicts are indeterminate (§2)")
         return out
-    m = out["means"] = {a: mean_of(runs[a], "process_cpu_s") for a in arms}
+    m = out["means"] = {a: exact_mean(v["process_cpu_s"] for v in runs[a]) for a in arms}
     out["value"] = value(name, m)
     if out["value"] is None:
         flags.append(f"{formula} is undefined: its denominator is 0")
@@ -376,18 +480,32 @@ def hypothesis(name, runs):
     slow = [v["run"] for a in arms for v in runs[a]
             if v.get("inference_fps_min") is None or v["inference_fps_min"] < MIN_FPS]
     if slow:
-        flags.append(f"a channel below {MIN_FPS} fps in {', '.join(slow)} (§2)")
+        flags.append(f"a channel below 4.75 fps in {', '.join(slow)} (§2)")
         out["practical"] = "indeterminate"
-    drops = {a: mean_of(runs[a], "drop_rate") for a in arms}
-    if None in drops.values():
-        flags.append(f"no drop rate for {', '.join(a for a in arms if drops[a] is None)} (§2)")
+    no_drop = [v["run"] for a in arms for v in runs[a] if v.get("drop_rate") is None]
+    if no_drop:
+        flags.append(f"no drop rate in {', '.join(no_drop)} (§2)")
         out["practical"] = "indeterminate"
+    drops = {a: exact_mean(v["drop_rate"] for v in runs[a] if v.get("drop_rate") is not None) for a in arms}
     for a, b in itertools.combinations(arms, 2):
-        if None not in (drops[a], drops[b]) and abs(drops[a] - drops[b]) > DROP_PP + FLOAT_TOLERANCE:
-            flags.append(f"the mean drop rates of {a} and {b} differ by {100 * abs(drops[a] - drops[b]):.3f} "
+        if None not in (drops[a], drops[b]) and abs(drops[a] - drops[b]) > DROP_PP:
+            flags.append(f"the mean drop rates of {a} and {b} differ by {100 * float(abs(drops[a] - drops[b])):.3f} "
                          "percentage points, more than 1 (§2)")
             out["practical"] = "indeterminate"
-    s = {a: mean_of(runs[a], "schedstat_total_s") for a in arms}
+    if name == "M6-H2":  # §5, read literally and in addition to §2: "Cpf drops frames ... indeterminate"
+        dropped = [f"{v['run']} ({v['q1_drops_in_window']})" for v in runs["Cpf"]
+                   if (v.get("q1_drops_in_window") or 0) > 0]
+        if dropped:
+            flags.append(f"Cpf drops frames, Q1 drops in the window: {', '.join(dropped)}: the practical verdict of "
+                         "M6-H2 is then indeterminate (§5)")
+            out["practical"] = "indeterminate"
+    missing = {a: sum(v.get("schedstat_total_s") is None for v in runs[a]) for a in arms}
+    partial = [f"{a} {missing[a]} of {n[a]}" for a in arms if 0 < missing[a] < n[a]]
+    if partial:
+        flags.append(f"no /proc/schedstat value less idle in some runs that count ({', '.join(partial)}): the "
+                     "secondary means use the others")
+    s = {a: exact_mean(v["schedstat_total_s"] for v in runs[a] if v.get("schedstat_total_s") is not None)
+         for a in arms}
     if None in s.values():
         flags.append(f"the secondary metric is missing for {', '.join(a for a in arms if s[a] is None)}: "
                      "no mixed label")
@@ -400,6 +518,11 @@ def hypothesis(name, runs):
 
 
 # ---------------------------------------------------------------- §6's other values
+
+def mean_of(runs, key):
+    """The mean of key over runs where it has a value, as a float for the tables; None without one."""
+    return m3r.mean_sd([float(v[key]) for v in runs if v.get(key) is not None])[0]
+
 
 def means(per_arm, key):
     """{arm: mean of key over its runs that count, or None}."""
@@ -435,7 +558,7 @@ def paired(by_rep, a, b, key):
             d[rep] = va[key] - vb[key]
     if not d:
         return d, None, None
-    v = list(d.values())
+    v = [float(x) for x in d.values()]
     half = T975[len(v) - 1] * statistics.stdev(v) / math.sqrt(len(v)) if len(v) >= 2 else None
     return d, statistics.fmean(v), half
 
@@ -447,7 +570,7 @@ def counted_values(session_dirs, phase_name, arms):
     out = {a: [] for a in arms}
     for (_, arm), d in sorted(runs.items()):
         if d is not None:
-            out[arm].append((service_values if arm in ("P", "P4") else run_values)(d, read_idle(d.parent)))
+            out[arm].append(read_values(service_values if arm in ("P", "P4") else run_values, d, read_idle(d.parent)))
     return out
 
 
@@ -464,16 +587,16 @@ def references(root=ROOT):
 # ---------------------------------------------------------------- Markdown
 
 def fmt(x, digits=3):
-    return m3r.fmt(x, digits)
+    return m3r.fmt(None if x is None else float(x), digits)
 
 
 def pct(x):
-    return m3r.pct(x)
+    return m3r.pct(None if x is None else float(x))
 
 
 def cell(values, digits=3):
     """"mean ± sd (n)" of the values that exist, "–" without one."""
-    mean, sd, n = m3r.mean_sd([x for x in values if x is not None])
+    mean, sd, n = m3r.mean_sd([float(x) for x in values if x is not None])
     return "–" if mean is None else f"{fmt(mean, digits)} ± {fmt(sd, digits)} ({n})"
 
 
@@ -503,12 +626,15 @@ def hypotheses_section(c, smoke):
         m = ", ".join(f"{a} {fmt(h['means'][a])} ({h['n'][a]})" for a in h["arms"] if a in h["means"]) or "–"
         s = ", ".join(f"{a} {fmt(h['secondary'][a])}" for a in h["arms"] if a in h["secondary"]) or "–"
         mixed = "–" if h["mixed"] is None else "mixed" if h["mixed"] else "none"
-        out.append(f"| {name}: {h['formula']} ≥ {h['threshold']:.2f} | {m} | {fmt(h['value'], 4)} | "
-                   f"{h['threshold']:.2f} | {h['spec']} | {h['practical']} | {s} | {fmt(h['secondary_value'], 4)} | "
-                   f"{mixed} | {text('; '.join(h['flags']) or 'none')} |")
-        notes.append(f"- **{name}:** {NOTES[name]}")
-    return out + [""] + notes + ["", "Mean of each arm over its runs that count (n). Mixed: by §2's rule, from "
-                                 "/proc/schedstat's system CPU less the idle baseline (M2 §3.2)."]
+        threshold = f"{float(h['threshold']):.2f}"
+        out.append(f"| {name}: {h['formula']} ≥ {threshold} | {m} | {fmt(h['value'], 4)} | {threshold} | "
+                   f"{h['spec']} | {h['practical']} | {s} | {fmt(h['secondary_value'], 4)} | {mixed} | "
+                   f"{text('; '.join(h['flags']) or 'none')} |")
+        notes.append(f"- **{name}:** " + " ".join(NOTES[name]))
+    return out + [""] + notes + [f"- **All three:** {SCOPE_NOTE}", "",
+                                 "Mean of each arm over its runs that count (n). The verdicts and the mixed labels "
+                                 "are decided exactly on the records' decimal values; the table rounds them. Mixed: "
+                                 "by §2's rule, from /proc/schedstat's system CPU less the idle baseline (M2 §3.2)."]
 
 
 def cells_section(c):
@@ -582,7 +708,9 @@ def rknn_section(c):
     m = means(pa, "process_cpu_s")
     out = ["## rknn_run (Ct, §3; a description, no hypothesis)", "", "| Value | Ct |", "|---|---|"]
     out += [f"| {label} | {cell((v.get(k) for v in pa.get('Ct', [])), d)} |" for k, label, d in CT_ROWS]
-    return out + ["", f"Ct − C, process CPU, from the means: {fmt(diff(m, 'Ct', 'C'))} s; its paired differences "
+    return out + ["", "The stage's wall time (t3 − t2c) is Ct's own and includes the two clock reads around each "
+                  "rknn_run (§1).",
+                  f"Ct − C, process CPU, from the means: {fmt(diff(m, 'Ct', 'C'))} s; its paired differences "
                   "and their interval are below."]
 
 
@@ -621,13 +749,13 @@ def counting_section(c):
 def descriptive_section(c):
     arms, pa = c["arms"], c["per_arm"]
     out = ["## Every arm, descriptively (§6)", "",
-           "Mean ± sample sd (n) over the runs that count. " + LATENCY_NOTE + " " + CORES_NOTE, "",
+           "Mean ± sample sd (n) over the runs that count. " + LATENCY_NOTE + " " + CORES_NOTE + " " + SLOT_NOTE, "",
            "| Metric | " + " | ".join(arms) + " |", "|---|" + "---|" * len(arms)]
     for key, label, digits in DESCRIPTIVE:
         out.append(f"| {label} | " + " | ".join(cell((v.get(key) for v in pa[a]), digits) for a in arms) + " |")
     out.append("| CV of process CPU | " + " | ".join(
-        pct(m3r.cv([v["process_cpu_s"] for v in pa[a]])).lstrip("+") for a in arms) + " |")
-    out.append("| Position in the session, r1 / r2 / r3 | " + " | ".join(
+        pct(m3r.cv([float(v["process_cpu_s"]) for v in pa[a]])).lstrip("+") for a in arms) + " |")
+    out.append("| Slot in the session, r1 / r2 / r3 | " + " | ".join(
         " / ".join(text(c["counting"][(r, a)]["seq"]) if c["counting"].get((r, a)) else "–"
                    for r in range(1, REPETITIONS + 1)) for a in arms) + " |")
     return out
@@ -637,7 +765,9 @@ def milestones_section(c, refs):
     labels = [k for k in refs if k.startswith(("M1", "M3", "M5"))]
     columns = [(k, refs[k]) for k in labels] + [("M6", c["per_arm"])]
     out = ["## B and C at H1's point, next to M1, M3 and M5 (§6)", "",
-           "Across sessions, so descriptive: each value is of its own sessions and binary.", "",
+           "Across sessions, so descriptive: each value is of its own sessions and binary. Latency is recomputed "
+           "here from each run's frames.csv (PROTOCOL §7.3), so its last digit can differ from the published "
+           "tables.", "",
            "| Value | " + " | ".join(k for k, _ in columns) + " |", "|---|" + "---|" * len(columns)]
     for arm in ("B", "C"):
         for key, label in (("process_cpu_s", "process CPU (s)"), ("latency_p50_ms", "latency p50 (ms)")):
@@ -649,47 +779,71 @@ def milestones_section(c, refs):
     return out
 
 
-def every_run_section(c):
-    out = ["## Every run (§6)", "",
-           "Every attempt of the sessions, valid or not, in session order. Seq: the run's position in its session; "
-           "Order: its place in its repetition's order (§4).", "",
-           "| Run | Arm | Repetition | Attempt | Seq | Order | Valid | Counts | Process CPU (s) | "
-           "/proc/schedstat less idle (s) | /proc/stat less idle (s) | Latency p50 (ms) | Latency p99 (ms) | "
-           "Lowest channel (fps) | Drop rate | Arrival spread (ms) | Highest temperature (m°C) | VmRSS (kB) | "
-           "Reasons |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
-    columns = (("process_cpu_s", 3), ("schedstat_total_s", 3), ("system_total_s", 3), ("latency_p50_ms", 3),
+RUN_COLUMNS = (("process_cpu_s", 3), ("schedstat_total_s", 3), ("system_total_s", 3), ("latency_p50_ms", 3),
                ("latency_p99_ms", 3), ("inference_fps_min", 3), ("drop_rate", 5), ("arrival_spread_ms", 1),
                ("temp_max_mc", 0), ("rss_window_max_kb", 0))
-    for e in c["every"]:
+
+
+def run_table(entries):
+    """The rows of attempts() as a Markdown table."""
+    out = ["| Run | Arm | Repetition | Attempt | Slot | Order | Valid | Counts | Process CPU (s) | "
+           "/proc/schedstat less idle (s) | /proc/stat less idle (s) | Latency p50 (ms) | Latency p99 (ms) | "
+           "Lowest channel (fps) | Drop rate | Arrival spread (ms) | Highest temperature (m°C) | VmRSS (kB) | "
+           "Trip samples | Reasons |", "|---" * 20 + "|"]
+    for e in entries:
         v = e["values"]
         out.append(f"| `{e['session']}/{e['name']}` | {e['variant']} | {e['repetition']} | {e['attempt']} | "
                    f"{text(e['seq'])} | {text(e['position'] or '')} | {'yes' if e['valid'] else 'no'} | "
-                   f"{'yes' if e['counts'] else 'no'} | " + " | ".join(fmt(v.get(k), d) for k, d in columns)
-                   + f" | {text(e['reasons'])} |")
+                   f"{'yes' if e['counts'] else text('no: ' + e['why'])} | "
+                   + " | ".join(fmt(v.get(k), d) for k, d in RUN_COLUMNS)
+                   + f" | {text(e['trip_samples'])} | {text(e['reasons'])} |")
     return out
 
 
+def every_run_section(c):
+    return ["## Every run (§6)", "",
+            "Every attempt of the sessions that can count, valid or not, in session order. " + SLOT_NOTE + " Order: "
+            "its place in its repetition's order (§4). Counts: whether it is a run that counts, and why not.", ""] \
+        + run_table(c["every"])
+
+
+def superseded_section(c):
+    if not c["superseded"]:
+        return ["## Superseded runs (§5, §9)", "", "No session is superseded (stream_session.M6_SUPERSEDED)."]
+    return ["## Superseded runs (§5, §9)", "",
+            "Superseded by an amendment (stream_session.M6_SUPERSEDED): "
+            + ", ".join(f"`{d.name}`" for d in c["superseded"]) + ". Superseded runs stay under their records and "
+            "are reported (§5); none of them counts.", ""] + run_table(c["superseded_runs"])
+
+
 def report(session_dirs, smoke=False, refs=None):
-    """The Markdown tables of M6's sweep from its sessions (§2, §3, §6). refs: references(), read when None."""
+    """The Markdown tables of M6's sweep from its sessions (§2, §3, §6), superseded ones apart. refs: references(),
+    read when None."""
     c = collect(session_dirs)
     refs = references() if refs is None else refs
     out = ["# M6 tables", "",
            "Generated by `tools/m6_report.py` from the run records of M6's sweep ([prereg/M6.md](../../prereg/M6.md)); "
            "nothing here is edited by hand. Every value is computed from the records' values and rounded only here; "
            "process CPU and system CPU are per window.", "", "## Sessions", "",
-           "| Session | Attempts | Status | Idle baseline |", "|---|---|---|---|"]
-    for d in c["sessions"]:
+           "| Session | Attempts | Status | Ambient (°C) | Idle baseline | Superseded |", "|---|---|---|---|---|---|"]
+    attempts_in = {}
+    for e in c["every"] + c["superseded_runs"]:
+        attempts_in[e["session"]] = attempts_in.get(e["session"], 0) + 1
+    for d in sorted(c["sessions"] + c["superseded"], key=lambda x: x.name):
         result = d / "result.csv"
-        status = ss.summary_values(result)[1].get("session_status", "–") if result.exists() else "no result.csv"
-        out.append(f"| `{d.name}` | {sum(e['session'] == d.name for e in c['every'])} | {text(status)} | "
-                   f"{'yes' if (d / 'idle_baseline.csv').exists() else 'no'} |")
-    if not c["sessions"]:
-        out.append("| none | | | |")
-    out += ["", f"Arms run: {', '.join(c['arms'])}. Arms not run (§5): {', '.join(ss.M6_NOT_RUN) or 'none'}. "
+        header, rows = ss.summary_values(result) if result.exists() else ({}, {})
+        out.append(f"| `{d.name}` | {attempts_in.get(d.name, 0)} | "
+                   f"{text(rows.get('session_status', 'no result.csv'))} | {text(header.get('ambient_c', ''))} | "
+                   f"{'yes' if (d / 'idle_baseline.csv').exists() else 'no'} | "
+                   f"{'yes' if d in c['superseded'] else 'no'} |")
+    if not c["sessions"] and not c["superseded"]:
+        out.append("| none | | | | | |")
+    not_run = "; ".join(f"{a} ({not_run_why(a)})" for a in ss.M6_NOT_RUN) or "none"
+    out += ["", f"Arms run: {', '.join(c['arms'])}. Arms not run (§5): {not_run}. "
             f"Repetitions complete: {len(c['complete'])} of {REPETITIONS}.", ""]
     for section in (counting_section(c), hypotheses_section(c, smoke), cells_section(c), cpu_path_section(c),
                     package_section(c, refs), rknn_section(c), paired_section(c), descriptive_section(c),
-                    milestones_section(c, refs), every_run_section(c)):
+                    milestones_section(c, refs), every_run_section(c), superseded_section(c)):
         out += section + [""]
     return "\n".join(out).rstrip("\n") + "\n"
 
@@ -697,14 +851,16 @@ def report(session_dirs, smoke=False, refs=None):
 # ---------------------------------------------------------------- the sessions
 
 def m6_sessions(root=ROOT):
-    """The protocol sessions of M6's sweep, results/m6/<UTC>_m6, by name (UTC)."""
+    """Every protocol session of M6's sweep, results/m6/<UTC>_m6, by name (UTC), superseded ones included: collect()
+    sets those apart."""
     return sorted(d for d in (root / "results" / ss.SWEEPS[PHASE][3]).glob(f"*_{PHASE}")
                   if d.is_dir() and re.fullmatch(ss.SESSION_NAME + PHASE, d.name))
 
 
 def session_dirs(session):
     """(sessions, smoke) that --session DIR reads: a smoke test (<UTC>_m6_smoke) alone; a protocol session with the
-    earlier sessions of its sweep, since a sweep spans sessions (PROTOCOL §9.3)."""
+    earlier sessions of its sweep, since a sweep spans sessions (PROTOCOL §9.3), superseded ones included: collect()
+    sets those apart."""
     session = Path(session)
     if not session.is_dir():
         raise ValueError(f"{session} is not a directory")
