@@ -28,6 +28,7 @@ struct PipelineConfig {
     int metrics_cpu = 0;               // 4 when the pipeline runs on the A55 cores (A12)
     bool stagger = false;              // M2 §3.1: channel i samples the frames with counter % stride == i % stride
     const PipelinePost* post = nullptr;   // required with a backend: M1's, arm Cp's (M2 §1) or C10's (M4 §1)
+    bool time_rknn = false;            // arm Ct (M6 §1): the worker's thread CPU time around each rknn_run
 };
 
 struct FrameRecord {
@@ -36,6 +37,7 @@ struct FrameRecord {
     int64_t t0, t1, t2a, t2b, t2c, t3, t4;  // CLOCK_MONOTONIC ns (PROTOCOL §7.3)
     int64_t slot_wait_ns;
     int ctx, slot, detections;
+    int64_t rknn_cpu_ns;  // with time_rknn: CLOCK_THREAD_CPUTIME_ID after rknn_run minus before it; else 0
 };
 
 struct ChannelResult {

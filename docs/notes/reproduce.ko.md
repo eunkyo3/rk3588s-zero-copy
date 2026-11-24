@@ -25,7 +25,7 @@
 보드에서, 사용자 `pi`로:
 
 ```sh
-git clone https://github.com/eunkyo3/rk3588s-zero-copy.git ~/rk3588s-zero-copy
+git clone --branch v0.3-m3 https://github.com/eunkyo3/rk3588s-zero-copy.git ~/rk3588s-zero-copy
 cd ~/rk3588s-zero-copy
 sudo -v                                         # 아래 작업 전에 sudo 비밀번호를 한 번 넣는다
 sudo setsid nohup scripts/setup_board.sh --stream-key ~/bench_stream >~/setup.log 2>&1 &
@@ -33,7 +33,8 @@ sudo setsid nohup scripts/setup_board.sh --stream-key ~/bench_stream >~/setup.lo
 sudo COOLING="heatsink + always-on fan" AMBIENT_C=25 setsid nohup scripts/reproduce_m1.sh after >~/reproduce.log 2>&1 &
 ```
 
-- **커밋:** M3의 실행은 `freeze-m3`에 등록한 코드를 쓰고, [env.md](env.ko.md#등록)에 `freeze-m3`의 행도 있는 체크아웃에서 돈다. 그 행은 태그 다음 커밋에 들어오므로, 태그가 아니라 `main`을 클론한다. 두 스크립트가 `src/`, `tools/`, `scripts/`, `tests/`, `CMakeLists.txt`가 `freeze-m3`의 것과 같은지 확인한다.
+- **커밋:** M3의 실행은 `freeze-m3`에 등록한 코드를 쓰고, [env.md](env.ko.md#등록)에 `freeze-m3`의 행도 있는 체크아웃에서 돈다. 그 행은 태그 `freeze-m3` 다음 커밋에 들어오므로, 둘 다 들어 있는 공개 태그 `v0.3-m3`를 클론한다. 두 스크립트가 `src/`, `tools/`, `scripts/`, `tests/`, `CMakeLists.txt`가 `freeze-m3`의 것과 같은지 확인한다.
+  - **`main`이 아니다.** M6가 등록된 코드에 구성을 더했으므로([prereg/M6.md](../../prereg/M6.ko.md) §8), `main`은 이 경로들에서 `freeze-m3`와 같지 않고, 두 스크립트는 `main`을 거부한다. M5의 측정도 도구가 `tools/stream_session.py`를 가져다 쓰므로, 같은 이유로 태그 `v0.5-m5`에서 돌린다.
 - **저장소는 `/home/pi/rk3588s-zero-copy`에 있어야 한다.** M1의 인벤토리가 빌드의 include 경로에 이 경로를 담고 있고, 세션이 이를 비교한다(M3 §4).
 - **로그는 저장소 밖에 둔다.** 저장소 안에 파일이 생기면 모든 기록의 커밋이 `-dirty`가 된다.
 - **`setsid nohup`**이면 로그인이 끊겨도 작업이 계속 돈다. 중간에 끊긴 설정은 이어서 할 수 없고, 보드를 다시 초기화해야 한다(M3 §5).

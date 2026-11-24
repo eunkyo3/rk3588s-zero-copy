@@ -704,3 +704,93 @@ Each entry has this form:
 - Reason: M5 §8 step 4. The package and the tool were fixed before the service's first start, and the checks of step 3 passed before `freeze-m5`.
 - Affected data: none. The first check session's runs are kept and listed above; no run of the sweep has been made.
 - Release: `amend-A16`. `freeze-m5` tags the same commit, the merge of the pull request that adds this entry; its `created_at` is the reference time for M5's runs. The Release `rkzc-v0.1.1`, with the file of the SHA-256 above, is published before both (§8 step 2).
+
+## A17 — 2026-11-24 — M6: the values fixed before `freeze-m6`
+- Change: fixes the values of [M6.md](M6.md) §8 step 4, and states four readings of its text. Nothing in M6.md changes.
+  - **The code (§8 step 2):** commit `7d8e520207cf6f8c18ff8d1d2a3e49e7ef7443e0`. `freeze-m6`'s commit is the merge of the pull request that adds this entry; its `src/`, `tools/`, `tests/` and `CMakeLists.txt` equal that commit's.
+    - **Its diff from `freeze-m3`** in the registered paths: 27 files, 4,463 lines added and 80 removed.
+      - **New:** `src/preprocess/rga_copy.cpp` (Rc), `src/preprocess/cpu_yuv.cpp` (By), their header `src/preprocess/m6_backends.h`; `tools/m6_arms_dump.cpp`, `m6_by_check.cpp`, `m6_unchanged.sh`, `m6_rc_trace.sh`, `m6_checks.py`, `m6_report.py`, `tools/setup/fetch_libyuv.sh`; `tests/test_m6.py`, `tests/test_m6_report.py`.
+      - **Changed, as §8 step 2 lists:** `src/app/bench_main.cpp`, `src/core/pipeline.cpp` and `.h`, `report.cpp` and `.h`, `run_rules.cpp` and `.h`, `CMakeLists.txt`, `tools/stream_session.py`, `tools/check_prereg_order.py`, `tests/test_core.cpp`.
+      - **Changed, for By's check "with `tools/equivalence_dump` (By in C's place)":** `tools/equivalence_dump.cpp`, `equivalence_check.py`, `equivalence.sh` and `equivalence_holdout.sh` take By in C's place when asked; without that option they do what they did.
+      - **`scripts/` is not changed.** `scripts/setup_board.sh` and `reproduce_m1.sh` refuse `main`, whose code no longer equals `freeze-m3`'s; M3 runs from `v0.3-m3` and M5 from `v0.5-m5` ([reproduce.md](../docs/notes/reproduce.md)).
+    - **What changes for B, Bd, C and Cp with the new options at their defaults:**
+      - every header gains `prereg_m6_commit`, `freeze_m6_commit` and `libyuv_commit`, and `env.json` a key `m6` with the arm's name;
+      - a frame's record grows from 104 to 112 bytes, about 38 kB more over a run at 8 channels;
+      - each NPU worker takes one more branch per inference, on the option of Ct;
+      - `bench_main` links By's library and libyuv statically, so the binary and the inventory's `link_bench_main` line differ. No shared library is added;
+      - `frames.csv`'s columns, `summary.csv`'s rows and `threads.csv` are as before. Ct alone has one more column and six more rows.
+    - **The 13 objects of §8 step 2** have the same SHA-256 in this build and in a build of `freeze-m3`'s commit made on the board with the same compiler and flags ([20261124T044548Z_m6_unchanged](../results/check/20261124T044548Z_m6_unchanged)). One list, since both sets are equal:
+
+      | Source | SHA-256 of its object, both builds |
+      |---|---|
+      | `src/preprocess/cpu_common.cpp` | `19c900cd0840c36283a85e0c07b7fe34bbc3c91d1dd7235234411056bb29cc96` |
+      | `src/preprocess/cpu_copy.cpp` | `e99d168f8074409d14c5b0ab89c0de9d1a15e8c77f1a071850227bd4eb4bb2a7` |
+      | `src/preprocess/cpu_direct.cpp` | `ee2d7443b5d9e013f44618e993ccbdd2f217e9af93507f21060686299aff93ab` |
+      | `src/preprocess/cpu_sw.cpp` | `496ca33bed61058b4911338e624fe477b5870b87193a7b50157d3cd1a4d7c84b` |
+      | `src/preprocess/zero_copy_rga.cpp` | `7ddd5060afe89910654feddc79ad0211cdb469b10971cbf59456b437613fab06` |
+      | `src/core/npu.cpp` | `01db03a89aeeefa94e4ca84ea9fc2da1fef2519ff469cdc926b6a9020f929c14` |
+      | `src/core/video_source.cpp` | `99f57937d8fc579899aa735dc4feda4417782325e2708a1ca338162d59499e3a` |
+      | `src/core/slot_pool.cpp` | `08173a21643a49ee88027aef5c6efc26258fe359e7b47aad14fbd6c34f2d35da` |
+      | `src/core/metrics.cpp` | `dd8bc752ab0c405aaa8226060e9ed1a7a05bcb2e1b39b29b2addc9deeb8e0e2d` |
+      | `src/core/pipeline_post.cpp` | `28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a` |
+      | `src/core/yolov8_post.cpp` | `536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2` |
+      | `src/core/yolov8_post_neon.cpp` | `3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555` |
+      | `src/core/yolov10_post.cpp` | `b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8` |
+
+      The reference build is a git worktree of `freeze-m3` with `tools/m6_arms_dump.cpp` copied in and one target for it appended to its `CMakeLists.txt`; nothing else of it differs.
+  - **Rc's heap:** `system-dma32`. RGA3 writes into it, so §1's fallback is not taken.
+  - **libyuv's commit:** `0ec9f68d82634f6f3414aaaf780e03f9edf002b3`. It builds on the board, so §1's fallback is not taken.
+    - **How it is added:** `tools/setup/fetch_libyuv.sh` puts a git checkout of that commit in `third_party/libyuv`, which is not in the repository; the configure step runs the script when the directory is missing, and stops unless it is a clean checkout of that commit.
+    - **As built:** libyuv's CMake found Ubuntu's libjpeg and so defines `HAVE_JPEG`, its default; GCC 13 cannot compile its SME files, which it then leaves out (`LIBYUV_DISABLE_SME`). By calls no function these touch. The flags are in the record (`flags_libyuv.txt`).
+  - **By's equivalence: passed. By is run.** A5's criteria against B on the 1,000 frames of video ①, R computed in the same run ([20261124T044621Z_m6_by_equivalence](../results/check/20261124T044621Z_m6_by_equivalence)):
+
+    | Criterion | By against B | R against B | |
+    |---|---|---|---|
+    | Tensor MAE | 1.5143 | 4.5384 | pass |
+    | Tensor minimum PSNR | 42.16 dB | 28.52 dB | pass |
+    | (a) pairs within both thresholds | 51.34% | 28.37% | pass |
+    | (b) frames agreeing | 62.30% | 34.70% | pass |
+    | (c) total boxes | 15,711 against B's 15,740: 0.18% | | pass (≤ 2%) |
+    | Border 114 in every tensor | yes | | pass |
+
+    - **By's tensors are darker than B's** in red and blue: the mean difference is −1.82, +0.16 and −2.18 for R, G and B. On synthetic frames with flat chroma, By's luma is 0.65 of a byte below B's on average, and never more than 2 bytes. M6's disclosure expected about half a level.
+    - **Held out,** as A8 made it for C, on every frame of videos ②, ③ and ④ pooled ([20261124T044731Z_m6_by_holdout](../results/check/20261124T044731Z_m6_by_holdout)): every criterion holds on the pool (MAE 1.4871 against R's 5.8061; (a) 51.90% against 25.78%; (b) 64.50% against 32.81%; (c) 0.91%). Video ④ alone has (c) at −2.12%, over the 2%; ② and ③ pass alone. These are reported and do not decide (§8 step 3).
+    - **Where the check ran:** the board has no numpy since its reset (M3), and `tools/equivalence_check.py` needs it. The dumps were made on the board; the check ran on the PC, with the same script at the same commit, over the record's files copied from the board, their SHA-256 checked against the record's. Each record keeps the board's failed output beside the PC's.
+  - **Results of the other checks of step 3,** all of run kind `check`, all from the build `7d8e520`, judged by `tools/m6_checks.py` ([20261124T052943Z_m6_checks](../results/check/20261124T052943Z_m6_checks)): every check passes.
+    - **Unchanged arms:** the objects above. For B, Bd, C and Cp, the input tensors, the NPU's outputs and the detections on the first 100 frames of video ① have the same SHA-256 from this build and from the reference build. The run of C with every option at its default, at 2 channels, has the threads, affinities and queues of M1's `32_main_C_2ch_r1`.
+    - **Rc:** the input buffer the NPU read and the outputs equal C's, byte for byte, on the same 100 frames.
+    - **Rc's trace** ([20261124T050450Z_m6_rc_trace](../results/check/20261124T050450Z_m6_rc_trace)), 1 channel, 10 s: 100 `DMA_BUF_IOCTL_SYNC` calls from the three NPU workers, all on one slot's dma-buf (`system-dma32`, 1,228,800 bytes), in pairs; 90 of them for the 45 frames bound inside the trace without its first and last half second. No other thread of the pipeline made one.
+    - **By's functional check:** channel order, band, border and orientation as required; the last row and the last column equal to B's on 21 frames; and the two checks added in stage 2: each box in its place (4 stripes of 4), and the rest of the luma plane within 2 bytes of B's.
+    - **Cpf:** all pipeline threads allowed cpu0–7 and the metrics thread cpu0 only, at the window's start and end.
+    - **Ct:** 400 timed calls for 400 inferences in the window, the smallest 1.03 ms of thread CPU.
+    - **One run of each arm** with a 10 s window ([20261124T050543Z_m6_check](../results/check/20261124T050543Z_m6_check)), in the order B, Bd, Rc, C, By, Cp, Cpf, Ct after the default run: all valid at the first attempt, no drop. Nothing M6.md fixes changes because of these values (§5):
+
+      | Arm | Process CPU (s) | Latency p50 (ms) | Latency p99 (ms) |
+      |---|---|---|---|
+      | B | 3.67 | 35.6 | 47.0 |
+      | Bd | 3.56 | 21.2 | 34.4 |
+      | Rc | 1.66 | 27.1 | 33.8 |
+      | C | 1.55 | 29.7 | 43.8 |
+      | By | 2.64 | 33.1 | 51.8 |
+      | Cp | 1.48 | 29.7 | 42.7 |
+      | Cpf | 2.31 | 32.6 | 47.8 |
+      | Ct | 1.66 | 29.4 | 44.0 |
+
+      Ct: 0.465 s of the NPU workers' thread CPU inside `rknn_run`, 28.0% of its process CPU; 1.163 ms per call against 15.6 ms of wall time.
+    - **The order of step 3:** the records of the unchanged arms, of By's functional check and of By's equivalence were committed at 2026-11-24T05:04:29Z (`743bde7`). Rc's trace started at 05:04:51Z and the arms' runs at 05:15:56Z.
+  - **Readings of M6.md** where its text leaves a choice or cannot be met as written:
+    - **"None on the decoder's buffer" (§8 step 3, Rc's trace).** MPP makes `DMA_BUF_IOCTL_SYNC` calls of its own on its buffers, from the decoder's threads (`dec-<n>` and `mpp_dec_parser`): 600 in 10 s for one channel, on two 2 MB bitstream buffers and four 4,177,920-byte frame buffers. They are in every arm; a trace of C made the same way has the same 600 and no other sync call. No arm can show none. The sentence is read with §1 ("Rc and C do not read it with the CPU") as being about the arm: of the calls made outside the decoder's threads, two per frame, on a slot, from an NPU worker, and none on any other buffer; the decoder's threads touch no slot; and C shows the decoder's calls at the same rate within 10% and nothing else. B's count was taken per thread in the same way ([preprocess.md](../docs/notes/preprocess.md)).
+      - **Not in M6's disclosure:** these calls are part of every arm's process CPU, in the decoder's threads. §1's table of syncs counts the slot only.
+      - **The flags are not read from the trace.** The board's strace does not print them. That Rc's two calls are START(READ) and END(READ) is shown by its code.
+    - **"Cpf drops frames" (§5) and the 1-point rule (§2).** Both apply. M6-H2's practical verdict is *indeterminate* if a run of Cpf that counts has a frame dropped from Q1 in the window, whatever Cp's drop rate; and, as for all three hypotheses, if the mean drop rates of two named arms differ by more than 1 percentage point.
+    - **A threshold met exactly** counts as met: the report compares exact fractions of the records' decimal values, with no tolerance, for §2's ratios, the 1-point rule, 4.75 fps and the CV flags.
+    - **Latency and rates in the report** are computed from `frames.csv` and the window's counts, not from `summary.csv`'s rounded values; the last digit can differ from the earlier reports' tables.
+  - **Fixed for a rerun (§5, §9):** the session tool and the report count no run of a session named in `M6_SUPERSEDED`, and a session's code must equal that of the stage named in `M6_CODE_TAG` (`freeze-m6`). An amendment that reruns the sweep sets both.
+  - **Earlier rounds of the checks.** They were made three times, since the tools changed twice after a round (§9, "redone from scratch"). `src/` did not change between the rounds.
+    - **At `1bad68a`:** the four checks without a window passed. Rc's first trace showed MPP's sync calls, and the judge was changed to the reading above.
+    - **At `de64e35`:** every check passed ([20261124T044115Z_m6_checks](../results/check/20261124T044115Z_m6_checks)). `tools/check_prereg_order.py` then took the dump's detection files, named `.jsonl` and without a header line, for results files with no header; the dump now names them `.detections`.
+    - **Their records are kept** in `results/check/` (20261124T0111Z to T0417Z). In the two earlier `m6_unchanged` records those files were renamed, their content unchanged (`renamed.txt`). By's equivalence gave the same tensors and the same values in all three rounds.
+  - **Library versions, clocks and cooling:** as A7, A9, A10 and A15. Every key M3 §4 pins equals `docs/notes/inventory_m1.txt`; 22 other lines differ: `os`, `link_bench_main` (By's library and libyuv), and the files of libavutil and Ubuntu's libc, libX11, liblzma and zlib, as after M3's reset.
+- Reason: M6 §8 step 4. The checks of step 3 passed before `freeze-m6`, and the readings are stated before any run of the sweep.
+- Affected data: none. The check records of the earlier rounds are kept and listed above; no run of the sweep has been made.
+- Release: `amend-A17`. `freeze-m6` tags the same commit, the merge of the pull request that adds this entry; its `created_at` is the reference time for M6's runs.

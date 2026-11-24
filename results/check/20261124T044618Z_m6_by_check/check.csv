@@ -1,0 +1,25 @@
+# start_time_utc: 2026-11-24T04:46:18Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# prereg_m6_commit: 5a17d375d9aab77a302ec2295df886ee1257f3fd
+# libyuv_commit: 0ec9f68d82634f6f3414aaaf780e03f9edf002b3
+# run_kind: check
+# code_commit: 7d8e520207cf6f8c18ff8d1d2a3e49e7ef7443e0
+# amendment: A16
+key,value
+channel_order_colours_ok,3 of 3
+band_elements_not_white,0
+border_elements_not_114,0
+quadrants_ok,4 of 4
+stripes_ok,4 of 4
+edge_frames,21
+edge_frames_equal_to_b,21
+edge_bytes,62937
+edge_bytes_differing,0
+inner_bytes,14452263
+inner_max_abs_diff,2 (at most 2)
+reported_inner_bytes_differing,8030343
+reported_inner_mean_diff_by_minus_b,-0.6468
+reported_tensor_mae_by_vs_b,1.0195
+reported_tensor_mean_diff_by_minus_b,-0.8076
+passed,1

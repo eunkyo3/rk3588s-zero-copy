@@ -1,0 +1,78 @@
+0	/dev/null		
+1	/home/pi/rk3588s-zero-copy/results/check/20261124T041621Z_m6_rc_trace/run_c.log		
+10	/dev/dma_heap/cma		
+11	/dev/dma_heap/cma-uncached		
+12	/dev/dma_heap/cma-uncached		
+13	/dev/dri/card1		
+14	/dmabuf:	drm	45056
+15	/dmabuf:	drm	4161536
+16	/dmabuf:	drm	4505600
+17	/dmabuf:	drm	45056
+18	/dmabuf:	drm	4161536
+19	/dmabuf:	drm	4505600
+2	/home/pi/rk3588s-zero-copy/results/check/20261124T041621Z_m6_rc_trace/run_c.log		
+20	/dmabuf:	drm	45056
+21	/dmabuf:	drm	4161536
+22	/dmabuf:	drm	4505600
+23	/dmabuf:	drm	409600
+24	/dmabuf:	drm	512000
+25	/dmabuf:	drm	102400
+26	/dmabuf:	drm	122880
+27	/dmabuf:	drm	155648
+28	/dmabuf:	drm	32768
+29	/dmabuf:	drm	40960
+3	/sys/kernel/debug/tracing/trace_marker		
+30	/dmabuf:	drm	53248
+31	/dmabuf:	drm	12288
+32	/dmabuf:	drm	409600
+33	/dmabuf:	drm	512000
+34	/dmabuf:	drm	102400
+35	/dmabuf:	drm	122880
+36	/dmabuf:	drm	155648
+37	/dmabuf:	drm	32768
+38	/dmabuf:	drm	40960
+39	/dmabuf:	drm	53248
+4	socket:[1230913]		
+40	/dmabuf:	drm	12288
+41	/dmabuf:	drm	409600
+42	/dmabuf:	drm	512000
+43	/dmabuf:	drm	102400
+44	/dmabuf:	drm	122880
+45	/dmabuf:	drm	155648
+46	/dmabuf:	drm	32768
+47	/dmabuf:	drm	40960
+48	/dmabuf:	drm	53248
+49	/dmabuf:	drm	12288
+5	/dev/dma_heap/system-uncached		
+50	/dev/rga		
+51	/dmabuf:	system-uncached-dma32	1228800
+52	/home/pi/media/bench/pexels_36330861.mp4		
+53	/dmabuf:	system-uncached-dma32	1228800
+54	/dmabuf:	system-uncached-dma32	1228800
+55	/dmabuf:	system-uncached-dma32	1228800
+56	/dmabuf:	system-uncached-dma32	1228800
+57	/dmabuf:	system-uncached-dma32	1228800
+58	/dmabuf:	system-uncached-dma32	1228800
+59	/dmabuf:	system-uncached-dma32	1228800
+6	/dev/dma_heap/system-uncached-dma32		
+60	/dmabuf:	system-uncached-dma32	1228800
+61	/dmabuf:	system-uncached-dma32	1228800
+62	/dmabuf:	system-uncached-dma32	1228800
+63	/dev/mpp_service		
+64	/dmabuf:	system-uncached	77824
+65	/dmabuf:	system	2097152
+66	/dmabuf:	system-dma32	4177920
+67	/dmabuf:	system-uncached	2093056
+68	/dmabuf:	system-uncached	184320
+69	/dmabuf:	system-uncached	184320
+7	/dev/dma_heap/system		
+70	/dmabuf:	system-uncached	184320
+71	/dmabuf:	system	2097152
+72	/dmabuf:	system-dma32	4177920
+73	/dmabuf:	system-uncached	2093056
+74	/dmabuf:	system-dma32	4177920
+75	/dmabuf:	system-uncached	2093056
+76	/dmabuf:	system-dma32	4177920
+77	/dmabuf:	system-uncached	2093056
+8	/dev/dma_heap/system-dma32		
+9	/dev/dma_heap/cma-uncached		

@@ -1,0 +1,2 @@
+check_board.txt is the output of tools/equivalence_check.py on the board, which has no numpy since its reset (M3): the check did not run there.
+check.txt and check.json are the same script's output on the PC, at the commit in the files' headers, over this record's files copied from the board, their SHA-256 checked against tensors.sha256.

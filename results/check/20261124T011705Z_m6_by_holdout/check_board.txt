@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/pi/rk3588s-zero-copy/tools/equivalence_check.py", line 556, in main
+    return run(args)
+           ^^^^^^^^^
+  File "/home/pi/rk3588s-zero-copy/tools/equivalence_check.py", line 408, in run
+    part = tensor_sums(tensors, headers["B"], len(frames["B"]))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pi/rk3588s-zero-copy/tools/equivalence_check.py", line 233, in tensor_sums
+    import numpy as np
+ModuleNotFoundError: No module named 'numpy'

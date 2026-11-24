@@ -39,3 +39,39 @@ std::string m4_rule_problem(const RunChoice& c) {
                "the A76 cores (M4 §3.2)";
     return "";
 }
+
+std::string m6_arm(const std::string& variant, PostKind post, const std::string& cores, bool time_rknn) {
+    const bool plain = post == PostKind::M1 && cores == "a76" && !time_rknn;
+    if (plain && (variant == "B" || variant == "Bd" || variant == "Rc" || variant == "C" || variant == "By"))
+        return variant;
+    if (variant != "C")
+        return "";
+    if (post == PostKind::Neon && !time_rknn && cores == "a76")
+        return "Cp";
+    if (post == PostKind::Neon && !time_rknn && cores == "all")
+        return "Cpf";
+    if (post == PostKind::M1 && time_rknn && cores == "a76")
+        return "Ct";
+    return "";
+}
+
+std::string m6_rule_problem(const M6Choice& c) {
+    const bool check_or_m6 = c.kind == "check" || c.kind == "m6";
+    if (c.freeze_m6 != "none" && !is_commit_sha(c.freeze_m6))
+        return "freeze-m6-commit must be none or a full commit SHA";
+    if ((c.variant == "Rc" || c.variant == "By" || c.cores == "all" || c.time_rknn) && !check_or_m6)
+        return "variants Rc and By, --cores all and --time-rknn on are M6's: run kind check or m6";
+    if (c.kind != "m6")
+        return "";
+
+    if (!is_commit_sha(c.freeze_m6))
+        return "run kind m6 needs freeze-m6's commit (M6 §8)";
+    if (m6_arm(c.variant, c.post, c.cores, c.time_rknn).empty())
+        return "run kind m6 is one of M6's eight arms: B, Bd, Rc, C, By, Cp, Cpf or Ct (M6 §1)";
+    if (c.channels != 8 || c.condition != "main" || c.warmup_s != 20 || c.duration_s != 120 || c.stagger ||
+        c.prep_threads != 2 || c.model_path != "models/yolov8n_i8.rknn" || c.model_sha != kYolov8nSha256 ||
+        c.other_freeze)
+        return "run kind m6 runs at H1's point with the defaults: 8 channels, main condition, 20 s warm-up and a "
+               "120 s window, no stagger, K = 2, the YOLOv8n model, and no other freeze commit (M6 §1)";
+    return "";
+}

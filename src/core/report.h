@@ -1,8 +1,10 @@
 // Writes one run's results (PROTOCOL §1, §7): every CSV starts with "# key: value" header lines.
-//   frames.csv    one row per processed frame, times in ns since the timeline start
+//   frames.csv    one row per processed frame, times in ns since the timeline start; with --time-rknn on
+//                 (arm Ct, M6 §1) one more column, rknn_cpu_ns
 //   samples.csv   one row per second (§7.7)
 //   channels.csv  per channel: decode rate, drift, decoder drops, sampling, Q1 drops, inference rate
-//   summary.csv   key,value: CPU (§7.1, §7.2), latency percentiles (§7.3), drop rate (§7.5), RSS, clocks
+//   summary.csv   key,value: CPU (§7.1, §7.2), latency percentiles (§7.3), drop rate (§7.5), RSS, clocks;
+//                 with --time-rknn on, the rknn_run_* rows of M6 §3
 //   threads.csv   CPU seconds in the window per thread that was alive at its end, with its affinity
 //   env.json      arguments, every thread's affinity, library versions, binding paths
 #pragma once
@@ -21,6 +23,8 @@ constexpr const char* kPreregCommit = "87fe874b4f196dafd48f6a175b2d7604625aedba"
 constexpr const char* kPreregM2Commit = "5d9d6d04e50f17d52980dc5b958c7071d7107176";
 // Tag prereg-m4 (Release created_at 2026-11-11T00:04:33Z, docs/notes/env.md).
 constexpr const char* kPreregM4Commit = "8638685d9ef806a85e5042d7cc10febdd5ae93a9";
+// Tag prereg-m6 (Release created_at 2026-11-23T23:47:43Z, docs/notes/env.md).
+constexpr const char* kPreregM6Commit = "5a17d375d9aab77a302ec2295df886ee1257f3fd";
 // M4's two INT8 models (prereg/M4.md §1, models/README.md): every m4 run checks its model file.
 constexpr const char* kYolov8nSha256 = "04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee";
 constexpr const char* kYolov10nSha256 = "6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81";

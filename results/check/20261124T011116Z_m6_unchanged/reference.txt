@@ -1,0 +1,12 @@
+start_time_utc: 2026-11-24T01:11:16Z
+run_kind: check
+code_commit: 1bad68ad2ba04329ed5f197cedaecc4be56fca0d
+reference_tag: freeze-m3
+reference_commit: dec7c90c5d4e1addc94ebeb2d7ad4d5e8c7670f2
+reference_dir: /home/pi/m6_freeze_m3
+reference_status:
+   M CMakeLists.txt
+  ?? tools/m6_arms_dump.cpp
+reference_diff_stat:
+   CMakeLists.txt | 7 +++++++
+   1 file changed, 7 insertions(+)

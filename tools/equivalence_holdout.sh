@@ -6,10 +6,19 @@
 # anything before the check failed.
 # Usage, on the board as root from the repository: tools/equivalence_holdout.sh [out_dir]
 #   (env: MEDIA, default /home/pi/media/bench; MODEL, default models/yolov8n_i8.rknn;
-#    FFPROBE, default /opt/ffmpeg-rockchip/bin/ffprobe; FREEZE_COMMIT, default none)
+#    FFPROBE, default /opt/ffmpeg-rockchip/bin/ffprobe; FREEZE_COMMIT, default none;
+#    C_PLACE, default C. C_PLACE=By checks arm By of M6 in C's place, as run kind check, into
+#    results/check/<UTC>_m6_by_holdout: prereg/M6.md §8 step 3)
 set -u
 
-OUT=${1:-results/equivalence/$(date -u +%Y%m%dT%H%M%SZ)_holdout}
+C_PLACE=${C_PLACE:-C}
+if [ "$C_PLACE" = By ]; then
+    KIND=check
+    OUT=${1:-results/check/$(date -u +%Y%m%dT%H%M%SZ)_m6_by_holdout}
+else
+    KIND=equivalence
+    OUT=${1:-results/equivalence/$(date -u +%Y%m%dT%H%M%SZ)_holdout}
+fi
 MEDIA=${MEDIA:-/home/pi/media/bench}
 MODEL=${MODEL:-models/yolov8n_i8.rknn}
 FFPROBE=${FFPROBE:-/opt/ffmpeg-rockchip/bin/ffprobe}
@@ -46,7 +55,7 @@ set -- $VIDEOS
 while [ $# -ge 3 ]; do
     dir=$OUT/$1
     mkdir "$dir" || fail "cannot create $dir"
-    if ! ./build/equivalence_dump "$MEDIA/$1.mp4" "$MODEL" "$dir" "$2" "${FREEZE_COMMIT:-none}" \
+    if ! ./build/equivalence_dump "$MEDIA/$1.mp4" "$MODEL" "$dir" "$2" "${FREEZE_COMMIT:-none}" "$KIND" "$C_PLACE" \
         >"$dir/dump.txt" 2>"$dir/dump.log"; then
         cat "$dir/dump.txt" "$dir/dump.log"
         fail "equivalence_dump failed on $1"
@@ -59,7 +68,8 @@ while [ $# -ge 3 ]; do
 done
 status=0
 # $sets is split on purpose: --set DIR FRAMES per video; out_dir has no spaces or glob characters.
-python3 tools/equivalence_check.py $sets --json "$OUT/check.json" >"$OUT/check.txt" 2>&1 || status=$?
+python3 tools/equivalence_check.py $sets --json "$OUT/check.json" --c-place "$C_PLACE" >"$OUT/check.txt" 2>&1 ||
+    status=$?
 cat "$OUT/check.txt"
 case $status in
 0 | 1 | 2) ;;

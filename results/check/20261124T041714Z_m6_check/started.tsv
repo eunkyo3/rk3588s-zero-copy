@@ -1,0 +1,10 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	start_utc
+1	01_m6_default_C_2ch	m6_default	C	2	main	1	1	2026-11-24T04:27:27Z
+2	02_m6_check_B_8ch	m6_check	B	8	main	1	1	2026-11-24T04:29:00Z
+3	03_m6_check_Bd_8ch	m6_check	Bd	8	main	1	1	2026-11-24T04:30:33Z
+4	04_m6_check_Rc_8ch	m6_check	Rc	8	main	1	1	2026-11-24T04:32:06Z
+5	05_m6_check_C_8ch	m6_check	C	8	main	1	1	2026-11-24T04:33:39Z
+6	06_m6_check_By_8ch	m6_check	By	8	main	1	1	2026-11-24T04:35:12Z
+7	07_m6_check_Cp_8ch	m6_check	Cp	8	main	1	1	2026-11-24T04:36:45Z
+8	08_m6_check_Cpf_8ch	m6_check	Cpf	8	main	1	1	2026-11-24T04:38:18Z
+9	09_m6_check_Ct_8ch	m6_check	Ct	8	main	1	1	2026-11-24T04:39:52Z

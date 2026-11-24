@@ -1,0 +1,10 @@
+95610 bench_main
+95617 dec-1
+95618 mpp_dec_parser
+95619 mpp_dec_hal
+95620 pre-0
+95621 pre-1
+95622 npu-0
+95623 npu-1
+95624 npu-2
+95625 metrics

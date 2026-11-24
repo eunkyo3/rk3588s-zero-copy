@@ -64,6 +64,16 @@ Subcommands:
                for the other sweeps, nor for their redos.
                The session records the board's inventory and its diff from docs/notes/inventory_m1.txt, and
                stops only if a key that M3 §4 pins differs (M3_PINNED); the other lines are recorded.
+  sweep m6     M6's sweep of prereg/M6.md §4, run kind m6: the eight arms of M6 §1 (B, Bd, Rc, C, By, Cp, Cpf,
+               Ct) at 8 channels main (H1's point, unstaggered), 3 repetitions in M6 §4's three orders
+               (M6_ORDERS), without the arms the amendment of M6 §8 step 4 says are not run (M6_NOT_RUN). Each
+               run passes freeze-m6's commit from docs/notes/env.md. A session starts only once freeze-m6 has its
+               row there and the checkout's code (src, tools, tests, CMakeLists.txt) equals freeze-m6's, built
+               at the checkout's commit. Like M3's sweeps it stands outside the others' order, and its
+               inventory check stops only for the keys M3 §4 pins (M6 §4).
+  m6-check     the check runs of prereg/M6.md §8 step 3, run kind check, before freeze-m6: one run of C with
+               every option at its default at 2 channels, then one run of each arm at 8 channels main, all
+               with windows of 10 s (--duration, default 10 here). tools/m6_checks.py judges them.
   h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
@@ -94,6 +104,9 @@ Which rules apply:
     count but 32 at the main condition, every auxiliary and every A count.
   - m2-check runs: rules 1, 2, 3 and 4 (8 channels main is unsaturated, M2 §5.2).
   - m3 sweep runs: rules 1, 2, 3 and 4 (8 channels main is unsaturated, §6.2 with A7).
+  - m6 sweep and m6-check runs: rules 1, 2, 3 and 4, and for arm Cpf M6 §4's rule 5: at the window's start
+    (env.json) and at its end (threads.csv), every pipeline thread is allowed cpu0-7 and the metrics thread
+    cpu0 only. A run whose env.json does not name its arm stops the session, as for M4.
   - m4 sweep and m4-check runs: rules 1, 2 and 4, and rule 3 only for an arm whose label at the point is
     unsaturated (M4 §3.2). A saturated or unknown label leaves rule 3 out, and the runs are still made. A run
     whose header is not its arm's, or that bench_main refuses before it makes the run's directory, stops the
@@ -134,6 +147,8 @@ from the login session (setsid nohup):
   (scripts/reproduce_m1.sh runs the m3 sweeps)
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py m2-check [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py m4-check [--calib DIR] [--out DIR]
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep m6
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py m6-check [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
 --gate-s, for limit and h3 --start and --cap, for sweep --counts, and for an m4 sweep --calib DIR, the
@@ -150,6 +165,7 @@ import csv
 import datetime as dt
 import difflib
 import hashlib
+import json
 import math
 import os
 import random
@@ -196,7 +212,8 @@ PREREG_V1_COMMIT = "87fe874b4f196dafd48f6a175b2d7604625aedba"  # docs/notes/env.
 FREEZE_M1_COMMIT = "2eec964d27545e081a44bc5ead01bbfcd2905a54"  # docs/notes/env.md; every run carries it
 PREREG_M2_COMMIT = "5d9d6d04e50f17d52980dc5b958c7071d7107176"  # docs/notes/env.md; M2's headers carry it (M2 §5.1)
 PREREG_M4_COMMIT = "8638685d9ef806a85e5042d7cc10febdd5ae93a9"  # docs/notes/env.md; M4's headers carry it (M4 §4)
-ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's, freeze-m4's and freeze-m3's commits
+PREREG_M6_COMMIT = "5a17d375d9aab77a302ec2295df886ee1257f3fd"  # docs/notes/env.md; M6's headers carry it (M6 §8)
+ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's, freeze-m4's, freeze-m3's and freeze-m6's commits
 M3_SETUP = "setup"  # results/m3/<UTC>_setup: a record of scripts/setup_board.sh (prereg/M3.md §3)
 M3_PINNED = (  # prereg/M3.md §4: the inventory keys (tools/inventory.sh) that must equal inventory_m1.txt's
     # the image's kernel, drivers and boot firmware
@@ -229,6 +246,20 @@ M4_CALIB_SETTINGS = {"run_kind": "m4", "warmup_s": "20", "duration_s": "120"}  #
 LABELS = ("unsaturated", "saturated", "unknown")  # M4 §3.2 and §5, as tools/m4_calib_summary.py writes them
 LIMIT = 32  # L (A9)
 SEED, REPETITIONS = 20261030, 3  # §9.1, §8
+M6_ARMS = ("B", "Bd", "Rc", "C", "By", "Cp", "Cpf", "Ct")  # prereg/M6.md §1, in the first repetition's order
+M6_ORDERS = {1: M6_ARMS, 2: M6_ARMS[::-1], 3: ("By", "B", "Rc", "C", "Bd", "Cpf", "Cp", "Ct")}  # M6 §4
+# M6 §4, §5: the arms that are not run, as the amendment of M6 §8 step 4 says (By, if it does not pass A5's
+# criteria; an arm whose check failed). They are left out, and the order of the others stands.
+M6_NOT_RUN = ()
+M6_NOT_RUN_WHY = {}  # arm -> why it is not run, in one sentence that names the check's record; the report gives it
+# M6 §5, §9: after a defect an amendment fixes, the sweep is rerun whole. The amendment names the sessions it
+# supersedes here (results/m6/<name>). They stay where they are and are reported, and neither the session tool
+# nor the report counts their runs.
+M6_SUPERSEDED = ()
+# The stage in docs/notes/env.md whose commit an m6 session's code must equal: freeze-m6, and for a sweep rerun
+# under an amendment that changes the code, that amendment's Release (amend-A<n>), which the amendment puts here.
+M6_CODE_TAG = "freeze-m6"
+M6_CODE_PATHS = ("src", "tools", "tests", "CMakeLists.txt")  # M6 §9: what an m6 run's code is
 SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, results/<kind>/<UTC>_<sweep>
     "main": ((1, 2, 4, 8, 12, 16, 32), "main", ("B", "C"), "comparison"),
     "aux": ((1, 2, 3, 4, 5), "aux", ("B", "C"), "comparison"),
@@ -248,16 +279,24 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     # prereg/M3.md §1 and §3: M1's B and C at H1's point, before and after the board's reset
     "m3_before": ((8,), "main", ("B", "C"), "m3"),
     "m3_after": ((8,), "main", ("B", "C"), "m3"),
+    # prereg/M6.md §1 and §4: eight arms at H1's point, in M6_ORDERS
+    "m6": ((8,), "main", M6_ARMS, "m6"),
 }
 ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"],  # A12
         "Cp": ["--variant", "C", "--post", "neon"],  # M2 §1
         "C8": ["--variant", "C", "--post", "neon", "--model", M4_MODELS["C8"][0]],  # M4 §3.2
-        "C10": ["--variant", "C", "--post", "v10", "--model", M4_MODELS["C10"][0]]}  # else --variant <arm>
+        "C10": ["--variant", "C", "--post", "v10", "--model", M4_MODELS["C10"][0]],
+        "Cpf": ["--variant", "C", "--post", "neon", "--cores", "all"],  # M6 §1: Cp with the pipeline not pinned
+        "Ct": ["--variant", "C", "--time-rknn", "on"]}  # M6 §1; else --variant <arm>
 SWEEP_OPTIONS = {"a55": ["--cores", "a55"],  # A12; on every run of the sweep or phase
                  "m2_main": ["--stagger", "on"], "m2_check": ["--stagger", "on"],  # M2 §3.1, both arms
                  "m4_main": ["--stagger", "on"], "m4_check": ["--stagger", "on"]}  # M4 §3.2, both arms
 M2_CHECK = (8, "main", ("C", "Cp"))  # M2 §7 step 3: channels, condition, arms in run order, one run each
 M4_CHECK = (8, "main", ("C8", "C10"))  # M4 §8 step 3, "Arms": the same
+M6_CHECK = (8, "main")  # M6 §8 step 3: one run of each arm at the point
+M6_DEFAULT = (2, "main", "C")  # M6 §8 step 3: C with every option at its default, as M1's 32_main_C_2ch_r1
+M6_CHECK_DURATION = 10  # M6 §8 step 3: windows of 10 s
+M6_PHASES = ("m6", "m6_check", "m6_default")  # the phases whose runs are M6's arms
 M4_POINTS = {"m4_main": "main", "m4_aux": "aux", "m4_check": "main"}  # M4 §3.2: the point of each M4 phase
 SWEEP_REPETITIONS = {"a55": 1}  # A12 (§13: × 1); the other sweeps have REPETITIONS
 IDLE_BASELINE_S = 120  # §7.2
@@ -473,6 +512,17 @@ def is_m3(name):
     return name in SWEEPS and SWEEPS[name][3] == "m3"
 
 
+def is_m6(name):
+    """Whether name is M6's sweep (run kind m6, M6 §4)."""
+    return name in SWEEPS and SWEEPS[name][3] == "m6"
+
+
+def m6_session(args):
+    """Whether a session is M6's, its sweep or m6-check: its headers carry M6's commits, its idle baseline
+    has /proc/schedstat (M2 §3.2), and its inventory check keeps to M3 §4 (M6 §4)."""
+    return is_m6(getattr(args, "sweep", None)) or getattr(args, "command", None) == "m6-check"
+
+
 def m3_session(args):
     """Whether a session is M3's: its runs pass freeze-m3's commit, and its inventory check keeps to M3 §4."""
     return is_m3(getattr(args, "sweep", None))
@@ -521,7 +571,8 @@ def rule3_applies(phase, variant, channels, condition, limit, labels):
     arm's saturation label at the point (M4 §3.2): only "unsaturated" applies it. For the others, §6.2."""
     if m4_phase(phase):
         return labels.get(variant) == "unsaturated"
-    return phase in ("thermal", "m2_check") + tuple(SWEEPS) and unsaturated(channels, condition, limit)
+    return phase in ("thermal", "m2_check", "m6_check", "m6_default") + tuple(SWEEPS) and \
+        unsaturated(channels, condition, limit)
 
 
 def m4_labels(calibration_csv, point):
@@ -715,9 +766,55 @@ def arm_post(arm):
     return args[args.index("--post") + 1] if "--post" in args else "m1"
 
 
+def m6_arms():
+    """M6's arms that are run, in the first repetition's order (M6 §4)."""
+    return tuple(a for a in M6_ARMS if a not in M6_NOT_RUN)
+
+
+def sweep_variants(sweep):
+    """The arms a sweep runs: SWEEPS', and for m6 without the arms that are not run (M6 §4)."""
+    return m6_arms() if sweep == "m6" else SWEEPS[sweep][2]
+
+
+def cpf_affinity_problems(window_start, window_end):
+    """M6 §4's rule for arm Cpf: why a run is invalid, as a list. window_start: env.json's
+    threads_at_window_start, dicts with comm and affinity; window_end: the rows of threads.csv. In both,
+    every pipeline thread (every thread but the metrics thread) must be allowed cpu0-7, and the metrics
+    thread cpu0 only."""
+    problems = []
+    for when, threads in (("at the window's start", window_start), ("at the window's end", window_end)):
+        metrics = [t for t in threads if t["comm"] == "metrics"]
+        others = [t for t in threads if t["comm"] != "metrics"]
+        if len(metrics) != 1 or not others:
+            problems.append(f"Cpf: {len(metrics)} metrics threads and {len(others)} pipeline threads {when} "
+                            "(rule 5, M6 §4)")
+        problems += [f"Cpf: the metrics thread is allowed cpu {t['affinity']} {when}, not 0 (rule 5, M6 §4)"
+                     for t in metrics if t["affinity"] != "0"]
+        wrong = sorted({f"{t['comm']} ({t['affinity']})" for t in others if t["affinity"] != "0-7"})
+        if wrong:
+            problems.append(f"Cpf: pipeline threads not allowed cpu 0-7 {when}: {', '.join(wrong)} (rule 5, M6 §4)")
+    return problems
+
+
+def m6_run_problems(variant, env, threads_rows):
+    """(reasons, external) for a finished run of an M6 arm. env: its env.json as a dict, or None if it cannot be
+    read; threads_rows: the rows of its threads.csv. A run whose env.json does not name its arm is the setup's
+    fault and stops the session (external is then a text, M6 §1). For Cpf, M6 §4's rule 5 gives the reasons."""
+    got = "unreadable env.json" if env is None else env.get("m6", {}).get("arm")
+    if got != variant:
+        return [f"the run's env.json names arm {got!r}, not {variant} (M6 §1)"], "a run's options are not its arm's"
+    if variant == "Cpf":
+        return cpf_affinity_problems(env.get("threads_at_window_start", []), threads_rows), None
+    return [], None
+
+
 def sweep_plan(sweep, counts=None):
-    """[(channels, repetition, variants in run order)] of a sweep, in run order."""
+    """[(channels, repetition, variants in run order)] of a sweep, in run order. M6's orders are its own
+    (M6 §4), without the arms that are not run."""
     all_counts, _, variants, _ = SWEEPS[sweep]
+    if sweep == "m6":
+        return [(c, r, tuple(a for a in M6_ORDERS[r] if a not in M6_NOT_RUN))
+                for c in (counts or all_counts) for r in sorted(M6_ORDERS)]
     return [(c, r, variant_order(variants, r)) for c in channel_order(counts or all_counts)
             for r in range(1, SWEEP_REPETITIONS.get(sweep, REPETITIONS) + 1)]
 
@@ -1080,6 +1177,7 @@ class Session:
         self.launcher_pid = None
         self.server_started = False
         self.freeze_m3 = "none"  # start() sets freeze-m3's commit for an m3 session (M3 §4)
+        self.freeze_m6 = "none"  # start() sets freeze-m6's commit for an M6 session; none before it (M6 §8)
         self.last_end = None
         self.invalid_x2 = []
         self.run_header = None  # the first run's header, for result.csv
@@ -1200,8 +1298,8 @@ class Session:
             with open(self.out / "dpkg.tsv", "w", encoding="utf-8") as f:
                 subprocess.run(["dpkg-query", "-W", "-f", "${Package}\t${Version}\t${db:Status-Abbrev}\n"],
                                stdout=f, check=False)
-        if diff and m3_session(a):  # M3 §4: only the pinned keys stop it; the rest is recorded and reported
-            problems = m3_inventory_problems(now, reference)
+        if diff and (m3_session(a) or m6_session(a)):  # M3 §4, M6 §4: only the pinned keys stop it; the rest is
+            problems = m3_inventory_problems(now, reference)  # recorded and reported
             if problems:
                 (self.out / "inventory_pinned.txt").write_text("".join(f"{p}\n" for p in problems))
                 raise Stop(f"a key that M3 §4 pins differs from {INVENTORY}: " + "; ".join(problems))
@@ -1221,6 +1319,7 @@ class Session:
         self.code_commit = build_commit()
         self.freeze_m2, self.freeze_m4 = session_freezes(a)
         self.freeze_m3 = freeze_m3_commit() if m3_session(a) else "none"  # M3 §4; none before it (smoke tests)
+        self.freeze_m6 = registered_commit("freeze-m6") if m6_session(a) else "none"  # M6 §8; none before it
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
@@ -1358,6 +1457,7 @@ class Session:
                *(["--freeze-m2-commit", self.freeze_m2] if is_m2(phase) else []),  # M2 §5.1; M1's as before
                *(["--freeze-m4-commit", self.freeze_m4] if m4_phase(phase) else []),  # M4 §4
                *(["--freeze-m3-commit", self.freeze_m3] if is_m3(phase) else []),  # M3 §4
+               *(["--freeze-m6-commit", self.freeze_m6] if phase in M6_PHASES else []),  # M6 §8
                "--out", str(run_dir)]
         start = dt.datetime.now(dt.timezone.utc)
         # Just before the bench, after the gate and the checks: if the session dies during the run,
@@ -1420,9 +1520,10 @@ class Session:
         summary_path, channels_path = run_dir / "summary.csv", run_dir / "channels.csv"
         if o.code != 0 or not summary_path.exists() or not channels_path.exists():  # rule 2
             o.reasons.append(f"bench exit {o.code}")
-            if m4_phase(phase) and not made and o.code != 0:  # it refused the run: the setup, not the run
-                o.reasons[-1] += " before it made its directory: it refused the run's options (see its log)"
-                o.external = o.external or "bench_main refused an M4 run's options"
+            if (m4_phase(phase) or phase in M6_PHASES) and not made and o.code != 0:  # it refused the run: the
+                o.reasons[-1] += " before it made its directory: it refused the run's options (see its log)"  # setup
+                o.external = o.external or ("bench_main refused an M4 run's options" if m4_phase(phase) else
+                                            "bench_main refused an M6 run's options")
         else:
             header, rows = read_csv(summary_path)
             self.run_header = self.run_header or header
@@ -1435,6 +1536,16 @@ class Session:
                     o.external = "a run's model or post-processing is not its arm's"
                     return
                 self.arm_headers.setdefault(variant, header)
+            if phase in M6_PHASES:  # M6 §1: the run is its arm's; M6 §4: rule 5 for Cpf
+                try:
+                    env = json.loads((run_dir / "env.json").read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    env = None
+                reasons, external = m6_run_problems(variant, env, read_csv(run_dir / "threads.csv")[1])
+                o.reasons += reasons
+                if external:
+                    o.external = external
+                    return
             summary = {r["key"]: r["value"] for r in rows}
             ch_rows = read_csv(channels_path)[1]
             samples = read_csv(run_dir / "samples.csv")[1]
@@ -1496,7 +1607,8 @@ class Session:
 
     def write_result(self, rows, run_kind):
         a = self.args
-        off = [f"{k} {getattr(a, k)} (protocol {v})" for k, v in PROTOCOL.items() if getattr(a, k) != v]
+        protocol = {**PROTOCOL, "duration": M6_CHECK_DURATION} if getattr(a, "command", None) == "m6-check"             else PROTOCOL  # M6 §8 step 3: m6-check's windows are 10 s
+        off = [f"{k} {getattr(a, k)} (protocol {v})" for k, v in protocol.items() if getattr(a, k) != v]
         if getattr(a, "counts", None):
             off.append(f"counts {' '.join(map(str, a.counts))} (protocol: all of the sweep)")
         if getattr(a, "calib", None) and getattr(a, "command", None) == "sweep":
@@ -1512,10 +1624,12 @@ class Session:
         else:
             m4, models = {}, {"model_sha256": h.get("model_sha256", "")}
         m3 = {"freeze_m3_commit": self.freeze_m3} if m3_session(a) else {}  # M3 §4
+        m6 = {"prereg_m6_commit": PREREG_M6_COMMIT, "freeze_m6_commit": self.freeze_m6,  # M6 §8
+              "libyuv_commit": h.get("libyuv_commit", "")} if m6_session(a) else {}
         header = {"start_time_utc": min(starts) if starts else "", "ntp_synchronized": h.get("ntp_synchronized", ""),
                   "prereg_v1_commit": h.get("prereg_v1_commit", ""), "freeze_m1_commit": h.get("freeze_m1_commit", ""),
                   **{k: h.get(k, "") for k in m2},  # M2 §5.1, from the first run's header
-                  **m4, **m3, "run_kind": run_kind, **models, "decoder": h.get("decoder", ""),
+                  **m4, **m3, **m6, "run_kind": run_kind, **models, "decoder": h.get("decoder", ""),
                   "code_commit": self.code_commit, "amendment": h.get("amendment", ""), "session": self.out.name,
                   "cooling": os.environ["COOLING"], "ambient_c": os.environ["AMBIENT_C"]}
         rows = rows + [("invalid_x2_runs", " ".join(self.invalid_x2) or "none"),
@@ -1553,7 +1667,7 @@ def sweep_sessions(sweep, current=None):
     current."""
     pattern = re.compile(SESSION_NAME + re.escape(sweep) + "$")
     return sorted(d for d in Path("results", session_kind(sweep)).glob(f"*_{sweep}")
-                  if d.is_dir() and pattern.match(d.name)
+                  if d.is_dir() and pattern.match(d.name) and not (sweep == "m6" and d.name in M6_SUPERSEDED)
                   and (current is None or d.resolve() != Path(current).resolve()))
 
 
@@ -1565,7 +1679,7 @@ def progress(name):
     if name == "h3":
         _, nxt, _, _, _ = h3_replay(h3_trials(load_records(sessions, H3_PHASES)))
         return "complete" if nxt is None else "started"
-    complete, _ = sweep_state(load_records(sessions, (name,)), SWEEPS[name][2])
+    complete, _ = sweep_state(load_records(sessions, (name,)), sweep_variants(name))
     return "complete" if all((c, r) in complete for c, r, _ in sweep_plan(name)) else "started"
 
 
@@ -1646,6 +1760,55 @@ def freeze_m3_commit():
     except (OSError, UnicodeDecodeError) as e:
         raise Stop(f"cannot read {ENV_MD}: {e!r}") from None
     return registration_rows(text).get("freeze-m3", ("none", None))[0]
+
+
+def registered_commit(tag):
+    """A stage's tag commit from the Registration table of docs/notes/env.md, or "none" before it has a row."""
+    try:
+        text = Path(ENV_MD).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        raise Stop(f"cannot read {ENV_MD}: {e!r}") from None
+    return registration_rows(text).get(tag, ("none", None))[0]
+
+
+def m6_code_problem(freeze, git=None):
+    """M6 §9: why this checkout is not freeze-m6's code built at its own commit, or None. git(args) -> (exit
+    code, stdout); the default runs git in the repository."""
+    def run(args):  # the session runs as root, and git refuses a checkout another user owns unless it is named safe
+        r = subprocess.run(["git", "-c", f"safe.directory={Path.cwd()}", *args], capture_output=True, text=True)
+        return r.returncode, r.stdout.strip()
+    git = git or run
+    code, head = git(["rev-parse", "HEAD"])
+    if code != 0:
+        return "git cannot read the checkout's commit: an m6 session runs from a git checkout (M6 §9)"
+    built = build_commit()
+    if built != head:
+        return f"build/ was built at {built}, and the checkout is at {head}: build this commit (M6 §9)"
+    code, _ = git(["diff", "--quiet", freeze, "HEAD", "--", *M6_CODE_PATHS])
+    if code != 0:
+        return (f"the checkout's {', '.join(M6_CODE_PATHS)} differ from {M6_CODE_TAG}'s ({freeze}), or git cannot "
+                "compare them (M6 §9)")
+    code, changed = git(["status", "--porcelain", "--", *M6_CODE_PATHS])
+    if code != 0 or changed:
+        return f"the checkout has local changes in {', '.join(M6_CODE_PATHS)} (M6 §9)"
+    return None
+
+
+def m6_order_problem(name):
+    """Why an M6 protocol session cannot start now (M6 §8, §9), or None."""
+    freeze = registered_commit("freeze-m6")
+    if freeze == "none":
+        return (f"freeze-m6 comes before M6's runs, and {ENV_MD} has no row for it with its commit and created_at "
+                "(M6 §8)")
+    code = registered_commit(M6_CODE_TAG)
+    if code == "none":
+        return f"{ENV_MD} has no row for {M6_CODE_TAG}, whose code M6's runs use (M6 §9)"
+    problem = m6_code_problem(code)
+    if problem:
+        return problem
+    if progress(name) == "complete":
+        return f"{name} is complete"
+    return None
 
 
 def m3_setup_records(root=Path("results", "m3")):
@@ -1769,7 +1932,7 @@ def write_idle_baseline(s, run_kind):
     rows = [("window_s", f"{t1 - t0:.1f}")] + idle_rows(proc_stat_nonidle(stat0), proc_stat_nonidle(stat1),
                                                        1.0 / os.sysconf("SC_CLK_TCK"))
     # M2 §3.2, M4 §3.3, M3 §6; none without /proc/schedstat. M1's sessions keep their rows.
-    if m2_session(s.args) or m4_session(s.args) or m3_session(s.args):
+    if m2_session(s.args) or m4_session(s.args) or m3_session(s.args) or m6_session(s.args):
         rows += schedstat_rows(sched0, sched1)
     amendments = re.findall(r"^## (A\d+) ", Path("prereg/AMENDMENTS.md").read_text(encoding="utf-8"), re.M)
     ntp = subprocess.run(["timedatectl", "show", "-p", "NTPSynchronized", "--value"], capture_output=True,
@@ -1777,6 +1940,8 @@ def write_idle_baseline(s, run_kind):
     m2 = {"prereg_m2_commit": PREREG_M2_COMMIT, "freeze_m2_commit": s.freeze_m2} if m2_session(s.args) else {}
     m4 = {"prereg_m4_commit": PREREG_M4_COMMIT, "freeze_m4_commit": s.freeze_m4} if m4_session(s.args) else {}
     m3 = {"freeze_m3_commit": s.freeze_m3} if m3_session(s.args) else {}
+    if m6_session(s.args):  # M6 §8: its commits, in the same fields as the runs' headers
+        m3 = {**m3, "prereg_m6_commit": PREREG_M6_COMMIT, "freeze_m6_commit": s.freeze_m6}
     header = {"start_time_utc": f"{start:%Y-%m-%dT%H:%M:%SZ}", "ntp_synchronized": ntp,
               "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, **m2, **m4, **m3,
               "run_kind": run_kind,
@@ -1789,7 +1954,8 @@ def write_idle_baseline(s, run_kind):
 
 def cmd_sweep(s):
     a = s.args
-    _, condition, variants, run_kind = SWEEPS[a.sweep]
+    _, condition, _, run_kind = SWEEPS[a.sweep]
+    variants = sweep_variants(a.sweep)
     write_idle_baseline(s, s.run_kind)
     earlier = [] if s.smoke else sweep_sessions(a.sweep, s.out)
     complete, pending = sweep_state(load_records(earlier, (a.sweep,)), variants)
@@ -1817,7 +1983,8 @@ def cmd_sweep(s):
                         ("repetitions_left", " ".join(left) or "none")]
                        + (list(post_object_hashes().items()) if is_m2(a.sweep) else [])  # M2 §4
                        + (m4_rows(s) if is_m4(a.sweep) else [])
-                       + (m3_rows(s) if is_m3(a.sweep) else []), s.run_kind)
+                       + (m3_rows(s) if is_m3(a.sweep) else [])
+                       + (m6_rows(s) if is_m6(a.sweep) else []), s.run_kind)
 
 
 def m3_rows(s):
@@ -1830,6 +1997,36 @@ def m3_rows(s):
     return [("setup_records", " ".join(d.name for d, _ in setup) or "none"),
             ("inventory_same_as_m1", "no" if diff.exists() else "yes"),
             ("inventory_changed_lines", str(changed))]
+
+
+def m6_rows(s):
+    """M6's rows of result.csv: the arms run and not run, each repetition's order (M6 §4), and whether the
+    inventory equals M1's (M6 §4, as M3's sessions record it)."""
+    diff = s.out / "inventory.diff"
+    changed = sum(1 for line in diff.read_text().splitlines()
+                  if line[:1] in "+-" and line[:3] not in ("+++", "---")) if diff.exists() else 0
+    return ([("arms", " ".join(m6_arms())), ("arms_not_run", " ".join(M6_NOT_RUN) or "none")]
+            + [(f"order_r{r}", " ".join(order)) for _, r, order in sweep_plan("m6")]
+            + [("inventory_same_as_m1", "no" if diff.exists() else "yes"),
+               ("inventory_changed_lines", str(changed))])
+
+
+def cmd_m6_check(s):
+    """M6 §8 step 3: one run of C with every option at its default at 2 channels, then one run of each arm at
+    the point, with windows of 10 s, before freeze-m6. tools/m6_checks.py judges them."""
+    write_idle_baseline(s, "check")
+    rows, status = [], "stopped"
+    try:
+        channels, condition, arm = M6_DEFAULT
+        valid, run_dir = s.run("m6_default", arm, channels, condition, "check")
+        rows.append(("default_run", run_dir.name if valid else "invalid_x2"))
+        channels, condition = M6_CHECK
+        for arm in m6_arms():
+            valid, run_dir = s.run("m6_check", arm, channels, condition, "check")
+            rows.append((f"{arm}_run", run_dir.name if valid else "invalid_x2"))
+        status = "completed"
+    finally:  # also when the session stops: what it ran
+        s.write_result([("session_status", status)] + rows + m6_rows(s), "check")
 
 
 def m4_rows(s):
@@ -1945,13 +2142,15 @@ def cmd_thermal(s):
 
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3", "m2-check", "m4-check"])
+    ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3", "m2-check", "m4-check",
+                                        "m6-check"])
     ap.add_argument("sweep", nargs="?", choices=list(SWEEPS), help="sweep: which one")
     ap.add_argument("--out")
     ap.add_argument("--limit", type=int, help="thermal: L, which gives the largest main count")
     ap.add_argument("--idle-s", type=int, default=PROTOCOL["idle_s"])
     ap.add_argument("--warmup", type=int, default=PROTOCOL["warmup"])
-    ap.add_argument("--duration", type=int, default=PROTOCOL["duration"])
+    ap.add_argument("--duration", type=int, help=f"the window, s (default {PROTOCOL['duration']}; m6-check: "
+                                                 f"{M6_CHECK_DURATION}, M6 §8 step 3)")
     ap.add_argument("--gate-s", type=int, default=PROTOCOL["gate_s"])
     ap.add_argument("--start", type=int, default=PROTOCOL["start"])
     ap.add_argument("--cap", type=int, default=PROTOCOL["cap"])
@@ -1960,6 +2159,8 @@ def main(argv):
     ap.add_argument("--calib", help="m4-check, and an m4 sweep as a smoke test: the tools/m4_calib.sh session whose "
                                     "saturation labels decide rule 3 (M4 §3.2)")
     args = ap.parse_args(argv)
+    if args.duration is None:
+        args.duration = M6_CHECK_DURATION if args.command == "m6-check" else PROTOCOL["duration"]
     if (args.command == "sweep") != (args.sweep is not None):
         ap.error(f"sweep needs one of {', '.join(SWEEPS)}; the other commands take none")
     if args.counts and (args.command != "sweep" or not set(args.counts) <= set(SWEEPS[args.sweep][0])
@@ -1996,8 +2197,8 @@ def main(argv):
         args.out = args.out or f"results/{run_kind}/{now}_{name}" + ("_smoke" if smoke else "")
     else:
         kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal", "m2-check": "m2_check",
-                "m4-check": "m4_check"}[args.command]
-        run_kind = "check" if kind in ("loop", "m2_check", "m4_check") else "calibration"
+                "m4-check": "m4_check", "m6-check": "m6_check"}[args.command]
+        run_kind = "check" if kind in ("loop", "m2_check", "m4_check", "m6_check") else "calibration"
         args.out = args.out or f"results/{run_kind}/{now}_{kind}" + (f"_{video_set}" if video_set != "m1" else "")
 
     def on_signal(signum, _frame):
@@ -2008,12 +2209,15 @@ def main(argv):
     try:
         this = (args.sweep or "h3") if args.command in ("sweep", "h3") and not smoke else None
         # M3's sweeps stand outside the others' order (M3 §3): they do not wait for the others' redos.
-        waiting = [] if is_m3(args.sweep) else [w for w in redo_pending() if w != this]
+        # So does M6's sweep (M6 §4), and m6-check.
+        outside = is_m3(args.sweep) or m6_session(args)
+        waiting = [] if outside else [w for w in redo_pending() if w != this]
         if waiting:
             raise Stop(f"not starting: {', '.join(waiting)} has a repetition to redo, so its next session comes "
                        "first (docs/notes/comparison.md)")
         if this:
-            problem = m3_order_problem(this) if is_m3(this) else order_problem(this)
+            problem = m3_order_problem(this) if is_m3(this) else m6_order_problem(this) if is_m6(this) else \
+                order_problem(this)
             if problem:
                 raise Stop(f"not starting: {problem} (docs/notes/comparison.md)")
         # Not freeze-m2 or freeze-m4: the checks come before them.
@@ -2050,7 +2254,8 @@ def main(argv):
     try:
         s.start()
         {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal, "sweep": cmd_sweep,
-         "h3": cmd_h3, "m2-check": cmd_m2_check, "m4-check": cmd_m4_check}[args.command](s)
+         "h3": cmd_h3, "m2-check": cmd_m2_check, "m4-check": cmd_m4_check,
+         "m6-check": cmd_m6_check}[args.command](s)
         status = 0
     except Stop as e:
         s.say(f"stopped: {e}")

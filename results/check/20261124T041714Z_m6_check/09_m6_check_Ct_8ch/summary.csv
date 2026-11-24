@@ -1,0 +1,95 @@
+# start_time_utc: 2026-11-24T04:39:52Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# freeze_m3_commit: none
+# prereg_m6_commit: 5a17d375d9aab77a302ec2295df886ee1257f3fd
+# freeze_m6_commit: none
+# libyuv_commit: 0ec9f68d82634f6f3414aaaf780e03f9edf002b3
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: C
+# channels: 8
+# condition: main
+# post: m1
+# stagger: off
+# repetition: 1
+# code_commit: de64e3541313f188102767692243471079c67443
+# amendment: A16
+# warmup_s: 20
+# duration_s: 10
+# source: rtsp://10.88.0.1:8554/ch{n}
+key,value
+window_s,10
+warmup_start_utc,2026-11-24T04:39:54.535Z
+window_start_utc,2026-11-24T04:40:14.535Z
+window_end_utc,2026-11-24T04:40:24.535Z
+process_cpu_s,1.630
+process_cpu_a76_s,1.650
+process_cpu_a55_s,0.010
+process_cpu_unattributed_s,-0.030
+system_cpu0_s,0.030
+system_cpu1_s,0.080
+system_cpu2_s,0.090
+system_cpu3_s,0.010
+system_cpu4_s,0.250
+system_cpu5_s,0.180
+system_cpu6_s,0.180
+system_cpu7_s,0.240
+system_cpu0-3_s,0.210
+system_cpu4-5_s,0.430
+system_cpu6-7_s,0.420
+system_cpu_total_s,1.060
+schedstat_version,15
+schedstat_cpu0_s,0.048
+schedstat_cpu1_s,0.035
+schedstat_cpu2_s,0.088
+schedstat_cpu3_s,0.025
+schedstat_cpu4_s,0.429
+schedstat_cpu5_s,0.407
+schedstat_cpu6_s,0.402
+schedstat_cpu7_s,0.392
+schedstat_cpu0-3_s,0.196
+schedstat_cpu4-5_s,0.836
+schedstat_cpu6-7_s,0.794
+schedstat_cpu_total_s,1.826
+decode_fps_min,30.000
+decode_fps_max,30.000
+drift_max_s,0.000
+decoder_drops,0
+input_ended_early,0
+sampled_in_window,400
+q1_drops_in_window,0
+drop_rate,0.00000
+processed_in_window,400
+latency_p50_ms,32.569
+latency_p99_ms,42.909
+mpp_hold_p50_ms,2.496
+mpp_hold_p99_ms,4.126
+slot_wait_p99_ms,0.001
+rknn_run_calls,400
+rknn_run_cpu_s,0.461
+rknn_run_cpu_share,0.2830
+rknn_run_cpu_mean_ms,1.1534
+rknn_run_cpu_min_ns,1033084
+rknn_run_wall_mean_ms,15.5133
+rss_window_start_kb,235788
+rss_window_end_kb,235788
+rss_window_max_kb,235788
+rss_growth_pct,0.00
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,42538

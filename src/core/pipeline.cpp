@@ -50,6 +50,13 @@ void name_current_thread(const std::string& name) {
     pthread_setname_np(pthread_self(), name.substr(0, 15).c_str());
 }
 
+// The calling thread's CPU time (arm Ct, M6 §1): one system call.
+int64_t thread_cpu_ns() {
+    timespec ts{};
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return int64_t(ts.tv_sec) * kSecond + ts.tv_nsec;
+}
+
 void sleep_until_ns(int64_t t) {
     timespec ts{static_cast<time_t>(t / kSecond), static_cast<long>(t % kSecond)};
     while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, nullptr) != 0) {
@@ -188,7 +195,13 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
                     r.t2b = now_ns();
                     backend->bind(*npu, k, p->slot);
                     r.t2c = now_ns();
-                    CHECK(rknn_run(npu->ctx[k], nullptr) == RKNN_SUCC, "rknn_run failed");
+                    if (cfg.time_rknn) {  // arm Ct only: two more system calls per inference
+                        const int64_t c0 = thread_cpu_ns();
+                        CHECK(rknn_run(npu->ctx[k], nullptr) == RKNN_SUCC, "rknn_run failed");
+                        r.rknn_cpu_ns = thread_cpu_ns() - c0;
+                    } else {
+                        CHECK(rknn_run(npu->ctx[k], nullptr) == RKNN_SUCC, "rknn_run failed");
+                    }
                     r.t3 = now_ns();
                     r.detections = static_cast<int>(
                         cfg.post->run(npu->output_ptrs(k), npu->outputs, npu->model_w(), npu->model_h()).size());
