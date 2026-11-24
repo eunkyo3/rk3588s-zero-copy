@@ -1,0 +1,55 @@
+2026-11-24T06:47:11Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-24T06:47:13Z starting the stream server
+2026-11-24T06:47:19Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261124T064714Z-470031, clock offset -0.3 ms
+2026-11-24T06:47:19Z idle for 600 s
+2026-11-24T06:57:19Z soc-thermal baseline 38846 m°C
+2026-11-24T06:57:19Z m6: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-24T06:57:20Z 01_m6_B_8ch_r1: B, 8 ch, main
+2026-11-24T06:59:42Z 01_m6_B_8ch_r1: valid
+2026-11-24T07:00:42Z 02_m6_Bd_8ch_r1: Bd, 8 ch, main
+2026-11-24T07:03:05Z 02_m6_Bd_8ch_r1: valid
+2026-11-24T07:04:06Z 03_m6_Rc_8ch_r1: Rc, 8 ch, main
+2026-11-24T07:06:29Z 03_m6_Rc_8ch_r1: valid
+2026-11-24T07:07:30Z 04_m6_C_8ch_r1: C, 8 ch, main
+2026-11-24T07:09:53Z 04_m6_C_8ch_r1: valid
+2026-11-24T07:10:53Z 05_m6_By_8ch_r1: By, 8 ch, main
+2026-11-24T07:13:16Z 05_m6_By_8ch_r1: valid
+2026-11-24T07:14:16Z 06_m6_Cp_8ch_r1: Cp, 8 ch, main
+2026-11-24T07:16:39Z 06_m6_Cp_8ch_r1: valid
+2026-11-24T07:17:39Z 07_m6_Cpf_8ch_r1: Cpf, 8 ch, main
+2026-11-24T07:20:02Z 07_m6_Cpf_8ch_r1: valid
+2026-11-24T07:21:03Z 08_m6_Ct_8ch_r1: Ct, 8 ch, main
+2026-11-24T07:23:26Z 08_m6_Ct_8ch_r1: valid
+2026-11-24T07:24:27Z 09_m6_Ct_8ch_r2: Ct, 8 ch, main
+2026-11-24T07:26:50Z 09_m6_Ct_8ch_r2: valid
+2026-11-24T07:27:50Z 10_m6_Cpf_8ch_r2: Cpf, 8 ch, main
+2026-11-24T07:30:13Z 10_m6_Cpf_8ch_r2: valid
+2026-11-24T07:31:14Z 11_m6_Cp_8ch_r2: Cp, 8 ch, main
+2026-11-24T07:33:37Z 11_m6_Cp_8ch_r2: valid
+2026-11-24T07:34:37Z 12_m6_By_8ch_r2: By, 8 ch, main
+2026-11-24T07:37:00Z 12_m6_By_8ch_r2: valid
+2026-11-24T07:38:00Z 13_m6_C_8ch_r2: C, 8 ch, main
+2026-11-24T07:40:23Z 13_m6_C_8ch_r2: valid
+2026-11-24T07:41:24Z 14_m6_Rc_8ch_r2: Rc, 8 ch, main
+2026-11-24T07:43:47Z 14_m6_Rc_8ch_r2: valid
+2026-11-24T07:44:47Z 15_m6_Bd_8ch_r2: Bd, 8 ch, main
+2026-11-24T07:47:10Z 15_m6_Bd_8ch_r2: valid
+2026-11-24T07:48:10Z 16_m6_B_8ch_r2: B, 8 ch, main
+2026-11-24T07:50:33Z 16_m6_B_8ch_r2: valid
+2026-11-24T07:51:34Z 17_m6_By_8ch_r3: By, 8 ch, main
+2026-11-24T07:53:57Z 17_m6_By_8ch_r3: valid
+2026-11-24T07:54:57Z 18_m6_B_8ch_r3: B, 8 ch, main
+2026-11-24T07:57:20Z 18_m6_B_8ch_r3: valid
+2026-11-24T07:58:20Z 19_m6_Rc_8ch_r3: Rc, 8 ch, main
+2026-11-24T08:00:43Z 19_m6_Rc_8ch_r3: valid
+2026-11-24T08:01:43Z 20_m6_C_8ch_r3: C, 8 ch, main
+2026-11-24T08:04:06Z 20_m6_C_8ch_r3: valid
+2026-11-24T08:05:06Z 21_m6_Bd_8ch_r3: Bd, 8 ch, main
+2026-11-24T08:07:29Z 21_m6_Bd_8ch_r3: valid
+2026-11-24T08:08:29Z 22_m6_Cpf_8ch_r3: Cpf, 8 ch, main
+2026-11-24T08:10:52Z 22_m6_Cpf_8ch_r3: valid
+2026-11-24T08:11:53Z 23_m6_Cp_8ch_r3: Cp, 8 ch, main
+2026-11-24T08:14:16Z 23_m6_Cp_8ch_r3: valid
+2026-11-24T08:15:17Z 24_m6_Ct_8ch_r3: Ct, 8 ch, main
+2026-11-24T08:17:40Z 24_m6_Ct_8ch_r3: valid
+2026-11-24T08:17:40Z stopping the stream server
