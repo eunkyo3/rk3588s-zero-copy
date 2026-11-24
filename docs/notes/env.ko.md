@@ -24,6 +24,7 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5) | `9ac3ec137504b65751c1232ad9add69f3d15f091` | 2026-11-20T04:09:11Z |
 | [`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) | `e959531f4d08054527440a57806d1ccd3f7961e6` | 2026-11-23T00:05:11Z |
 | [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) | `e959531f4d08054527440a57806d1ccd3f7961e6` | 2026-11-23T00:05:11Z |
+| [`prereg-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m6) | `5a17d375d9aab77a302ec2295df886ee1257f3fd` | 2026-11-23T23:47:43Z |
 
 기준 시각은 `created_at`이다(PROTOCOL §1). 태그가 가리키는 커밋은 PR #1의 머지 커밋이며, 그 커미터 날짜(2026-10-30T01:58:11Z)는 쓰지 않는다. `amend-A8`은 `freeze-m1` 전에 만든 수정 기록의 Release로, 그 항목이 등록하는 검사에 기준 시각을 주기 위한 것이다([A8](../../prereg/AMENDMENTS.ko.md)). 태그가 가리키는 커밋은 PR #12의 머지 커밋이다. GitHub는 그 커밋의 시각을 Release의 `created_at`으로 주며, Release는 2026-11-03T01:40:12Z에 공개됐다. 검사는 둘 다 지난 02:19:49Z에 시작했다.
 
@@ -44,6 +45,8 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 `prereg-m5`는 M5 사전 등록의 1단계인 [prereg/M5.md](../../prereg/M5.ko.md)다. PR #95의 머지 커밋을 가리킨다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-20T04:10:17Z에 공개됐다. 머리말에 `prereg-m5`를 적는 모든 M5 점검 실행은 둘 다 지난 뒤에 시작하며, `lib/measure/` 아래에 두는 M5 자체의 순서 검사가 이를 검사한다. 등록된 `tools/check_prereg_order.py`는 실행 종류 `m5`를 모르기 때문이다(M5 §8).
 
 `amend-A16`과 `freeze-m5`는 둘 다 PR #97의 머지 커밋을 가리키며, 그 PR이 A16, [lib/measure/](../../lib/measure/README.ko.md) 아래의 측정 도구, `rkzc` 0.1.1의 소스를 더한다. M5 등록의 2단계다(M5 §8 4단계). 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-23T00:08:08Z와 00:08:11Z에 공개됐다. 패키지의 Release [`rkzc-v0.1.1`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/rkzc-v0.1.1)이 00:08:05Z에 먼저 공개됐다(M5 §8 2단계). M5 본 측정의 모든 세션은 둘 다 지난 뒤에 시작하며 `lib/measure/m5_order.py`가 이를 검사한다. 세션 도구는 `freeze-m5`의 행이 이 표에 있어야 본 측정을 시작한다.
+
+`prereg-m6`는 M6 사전 등록의 1단계인 [prereg/M6.md](../../prereg/M6.ko.md)다. PR #103의 머지 커밋을 가리키며, 그 앞에 PR #102(H1의 문턱값에 관한 노트)의 머지가 있다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-23T23:49:30Z에 공개됐다. 머리말에 `prereg-m6`를 적는 모든 M6 점검 실행은 둘 다 지난 뒤에 시작한다. 2단계가 `tools/check_prereg_order.py`에 실행 종류 `m6`를 더하면 그 도구가 이를 검사한다(M6 §8).
 
 ## 보드 기준선
 
