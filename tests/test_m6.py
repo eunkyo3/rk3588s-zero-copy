@@ -219,7 +219,7 @@ def dump(arms=("b", "bd", "c", "cp", "rc"), frames=100, **changed):
 class Unchanged(unittest.TestCase):
     def objects(self, **differ):
         return [{"source": s, "sha256_m6": HASH, "sha256_freeze_m3": differ.get(s, HASH)}
-                for s in ("src/core/npu.cpp", "src/preprocess/cpu_copy.cpp")]
+                for s in m6c.UNCHANGED_SOURCES]
 
     def problems(self, objects=None, flags=("f", "f"), mine=None, ref=None):
         return m6c.unchanged_problems(self.objects() if objects is None else objects, flags[0], flags[1],
@@ -232,6 +232,16 @@ class Unchanged(unittest.TestCase):
         problems = self.problems(objects=self.objects(**{"src/core/npu.cpp": "b" * 64}))
         self.assertEqual(len(problems), 1)
         self.assertIn("src/core/npu.cpp", problems[0])
+
+    def test_the_list_is_the_registered_one(self):
+        self.assertEqual(len(m6c.UNCHANGED_SOURCES), 13)  # M6 §8 step 2: ten files and the three post-processings
+        self.assertTrue(self.problems(objects=self.objects()[:-1]))  # one of them missing
+        script = (ROOT / "tools/m6_unchanged.sh").read_text(encoding="utf-8")
+        listed = script.split('UNCHANGED="', 1)[1].split('"', 1)[0].split()
+        self.assertEqual(sorted(listed), sorted(m6c.UNCHANGED_SOURCES))
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        for source in m6c.UNCHANGED_SOURCES:
+            self.assertIn(source, cmake)
 
     def test_no_objects_or_flags_that_differ(self):
         self.assertTrue(self.problems(objects=[]))
@@ -256,7 +266,8 @@ class Trace(unittest.TestCase):
     """Rc's trace: two sync calls per frame on a slot, from an NPU worker, none elsewhere."""
 
     THREADS = {"100": "bench_main", "101": "npu-0", "102": "npu-1", "103": "pre-0"}
-    FDS = {"20": "system-dma32", "21": "system-dma32", "30": "system-uncached"}
+    FDS = {"20": ("system-dma32", 1228800), "21": ("system-dma32", 1228800), "30": ("system-uncached", 2093056),
+           "40": ("system-dma32", 3133440)}  # 40: a decoder buffer, from the slots' heap (A1) and larger
 
     def trace(self, frames=40, extra=(), per_frame=2, tid="101", fd="20"):
         t0, lines, binds = 1000.0, [], []
@@ -295,6 +306,13 @@ class Trace(unittest.TestCase):
     def test_a_sync_on_an_fd_that_is_no_dma_buf(self):
         self.assertTrue(any("not slots" in p for p in m6c.trace_problems(self.trace(fd="99"))))
 
+    def test_a_sync_on_a_decoder_buffer_of_the_slots_heap(self):
+        self.assertTrue(any("not slots" in p for p in m6c.trace_problems(self.trace(fd="40"))))
+
+    def test_a_bind_cut_by_the_traces_start_does_not_break_the_pairs(self):
+        extra = ["101 1000.000500 ioctl(20, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]  # an END whose START was not traced
+        self.assertEqual(m6c.trace_problems(self.trace(extra=extra)), [])
+
     def test_pairs_on_different_fds(self):
         extra = ["102 1003.050000 ioctl(20, DMA_BUF_IOCTL_SYNC, 0xffff) = 0",
                  "102 1003.050100 ioctl(21, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]
@@ -304,7 +322,7 @@ class Trace(unittest.TestCase):
         self.assertTrue(any("frames in the trace" in p for p in m6c.trace_problems(self.trace(frames=8))))
 
     def test_the_fallback_heap_counts_as_a_slot(self):
-        with mock.patch.object(Trace, "FDS", {"20": "system"}):
+        with mock.patch.object(Trace, "FDS", {"20": ("system", 1228800)}):
             self.assertEqual(m6c.trace_problems(self.trace()), [])
 
 
@@ -343,6 +361,102 @@ class Ct(unittest.TestCase):
         self.assertTrue(m6c.ct_problems(*self.run_(n=0)))
 
 
+class OneBuild(unittest.TestCase):
+    C = "c" * 40
+
+    def test_one_clean_build_of_this_code(self):
+        self.assertEqual(m6c.commit_problems({"a": self.C, "b": self.C}, lambda c: True), [])
+
+    def test_two_builds(self):
+        self.assertTrue(m6c.commit_problems({"a": self.C, "b": "d" * 40}, lambda c: True))
+
+    def test_a_dirty_or_unknown_build(self):
+        for commit in (self.C + "-dirty", "unknown", ""):
+            self.assertTrue(m6c.commit_problems({"a": commit, "b": commit}, lambda c: True), commit)
+
+    def test_code_that_is_not_the_checkouts(self):
+        self.assertTrue(m6c.commit_problems({"a": self.C}, lambda c: False))
+
+
+def by_header(variant):
+    return {"variant": variant, "run_kind": "check", "source": "/home/pi/media/bench/pexels_36330861.mp4"}
+
+
+def holdout_header(name, variant="By"):
+    return {"B": {"source": f"/m/{name}"}, "C": {"variant": variant, "run_kind": "check"}}
+
+
+class ByInput(unittest.TestCase):
+    def check_json(self, **changes):
+        j = {"frames": 1000, "registered_input": True, "pass": False,
+             "headers": {"B": by_header("B"), "C": by_header("By"), "R": by_header("R")}}
+        j.update(changes)
+        return j
+
+    def test_bys_check_on_the_registered_input(self):
+        self.assertEqual(m6c.by_input_problems(self.check_json(), m6c.VIDEO_1[1]), [])
+        self.assertEqual(m6c.by_input_problems(self.check_json(**{"pass": True}), m6c.VIDEO_1[1]), [])
+
+    def test_cs_check_is_not_bys(self):
+        j = self.check_json()
+        j["headers"]["C"]["variant"] = "C"
+        self.assertTrue(m6c.by_input_problems(j, m6c.VIDEO_1[1]))
+
+    def test_another_input(self):
+        self.assertTrue(m6c.by_input_problems(self.check_json(frames=200, registered_input=False), m6c.VIDEO_1[1]))
+        self.assertTrue(m6c.by_input_problems(self.check_json(), "0" * 64))  # another file under video 1's name
+        self.assertTrue(m6c.by_input_problems(self.check_json(), ""))
+        j = self.check_json()
+        for k in "BCR":
+            j["headers"][k]["source"] = "/x/other.mp4"
+        self.assertTrue(m6c.by_input_problems(j, m6c.VIDEO_1[1]))
+
+    def test_another_run_kind_or_no_verdict(self):
+        j = self.check_json()
+        j["headers"]["B"]["run_kind"] = "equivalence"
+        self.assertTrue(m6c.by_input_problems(j, m6c.VIDEO_1[1]))
+        self.assertTrue(m6c.by_input_problems(self.check_json(**{"pass": None}), m6c.VIDEO_1[1]))
+        self.assertTrue(m6c.by_input_problems(self.check_json(headers=[]), m6c.VIDEO_1[1]))  # pooled
+
+    def test_the_holdout(self):
+        self.assertEqual(m6c.holdout_input_problems({"headers": [holdout_header(n) for n in m6c.HOLDOUT]}), [])
+        self.assertTrue(m6c.holdout_input_problems({"headers": [holdout_header(n) for n in m6c.HOLDOUT[:2]]}))
+        self.assertTrue(m6c.holdout_input_problems({"headers": [holdout_header(n, "C") for n in m6c.HOLDOUT]}))
+        self.assertTrue(m6c.holdout_input_problems({"headers": {}}))
+
+    def test_the_holdout_videos_are_a8s(self):
+        script = (ROOT / "tools/equivalence_holdout.sh").read_text(encoding="utf-8")
+        for name in m6c.HOLDOUT:
+            self.assertIn(name[:-len(".mp4")], script)
+
+
+class StepOrder(unittest.TestCase):
+    NAMES = ("m6_unchanged", "m6_by_check", "m6_by_equivalence", "m6_by_holdout", "m6_rc_trace", "m6_check")
+
+    def starts(self, *order):
+        return {name: i for i, name in enumerate(order)}
+
+    def test_the_registered_order(self):
+        self.assertEqual(m6c.order_problems(self.starts(*self.NAMES)), [])
+
+    def test_every_swap_of_neighbours_that_the_plan_orders(self):
+        for a, b in (("m6_by_check", "m6_by_equivalence"), ("m6_by_equivalence", "m6_by_holdout"),
+                     ("m6_rc_trace", "m6_check")):
+            order = list(self.NAMES)
+            i, j = order.index(a), order.index(b)
+            order[i], order[j] = order[j], order[i]
+            self.assertTrue(m6c.order_problems(self.starts(*order)), (a, b))
+
+    def test_a_run_with_a_window_before_bys_outcome(self):
+        order = ("m6_unchanged", "m6_by_check", "m6_rc_trace", "m6_by_equivalence", "m6_by_holdout", "m6_check")
+        self.assertTrue(m6c.order_problems(self.starts(*order)))
+        order = ("m6_check", "m6_unchanged", "m6_by_check", "m6_by_equivalence", "m6_by_holdout", "m6_rc_trace")
+        self.assertTrue(m6c.order_problems(self.starts(*order)))
+
+    def test_equal_times_are_not_after(self):
+        self.assertTrue(m6c.order_problems(dict.fromkeys(self.NAMES, 0)))
+
+
 class Records(unittest.TestCase):
     def test_the_latest_record_of_a_name(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -369,8 +483,7 @@ class Headers(unittest.TestCase):
     def test_the_prereg_commit_is_the_tags(self):
         text = (ROOT / "docs/notes/env.md").read_text(encoding="utf-8")
         rows = ss.registration_rows(text)
-        if "prereg-m6" in rows:  # once the Release's row is recorded
-            self.assertEqual(rows["prereg-m6"][0], ss.PREREG_M6_COMMIT)
+        self.assertEqual(rows["prereg-m6"][0], ss.PREREG_M6_COMMIT)
         self.assertIn(f'kPreregM6Commit = "{ss.PREREG_M6_COMMIT}"',
                       (ROOT / "src/core/report.h").read_text(encoding="utf-8"))
 

@@ -32,6 +32,9 @@ fail() {
 
 mkdir -p "$OUT" || fail "cannot create $OUT"
 tools/collect_env.sh >"$OUT/env.txt" || fail "collect_env.sh failed"
+if [ "$C_PLACE" = By ]; then # M6 §8 step 3: the check is on video ①, and tools/m6_checks.py reads this
+    sha256sum "$VIDEO" | cut -c1-64 >"$OUT/source.sha256" || fail "cannot hash $VIDEO"
+fi
 if ! ./build/equivalence_dump "$VIDEO" "$MODEL" "$OUT" "$FRAMES" "${FREEZE_COMMIT:-none}" "$KIND" "$C_PLACE" \
     >"$OUT/dump.txt" 2>"$OUT/dump.log"; then
     cat "$OUT/dump.txt" "$OUT/dump.log"

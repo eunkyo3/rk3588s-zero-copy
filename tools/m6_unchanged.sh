@@ -44,6 +44,12 @@ fail() {
 
 [ -f build/CMakeCache.txt ] && [ -x build/m6_arms_dump ] || fail "no build/ with m6_arms_dump: build this commit first"
 [ ! -e "$OUT" ] || fail "$OUT exists"
+[ "$(readlink -f "$REF_DIR")" != "$(readlink -f .)" ] || fail "REF_DIR is this repository"
+# The build under check is this checkout's commit, with no local change, and up to date.
+[ -z "$(git status --porcelain -- src tools tests CMakeLists.txt)" ] || fail "the checkout has local changes"
+[ "$(sed -n 's/^CODE_COMMIT:[A-Z]*=//p' build/CMakeCache.txt)" = "$(git rev-parse HEAD)" ] ||
+    fail "build/ was not built at the checkout's commit"
+cmake --build build -j4 >/dev/null || fail "building this checkout failed"
 echo "$VIDEO_SHA256  $VIDEO" | sha256sum -c --status - || fail "$VIDEO: SHA-256 is not $VIDEO_SHA256"
 ref_commit=$(git rev-parse "$REF_TAG^{commit}") || fail "no tag $REF_TAG: git fetch --tags"
 commit=$(sed -n 's/^CODE_COMMIT:[A-Z]*=//p' build/CMakeCache.txt)
@@ -92,6 +98,14 @@ flags() {
         "$1/build/CMakeFiles/core.dir/flags.make" | sed "s|$2|<repo>|g"
 }
 flags . "$(pwd)" >"$OUT/flags_m6.txt"
+# libyuv as it was built for By (M6 §1): its flags and definitions, HAVE_JPEG among them when CMake found
+# libjpeg, which is libyuv's default.
+for t in yuv_common_objects yuv_neon64 yuv_sve core_by; do
+    d=$(find build -type d -name "$t.dir" | head -n 1)
+    [ -n "$d" ] && [ -f "$d/flags.make" ] || fail "no flags.make for $t"
+    echo "== $t"
+    grep -E '^(C|CXX)_(FLAGS|DEFINES|INCLUDES) = ' "$d/flags.make" | sed "s|$(pwd)|<repo>|g"
+done >"$OUT/flags_libyuv.txt"
 flags "$REF_DIR" "$REF_DIR" >"$OUT/flags_freeze_m3.txt"
 {
     echo "# start_time_utc: $start"

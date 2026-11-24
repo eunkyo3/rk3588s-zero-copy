@@ -11,7 +11,7 @@
 #include "preprocess/backend.h"
 
 // A backend whose bind copies into a bound input buffer can give that buffer back: what the NPU read.
-// For tools only (tools/m6_rc_check).
+// For tools only (tools/m6_arms_dump).
 class InputReader {
 public:
     virtual ~InputReader() = default;

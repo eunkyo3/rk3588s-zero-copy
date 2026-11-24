@@ -78,11 +78,13 @@ public:
             CHECK(sl.fd >= 0, "%s allocation failed", kHeap);
             sl.virt = static_cast<uint8_t*>(mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_SHARED, sl.fd, 0));
             CHECK(sl.virt != MAP_FAILED, "mmap of slot failed");
-            sync(sl.fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);  // the border, once
-            std::memset(sl.virt, kPad, size_);
-            sync(sl.fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
             sl.rga = importbuffer_fd(sl.fd, static_cast<int>(size_));
             CHECK(sl.rga, "importbuffer_fd(slot) failed");
+            // The border, once, after RGA has the buffer: the heap syncs the cache for the devices attached
+            // to it (as cpu_direct.cpp fills its slots after their registration).
+            sync(sl.fd, DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE);
+            std::memset(sl.virt, kPad, size_);
+            sync(sl.fd, DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE);
             slots_.push_back(sl);
         }
         for (int k = 0; k < NpuContexts::kCount; k++) {

@@ -75,6 +75,8 @@ if(NOT libyuv_rev EQUAL 0 OR NOT libyuv_status EQUAL 0 OR NOT LIBYUV_COMMIT STRE
     message(FATAL_ERROR "${LIBYUV_DIR} is not a clean checkout of libyuv ${LIBYUV_PINNED_COMMIT} (M6 §1): "
                         "it is at '${LIBYUV_COMMIT}', changes: '${libyuv_changes}'")
 endif()
+# A checkout moved to another commit is seen at the next build, which then configures again and stops above.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LIBYUV_DIR}/.git/HEAD)
 add_subdirectory(${LIBYUV_DIR} third_party/libyuv EXCLUDE_FROM_ALL)
 
 add_library(core_by STATIC src/preprocess/cpu_yuv.cpp)

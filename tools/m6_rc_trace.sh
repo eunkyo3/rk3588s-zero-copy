@@ -23,6 +23,8 @@ command -v strace >/dev/null || fail "strace is not installed"
 [ -f "$VIDEO" ] || fail "no $VIDEO"
 [ ! -e "$OUT" ] || fail "$OUT exists"
 mkdir -p "$OUT"
+# First, so that the record has a start time of its own (PROTOCOL §1.4).
+tools/collect_env.sh >"$OUT/env.txt" || fail "collect_env.sh failed"
 
 "$BENCH" --variant Rc --channels 1 --source "$VIDEO" --warmup 5 --duration 20 --out "$OUT/run" \
     >"$OUT/run.log" 2>&1 &
@@ -34,11 +36,14 @@ for t in /proc/"$pid"/task/*; do
 done >"$OUT/threads.txt"
 # -ttt: every call with its time, seconds since the epoch, to place it among the run's frames.
 timeout 10 strace -f -ttt -e trace=ioctl -p "$pid" -o "$OUT/strace.txt" || true
-# The dma-bufs among the fds, each with the name of the exporter that made it (the heap's name for a slot).
+# The dma-bufs among the fds, each with its size and the name of the exporter that made it. A slot is a
+# buffer of the slot heap with the model input's size; the decoder's buffers come from the same heap (A1)
+# and are larger.
 for f in /proc/"$pid"/fd/*; do
     n=${f##*/}
     exp=$(sed -n 's/^exp_name:[[:space:]]*//p' "/proc/$pid/fdinfo/$n" 2>/dev/null || true)
-    printf '%s\t%s\t%s\n' "$n" "$(readlink "$f" 2>/dev/null || true)" "$exp"
+    size=$(sed -n 's/^size:[[:space:]]*//p' "/proc/$pid/fdinfo/$n" 2>/dev/null || true)
+    printf '%s\t%s\t%s\t%s\n' "$n" "$(readlink "$f" 2>/dev/null || true)" "$exp" "$size"
 done >"$OUT/fds.tsv"
 wait "$pid" || fail "bench_main failed: see $OUT/run.log"
 [ -s "$OUT/strace.txt" ] || fail "the trace is empty"

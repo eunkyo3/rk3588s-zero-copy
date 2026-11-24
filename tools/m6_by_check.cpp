@@ -11,12 +11,20 @@
 //     (yuv_resize_luma) through OpenCV's COLOR_YUV2RGB_NV12 with a flat chroma of 128, B's inside
 //     letterbox_nv12 on the same frame. With luma between 16 and 235 and that chroma, the conversion
 //     maps different luma values to different bytes, so equal bytes mean equal luma. 20 random frames
-//     and one whose last row and column differ from their neighbours.
-// Reported, not judged: over the rest of the plane, By's luma against B's through the same conversion
-// (libyuv's box rounds down, OpenCV's rounds to nearest, M6's disclosure), and By's whole tensor
-// against B's on the random frames.
+//     and one whose last row and column differ from their neighbours;
+//   - the rest of the luma plane within 2 levels of B's through that conversion, on the same frames of
+//     random luma: libyuv's box rounds down and OpenCV's to nearest (M6's disclosure), which is at most
+//     one luma level, and at most 2 bytes after the conversion's slope of 1.164. A box that starts one
+//     pixel off would differ by tens of levels on such frames;
+//   - the place of each box, exactly. Luma: with only the input columns 3c+1 to 3c+3 bright, output
+//     column c is bright and its two neighbours stay dark, and the same for rows. Chroma: with only the
+//     chroma columns 3c to 3c+2 blue, the two output columns of chroma column c are blue and their
+//     neighbours grey, and the same for rows. A box one pixel or one chroma pair off spreads over two
+//     output columns.
+// Reported, not judged: the mean difference of that luma against B's, and By's whole tensor against B's
+// on the random frames.
 //
-// Usage: m6_by_check <out_dir>
+// Usage: m6_by_check [out_dir]   (default results/check/<UTC>_m6_by_check)
 //   <out_dir>/check.csv  "# key: value" header lines (PROTOCOL §1.4, run kind check), then key,value
 // Exit code 0 when it passed.
 #include <algorithm>
@@ -85,9 +93,7 @@ const uint8_t* px(const std::vector<uint8_t>& slot, int x, int y) { return &slot
 int main(int argc, char** argv) {
     pin_current_thread({4, 5, 6, 7});
     cv::setNumThreads(1);  // PROTOCOL §8
-    if (argc < 2)
-        die("usage: m6_by_check <out_dir>");
-    const std::string out = argv[1];
+    const std::string out = argc > 1 ? argv[1] : "results/check/" + utc_now("%Y%m%dT%H%M%SZ") + "_m6_by_check";
     std::filesystem::create_directories(out);
     const Header header = {
         {"start_time_utc", utc_now("%Y-%m-%dT%H:%M:%SZ")},
@@ -151,6 +157,50 @@ int main(int argc, char** argv) {
         quadrants += ok;
     }
 
+    // ---- the place of each box: one bright luma stripe, one blue chroma stripe, by column and by row ----
+    int stripes = 0;
+    constexpr int kStripes = 4;
+    {
+        const int c = 211, r = 97;      // an output luma column and row, away from the edges
+        const int cc = 105, cr = 48;    // an output chroma column and row
+        for (int vertical = 0; vertical < 2; vertical++) {
+            // Luma: the three input columns (rows) of output column c (row r), B's shifted box (A4).
+            f.fill(16, 128, 128);
+            for (int y = 0; y < kH; y++)
+                for (int x = 0; x < kW; x++)
+                    if (vertical ? (x >= 3 * c + 1 && x <= 3 * c + 3) : (y >= 3 * r + 1 && y <= 3 * r + 3))
+                        f.luma(x, y) = 235;
+            auto slot = by(f);
+            bool ok = true;
+            for (int k = 0; k < band.h && vertical; k += 5)
+                ok &= px(slot, c, band.y + k)[1] >= 250 && px(slot, c - 1, band.y + k)[1] <= 5 &&
+                      px(slot, c + 1, band.y + k)[1] <= 5;
+            for (int k = 0; k < band.w && !vertical; k += 5)
+                ok &= px(slot, k, band.y + r)[1] >= 250 && px(slot, k, band.y + r - 1)[1] <= 5 &&
+                      px(slot, k, band.y + r + 1)[1] <= 5;
+            stripes += ok;
+            // Chroma: the three chroma columns (rows) of output chroma column cc (row cr), not shifted.
+            f.fill(128, 128, 128);
+            for (int y = 0; y < kH / 2; y++)
+                for (int x = 0; x < kW / 2; x++)
+                    if (vertical ? (x >= 3 * cc && x <= 3 * cc + 2) : (y >= 3 * cr && y <= 3 * cr + 2)) {
+                        f.uv[size_t(y) * kStride + 2 * x] = 240;      // U: blue
+                        f.uv[size_t(y) * kStride + 2 * x + 1] = 110;  // V
+                    }
+            slot = by(f);
+            auto blue = [&](int x, int y) { return int(px(slot, x, y)[2]) - int(px(slot, x, y)[0]) >= 100; };
+            auto grey = [&](int x, int y) { return std::abs(int(px(slot, x, y)[2]) - int(px(slot, x, y)[0])) <= 3; };
+            ok = true;
+            for (int k = 0; k < band.h && vertical; k += 5)
+                ok &= blue(2 * cc, band.y + k) && blue(2 * cc + 1, band.y + k) && grey(2 * cc - 1, band.y + k) &&
+                      grey(2 * cc + 2, band.y + k);
+            for (int k = 0; k < band.w && !vertical; k += 5)
+                ok &= blue(k, band.y + 2 * cr) && blue(k, band.y + 2 * cr + 1) && grey(k, band.y + 2 * cr - 1) &&
+                      grey(k, band.y + 2 * cr + 2);
+            stripes += ok;
+        }
+    }
+
     // ---- the last row and column of the luma plane against B's, through the same colour conversion ----
     std::mt19937 rng(20261124);
     std::uniform_int_distribution<int> level(16, 235);
@@ -205,7 +255,7 @@ int main(int argc, char** argv) {
     }
 
     const bool passed = channel_order == 3 && band_not_white == 0 && border_not_pad == 0 && quadrants == 4 &&
-                        edge_frames_equal == kEdgeFrames;
+                        stripes == kStripes && edge_frames_equal == kEdgeFrames && inner_max <= 2;
     char buf[64];
     auto num = [&](double v) {
         std::snprintf(buf, sizeof buf, "%.4f", v);
@@ -216,13 +266,14 @@ int main(int argc, char** argv) {
         {"band_elements_not_white", std::to_string(band_not_white)},
         {"border_elements_not_114", std::to_string(border_not_pad)},
         {"quadrants_ok", std::to_string(quadrants) + " of 4"},
+        {"stripes_ok", std::to_string(stripes) + " of " + std::to_string(kStripes)},
         {"edge_frames", std::to_string(kEdgeFrames)},
         {"edge_frames_equal_to_b", std::to_string(edge_frames_equal)},
         {"edge_bytes", std::to_string(edge_bytes)},
         {"edge_bytes_differing", std::to_string(edge_bytes_differ)},
-        {"reported_inner_bytes", std::to_string(inner_bytes)},
+        {"inner_bytes", std::to_string(inner_bytes)},
+        {"inner_max_abs_diff", std::to_string(inner_max) + " (at most 2)"},
         {"reported_inner_bytes_differing", std::to_string(inner_differ)},
-        {"reported_inner_max_abs_diff", std::to_string(inner_max)},
         {"reported_inner_mean_diff_by_minus_b", num(inner_signed / double(inner_bytes))},
         {"reported_tensor_mae_by_vs_b", num(tensor_abs / double(tensor_bytes))},
         {"reported_tensor_mean_diff_by_minus_b", num(tensor_signed / double(tensor_bytes))},
