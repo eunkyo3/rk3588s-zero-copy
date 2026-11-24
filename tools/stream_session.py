@@ -256,6 +256,9 @@ M6_NOT_RUN_WHY = {}  # arm -> why it is not run, in one sentence that names the 
 # supersedes here (results/m6/<name>). They stay where they are and are reported, and neither the session tool
 # nor the report counts their runs.
 M6_SUPERSEDED = ()
+# The stage in docs/notes/env.md whose commit an m6 session's code must equal: freeze-m6, and for a sweep rerun
+# under an amendment that changes the code, that amendment's Release (amend-A<n>), which the amendment puts here.
+M6_CODE_TAG = "freeze-m6"
 M6_CODE_PATHS = ("src", "tools", "tests", "CMakeLists.txt")  # M6 §9: what an m6 run's code is
 SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, results/<kind>/<UTC>_<sweep>
     "main": ((1, 2, 4, 8, 12, 16, 32), "main", ("B", "C"), "comparison"),
@@ -791,6 +794,18 @@ def cpf_affinity_problems(window_start, window_end):
         if wrong:
             problems.append(f"Cpf: pipeline threads not allowed cpu 0-7 {when}: {', '.join(wrong)} (rule 5, M6 §4)")
     return problems
+
+
+def m6_run_problems(variant, env, threads_rows):
+    """(reasons, external) for a finished run of an M6 arm. env: its env.json as a dict, or None if it cannot be
+    read; threads_rows: the rows of its threads.csv. A run whose env.json does not name its arm is the setup's
+    fault and stops the session (external is then a text, M6 §1). For Cpf, M6 §4's rule 5 gives the reasons."""
+    got = "unreadable env.json" if env is None else env.get("m6", {}).get("arm")
+    if got != variant:
+        return [f"the run's env.json names arm {got!r}, not {variant} (M6 §1)"], "a run's options are not its arm's"
+    if variant == "Cpf":
+        return cpf_affinity_problems(env.get("threads_at_window_start", []), threads_rows), None
+    return [], None
 
 
 def sweep_plan(sweep, counts=None):
@@ -1524,16 +1539,13 @@ class Session:
             if phase in M6_PHASES:  # M6 §1: the run is its arm's; M6 §4: rule 5 for Cpf
                 try:
                     env = json.loads((run_dir / "env.json").read_text(encoding="utf-8"))
-                except (OSError, ValueError) as e:
-                    env = {"m6": {"arm": f"unreadable env.json ({e!r})"}}
-                got = env.get("m6", {}).get("arm")
-                if got != variant:
-                    o.reasons.append(f"the run's env.json names arm {got!r}, not {variant} (M6 §1)")
-                    o.external = "a run's options are not its arm's"
+                except (OSError, ValueError):
+                    env = None
+                reasons, external = m6_run_problems(variant, env, read_csv(run_dir / "threads.csv")[1])
+                o.reasons += reasons
+                if external:
+                    o.external = external
                     return
-                if variant == "Cpf":
-                    o.reasons += cpf_affinity_problems(env.get("threads_at_window_start", []),
-                                                       read_csv(run_dir / "threads.csv")[1])
             summary = {r["key"]: r["value"] for r in rows}
             ch_rows = read_csv(channels_path)[1]
             samples = read_csv(run_dir / "samples.csv")[1]
@@ -1774,7 +1786,7 @@ def m6_code_problem(freeze, git=None):
         return f"build/ was built at {built}, and the checkout is at {head}: build this commit (M6 §9)"
     code, _ = git(["diff", "--quiet", freeze, "HEAD", "--", *M6_CODE_PATHS])
     if code != 0:
-        return (f"the checkout's {', '.join(M6_CODE_PATHS)} differ from freeze-m6's ({freeze}), or git cannot "
+        return (f"the checkout's {', '.join(M6_CODE_PATHS)} differ from {M6_CODE_TAG}'s ({freeze}), or git cannot "
                 "compare them (M6 §9)")
     code, changed = git(["status", "--porcelain", "--", *M6_CODE_PATHS])
     if code != 0 or changed:
@@ -1788,7 +1800,10 @@ def m6_order_problem(name):
     if freeze == "none":
         return (f"freeze-m6 comes before M6's runs, and {ENV_MD} has no row for it with its commit and created_at "
                 "(M6 §8)")
-    problem = m6_code_problem(freeze)
+    code = registered_commit(M6_CODE_TAG)
+    if code == "none":
+        return f"{ENV_MD} has no row for {M6_CODE_TAG}, whose code M6's runs use (M6 §9)"
+    problem = m6_code_problem(code)
     if problem:
         return problem
     if progress(name) == "complete":

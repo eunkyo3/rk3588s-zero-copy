@@ -28,7 +28,8 @@ Every record must come from one build: the same commit in each, a full commit an
 The order M6 §8 step 3 gives is checked on the records' start times: By's three in their order; m6_rc_trace
 and the m6_check session, whose runs have measurement windows, after m6_unchanged and m6_by_equivalence; and
 m6_check, the arms' 10 s runs, last. That the outcomes were committed before those runs is shown by the
-commits' times, not here.
+commits' times: the records of m6_unchanged, m6_by_check and m6_by_equivalence must be in a git commit whose
+time is before the starts of m6_rc_trace and m6_check.
 
 Usage, from the repository: python3 tools/m6_checks.py [--results DIR] [--out FILE]
   --results  where the records are (default results/check)
@@ -63,6 +64,7 @@ UNCHANGED_SOURCES = (
     "src/core/yolov8_post_neon.cpp", "src/core/yolov10_post.cpp")
 VIDEO_1 = ("pexels_36330861.mp4", "435a6b05ffb60cf1f0bb4e60c86c8a2f5d5a56a5aa9ca145d845c9a5fffc37ce")  # video ①
 BY_FRAMES = 1000  # M6 §8 step 3, "By", 2
+MODEL_SHA256 = "04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee"  # M1's YOLOv8n (M6 §1)
 HOLDOUT = ("pexels_29130409.mp4", "pexels_29969146.mp4", "pixabay_180386.mp4")  # A8: videos ②, ③, ④
 SYNC = re.compile(r"^(\d+)\s+(\d+\.\d+)\s+ioctl\((\d+),\s*DMA_BUF_IOCTL_SYNC")
 TRIM_S = 0.5  # the trace's first and last half second are left out: strace attaches and detaches there
@@ -263,9 +265,34 @@ def by_input_problems(j, source_sha):
     source = Path(str(headers.get("B", {}).get("source", ""))).name
     if source != VIDEO_1[0] or source_sha != VIDEO_1[1]:
         problems.append(f"the source is {source} with SHA-256 {source_sha}, not video ① ({VIDEO_1[0]})")
+    if any(headers.get(k, {}).get("model_sha256") != MODEL_SHA256 for k in ("B", "C", "R")):
+        problems.append("the model is not M1's YOLOv8n")
     if not isinstance(j.get("pass"), bool):
         problems.append("the check gives no verdict")
     return problems
+
+
+def committed_problems(commit_times, starts):
+    """Why the outcomes are not shown committed before the runs with a measurement window (M6 §8 step 3); []
+    if they are. commit_times: {record: the time of the first commit that holds it, or None}; starts: {record:
+    start time}."""
+    problems = []
+    for record in ("m6_unchanged", "m6_by_check", "m6_by_equivalence"):
+        t = commit_times.get(record)
+        if t is None:
+            problems.append(f"{record} is in no commit")
+            continue
+        problems += [f"{record} was committed at {t:%Y-%m-%dT%H:%M:%SZ}, not before {later} started"
+                     for later in ("m6_rc_trace", "m6_check") if t >= starts[later]]
+    return problems
+
+
+def first_commit_time(path):
+    """The committer time of the first commit that holds anything under path, or None."""
+    r = subprocess.run(["git", "-c", f"safe.directory={Path.cwd()}", "log", "--reverse", "--format=%ct", "--",
+                        str(path)], capture_output=True, text=True)
+    lines = r.stdout.split()
+    return dt.datetime.fromtimestamp(int(lines[0]), dt.timezone.utc) if r.returncode == 0 and lines else None
 
 
 def holdout_input_problems(j):
@@ -421,6 +448,9 @@ def check(results, m1_default=m2_checks.M1_DEFAULT_RUN):
     starts = {name: start_of(dirs[name], name) for name in RECORDS}
     rows += [(f"start_{n}", f"{t:%Y-%m-%dT%H:%M:%SZ}") for n, t in starts.items()]
     judge("order", order_problems(starts))
+    committed = {n: first_commit_time(dirs[n]) for n in ("m6_unchanged", "m6_by_check", "m6_by_equivalence")}
+    rows += [(f"committed_{n}", f"{t:%Y-%m-%dT%H:%M:%SZ}" if t else "not committed") for n, t in committed.items()]
+    judge("committed_before_the_runs", committed_problems(committed, starts))
     judge("one_build", commit_problems(commits))
     rows.append(("passed", "0" if failed else "1"))
     return rows, not failed

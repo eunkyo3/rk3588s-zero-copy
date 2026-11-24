@@ -78,6 +78,8 @@ cmake -S "$REF_DIR" -B "$REF_DIR/build" -DCMAKE_BUILD_TYPE="$build_type" -DCODE_
 cmake --build "$REF_DIR/build" -j4 --target core m6_arms_dump >/dev/null || fail "building $REF_DIR failed"
 
 mkdir -p "$OUT" || fail "cannot create $OUT"
+# First, so that the record has a start time of its own whatever fails below (PROTOCOL §1.4).
+tools/collect_env.sh >"$OUT/env.txt" || fail "collect_env.sh failed"
 {
     echo "start_time_utc: $start"
     echo "run_kind: check"

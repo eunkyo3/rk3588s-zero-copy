@@ -119,6 +119,44 @@ class CpfRule(unittest.TestCase):
         self.assertTrue(ss.cpf_affinity_problems(pinned, pinned))
 
 
+class RunOfAnArm(unittest.TestCase):
+    """What the session's judge takes from a finished M6 run (tools/stream_session.py, m6_run_problems)."""
+
+    ROWS = [{"comm": "npu-0", "affinity": "0-7"}, {"comm": "metrics", "affinity": "0"}]
+
+    def env(self, arm, **threads):
+        t = {"npu-0": "0-7", "metrics": "0", **threads}
+        return {"m6": {"arm": arm}, "threads_at_window_start": [{"comm": k, "affinity": v} for k, v in t.items()]}
+
+    def test_a_run_of_its_arm(self):
+        for arm in ss.M6_ARMS:
+            pinned = arm != "Cpf"
+            env = self.env(arm, **({"npu-0": "4-7"} if pinned else {}))
+            self.assertEqual(ss.m6_run_problems(arm, env, self.ROWS), ([], None), arm)
+
+    def test_another_arm_stops_the_session(self):
+        reasons, external = ss.m6_run_problems("Cpf", self.env("Cp"), self.ROWS)
+        self.assertTrue(reasons and external)
+        reasons, external = ss.m6_run_problems("C", {"variant": "C"}, self.ROWS)  # a binary without M6's key
+        self.assertTrue(reasons and external)
+
+    def test_an_unreadable_env_json_stops_the_session(self):
+        reasons, external = ss.m6_run_problems("B", None, self.ROWS)
+        self.assertTrue(reasons and external)
+
+    def test_cpf_with_a_pinned_thread_is_invalid_and_repeated(self):
+        end = [{"comm": "npu-0", "affinity": "4-7"}, {"comm": "metrics", "affinity": "0"}]
+        reasons, external = ss.m6_run_problems("Cpf", self.env("Cpf"), end)
+        self.assertEqual(len(reasons), 1)
+        self.assertIsNone(external)  # rule 5: an invalid run, not a wrong setup
+        reasons, external = ss.m6_run_problems("Cpf", self.env("Cpf", **{"npu-0": "4-7"}), self.ROWS)
+        self.assertEqual((len(reasons), external), (1, None))
+
+    def test_rule_5_is_cpfs_only(self):
+        end = [{"comm": "npu-0", "affinity": "4-7"}, {"comm": "metrics", "affinity": "0"}]
+        self.assertEqual(ss.m6_run_problems("Cp", self.env("Cp", **{"npu-0": "4-7"}), end), ([], None))
+
+
 class Code(unittest.TestCase):
     """M6 §9: a protocol session runs freeze-m6's code, built at the checkout's commit."""
 
@@ -150,6 +188,19 @@ class Code(unittest.TestCase):
 
     def test_local_changes(self):
         self.assertIn("local changes", self.problem(status=" M src/core/pipeline.cpp"))
+
+    def test_the_gate_compares_with_the_registered_stage(self):
+        self.assertEqual(ss.M6_CODE_TAG, "freeze-m6")
+        seen = []
+        with mock.patch.object(ss, "registered_commit", lambda tag: "none" if tag == "amend-A99" else "f" * 40), \
+                mock.patch.object(ss, "m6_code_problem", lambda commit: seen.append(commit)), \
+                mock.patch.object(ss, "progress", lambda name: "new"):
+            self.assertIsNone(ss.m6_order_problem("m6"))
+            self.assertEqual(seen, ["f" * 40])
+            with mock.patch.object(ss, "M6_CODE_TAG", "amend-A99"):  # a rerun whose amendment has no row yet
+                self.assertIn("amend-A99", ss.m6_order_problem("m6"))
+        with mock.patch.object(ss, "registered_commit", lambda tag: "none"):
+            self.assertIn("freeze-m6 comes before", ss.m6_order_problem("m6"))
 
     def test_the_code_paths(self):
         self.assertEqual(ss.M6_CODE_PATHS, ("src", "tools", "tests", "CMakeLists.txt"))  # M6 §9
@@ -379,7 +430,8 @@ class OneBuild(unittest.TestCase):
 
 
 def by_header(variant):
-    return {"variant": variant, "run_kind": "check", "source": "/home/pi/media/bench/pexels_36330861.mp4"}
+    return {"variant": variant, "run_kind": "check", "source": "/home/pi/media/bench/pexels_36330861.mp4",
+            "model_sha256": m6c.MODEL_SHA256}
 
 
 def holdout_header(name, variant="By"):
@@ -411,6 +463,11 @@ class ByInput(unittest.TestCase):
             j["headers"][k]["source"] = "/x/other.mp4"
         self.assertTrue(m6c.by_input_problems(j, m6c.VIDEO_1[1]))
 
+    def test_another_model(self):
+        j = self.check_json()
+        j["headers"]["R"]["model_sha256"] = "6a64" + "0" * 60
+        self.assertTrue(m6c.by_input_problems(j, m6c.VIDEO_1[1]))
+
     def test_another_run_kind_or_no_verdict(self):
         j = self.check_json()
         j["headers"]["B"]["run_kind"] = "equivalence"
@@ -428,6 +485,25 @@ class ByInput(unittest.TestCase):
         script = (ROOT / "tools/equivalence_holdout.sh").read_text(encoding="utf-8")
         for name in m6c.HOLDOUT:
             self.assertIn(name[:-len(".mp4")], script)
+
+
+class Committed(unittest.TestCase):
+    STARTS = {"m6_rc_trace": 100, "m6_check": 200}
+
+    def test_committed_before_both(self):
+        self.assertEqual(m6c.committed_problems(dict.fromkeys(("m6_unchanged", "m6_by_check", "m6_by_equivalence"), 50),
+                                                self.STARTS), [])
+
+    def test_not_committed_or_too_late(self):
+        import datetime as dt
+        t = lambda s: dt.datetime.fromtimestamp(s, dt.timezone.utc)  # noqa: E731
+        starts = {k: t(v) for k, v in self.STARTS.items()}
+        ok = dict.fromkeys(("m6_unchanged", "m6_by_check", "m6_by_equivalence"), t(50))
+        self.assertEqual(m6c.committed_problems(ok, starts), [])
+        self.assertEqual(len(m6c.committed_problems({**ok, "m6_by_equivalence": None}, starts)), 1)
+        self.assertEqual(len(m6c.committed_problems({**ok, "m6_by_equivalence": t(150)}, starts)), 1)  # after the trace
+        self.assertEqual(len(m6c.committed_problems({**ok, "m6_unchanged": t(100)}, starts)), 1)  # not before
+        self.assertEqual(len(m6c.committed_problems({**ok, "m6_by_check": t(250)}, starts)), 2)
 
 
 class StepOrder(unittest.TestCase):

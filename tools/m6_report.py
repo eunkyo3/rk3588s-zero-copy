@@ -215,9 +215,9 @@ def less_idle(values, idle, window_s):
     for prefix in ("schedstat", "system"):
         for name in ("total",) + CLUSTERS:
             key = f"{prefix}_cpu_total_s" if name == "total" else f"{prefix}_cpu{name}_s"
-            have = values.get(key) is not None and key in idle and "window_s" in idle
-            out[f"{prefix}_{name}_s"] = (values[key] - Fraction(idle[key]) * window_s / Fraction(idle["window_s"])
-                                         if have else None)
+            base, base_window = exact(idle.get(key)), exact(idle.get("window_s"))  # None for a cell without a number
+            have = values.get(key) is not None and base is not None and base_window
+            out[f"{prefix}_{name}_s"] = values[key] - base * window_s / base_window if have else None
     return out
 
 
