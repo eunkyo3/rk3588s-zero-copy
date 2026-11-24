@@ -383,6 +383,13 @@ class Trace(unittest.TestCase):
 
     def test_decoder_syncs_that_only_rc_has(self):
         self.assertTrue(any("every arm" in p for p in m6c.trace_problems(self.trace(), self.c(mpp=False))))
+        self.assertTrue(any("every arm" in p for p in m6c.trace_problems(self.trace(mpp=False), self.c())))
+
+    def test_decoder_syncs_at_another_rate(self):
+        t, c = self.trace(), self.c()
+        self.assertEqual(m6c.trace_problems(t, {**c, "decoder_sync_calls": int(c["decoder_sync_calls"] * 0.92)}), [])
+        self.assertTrue(any("every arm" in p for p in m6c.trace_problems(
+            t, {**c, "decoder_sync_calls": int(c["decoder_sync_calls"] * 0.85)})))
         self.assertEqual(m6c.trace_problems(self.trace(mpp=False), self.c(mpp=False)), [])  # an MPP without them
 
     def test_too_short_a_trace_of_either(self):

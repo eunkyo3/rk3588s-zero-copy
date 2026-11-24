@@ -70,6 +70,7 @@ BY_FRAMES = 1000  # M6 §8 step 3, "By", 2
 MODEL_SHA256 = "04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee"  # M1's YOLOv8n (M6 §1)
 HOLDOUT = ("pexels_29130409.mp4", "pexels_29969146.mp4", "pixabay_180386.mp4")  # A8: videos ②, ③, ④
 SYNC = re.compile(r"^(\d+)\s+(\d+\.\d+)\s+ioctl\((\d+),\s*DMA_BUF_IOCTL_SYNC")
+DECODER_RATE_TOLERANCE = 0.10  # Rc's and C's decoder-thread sync calls per second: the same within 10%
 TRIM_S = 0.5  # the trace's first and last half second are left out: strace attaches and detaches there
 
 
@@ -189,6 +190,11 @@ def trace_summary(strace_lines, threads, fd_exporters, bind_times):
     return out
 
 
+def decoder_rate(t):
+    """The decoder's threads' sync calls per traced second."""
+    return t["decoder_sync_calls"] / float(t["trace_s"]) if float(t["trace_s"]) > 0 else 0.0
+
+
 def trace_problems(t, c):
     """Why the traces are not Rc's registered behaviour; [] if they are. t: Rc's trace_summary; c: C's, from
     the same script.
@@ -196,7 +202,8 @@ def trace_problems(t, c):
     ("Rc and C do not read it with the CPU"), that is about what the arm does: of the arm's calls, two per
     frame, on a slot, from the NPU worker that binds it, and none on any other fd. MPP's own sync calls, from
     the decoder's threads, are in every arm; they must be on no slot, and C, which makes no sync call of its
-    own, must show them too and nothing else."""
+    own, must show them too, at the same rate within 10% (one channel of the same video, decoded at 30 fps in
+    both), and nothing else."""
     problems = []
     if t["frames_in_trace"] < 10:
         problems.append(f"only {t['frames_in_trace']} frames in the trace")
@@ -216,9 +223,10 @@ def trace_problems(t, c):
     if c["sync_calls"]:
         problems.append(f"C's trace has {c['sync_calls']} sync calls outside the decoder's threads: the split "
                         "between the decoder's calls and the arm's does not hold")
-    if bool(t["decoder_sync_calls"]) != bool(c["decoder_sync_calls"]):
-        problems.append(f"the decoder's threads make {t['decoder_sync_calls']} sync calls under Rc and "
-                        f"{c['decoder_sync_calls']} under C: they are not what every arm has")
+    rate_rc, rate_c = decoder_rate(t), decoder_rate(c)
+    if abs(rate_rc - rate_c) > DECODER_RATE_TOLERANCE * max(rate_rc, rate_c):
+        problems.append(f"the decoder's threads make {rate_rc:.1f} sync calls a second under Rc and {rate_c:.1f} "
+                        "under C: they are not what every arm has")
     return problems
 
 
@@ -485,7 +493,8 @@ def check(results, m1_default=m2_checks.M1_DEFAULT_RUN):
     starts = {name: start_of(dirs[name], name) for name in RECORDS}
     rows += [(f"start_{n}", f"{t:%Y-%m-%dT%H:%M:%SZ}") for n, t in starts.items()]
     judge("order", order_problems(starts))
-    committed = {n: first_commit_time(dirs[n]) for n in ("m6_unchanged", "m6_by_check", "m6_by_equivalence")}
+    outcome = {"m6_unchanged": "m6/dump.csv", "m6_by_check": "check.csv", "m6_by_equivalence": "check.json"}
+    committed = {n: first_commit_time(dirs[n] / f) for n, f in outcome.items()}  # the file with the outcome
     rows += [(f"committed_{n}", f"{t:%Y-%m-%dT%H:%M:%SZ}" if t else "not committed") for n, t in committed.items()]
     judge("committed_before_the_runs", committed_problems(committed, starts))
     judge("one_build", commit_problems(commits))
