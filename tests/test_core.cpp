@@ -783,6 +783,112 @@ void m4_run_rules() {
     expect(right == static_cast<int>(cases.size()), what);
 }
 
+// prereg/M6.md §1 and §8 step 2: the eight arms, and what an m6 run may be (core/run_rules.h).
+void m6_run_rules() {
+    const std::string freeze(40, 'a');
+    struct ArmCase {
+        const char* variant;
+        PostKind post;
+        const char* cores;
+        bool time_rknn;
+        const char* arm;
+    };
+    const ArmCase arm_cases[] = {
+        {"B", PostKind::M1, "a76", false, "B"},     {"Bd", PostKind::M1, "a76", false, "Bd"},
+        {"Rc", PostKind::M1, "a76", false, "Rc"},   {"C", PostKind::M1, "a76", false, "C"},
+        {"By", PostKind::M1, "a76", false, "By"},   {"C", PostKind::Neon, "a76", false, "Cp"},
+        {"C", PostKind::Neon, "all", false, "Cpf"}, {"C", PostKind::M1, "a76", true, "Ct"},
+        // not arms
+        {"A", PostKind::M1, "a76", false, ""},      {"none", PostKind::M1, "a76", false, ""},
+        {"B", PostKind::M1, "all", false, ""},      {"B", PostKind::M1, "a76", true, ""},
+        {"C", PostKind::M1, "all", false, ""},      {"C", PostKind::Neon, "all", true, ""},
+        {"C", PostKind::Neon, "a76", true, ""},     {"C", PostKind::V10, "a76", false, ""},
+        {"C", PostKind::M1, "a55", false, ""},      {"Rc", PostKind::Neon, "a76", false, ""},
+        {"By", PostKind::M1, "all", false, ""},
+    };
+    int arms_right = 0, arms_total = 0;
+    for (const ArmCase& a : arm_cases) {
+        arms_total++;
+        arms_right += m6_arm(a.variant, a.post, a.cores, a.time_rknn) == a.arm;
+    }
+    expect(arms_right == arms_total, "run_rules: m6_arm names the eight arms and nothing else");
+
+    M6Choice ok;  // arm C at the point, as the session tool runs it
+    ok.kind = "m6";
+    ok.variant = "C";
+    ok.freeze_m6 = freeze;
+    ok.channels = 8;
+    ok.condition = "main";
+    ok.warmup_s = 20;
+    ok.duration_s = 120;
+    ok.model_path = "models/yolov8n_i8.rknn";
+    ok.model_sha = kYolov8nSha256;
+    struct Case {
+        const char* what;
+        M6Choice c;
+        bool ok;
+    };
+    std::vector<Case> cases;
+    auto add = [&](const char* what, M6Choice c, bool accepted) { cases.push_back({what, c, accepted}); };
+    auto with = [](M6Choice c, auto f) {
+        f(c);
+        return c;
+    };
+    for (const ArmCase& a : arm_cases)
+        add(a.arm[0] ? "m6: an arm" : "m6: not an arm", with(ok, [&](M6Choice& c) {
+                c.variant = a.variant;
+                c.post = a.post;
+                c.cores = a.cores;
+                c.time_rknn = a.time_rknn;
+            }), a.arm[0] != 0);
+    add("m6 without freeze-m6", with(ok, [](M6Choice& c) { c.freeze_m6 = "none"; }), false);
+    add("m6 freeze-m6 not a SHA", with(ok, [](M6Choice& c) { c.freeze_m6 = "abc"; }), false);
+    add("m6 at 4 channels", with(ok, [](M6Choice& c) { c.channels = 4; }), false);
+    add("m6 aux", with(ok, [](M6Choice& c) { c.condition = "aux"; }), false);
+    add("m6 with a 10 s window", with(ok, [](M6Choice& c) { c.duration_s = 10; }), false);
+    add("m6 with a 5 s warm-up", with(ok, [](M6Choice& c) { c.warmup_s = 5; }), false);
+    add("m6 staggered", with(ok, [](M6Choice& c) { c.stagger = true; }), false);
+    add("m6 with K = 4", with(ok, [](M6Choice& c) { c.prep_threads = 4; }), false);
+    add("m6 with another model file", with(ok, [](M6Choice& c) { c.model_sha = kYolov10nSha256; }), false);
+    add("m6 with another model path", with(ok, [](M6Choice& c) { c.model_path = "other.rknn"; }), false);
+    add("m6 with freeze-m3's commit", with(ok, [](M6Choice& c) { c.other_freeze = true; }), false);
+    // the other run kinds
+    M6Choice check = ok;
+    check.kind = "check";
+    check.freeze_m6 = "none";
+    check.channels = 1;
+    check.duration_s = 10;
+    add("check: any shape", check, true);
+    add("check Rc", with(check, [](M6Choice& c) { c.variant = "Rc"; }), true);
+    add("check By, time-rknn, all cores", with(check, [](M6Choice& c) {
+            c.variant = "By";
+            c.time_rknn = true;
+            c.cores = "all";
+        }), true);
+    add("check with freeze-m6's commit", with(check, [&](M6Choice& c) { c.freeze_m6 = freeze; }), true);
+    add("check freeze-m6 not a SHA", with(check, [](M6Choice& c) { c.freeze_m6 = "abc"; }), false);
+    for (const char* kind : {"comparison", "m1.1", "m2", "m3", "m4", "calibration", "equivalence", "reference"}) {
+        M6Choice other = check;
+        other.kind = kind;
+        add("another kind: B, C as before", other, true);
+        add("another kind: Rc", with(other, [](M6Choice& c) { c.variant = "Rc"; }), false);
+        add("another kind: By", with(other, [](M6Choice& c) { c.variant = "By"; }), false);
+        add("another kind: all cores", with(other, [](M6Choice& c) { c.cores = "all"; }), false);
+        add("another kind: time-rknn", with(other, [](M6Choice& c) { c.time_rknn = true; }), false);
+    }
+    int right = 0;
+    for (const auto& k : cases) {
+        const std::string problem = m6_rule_problem(k.c);
+        if (problem.empty() == k.ok)
+            right++;
+        else
+            std::printf("     %s: %s\n", k.what, problem.empty() ? "accepted" : problem.c_str());
+    }
+    char what[96];
+    std::snprintf(what, sizeof what, "run_rules: %zu combinations accepted or rejected as M6 says", cases.size());
+    expect(right == static_cast<int>(cases.size()), what);
+}
+
 }  // namespace
 
 int main() {
@@ -803,6 +909,7 @@ int main() {
     yolov10_map_rule();
     commit_sha_form();
     m4_run_rules();
+    m6_run_rules();
     std::printf("%d failure(s)\n", failures);
     return failures ? 1 : 0;
 }
