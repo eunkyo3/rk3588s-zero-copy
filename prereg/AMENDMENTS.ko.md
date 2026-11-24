@@ -704,3 +704,93 @@
 - Reason: M5 §8 4단계. 패키지와 도구는 서비스를 처음 시작하기 전에 확정했고, 3단계의 점검은 `freeze-m5` 전에 통과했다.
 - Affected data: 없음. 첫 점검 세션의 실행은 남겨 두고 위에 적었다. 스윕의 실행은 아직 하나도 하지 않았다.
 - Release: `amend-A16`. `freeze-m5`는 같은 커밋, 곧 이 항목을 더하는 PR의 머지 커밋에 붙는다. 그 `created_at`이 M5 실행의 기준 시각이다. Release `rkzc-v0.1.1`은 위 SHA-256의 파일을 담아 둘보다 먼저 공개한다(§8 2단계).
+
+## A17 — 2026-11-24 — M6: `freeze-m6` 전에 확정하는 값
+- Change: [M6.md](M6.ko.md) §8 4단계의 값을 확정하고, 그 본문의 네 가지 읽기를 밝힌다. M6.md는 바뀌지 않는다.
+  - **코드(§8 2단계):** 커밋 `7d8e520207cf6f8c18ff8d1d2a3e49e7ef7443e0`. `freeze-m6`의 커밋은 이 항목을 더하는 PR의 머지 커밋이며, 그 `src/`, `tools/`, `tests/`, `CMakeLists.txt`는 이 커밋의 것과 같다.
+    - **등록된 경로에서 `freeze-m3`와의 차이:** 파일 27개, 4,463줄 추가, 80줄 삭제.
+      - **새 파일:** `src/preprocess/rga_copy.cpp`(Rc), `src/preprocess/cpu_yuv.cpp`(By), 둘의 헤더 `src/preprocess/m6_backends.h`; `tools/m6_arms_dump.cpp`, `m6_by_check.cpp`, `m6_unchanged.sh`, `m6_rc_trace.sh`, `m6_checks.py`, `m6_report.py`, `tools/setup/fetch_libyuv.sh`; `tests/test_m6.py`, `tests/test_m6_report.py`.
+      - **§8 2단계가 든 대로 바뀐 파일:** `src/app/bench_main.cpp`, `src/core/pipeline.cpp`와 `.h`, `report.cpp`와 `.h`, `run_rules.cpp`와 `.h`, `CMakeLists.txt`, `tools/stream_session.py`, `tools/check_prereg_order.py`, `tests/test_core.cpp`.
+      - **By의 점검("`tools/equivalence_dump`로, By를 C 자리에")을 위해 바뀐 파일:** `tools/equivalence_dump.cpp`, `equivalence_check.py`, `equivalence.sh`, `equivalence_holdout.sh`는 요청하면 By를 C 자리에 둔다. 그 옵션이 없으면 전과 같이 동작한다.
+      - **`scripts/`는 바꾸지 않았다.** `scripts/setup_board.sh`와 `reproduce_m1.sh`는 `main`을 거부한다. `main`의 코드가 더는 `freeze-m3`와 같지 않기 때문이다. M3는 `v0.3-m3`에서, M5는 `v0.5-m5`에서 돌린다([reproduce.md](../docs/notes/reproduce.ko.md)).
+    - **새 옵션이 기본값일 때 B, Bd, C, Cp에서 달라지는 것:**
+      - 모든 머리말에 `prereg_m6_commit`, `freeze_m6_commit`, `libyuv_commit`이 생기고, `env.json`에 구성 이름을 담은 키 `m6`가 생긴다.
+      - 프레임 기록 하나가 104바이트에서 112바이트로 커진다. 8채널 실행 하나에 약 38 kB다.
+      - NPU 워커가 추론마다 분기 하나를 더 탄다. Ct의 옵션을 보는 분기다.
+      - `bench_main`이 By의 라이브러리와 libyuv를 정적으로 링크하므로, 바이너리와 인벤토리의 `link_bench_main` 줄이 달라진다. 공유 라이브러리는 늘지 않는다.
+      - `frames.csv`의 열, `summary.csv`의 행, `threads.csv`는 전과 같다. Ct만 열 하나와 행 여섯 개가 더 있다.
+    - **§8 2단계의 오브젝트 13개**는 이 빌드와, 보드에서 같은 컴파일러와 플래그로 만든 `freeze-m3` 커밋의 빌드에서 SHA-256이 같다([20261124T044548Z_m6_unchanged](../results/check/20261124T044548Z_m6_unchanged)). 두 목록이 같으므로 하나만 싣는다.
+
+      | 소스 | 오브젝트의 SHA-256 (두 빌드 공통) |
+      |---|---|
+      | `src/preprocess/cpu_common.cpp` | `19c900cd0840c36283a85e0c07b7fe34bbc3c91d1dd7235234411056bb29cc96` |
+      | `src/preprocess/cpu_copy.cpp` | `e99d168f8074409d14c5b0ab89c0de9d1a15e8c77f1a071850227bd4eb4bb2a7` |
+      | `src/preprocess/cpu_direct.cpp` | `ee2d7443b5d9e013f44618e993ccbdd2f217e9af93507f21060686299aff93ab` |
+      | `src/preprocess/cpu_sw.cpp` | `496ca33bed61058b4911338e624fe477b5870b87193a7b50157d3cd1a4d7c84b` |
+      | `src/preprocess/zero_copy_rga.cpp` | `7ddd5060afe89910654feddc79ad0211cdb469b10971cbf59456b437613fab06` |
+      | `src/core/npu.cpp` | `01db03a89aeeefa94e4ca84ea9fc2da1fef2519ff469cdc926b6a9020f929c14` |
+      | `src/core/video_source.cpp` | `99f57937d8fc579899aa735dc4feda4417782325e2708a1ca338162d59499e3a` |
+      | `src/core/slot_pool.cpp` | `08173a21643a49ee88027aef5c6efc26258fe359e7b47aad14fbd6c34f2d35da` |
+      | `src/core/metrics.cpp` | `dd8bc752ab0c405aaa8226060e9ed1a7a05bcb2e1b39b29b2addc9deeb8e0e2d` |
+      | `src/core/pipeline_post.cpp` | `28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a` |
+      | `src/core/yolov8_post.cpp` | `536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2` |
+      | `src/core/yolov8_post_neon.cpp` | `3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555` |
+      | `src/core/yolov10_post.cpp` | `b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8` |
+
+      기준 빌드는 `freeze-m3`의 git worktree에 `tools/m6_arms_dump.cpp`를 복사해 넣고 `CMakeLists.txt` 끝에 그 타깃 하나를 덧붙인 것이다. 그 밖에는 다른 것이 없다.
+  - **Rc의 힙:** `system-dma32`. RGA3가 여기에 쓸 수 있으므로 §1의 대체안은 쓰지 않는다.
+  - **libyuv의 커밋:** `0ec9f68d82634f6f3414aaaf780e03f9edf002b3`. 보드에서 빌드되므로 §1의 대체안은 쓰지 않는다.
+    - **넣는 방법:** `tools/setup/fetch_libyuv.sh`가 그 커밋의 git 체크아웃을 `third_party/libyuv`에 둔다. 이 디렉터리는 저장소에 들어 있지 않다. 디렉터리가 없으면 configure 단계가 스크립트를 실행하고, 그 커밋의 깨끗한 체크아웃이 아니면 멈춘다.
+    - **빌드된 상태:** libyuv의 CMake가 Ubuntu의 libjpeg를 찾아 `HAVE_JPEG`를 정의한다. libyuv의 기본 동작이다. GCC 13은 SME 파일을 컴파일하지 못해 libyuv가 그 파일들을 뺀다(`LIBYUV_DISABLE_SME`). By는 이 둘과 관련된 함수를 부르지 않는다. 플래그는 기록에 있다(`flags_libyuv.txt`).
+  - **By의 동등성: 통과. By를 돌린다.** 영상 ①의 1,000프레임에서 B에 대한 A5의 기준이며, R은 같은 실행에서 계산했다([20261124T044621Z_m6_by_equivalence](../results/check/20261124T044621Z_m6_by_equivalence)).
+
+    | 기준 | By 대 B | R 대 B | |
+    |---|---|---|---|
+    | 텐서 MAE | 1.5143 | 4.5384 | 통과 |
+    | 텐서 최소 PSNR | 42.16 dB | 28.52 dB | 통과 |
+    | (a) 두 문턱값 안의 쌍 | 51.34% | 28.37% | 통과 |
+    | (b) 일치하는 프레임 | 62.30% | 34.70% | 통과 |
+    | (c) 전체 박스 수 | 15,711개 (B는 15,740개): 0.18% | | 통과 (≤ 2%) |
+    | 모든 텐서의 테두리 114 | 예 | | 통과 |
+
+    - **By의 텐서는 빨강과 파랑에서 B보다 어둡다.** 평균 차이는 R, G, B 순으로 −1.82, +0.16, −2.18이다. 색차가 평평한 합성 프레임에서 By의 휘도는 B보다 평균 0.65바이트 낮고, 2바이트 넘게 낮은 곳은 없다. M6의 공개 항목은 약 반 단계를 예상했다.
+    - **보류 영상 점검:** A8이 C에 대해 한 대로, 영상 ②, ③, ④의 모든 프레임을 합쳐서 했다([20261124T044731Z_m6_by_holdout](../results/check/20261124T044731Z_m6_by_holdout)). 합친 것에서는 모든 기준이 성립한다(MAE 1.4871, R은 5.8061; (a) 51.90% 대 25.78%; (b) 64.50% 대 32.81%; (c) 0.91%). 영상 ④만 따로 보면 (c)가 −2.12%로 2%를 넘고, ②와 ③은 따로 봐도 통과한다. 이 값들은 보고만 하며 결정에 쓰지 않는다(§8 3단계).
+    - **판정을 돌린 곳:** 보드에는 초기화(M3) 뒤로 numpy가 없고, `tools/equivalence_check.py`는 numpy가 필요하다. 덤프는 보드에서 만들었다. 판정은 PC에서 같은 커밋의 같은 스크립트로, 보드에서 복사한 기록 파일에 대해 돌렸고, 파일의 SHA-256을 기록의 것과 대조했다. 각 기록에는 보드에서 실패한 출력과 PC의 출력이 함께 있다.
+  - **3단계의 나머지 점검 결과.** 모두 실행 종류 `check`이고, 모두 빌드 `7d8e520`에서 나왔으며, `tools/m6_checks.py`가 판정했다([20261124T052943Z_m6_checks](../results/check/20261124T052943Z_m6_checks)). 모든 점검이 통과했다.
+    - **바뀌지 않은 구성:** 위의 오브젝트. B, Bd, C, Cp는 영상 ①의 첫 100프레임에서 입력 텐서, NPU 출력, 검출 결과의 SHA-256이 이 빌드와 기준 빌드에서 같다. 모든 옵션을 기본값으로 둔 2채널 C 실행은 스레드, 친화도, 큐가 M1의 `32_main_C_2ch_r1`과 같다.
+    - **Rc:** NPU가 읽은 입력 버퍼와 출력이 같은 100프레임에서 C와 바이트 단위로 같다.
+    - **Rc의 추적**([20261124T050450Z_m6_rc_trace](../results/check/20261124T050450Z_m6_rc_trace)), 1채널, 10초: NPU 워커 셋이 `DMA_BUF_IOCTL_SYNC`를 100회 불렀고, 모두 슬롯 하나의 dma-buf(`system-dma32`, 1,228,800바이트)에 쌍으로 불렀다. 추적의 처음과 마지막 반 초를 뺀 구간에서 바인딩된 45프레임에 90회다. 파이프라인의 다른 스레드는 한 번도 부르지 않았다.
+    - **By의 기능 점검:** 채널 순서, 밴드, 테두리, 방향이 요구대로다. 마지막 행과 마지막 열은 21프레임에서 B와 같다. 2단계에서 더한 두 점검도 통과했다: 박스 하나하나의 위치(줄무늬 4개 중 4개), 그리고 휘도 평면의 나머지가 B와 2바이트 이내.
+    - **Cpf:** 측정 구간의 시작과 끝에서 파이프라인 스레드는 모두 cpu0–7에, 측정 스레드는 cpu0에만 허용돼 있다.
+    - **Ct:** 측정 구간의 추론 400회에 시간 기록 400회, 가장 작은 값은 스레드 CPU 1.03 ms다.
+    - **구성마다 한 번씩,** 10초 구간으로([20261124T050543Z_m6_check](../results/check/20261124T050543Z_m6_check)), 기본 실행 뒤에 B, Bd, Rc, C, By, Cp, Cpf, Ct 순으로 돌렸다. 모두 첫 시도에 유효했고 드롭은 없었다. 이 값 때문에 M6.md가 정한 것은 아무것도 바뀌지 않는다(§5).
+
+      | 구성 | 프로세스 CPU (s) | 지연 p50 (ms) | 지연 p99 (ms) |
+      |---|---|---|---|
+      | B | 3.67 | 35.6 | 47.0 |
+      | Bd | 3.56 | 21.2 | 34.4 |
+      | Rc | 1.66 | 27.1 | 33.8 |
+      | C | 1.55 | 29.7 | 43.8 |
+      | By | 2.64 | 33.1 | 51.8 |
+      | Cp | 1.48 | 29.7 | 42.7 |
+      | Cpf | 2.31 | 32.6 | 47.8 |
+      | Ct | 1.66 | 29.4 | 44.0 |
+
+      Ct: `rknn_run` 안에서 NPU 워커가 쓴 스레드 CPU는 0.465초로 프로세스 CPU의 28.0%다. 호출당 1.163 ms이고, 같은 구간의 벽시계 시간은 15.6 ms다.
+    - **3단계의 순서:** 바뀌지 않은 구성, By의 기능 점검, By의 동등성 기록은 2026-11-24T05:04:29Z에 커밋했다(`743bde7`). Rc의 추적은 05:04:51Z에, 구성별 실행은 05:15:56Z에 시작했다.
+  - **M6.md의 읽기.** 본문이 선택을 남기거나 쓰인 그대로는 만족할 수 없는 곳이다.
+    - **"디코더의 버퍼에는 없다"(§8 3단계, Rc의 추적).** MPP는 디코더의 스레드(`dec-<n>`과 `mpp_dec_parser`)에서 자기 버퍼에 `DMA_BUF_IOCTL_SYNC`를 직접 부른다. 1채널에서 10초에 600회이고, 2 MB 비트스트림 버퍼 둘과 4,177,920바이트 프레임 버퍼 넷에 부른다. 모든 구성에 있는 호출이다. 같은 방법으로 만든 C의 추적에도 같은 600회가 있고 다른 sync 호출은 없다. 어느 구성도 "없음"을 보일 수 없다. 이 문장은 §1("Rc와 C는 그것을 CPU로 읽지 않는다")과 함께 구성에 관한 것으로 읽는다. 디코더의 스레드 밖에서 나온 호출은 프레임당 둘이고, 슬롯에, NPU 워커에서 나오며, 다른 버퍼에는 없다. 디코더의 스레드는 슬롯을 건드리지 않는다. C는 디코더의 호출을 10% 이내의 같은 빈도로 보이고 그 밖의 호출은 없다. B의 횟수도 같은 방식으로 스레드별로 셌다([preprocess.md](../docs/notes/preprocess.ko.md)).
+      - **M6의 공개 항목에 없던 것:** 이 호출들은 모든 구성의 프로세스 CPU에, 디코더의 스레드 몫으로 들어 있다. §1의 sync 표는 슬롯만 센다.
+      - **플래그는 추적에서 읽지 않는다.** 보드의 strace가 플래그를 출력하지 않는다. Rc의 두 호출이 START(READ)와 END(READ)라는 것은 코드로 보인다.
+    - **"Cpf가 프레임을 드롭하면"(§5)과 1%p 규칙(§2).** 둘 다 적용한다. 집계에 드는 Cpf 실행 중 하나라도 측정 구간에서 Q1에서 프레임이 드롭되면, Cp의 드롭률과 상관없이 M6-H2의 실용 판정은 *판정 불가*다. 그리고 세 가설 모두와 같이, 가설이 든 두 구성의 평균 드롭률이 1%p 넘게 다르면 *판정 불가*다.
+    - **문턱값과 정확히 같은 값**은 문턱값을 만족한 것으로 본다. 보고서는 §2의 비율, 1%p 규칙, 4.75 fps, CV 표시를 기록의 십진 값에서 만든 정확한 분수로, 허용 오차 없이 비교한다.
+    - **보고서의 지연과 처리율**은 `summary.csv`의 반올림한 값이 아니라 `frames.csv`와 측정 구간의 개수로 계산한다. 마지막 자리가 이전 보고서의 표와 다를 수 있다.
+  - **재실행을 위해 정한 것(§5, §9):** 세션 도구와 보고서는 `M6_SUPERSEDED`에 든 세션의 실행을 세지 않는다. 세션의 코드는 `M6_CODE_TAG`가 가리키는 단계(`freeze-m6`)의 코드와 같아야 한다. 스윕을 다시 돌리는 수정 기록이 이 둘을 정한다.
+  - **점검의 이전 회차.** 점검은 세 번 했다. 한 회차 뒤에 도구가 두 번 바뀌었기 때문이다(§9, "처음부터 다시"). 회차 사이에 `src/`는 바뀌지 않았다.
+    - **`1bad68a`에서:** 측정 구간이 없는 네 점검이 통과했다. Rc의 첫 추적에서 MPP의 sync 호출이 드러났고, 판정 도구를 위의 읽기로 바꿨다.
+    - **`de64e35`에서:** 모든 점검이 통과했다([20261124T044115Z_m6_checks](../results/check/20261124T044115Z_m6_checks)). 그 뒤 `tools/check_prereg_order.py`가 덤프의 검출 파일을 머리말 없는 결과 파일로 판정했다. 이름이 `.jsonl`인데 머리말 줄이 없었기 때문이다. 덤프 도구는 이제 그 파일을 `.detections`로 쓴다.
+    - **그 기록들은 남겨 둔다.** `results/check/`의 20261124T0111Z부터 T0417Z까지다. 이전의 두 `m6_unchanged` 기록에서는 그 파일들의 이름만 바꿨고 내용은 그대로다(`renamed.txt`). By의 동등성은 세 회차 모두 같은 텐서와 같은 값을 냈다.
+  - **라이브러리 버전, 클럭, 냉각:** A7, A9, A10, A15와 같다. M3 §4가 고정한 키는 모두 `docs/notes/inventory_m1.txt`와 같다. 다른 22줄이 다르다: `os`, `link_bench_main`(By의 라이브러리와 libyuv), 그리고 M3의 초기화 뒤와 같이 libavutil의 파일과 Ubuntu의 libc, libX11, liblzma, zlib의 파일.
+- Reason: M6 §8 4단계. 3단계의 점검은 `freeze-m6` 전에 통과했고, 읽기는 스윕의 어떤 실행보다 먼저 밝힌다.
+- Affected data: 없음. 이전 회차의 점검 기록은 남겨 두고 위에 적었다. 스윕의 실행은 아직 하나도 없다.
+- Release: `amend-A17`. `freeze-m6`는 같은 커밋, 곧 이 항목을 더하는 PR의 머지 커밋을 가리킨다. 그 `created_at`이 M6 실행의 기준 시각이다.

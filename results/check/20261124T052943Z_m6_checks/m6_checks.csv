@@ -1,0 +1,101 @@
+# start_time_utc: 2026-11-24T05:29:43Z
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# prereg_m6_commit: 5a17d375d9aab77a302ec2295df886ee1257f3fd
+# run_kind: check
+# code_commit: 7d8e520207cf6f8c18ff8d1d2a3e49e7ef7443e0
+# measurement: the checks of prereg/M6.md §8 step 3, judged from their records; not a run
+key,value
+record_m6_unchanged,20261124T044548Z_m6_unchanged
+record_m6_rc_trace,20261124T050450Z_m6_rc_trace
+record_m6_by_check,20261124T044618Z_m6_by_check
+record_m6_by_equivalence,20261124T044621Z_m6_by_equivalence
+record_m6_by_holdout,20261124T044731Z_m6_by_holdout
+record_m6_check,20261124T050543Z_m6_check
+code_commit,7d8e520207cf6f8c18ff8d1d2a3e49e7ef7443e0
+objects_compared,13
+unchanged_arms,pass
+rc_equals_c,pass
+rc_trace_decoder_sync_calls,600
+rc_trace_decoder_sync_on_slots,0
+rc_trace_decoder_sync_threads,dec-1 mpp_dec_parser
+rc_trace_sync_calls,100
+rc_trace_sync_on_slots,100
+rc_trace_sync_not_from_npu_workers,0
+rc_trace_slot_heaps,system-dma32
+rc_trace_sync_on_other_fds,0
+rc_trace_frames_in_trace,45
+rc_trace_sync_in_trace,90
+rc_trace_trace_s,10.0
+rc_trace_paired,True
+c_trace_decoder_sync_calls,600
+c_trace_decoder_sync_on_slots,0
+c_trace_decoder_sync_threads,dec-1 mpp_dec_parser
+c_trace_sync_calls,0
+c_trace_sync_on_slots,0
+c_trace_sync_not_from_npu_workers,0
+c_trace_slot_heaps,none
+c_trace_sync_on_other_fds,0
+c_trace_frames_in_trace,45
+c_trace_sync_in_trace,0
+c_trace_trace_s,10.0
+c_trace_paired,True
+rc_trace,pass
+libyuv_commit,0ec9f68d82634f6f3414aaaf780e03f9edf002b3
+by_check_reported_inner_bytes_differing,8030343
+by_check_reported_inner_mean_diff_by_minus_b,-0.6468
+by_check_reported_tensor_mae_by_vs_b,1.0195
+by_check_reported_tensor_mean_diff_by_minus_b,-0.8076
+by_functional,pass
+m6_by_equivalence_a5,pass
+m6_by_equivalence_a5_border_114_b_and_c,pass
+m6_by_equivalence_a5_tensor_mae,pass
+m6_by_equivalence_a5_tensor_min_psnr,pass
+m6_by_equivalence_a5_a_pairs_within_both_thresholds,pass
+m6_by_equivalence_a5_b_frames_agreeing,pass
+m6_by_equivalence_a5_c_total_boxes,pass
+by_equivalence_input,pass
+m6_by_holdout_a5,pass
+m6_by_holdout_a5_border_114_b_and_c,pass
+m6_by_holdout_a5_tensor_mae,pass
+m6_by_holdout_a5_tensor_min_psnr,pass
+m6_by_holdout_a5_a_pairs_within_both_thresholds,pass
+m6_by_holdout_a5_b_frames_agreeing,pass
+m6_by_holdout_a5_c_total_boxes,pass
+by_holdout_input,pass
+by_is_run,yes
+by_arm_list,pass
+m6_check_session_status,completed
+m6_check_invalid_attempts,none
+m6_check_session,pass
+default_path,pass
+arms_not_run,none
+run_B,02_m6_check_B_8ch: process CPU 3.670 s in 10 s, latency p50 35.637 ms, p99 47.038 ms, drop rate 0.00000
+run_Bd,03_m6_check_Bd_8ch: process CPU 3.560 s in 10 s, latency p50 21.247 ms, p99 34.352 ms, drop rate 0.00000
+run_Rc,04_m6_check_Rc_8ch: process CPU 1.660 s in 10 s, latency p50 27.106 ms, p99 33.839 ms, drop rate 0.00000
+run_C,05_m6_check_C_8ch: process CPU 1.550 s in 10 s, latency p50 29.749 ms, p99 43.844 ms, drop rate 0.00000
+run_By,06_m6_check_By_8ch: process CPU 2.640 s in 10 s, latency p50 33.124 ms, p99 51.797 ms, drop rate 0.00000
+run_Cp,07_m6_check_Cp_8ch: process CPU 1.480 s in 10 s, latency p50 29.714 ms, p99 42.719 ms, drop rate 0.00000
+run_Cpf,08_m6_check_Cpf_8ch: process CPU 2.310 s in 10 s, latency p50 32.600 ms, p99 47.751 ms, drop rate 0.00000
+cpf_affinities,pass
+run_Ct,09_m6_check_Ct_8ch: process CPU 1.660 s in 10 s, latency p50 29.438 ms, p99 44.007 ms, drop rate 0.00000
+ct_rknn_run_calls,400
+ct_rknn_run_cpu_s,0.465
+ct_rknn_run_cpu_share,0.2802
+ct_rknn_run_cpu_mean_ms,1.1626
+ct_rknn_run_cpu_min_ns,1031039
+ct_rknn_run_wall_mean_ms,15.6254
+ct_timing,pass
+arms_runs,pass
+start_m6_unchanged,2026-11-24T04:45:48Z
+start_m6_rc_trace,2026-11-24T05:04:51Z
+start_m6_by_check,2026-11-24T04:46:18Z
+start_m6_by_equivalence,2026-11-24T04:46:21Z
+start_m6_by_holdout,2026-11-24T04:47:31Z
+start_m6_check,2026-11-24T05:15:56Z
+order,pass
+committed_m6_unchanged,2026-11-24T05:04:29Z
+committed_m6_by_check,2026-11-24T05:04:29Z
+committed_m6_by_equivalence,2026-11-24T05:04:29Z
+committed_before_the_runs,pass
+one_build,pass
+passed,1

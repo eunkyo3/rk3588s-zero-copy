@@ -1,0 +1,10 @@
+102263 bench_main
+102270 dec-1
+102271 mpp_dec_parser
+102272 mpp_dec_hal
+102273 pre-0
+102274 pre-1
+102275 npu-0
+102276 npu-1
+102277 npu-2
+102278 metrics
