@@ -251,6 +251,11 @@ M6_ORDERS = {1: M6_ARMS, 2: M6_ARMS[::-1], 3: ("By", "B", "Rc", "C", "Bd", "Cpf"
 # M6 §4, §5: the arms that are not run, as the amendment of M6 §8 step 4 says (By, if it does not pass A5's
 # criteria; an arm whose check failed). They are left out, and the order of the others stands.
 M6_NOT_RUN = ()
+M6_NOT_RUN_WHY = {}  # arm -> why it is not run, in one sentence that names the check's record; the report gives it
+# M6 §5, §9: after a defect an amendment fixes, the sweep is rerun whole. The amendment names the sessions it
+# supersedes here (results/m6/<name>). They stay where they are and are reported, and neither the session tool
+# nor the report counts their runs.
+M6_SUPERSEDED = ()
 M6_CODE_PATHS = ("src", "tools", "tests", "CMakeLists.txt")  # M6 §9: what an m6 run's code is
 SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, results/<kind>/<UTC>_<sweep>
     "main": ((1, 2, 4, 8, 12, 16, 32), "main", ("B", "C"), "comparison"),
@@ -1650,7 +1655,7 @@ def sweep_sessions(sweep, current=None):
     current."""
     pattern = re.compile(SESSION_NAME + re.escape(sweep) + "$")
     return sorted(d for d in Path("results", session_kind(sweep)).glob(f"*_{sweep}")
-                  if d.is_dir() and pattern.match(d.name)
+                  if d.is_dir() and pattern.match(d.name) and not (sweep == "m6" and d.name in M6_SUPERSEDED)
                   and (current is None or d.resolve() != Path(current).resolve()))
 
 
@@ -1757,8 +1762,8 @@ def registered_commit(tag):
 def m6_code_problem(freeze, git=None):
     """M6 §9: why this checkout is not freeze-m6's code built at its own commit, or None. git(args) -> (exit
     code, stdout); the default runs git in the repository."""
-    def run(args):
-        r = subprocess.run(["git", *args], capture_output=True, text=True)
+    def run(args):  # the session runs as root, and git refuses a checkout another user owns unless it is named safe
+        r = subprocess.run(["git", "-c", f"safe.directory={Path.cwd()}", *args], capture_output=True, text=True)
         return r.returncode, r.stdout.strip()
     git = git or run
     code, head = git(["rev-parse", "HEAD"])

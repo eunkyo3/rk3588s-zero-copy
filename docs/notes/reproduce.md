@@ -25,7 +25,7 @@ Two scripts set up a NanoPi R6C from FriendlyElec's image and run M1's H1 point 
 On the board, as the user `pi`:
 
 ```sh
-git clone https://github.com/eunkyo3/rk3588s-zero-copy.git ~/rk3588s-zero-copy
+git clone --branch v0.3-m3 https://github.com/eunkyo3/rk3588s-zero-copy.git ~/rk3588s-zero-copy
 cd ~/rk3588s-zero-copy
 sudo -v                                         # sudo's password once, before the jobs below
 sudo setsid nohup scripts/setup_board.sh --stream-key ~/bench_stream >~/setup.log 2>&1 &
@@ -33,7 +33,8 @@ sudo setsid nohup scripts/setup_board.sh --stream-key ~/bench_stream >~/setup.lo
 sudo COOLING="heatsink + always-on fan" AMBIENT_C=25 setsid nohup scripts/reproduce_m1.sh after >~/reproduce.log 2>&1 &
 ```
 
-- **The commit:** M3's runs use the code registered at `freeze-m3`, from a checkout that also has `freeze-m3`'s row in [env.md](env.md#registration). That row comes in the commit after the tag, so clone `main`, not the tag. Both scripts check that `src/`, `tools/`, `scripts/`, `tests/` and `CMakeLists.txt` equal `freeze-m3`'s.
+- **The commit:** M3's runs use the code registered at `freeze-m3`, from a checkout that also has `freeze-m3`'s row in [env.md](env.md#registration). That row comes in the commit after the tag `freeze-m3`, so clone the release tag `v0.3-m3`, which has both. Both scripts check that `src/`, `tools/`, `scripts/`, `tests/` and `CMakeLists.txt` equal `freeze-m3`'s.
+  - **Not `main`:** M6 added arms to the registered code ([prereg/M6.md](../../prereg/M6.md) §8), so `main` no longer equals `freeze-m3` in those paths, and the scripts refuse it. M5's measurement, whose tool imports `tools/stream_session.py`, runs from its tag `v0.5-m5` for the same reason.
 - **The repository must be at `/home/pi/rk3588s-zero-copy`.** M1's inventory names that path in the build's include paths, and the session compares them (M3 §4).
 - **Logs outside the repository:** a file in it would make the commit read `-dirty` in every record.
 - **`setsid nohup`** keeps each job running if the login ends. A setup cut short cannot be resumed: the board must be reset again (M3 §5).
