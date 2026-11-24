@@ -7,9 +7,12 @@ Records, each the latest of its name (<UTC>_<name>):
                      the input tensors, the NPU's outputs and the detections on 100 frames of video ① equal
                      those of freeze-m3's build. "Rc": the input buffer the NPU read equals C's slot, with
                      equal outputs.
-  m6_rc_trace        tools/m6_rc_trace.sh. "Rc": in a system-call trace of a short run, two
+  m6_rc_trace        tools/m6_rc_trace.sh. "Rc": in a system-call trace of a short run, the arm makes two
                      DMA_BUF_IOCTL_SYNC calls per frame, on a slot's dma-buf (a buffer of the slot heap with
-                     the model input's size), from an NPU worker, and none on any other fd. strace 6.8 does
+                     the model input's size), from an NPU worker, and none on any other fd. MPP makes sync
+                     calls of its own on its buffers, from the decoder's threads, in every arm: they are
+                     counted apart, must touch no slot, and a trace of C from the same script must show
+                     them and no other sync call (trace_problems has the reading). strace 6.8 does
                      not print the call's flags, so START(READ) and END(READ) are not read from the trace:
                      they are in the code (src/preprocess/rga_copy.cpp), and m6_unchanged shows that what the
                      NPU read through them is C's tensor.
@@ -124,28 +127,40 @@ def rc_data_problems(dump_m6):
     return problems
 
 
+def decoder_thread(comm):
+    """Whether a thread is the decoder's: the pipeline's decoder thread of a channel (dec-<n>), inside which
+    MPP's calls run, or one of MPP's own threads (mpp*)."""
+    return comm.startswith("dec-") or comm.startswith("mpp")
+
+
 def trace_summary(strace_lines, threads, fd_exporters, bind_times):
-    """What a trace of Rc shows (M6 §8 step 3, "Rc").
+    """What a trace of a run shows of its DMA_BUF_IOCTL_SYNC calls (M6 §8 step 3, "Rc").
 
     strace_lines: lines of `strace -f -ttt -e trace=ioctl -o`: "<tid> <epoch s> ioctl(<fd>, ...". threads:
     {tid: comm}. fd_exporters: {fd: (exporter name, size in bytes)} for the process's dma-bufs. bind_times:
     the epoch time of every frame's bind (t2b), in order.
-    Returns a dict: sync calls on slots (dma-bufs of a slot heap with the model input's size) and on other
-    fds; the calls not made by an NPU worker; and, over the trace without its first and last half second, cut
-    between two binds: the sync calls, the frames bound, and whether each worker's calls come in pairs on one
-    fd.
+    The calls are split by who makes them. MPP syncs its own buffers from the decoder's threads, 30 times a
+    second per channel, in every arm: those are the decoder's, not the arm's. Every other call is the arm's.
+    Returns a dict: the decoder's calls, and how many of them are on a slot (a dma-buf of a slot heap with the
+    model input's size); the arm's calls, on slots and on other fds, and those not made by an NPU worker; and,
+    over the trace without its first and last half second, cut between two binds: the arm's calls, the frames
+    bound, and whether each thread's calls come in pairs on one fd.
     """
     def slot(fd):
         exporter, size = fd_exporters.get(fd, ("", 0))
         return exporter in SLOT_HEAPS and size == SLOT_BYTES
 
-    calls = []  # (time, tid, fd)
+    calls, decoder = [], []  # (time, tid, fd): the arm's, the decoder's
     for line in strace_lines:
         m = SYNC.match(line)
         if m:
-            calls.append((float(m.group(2)), m.group(1), m.group(3)))
+            call = (float(m.group(2)), m.group(1), m.group(3))
+            (decoder if decoder_thread(threads.get(m.group(1), "")) else calls).append(call)
     times = [float(m.group(2)) for m in map(re.compile(r"^(\d+)\s+(\d+\.\d+)\s").match, strace_lines) if m]
-    out = {"sync_calls": len(calls),
+    out = {"decoder_sync_calls": len(decoder),
+           "decoder_sync_on_slots": sum(1 for _, _, fd in decoder if slot(fd)),
+           "decoder_sync_threads": " ".join(sorted({threads.get(tid, "?") for _, tid, _ in decoder})) or "none",
+           "sync_calls": len(calls),
            "sync_on_slots": sum(1 for _, _, fd in calls if slot(fd)),
            "sync_not_from_npu_workers": sum(1 for _, tid, _ in calls if not threads.get(tid, "").startswith("npu-")),
            "slot_heaps": " ".join(sorted({fd_exporters[fd][0] for _, _, fd in calls if fd in fd_exporters}))
@@ -161,8 +176,10 @@ def trace_summary(strace_lines, threads, fd_exporters, bind_times):
         out["frames_in_trace"] = sum(1 for t in bind_times if lo <= t <= hi)
         inside = [c for c in calls if lo <= c[0] <= hi]
         out["sync_in_trace"] = len(inside)
+        out["trace_s"] = f"{max(times) - min(times):.1f}"
     else:
         out["frames_in_trace"] = out["sync_in_trace"] = 0
+        out["trace_s"] = "0.0"
         inside = []
     by_tid = {}  # between two cuts, so that a bind strace attached in the middle of does not count
     for _, tid, fd in inside:
@@ -172,39 +189,57 @@ def trace_summary(strace_lines, threads, fd_exporters, bind_times):
     return out
 
 
-def trace_problems(t):
-    """Why a trace_summary is not Rc's registered behaviour; [] if it is."""
+def trace_problems(t, c):
+    """Why the traces are not Rc's registered behaviour; [] if they are. t: Rc's trace_summary; c: C's, from
+    the same script.
+    M6 §8 step 3 asks for "two syncs per frame on the slot and none on the decoder's buffer". Read with M6 §1
+    ("Rc and C do not read it with the CPU"), that is about what the arm does: of the arm's calls, two per
+    frame, on a slot, from the NPU worker that binds it, and none on any other fd. MPP's own sync calls, from
+    the decoder's threads, are in every arm; they must be on no slot, and C, which makes no sync call of its
+    own, must show them too and nothing else."""
     problems = []
     if t["frames_in_trace"] < 10:
         problems.append(f"only {t['frames_in_trace']} frames in the trace")
     if t["sync_in_trace"] != 2 * t["frames_in_trace"]:
         problems.append(f"{t['sync_in_trace']} sync calls for {t['frames_in_trace']} frames, not two per frame")
     if t["sync_on_other_fds"]:
-        problems.append(f"{t['sync_on_other_fds']} sync calls on fds that are not slots")
+        problems.append(f"{t['sync_on_other_fds']} of the arm's sync calls on fds that are not slots")
     if t["sync_not_from_npu_workers"]:
-        problems.append(f"{t['sync_not_from_npu_workers']} sync calls from threads other than the NPU workers")
+        problems.append(f"{t['sync_not_from_npu_workers']} of the arm's sync calls from threads other than the NPU "
+                        "workers")
     if not t["paired"]:
         problems.append("a worker's sync calls do not come in pairs on one fd")
+    if t["decoder_sync_on_slots"]:
+        problems.append(f"{t['decoder_sync_on_slots']} sync calls on a slot from the decoder's threads")
+    if c["frames_in_trace"] < 10:
+        problems.append(f"only {c['frames_in_trace']} frames in C's trace")
+    if c["sync_calls"]:
+        problems.append(f"C's trace has {c['sync_calls']} sync calls outside the decoder's threads: the split "
+                        "between the decoder's calls and the arm's does not hold")
+    if bool(t["decoder_sync_calls"]) != bool(c["decoder_sync_calls"]):
+        problems.append(f"the decoder's threads make {t['decoder_sync_calls']} sync calls under Rc and "
+                        f"{c['decoder_sync_calls']} under C: they are not what every arm has")
     return problems
 
 
-def read_trace(d):
-    """trace_summary of a tools/m6_rc_trace.sh record."""
+def read_trace(d, variant="Rc"):
+    """(header, trace_summary) of one of the two runs of a tools/m6_rc_trace.sh record: Rc's, or C's."""
+    suffix = "" if variant == "Rc" else "_" + variant.lower()
     try:
-        threads = dict(l.split(" ", 1) for l in (d / "threads.txt").read_text().splitlines() if " " in l)
+        threads = dict(l.split(" ", 1) for l in (d / f"threads{suffix}.txt").read_text().splitlines() if " " in l)
         exporters = {}
-        for line in (d / "fds.tsv").read_text().splitlines():
+        for line in (d / f"fds{suffix}.tsv").read_text().splitlines():
             fd, _, exp, size = (line.split("\t") + ["", "", ""])[:4]
             if exp:
                 exporters[fd] = (exp, int(size or 0))
-        header, summary = keyed_csv(d / "run" / "summary.csv")
+        header, summary = keyed_csv(d / f"run{suffix}" / "summary.csv")
         t0 = ss.parse_utc(summary["warmup_start_utc"]).timestamp()
-        binds = sorted(t0 + int(f["t2b_ns"]) / 1e9 for f in ss.read_csv(d / "run" / "frames.csv")[1])
-        lines = (d / "strace.txt").read_text().splitlines()
+        binds = sorted(t0 + int(f["t2b_ns"]) / 1e9 for f in ss.read_csv(d / f"run{suffix}" / "frames.csv")[1])
+        lines = (d / f"strace{suffix}.txt").read_text().splitlines()
     except (OSError, KeyError, ValueError) as e:
-        raise Missing(f"cannot read the trace in {d}: {e!r}") from None
-    if header.get("variant") != "Rc":
-        raise Missing(f"{d}: the traced run is variant {header.get('variant')}, not Rc")
+        raise Missing(f"cannot read {variant}'s trace in {d}: {e!r}") from None
+    if header.get("variant") != variant:
+        raise Missing(f"{d}: the traced run is variant {header.get('variant')}, not {variant}")
     return header, trace_summary(lines, threads, exporters, binds)
 
 
@@ -365,9 +400,11 @@ def check(results, m1_default=m2_checks.M1_DEFAULT_RUN):
 
     # ---- Rc's trace ----
     head, t = read_trace(dirs["m6_rc_trace"])
-    commits["m6_rc_trace"] = head.get("code_commit", "")
+    head_c, tc = read_trace(dirs["m6_rc_trace"], "C")
+    commits["m6_rc_trace"], commits["m6_rc_trace C"] = head.get("code_commit", ""), head_c.get("code_commit", "")
     rows += [(f"rc_trace_{k}", str(v)) for k, v in t.items()]
-    judge("rc_trace", trace_problems(t))
+    rows += [(f"c_trace_{k}", str(v)) for k, v in tc.items()]
+    judge("rc_trace", trace_problems(t, tc))
 
     # ---- By ----
     head_by, by = keyed_csv(dirs["m6_by_check"] / "check.csv")

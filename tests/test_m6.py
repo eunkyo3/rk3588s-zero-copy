@@ -314,13 +314,15 @@ class Unchanged(unittest.TestCase):
 
 
 class Trace(unittest.TestCase):
-    """Rc's trace: two sync calls per frame on a slot, from an NPU worker, none elsewhere."""
+    """Rc's trace: of the arm's sync calls, two per frame on a slot, from an NPU worker, none elsewhere. MPP's
+    own calls, from the decoder's threads, are counted apart and are in C's trace too."""
 
-    THREADS = {"100": "bench_main", "101": "npu-0", "102": "npu-1", "103": "pre-0"}
-    FDS = {"20": ("system-dma32", 1228800), "21": ("system-dma32", 1228800), "30": ("system-uncached", 2093056),
-           "40": ("system-dma32", 3133440)}  # 40: a decoder buffer, from the slots' heap (A1) and larger
+    THREADS = {"100": "bench_main", "101": "npu-0", "102": "npu-1", "103": "pre-0", "104": "dec-1",
+               "105": "mpp_dec_parser"}
+    FDS = {"20": ("system-dma32", 1228800), "21": ("system-dma32", 1228800), "30": ("system", 2097152),
+           "40": ("system-dma32", 4177920)}  # 30, 40: MPP's buffers; 40 from the slots' heap (A1) and larger
 
-    def trace(self, frames=40, extra=(), per_frame=2, tid="101", fd="20"):
+    def trace(self, frames=40, extra=(), per_frame=2, tid="101", fd="20", mpp=True):
         t0, lines, binds = 1000.0, [], []
         lines.append(f"100 {t0:.6f} ioctl(5, _IOC(_IOC_READ, 0x64, 0x41, 0x8), 0x1) = 0")
         for i in range(frames):
@@ -329,52 +331,83 @@ class Trace(unittest.TestCase):
             for k in range(per_frame):
                 lines.append(f"{tid} {t + 0.0001 * (k + 1):.6f} ioctl({fd}, DMA_BUF_IOCTL_SYNC, 0xffff) = 0")
             lines.append(f"{tid} {t + 0.01:.6f} ioctl(5, _IOC(_IOC_READ|_IOC_WRITE, 0x64, 0x41, 0x68), 0x2) = 0")
+            for k in range(6 if mpp else 0):  # MPP: 30 decoded frames a second, synced from two threads
+                lines.append(f"104 {t + 0.03 * k + 0.02:.6f} ioctl(40, DMA_BUF_IOCTL_SYNC <unfinished ...>")
+                lines.append(f"105 {t + 0.03 * k + 0.021:.6f} ioctl(30, DMA_BUF_IOCTL_SYNC, 0xffff) = 0")
         lines += list(extra)
         lines.append(f"100 {t0 + 0.2 * frames + 0.1:.6f} ioctl(5, _IOC(_IOC_READ, 0x64, 0x41, 0x8), 0x1) = 0")
         return m6c.trace_summary(sorted(lines, key=lambda l: float(l.split()[1])), self.THREADS, self.FDS, binds)
 
+    def c(self, **kw):
+        return self.trace(per_frame=0, **kw)  # C binds by fd: no sync call of its own
+
+    def problems(self, **kw):
+        return m6c.trace_problems(self.trace(**kw), self.c())
+
     def test_as_registered(self):
         t = self.trace()
-        self.assertEqual(m6c.trace_problems(t), [])
+        self.assertEqual(m6c.trace_problems(t, self.c()), [])
         self.assertEqual(t["sync_in_trace"], 2 * t["frames_in_trace"])
-        self.assertEqual(t["sync_on_other_fds"], 0)
+        self.assertEqual((t["sync_on_other_fds"], t["decoder_sync_on_slots"]), (0, 0))
+        self.assertEqual(t["decoder_sync_calls"], 40 * 12)
+        self.assertEqual(t["decoder_sync_threads"], "dec-1 mpp_dec_parser")
         self.assertGreaterEqual(t["frames_in_trace"], 30)  # the first and last half second are left out
         self.assertLess(t["frames_in_trace"], 40)
 
     def test_one_sync_per_frame(self):
-        self.assertTrue(any("not two per frame" in p for p in m6c.trace_problems(self.trace(per_frame=1))))
+        self.assertTrue(any("not two per frame" in p for p in self.problems(per_frame=1)))
 
     def test_four_syncs_per_frame(self):
-        self.assertTrue(any("not two per frame" in p for p in m6c.trace_problems(self.trace(per_frame=4))))
+        self.assertTrue(any("not two per frame" in p for p in self.problems(per_frame=4)))
 
-    def test_a_sync_on_a_decoder_buffer(self):
-        extra = ["103 1002.050000 ioctl(30, DMA_BUF_IOCTL_SYNC, 0xffff) = 0",
-                 "103 1002.050100 ioctl(30, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]
-        problems = m6c.trace_problems(self.trace(extra=extra))
+    def test_the_arm_syncs_a_decoder_buffer(self):
+        extra = ["103 1002.050000 ioctl(40, DMA_BUF_IOCTL_SYNC, 0xffff) = 0",
+                 "103 1002.050100 ioctl(40, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]  # a preprocessing thread, as B's
+        problems = self.problems(extra=extra)
         self.assertTrue(any("not slots" in p for p in problems), problems)
         self.assertTrue(any("other than the NPU workers" in p for p in problems), problems)
 
+    def test_a_worker_syncs_a_decoder_buffer_of_the_slots_heap(self):
+        self.assertTrue(any("not slots" in p for p in self.problems(fd="40")))
+
     def test_a_sync_on_an_fd_that_is_no_dma_buf(self):
-        self.assertTrue(any("not slots" in p for p in m6c.trace_problems(self.trace(fd="99"))))
+        self.assertTrue(any("not slots" in p for p in self.problems(fd="99")))
 
-    def test_a_sync_on_a_decoder_buffer_of_the_slots_heap(self):
-        self.assertTrue(any("not slots" in p for p in m6c.trace_problems(self.trace(fd="40"))))
+    def test_the_decoders_threads_sync_a_slot(self):
+        extra = ["104 1002.050000 ioctl(20, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]
+        self.assertTrue(any("from the decoder's threads" in p for p in self.problems(extra=extra)))
 
-    def test_a_bind_cut_by_the_traces_start_does_not_break_the_pairs(self):
-        extra = ["101 1000.000500 ioctl(20, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]  # an END whose START was not traced
-        self.assertEqual(m6c.trace_problems(self.trace(extra=extra)), [])
+    def test_c_with_a_sync_of_its_own_breaks_the_split(self):
+        c = self.trace(per_frame=2)  # a "C" that syncs outside the decoder's threads
+        self.assertTrue(any("split" in p for p in m6c.trace_problems(self.trace(), c)))
+
+    def test_decoder_syncs_that_only_rc_has(self):
+        self.assertTrue(any("every arm" in p for p in m6c.trace_problems(self.trace(), self.c(mpp=False))))
+        self.assertEqual(m6c.trace_problems(self.trace(mpp=False), self.c(mpp=False)), [])  # an MPP without them
+
+    def test_too_short_a_trace_of_either(self):
+        self.assertTrue(any("frames in the trace" in p for p in self.problems(frames=8)))
+        self.assertTrue(any("C's trace" in p for p in m6c.trace_problems(self.trace(), self.c(frames=8))))
 
     def test_pairs_on_different_fds(self):
         extra = ["102 1003.050000 ioctl(20, DMA_BUF_IOCTL_SYNC, 0xffff) = 0",
                  "102 1003.050100 ioctl(21, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]
-        self.assertTrue(any("pairs" in p for p in m6c.trace_problems(self.trace(extra=extra))))
+        self.assertTrue(any("pairs" in p for p in self.problems(extra=extra)))
 
-    def test_too_short_a_trace(self):
-        self.assertTrue(any("frames in the trace" in p for p in m6c.trace_problems(self.trace(frames=8))))
+    def test_a_bind_cut_by_the_traces_start_does_not_break_the_pairs(self):
+        extra = ["101 1000.000500 ioctl(20, DMA_BUF_IOCTL_SYNC, 0xffff) = 0"]  # an END whose START was not traced
+        self.assertEqual(self.problems(extra=extra), [])
 
     def test_the_fallback_heap_counts_as_a_slot(self):
-        with mock.patch.object(Trace, "FDS", {"20": ("system", 1228800)}):
-            self.assertEqual(m6c.trace_problems(self.trace()), [])
+        fds = {**self.FDS, "20": ("system", 1228800)}
+        with mock.patch.object(Trace, "FDS", fds):
+            self.assertEqual(self.problems(), [])
+
+    def test_the_decoders_threads(self):
+        for comm in ("dec-1", "dec-12", "mpp_dec_parser", "mpp_dec_hal"):
+            self.assertTrue(m6c.decoder_thread(comm), comm)
+        for comm in ("npu-0", "pre-1", "bench_main", "metrics", ""):
+            self.assertFalse(m6c.decoder_thread(comm), comm)
 
 
 class Ct(unittest.TestCase):
