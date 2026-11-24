@@ -35,3 +35,32 @@ struct RunChoice {
 //     calib_npu: one of M4's two models, P_cap on 3 cores with its model's post-processing (neon
 //       for YOLOv8n, v10 for YOLOv10n) or the raw limit on 1 core, §3.1.
 std::string m4_rule_problem(const RunChoice& c);
+
+// M6's rules (prereg/M6.md §1, §8 step 2), which bench_main calls with what its command line gave.
+struct M6Choice {
+    std::string kind;                 // the run kind
+    std::string variant;              // --variant
+    PostKind post = PostKind::M1;     // --post
+    std::string cores = "a76";        // --cores: a76, a55 or all
+    bool time_rknn = false;           // --time-rknn on
+    std::string freeze_m6 = "none";   // --freeze-m6-commit
+    // The point, and the options an m6 run leaves at their defaults.
+    int channels = 0;
+    std::string condition;            // main or aux
+    int warmup_s = 0, duration_s = 0;
+    bool stagger = false;
+    int prep_threads = 2;
+    std::string model_path, model_sha;
+    bool other_freeze = false;        // a commit given for freeze-m2, freeze-m4 or freeze-m3
+};
+
+// The arm of M6 §1 that these options select: B, Bd, Rc, C, By, Cp, Cpf or Ct; empty for anything else.
+std::string m6_arm(const std::string& variant, PostKind post, const std::string& cores, bool time_rknn);
+
+// The first rule c breaks, as a message for die(); empty when it breaks none.
+//   - freeze-m6's commit is none or a full commit SHA.
+//   - Variants Rc and By, --cores all and --time-rknn on are M6's: run kind check or m6.
+//   - An m6 run names freeze-m6's commit, is one of the eight arms, and runs at H1's point with the
+//     defaults: 8 channels, main condition, 20 s warm-up and a 120 s window, no stagger, K = 2, the
+//     YOLOv8n model at its default path, and no commit of freeze-m2, freeze-m4 or freeze-m3.
+std::string m6_rule_problem(const M6Choice& c);

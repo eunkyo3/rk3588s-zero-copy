@@ -102,12 +102,17 @@ Header write_results(const std::string& dir, const Header& header, const Pipelin
 
     {
         auto f = open_csv(dir + "/frames.csv", header);
-        f << "channel,seq,pts,t0_ns,t1_ns,t2a_ns,t2b_ns,t2c_ns,t3_ns,t4_ns,slot_wait_ns,ctx,slot,detections\n";
-        for (const auto& x : r.frames)
+        f << "channel,seq,pts,t0_ns,t1_ns,t2a_ns,t2b_ns,t2c_ns,t3_ns,t4_ns,slot_wait_ns,ctx,slot,detections"
+          << (cfg.time_rknn ? ",rknn_cpu_ns\n" : "\n");
+        for (const auto& x : r.frames) {
             f << x.channel + 1 << ',' << x.seq << ',' << x.pts << ',' << x.t0 - r.t_start << ',' << x.t1 - r.t_start
               << ',' << x.t2a - r.t_start << ',' << x.t2b - r.t_start << ',' << x.t2c - r.t_start << ','
               << x.t3 - r.t_start << ',' << x.t4 - r.t_start << ',' << x.slot_wait_ns << ',' << x.ctx << ','
-              << x.slot << ',' << x.detections << '\n';
+              << x.slot << ',' << x.detections;
+            if (cfg.time_rknn)
+                f << ',' << x.rknn_cpu_ns;
+            f << '\n';
+        }
     }
     {
         auto f = open_csv(dir + "/samples.csv", header);
@@ -135,9 +140,15 @@ Header write_results(const std::string& dir, const Header& header, const Pipelin
     // ---- per channel ----
     std::vector<int64_t> processed(n, 0);
     std::vector<double> latency, hold, wait;
+    // Arm Ct (M6 §3), over the frames whose t4 is in the window: the workers' thread CPU time across
+    // rknn_run, the smallest single value, and the wall time of the same stage (t3 - t2c).
+    int64_t rknn_cpu_ns = 0, rknn_cpu_min_ns = std::numeric_limits<int64_t>::max(), rknn_wall_ns = 0;
     for (const auto& x : r.frames) {
         if (!in_window(x.t4))
             continue;
+        rknn_cpu_ns += x.rknn_cpu_ns;
+        rknn_cpu_min_ns = std::min(rknn_cpu_min_ns, x.rknn_cpu_ns);
+        rknn_wall_ns += x.t3 - x.t2c;
         processed[x.channel]++;
         latency.push_back((x.t4 - x.t0) / 1e6);
         hold.push_back((x.t2a - x.t0) / 1e6);
@@ -238,6 +249,17 @@ Header write_results(const std::string& dir, const Header& header, const Pipelin
         s.push_back({"mpp_hold_p50_ms", fmt(percentile(hold, 50))});
         s.push_back({"mpp_hold_p99_ms", fmt(percentile(hold, 99))});
         s.push_back({"slot_wait_p99_ms", fmt(percentile(wait, 99))});
+    }
+    if (cfg.time_rknn) {  // M6 §3
+        const double calls = double(latency.size());
+        s.push_back({"rknn_run_calls", std::to_string(latency.size())});
+        s.push_back({"rknn_run_cpu_s", fmt(rknn_cpu_ns / 1e9)});
+        s.push_back({"rknn_run_cpu_share", proc > 0 ? fmt(rknn_cpu_ns / 1e9 / proc, 4) : "nan"});
+        if (!latency.empty()) {
+            s.push_back({"rknn_run_cpu_mean_ms", fmt(rknn_cpu_ns / 1e6 / calls, 4)});
+            s.push_back({"rknn_run_cpu_min_ns", std::to_string(rknn_cpu_min_ns)});
+            s.push_back({"rknn_run_wall_mean_ms", fmt(rknn_wall_ns / 1e6 / calls, 4)});
+        }
     }
 
     const int64_t rss_w = r.samples[w_idx].rss_kb, rss_e = r.samples[e_idx].rss_kb;

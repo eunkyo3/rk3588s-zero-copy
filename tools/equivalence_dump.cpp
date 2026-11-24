@@ -4,8 +4,11 @@
 // A5. tools/equivalence_check.py decides.
 //
 // Usage: equivalence_dump <video.mp4> <model.rknn> <out_dir> [frames=1000] [freeze_commit=none]
-//                         [run_kind=equivalence]
-//   run_kind goes into the header: "m1.1" for the 4K tensors of AMENDMENTS A11
+//                         [run_kind=equivalence] [c_place=C]
+//   run_kind goes into the header: "m1.1" for the 4K tensors of AMENDMENTS A11, "check" for M6's check
+//   c_place  By: arm By of M6 (B with libyuv) takes C's place, in the files c.jsonl and c.u8 and with
+//            variant By in their header, for its check against B under A5's criteria, R computed in
+//            the same run (prereg/M6.md §8 step 3). Then run_kind must be check.
 //   <out_dir>/{c,b,r}.jsonl  a {"header": ...} line (PROTOCOL §1 fields, letterbox band, labels),
 //                            then one line per frame: {"frame", "pts", "detections"}, each detection
 //                            [class, score, x1, y1, x2, y2] in model input coordinates
@@ -39,6 +42,7 @@ extern "C" {
 #include "core/yolov8_post.h"
 #include "preprocess/backend.h"
 #include "preprocess/cpu_common.h"
+#include "preprocess/m6_backends.h"
 
 #ifndef CODE_COMMIT
 #define CODE_COMMIT "unknown"
@@ -103,13 +107,18 @@ int main(int argc, char** argv) {
     cv::setNumThreads(1);  // PROTOCOL §8
     if (argc < 4)
         die("usage: equivalence_dump <video.mp4> <model.rknn> <out_dir> [frames=1000] [freeze_commit=none] "
-            "[run_kind=equivalence]");
+            "[run_kind=equivalence] [c_place=C]");
     const std::string video = argv[1], model = argv[2], out = argv[3];
     const int max_frames = argc > 4 ? std::atoi(argv[4]) : 1000;
     const std::string freeze = argc > 5 ? argv[5] : "none";
     const std::string run_kind = argc > 6 ? argv[6] : "equivalence";
     CHECK(max_frames >= 1, "frames must be at least 1");
-    CHECK(run_kind == "equivalence" || run_kind == "m1.1", "run_kind must be equivalence or m1.1");
+    const std::string c_place = argc > 7 ? argv[7] : "C";
+    CHECK(run_kind == "equivalence" || run_kind == "m1.1" || run_kind == "check",
+          "run_kind must be equivalence, m1.1 or check");
+    CHECK(c_place == "C" || c_place == "By", "c_place must be C or By");
+    const bool by = c_place == "By";
+    CHECK(by == (run_kind == "check"), "c_place By goes with run_kind check, and only with it (M6 §8 step 3)");
     std::filesystem::create_directories(out);
     std::string args_json = "[";
     for (int i = 1; i < argc; i++)
@@ -121,6 +130,8 @@ int main(int argc, char** argv) {
         {"ntp_synchronized", command_output("timedatectl show -p NTPSynchronized --value")},
         {"prereg_v1_commit", kPreregCommit},
         {"freeze_m1_commit", freeze},
+        {"prereg_m6_commit", by ? kPreregM6Commit : "none"},
+        {"libyuv_commit", by ? libyuv_commit() : "none"},
         {"run_kind", run_kind},
         {"model_sha256", command_output("sha256sum '" + model + "' | cut -d' ' -f1")},
         {"decoder", std::string("h264_rkmpp, ffmpeg ") + av_version_info()},
@@ -133,9 +144,14 @@ int main(int argc, char** argv) {
 
     // Each preprocessing gets its own contexts: C and B both bind every context's input with
     // rknn_set_io_mem, to their own buffers.
-    Variant vars[3] = {{"C", "c"}, {"B", "b"}, {"R", "r"}};
-    vars[0].backend = make_zero_copy_rga(model, rga_interpolation());
-    vars[0].preprocessing = "RGA3, im_opt_t.interp " + std::to_string(rga_interpolation());
+    Variant vars[3] = {{by ? "By" : "C", "c"}, {"B", "b"}, {"R", "r"}};
+    if (by) {
+        vars[0].backend = make_cpu_yuv();
+        vars[0].preprocessing = std::string("libyuv ") + libyuv_commit() + ": ScalePlane kFilterBox, I420ToRAW";
+    } else {
+        vars[0].backend = make_zero_copy_rga(model, rga_interpolation());
+        vars[0].preprocessing = "RGA3, im_opt_t.interp " + std::to_string(rga_interpolation());
+    }
     vars[1].backend = make_cpu_copy(opencv_interpolation());
     vars[1].preprocessing = opencv_interpolation_name(opencv_interpolation());
     vars[2].backend = make_cpu_copy(cv::INTER_LINEAR);
@@ -211,10 +227,10 @@ int main(int argc, char** argv) {
     CHECK(std::fputs(env.c_str(), f) >= 0 && std::fclose(f) == 0, "writing env.json failed");
 
     std::printf("frames: %d, checked: %d (every 100th and the last)\n", frames, checked);
-    std::printf("outputs_equal_on_cores_0_1_2: C %d, B %d, R %d\n", vars[0].cores_agree, vars[1].cores_agree,
-                vars[2].cores_agree);
-    std::printf("bound_outputs_match_rknn_outputs_get: C %d, B %d, R %d\n", vars[0].matches_reference,
-                vars[1].matches_reference, vars[2].matches_reference);
+    std::printf("outputs_equal_on_cores_0_1_2: %s %d, B %d, R %d\n", vars[0].name, vars[0].cores_agree,
+                vars[1].cores_agree, vars[2].cores_agree);
+    std::printf("bound_outputs_match_rknn_outputs_get: %s %d, B %d, R %d\n", vars[0].name,
+                vars[0].matches_reference, vars[1].matches_reference, vars[2].matches_reference);
     for (Variant& v : vars) {
         v.backend->shutdown(v.npu);
         v.npu.close();

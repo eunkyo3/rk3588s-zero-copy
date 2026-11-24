@@ -39,8 +39,13 @@ per source, and a "sources" list.
 Exit code: 0 if the criteria in force hold, 1 if they do not, 2 if the inputs are inconsistent or the
 check could not run.
 
+With --c-place By (prereg/M6.md §8 step 3), the files in C's place are arm By's, from
+tools/equivalence_dump with By in C's place (run kind check): By is checked against B under the same
+criteria, R computed in the same run. The report then names By where it says C.
+
 Usage: tools/equivalence_check.py --b B.jsonl --c C.jsonl --r R.jsonl [--frames 1000] [--json OUT]
-       tools/equivalence_check.py --set DIR FRAMES [--set DIR FRAMES ...] [--json OUT]
+                                  [--c-place By]
+       tools/equivalence_check.py --set DIR FRAMES [--set DIR FRAMES ...] [--json OUT] [--c-place By]
 """
 import argparse
 import bisect
@@ -61,7 +66,8 @@ MAE_MAX = 2.0
 PSNR_MIN = 35.0
 FRAMES_AGREE_MIN = 0.99
 TOTAL_TOLERANCE = 0.02
-RUN_KINDS = ("equivalence", "m1.1")
+RUN_KINDS = ("equivalence", "m1.1", "check")  # check: M6's check of arm By (prereg/M6.md §8 step 3)
+C_PLACE = "C"  # the variant whose files stand in C's place: C, or By with --c-place By (M6 §8 step 3)
 CLASS_REPORT_MIN = 100  # per-class box counts are shown for classes with at least this many B boxes
 REGISTERED_FRAMES = 1000
 REGISTERED_BAND = (640, 360)
@@ -392,7 +398,7 @@ def run(args):
     for paths, expected in groups:
         headers, frames = {}, {}
         for k, p in paths.items():
-            headers[k], frames[k] = load(p, k)
+            headers[k], frames[k] = load(p, C_PLACE if k == "C" else k)
         check_inputs(headers, frames, expected)
         loaded.append((paths, headers, frames))
     check_sets([h for _, h, _ in loaded])
@@ -428,6 +434,8 @@ def run(args):
         out += [f"  {source}: {frames} frames" for source, frames, _ in per_source]
     else:
         out = [f"inputs: {n} frames of {hb['source']}" + ("" if registered_input else not_registered)]
+    if C_PLACE != "C":
+        out.append(f"  in C's place: {C_PLACE} (every \"C\" below is {C_PLACE})")
     out += [
         f"  model {hb['model_sha256']}, code {hb['code_commit']}, amendment {hb['amendment']}",
         f"  B: {hb['preprocessing']}; C: {headers['C']['preprocessing']}; R: {headers['R']['preprocessing']}",
@@ -526,7 +534,11 @@ def main(argv=None):
                     help="a source to pool (AMENDMENTS A8): DIR holds b.jsonl, c.jsonl and r.jsonl; "
                          "FRAMES is its expected frame count. Give it once per source.")
     ap.add_argument("--json", help="also write the numbers to this file")
+    ap.add_argument("--c-place", choices=["C", "By"], default="C",
+                    help="the variant whose files stand in C's place (By: prereg/M6.md §8 step 3)")
     args = ap.parse_args(argv)
+    global C_PLACE
+    C_PLACE = args.c_place
     if args.set:
         if args.b or args.c or args.r or args.frames is not None:
             ap.error("--set replaces --b, --c, --r and --frames")
