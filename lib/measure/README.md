@@ -2,7 +2,7 @@
 
 # M5's measuring tool
 
-The tool of [prereg/M5.md](../../prereg/M5.md) §8 step 2. It measures the installed package's service `rkzc-detect` next to the benchmark's B and C, on the board. It is not part of the package.
+The tool of [prereg/M5.md](../../prereg/M5.md) §8 step 2. It measures the installed package's service `rkzc-detect` next to the benchmark's B and C, on the board. It is not part of the package. It measures 0.1.1, whose unit pins nothing; with another version installed the session refuses to start (`package.txt`).
 
 | File | What it does | Runs on |
 |---|---|---|

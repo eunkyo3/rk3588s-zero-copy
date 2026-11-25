@@ -19,6 +19,11 @@ RestartSec=5
 RestartPreventExitStatus=2
 # The program stops on SIGTERM and delivers the frames it was inferring first.
 TimeoutStopSec=20
+# The four Cortex-A76 cores of an RK3588 (from 0.1.2). Left to the scheduler on all eight cores, the
+# service used about 49% more CPU time at the measured point (docs/report/M5.md). To let it run on
+# every core again, a drop-in whose [Service] section has the one line "CPUAffinity=" (empty: it
+# clears this list); to choose other cores, that line and then "CPUAffinity=<list>".
+CPUAffinity=4-7
 
 # No fixed account: a user made for the run, in the groups the path's devices need on the tested image
 # (/dev/dma_heap: video; the NPU's /dev/dri/renderD*: render). A user made for the run also means a

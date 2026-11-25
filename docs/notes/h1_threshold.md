@@ -20,7 +20,7 @@ Nothing, in the sense that no nearby threshold would have changed a verdict.
 | M1, H1 | C | 57.1% (descriptive interval 55.1% to 59.1%, [m1_intervals.md](m1_intervals.md)) | adopted |
 | M3, after the reset | C | 56.1% | not judged |
 | M5 | C | 56.0% | not judged |
-| M5, M5-H1 | the packaged service as installed | 38.5% | adopted |
+| M5, M5-H1 | the packaged service as 0.1.1 installed it, on all eight cores | 38.5% | adopted |
 | M5, M5-H2 | the packaged service on the A76 cores | 58.6% | adopted |
 
 - **H1** would have the same verdict at any threshold up to about 55%.
