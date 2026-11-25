@@ -7,7 +7,7 @@
 # here.
 #   cmake -S lib -B build-lib && cmake --build build-lib -j4
 cmake_minimum_required(VERSION 3.18)
-project(rkzc VERSION 0.1.1 LANGUAGES C CXX)
+project(rkzc VERSION 0.1.2 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

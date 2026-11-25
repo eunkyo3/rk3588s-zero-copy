@@ -10,16 +10,19 @@
 
 **측정한 것:** 이 저장소의 보드에서 한 지점(1080p RTSP 8채널, 채널당 초당 5회 추론)을 쟀다. [M5 보고서](report/M5.ko.md)에 있다.
 
-- **설치 그대로일 때** 서비스의 프로세스 CPU는 벤치마크의 CPU 경로(B)보다 38.5% 낮았고, 제로카피 변형(C)보다 39.8% 높았다. CPU 시간의 절반 가까이를 A55 코어에서 썼다.
-- **A76 코어로 제한했을 때**는 B보다 58.6% 낮았고 C와 비슷했다. 드롭인 파일 하나로 된다. `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`에 `[Service]`와 `CPUAffinity=4-7` 두 줄을 쓰고, `sudo systemctl daemon-reload` 뒤 서비스를 다시 시작한다.
+- **A76 코어(cpu4–7)로 제한했을 때** 서비스의 프로세스 CPU는 벤치마크의 CPU 경로(B)보다 58.6% 낮았고, 제로카피 변형(C)과 비슷했다. 0.1.2부터 패키지는 이렇게 설치한다. 서비스의 유닛에 `CPUAffinity=4-7` 줄이 있다. M5는 이것을 0.1.1에 그 줄을 드롭인 파일로 넣은 상태로 쟀다.
+- **여덟 코어 전부를 스케줄러에 맡겼을 때,** 곧 0.1.0과 0.1.1이 설치하던 대로는 B보다 38.5% 낮았고 C보다 39.8% 높았다. CPU 시간의 절반 가까이를 A55 코어에서 썼다. [M6](report/M6.ko.md)는 벤치마크 자체에서 고정만 풀었을 때 같은 크기의 증가(47.8%)를 봤다.
+- **0.1.2 자체는 측정하지 않았다.** 0.1.1과 다른 것은 유닛의 그 한 줄이다. 보드에서 빌드하고 설치해 cpu4–7에서 도는 것을 확인했다.
+- **다시 모든 코어를 쓰게 하려면:** 드롭인 파일 하나로 된다. `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`에 `[Service]`와 `CPUAffinity=`(비워 두면 목록을 지운다) 두 줄을 쓰고, `sudo systemctl daemon-reload` 뒤 서비스를 다시 시작한다. 다른 코어를 고르려면 셋째 줄로 `CPUAffinity=`에 목록을 쓴다.
+- **고정되는 것은 서비스뿐이다.** 라이브러리를 쓰는 직접 만든 프로그램은 시작한 곳에서 돈다. `taskset -c 4-7 <프로그램>`으로 서비스와 같은 배치가 된다.
 - **지연:** 보고서는 결론을 내리지 않는다. 서비스의 지연은 벤치마크와 같은 지점에서 잰 것이 아니고, 3회 실행으로는 구간이 넓다.
 - 이 숫자들에 무엇이 섞여 있고 무엇을 다루지 않는지는 보고서에 있다.
 
 ## 설치
 
 ```sh
-wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.1/rkzc_0.1.1-1_arm64.deb
-sudo apt install ./rkzc_0.1.1-1_arm64.deb
+wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.2/rkzc_0.1.2-1_arm64.deb
+sudo apt install ./rkzc_0.1.2-1_arm64.deb
 ```
 
 - **설치에는 네트워크가 필요하다.** Rockchip의 NPU 런타임(`librknnrt.so` 2.3.2)을 Rockchip 저장소에서 내려받아 SHA-256을 확인한다. 이 파일은 라이선스가 재배포를 허용하지 않아 패키지에 넣을 수 없다. 보드가 오프라인이면 설치는 그대로 성공하고 그 사실을 알려 준다. 나중에 `sudo rkzc-fetch-runtime`을 실행하면 된다. 내려받기는 20초씩 세 번 시도하고 포기한다. `wget`을 쓰므로 프록시는 apt 설정이 아니라 환경 변수(`https_proxy`)에서 읽는다.

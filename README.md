@@ -2,17 +2,38 @@
 
 # rk3588s-zero-copy
 
-How much does a zero-copy video pipeline actually save on an RK3588S, and under which conditions? This repository answers that with a pre-registered experiment on a NanoPi R6C. The code is here to make the experiment reproducible.
+How much does a zero-copy video pipeline actually save on an RK3588S, and under which conditions? This repository answers that with a pre-registered experiment on a NanoPi R6C, and ships the path it measured as a package that installs on that board.
 
 The project publishes:
 - a report that gives each pre-registered hypothesis its verdicts, with the measurements behind them: [docs/report/M1.md](docs/report/M1.md);
 - an exploratory report on the optional designs, which judges nothing: [docs/report/M1.1.md](docs/report/M1.1.md);
 - M2's report, a faster post-processing for C with its own pre-registered hypotheses: [docs/report/M2.md](docs/report/M2.md);
 - M4's report, an appendix on an NMS-free model (YOLOv10n), registered with no hypotheses: [docs/report/M4.md](docs/report/M4.md);
+- M3's report, a one-command reproduction of H1's point on a reset board: [docs/report/M3.md](docs/report/M3.md);
+- M5's report, the packaged path measured against B and C: [docs/report/M5.md](docs/report/M5.md);
+- M6's report, where C's saving comes from: [docs/report/M6.md](docs/report/M6.md);
+- the package `rkzc`, a service and a library for the NanoPi R6C: [docs/install.md](docs/install.md);
 - a multi-channel detection demo: [docs/notes/demo.md](docs/notes/demo.md);
 - scripts that reproduce the results.
 
-It is an experiment, not a library. A result in which zero copy saves nothing is a valid answer.
+The experiment came first, and its code is here to make it reproducible: a result in which zero copy saves nothing would have been a valid answer. The package came after it and is measured by it (M5).
+
+## Use the zero-copy path
+
+The path the experiment measured (variant C: hardware decoding, RGA, NPU, no CPU copy of the pixels) is also packaged for the NanoPi R6C as `rkzc`: a systemd service that reads RTSP cameras and writes detections as JSON lines, and a library with C++, C and Python interfaces.
+
+```sh
+wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.2/rkzc_0.1.2-1_arm64.deb
+sudo apt install ./rkzc_0.1.2-1_arm64.deb
+sudo rkzc-fetch-model yolov8n                 # the model is not in the package
+sudoedit /etc/rkzc/detect.toml                # your cameras' RTSP URLs
+sudo systemctl enable --now rkzc-detect
+nc -U /run/rkzc/detect.sock                   # one JSON object per frame
+```
+
+- **Everything else** (what the install downloads, the check before starting, Python and C++ use, removal, licences): [docs/install.md](docs/install.md). What the library is and its limits: [lib/README.md](lib/README.md).
+- **Tested on** one NanoPi R6C with FriendlyElec's Ubuntu 24.04 image. It promises none of this page's numbers on another board, camera or model.
+- **Measured** at one point, 8 channels of 1080p at 5 inferences per second each ([M5](docs/report/M5.md)): on the A76 cores, which is how the package runs it from 0.1.2, the service used 58.6% less process CPU than the CPU path B and about as much as C. Left on all eight cores it used 39.8% more than C.
 
 ## The comparison
 
@@ -46,6 +67,9 @@ Two pipelines share the same RTSP input, decoder (ffmpeg-rockchip `h264_rkmpp`, 
 - **The designs of §13, exploratory (M1.1):** 26 runs on 2026-11-04, all valid, each design with its own B and C rerun. B-direct, which drops only B's last copy, saved 2.8% of B's process CPU at 8 channels, against C's 55.7%: most of C's saving lies in what separates C from B-direct, chiefly the conversion on RGA3. Four preprocessing threads did not lower B's latency, and on the A55 cores both variants held 8 channels. Found after the fact: how close together the channels' frames arrive is not controlled by the protocol, and at multi-channel points latency went with it. Nothing is judged; see [the M1.1 report](docs/report/M1.1.md).
 - **M2, a faster post-processing for C (pre-registered):** 12 runs on 2026-11-05, all valid. Arm Cp, C with a NEON post-processing whose detections equal M1's, used 6.07% less process CPU than C at 8 channels and 14.73% less at 5 channels × 30 fps; both hypotheses (thresholds 3% and 5%, set after the prototype, which is disclosed) were adopted. Most of the difference is in the NPU workers' threads, where post-processing runs (exploratory). See [the M2 report](docs/report/M2.md).
 - **M4, an NMS-free model (registered appendix, no hypotheses):** on 2026-11-18, four accuracy passes over COCO val2017's 5,000 images and 24 board runs, all valid. AP@[.5:.95] was 36.8 (INT8, board) and 37.3 (FP32) for YOLOv8n, 37.8 and 38.4 for YOLOv10n. YOLOv10n's NPU capacity was 16% lower (161.8 against 193.2 inferences/s), so it is saturated at 5 channels × 30 fps. In C's pipeline its `rknn_run` took about 3 ms longer; its process CPU differed by +1.7% and +5.4%, with intervals that span 0. Nothing is judged; see [the M4 report](docs/report/M4.md).
+- **M3, reproduction (pre-registered):** on 2026-11-19, on the board reset to its base image and set up by one command, H1's point gave B 44.4 s and C 19.5 s; all four registered values were within ±10% of M1's. See [the M3 report](docs/report/M3.md).
+- **M5, the packaged path (pre-registered):** 12 runs on 2026-11-23, all valid. The service of `rkzc` 0.1.1 used 38.5% less process CPU than B as installed and 58.6% less restricted to the A76 cores; both hypotheses (threshold 25%) were adopted. Against C it used 39.8% more as installed and about as much on the A76 cores. See [the M5 report](docs/report/M5.md).
+- **M6, where C's saving comes from (pre-registered):** 24 runs on 2026-11-24, all valid; all three hypotheses adopted. With RGA3 converting and the CPU still copying every tensor, 93.5% of C's saving against B remained, by a small margin over the threshold of 90%. Removing the CPU pinning alone raised process CPU by 47.8%. B with libyuv in place of OpenCV used 28.8% less than B, and C is 38.4% below that. See [the M6 report](docs/report/M6.md).
 - **Demo:** C's detections on eight channels, rendered offline ([docs/notes/demo.md](docs/notes/demo.md)). The video is attached to the `v0.1-m1` Release; its footage is not Apache-2.0 ([License](#license)).
 
 ![Detection demo, one frame](docs/report/demo/demo_m1.jpg)

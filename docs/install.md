@@ -10,16 +10,19 @@
 
 **What was measured,** on this repository's board, at one point (8 channels of 1080p RTSP, 5 inferences per second each): the [M5 report](report/M5.md).
 
-- **As installed,** the service used 38.5% less process CPU than the benchmark's CPU path (B), and 39.8% more than its zero-copy variant (C). Close to half of its CPU time was spent on the A55 cores.
-- **Restricted to the A76 cores,** it used 58.6% less than B and about as much as C. That is one drop-in file, `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`, with the two lines `[Service]` and `CPUAffinity=4-7`, then `sudo systemctl daemon-reload` and a restart of the service.
+- **Restricted to the A76 cores (cpu4–7),** the service used 58.6% less process CPU than the benchmark's CPU path (B), and about as much as its zero-copy variant (C). From 0.1.2 that is how the package installs it: the service's unit has the line `CPUAffinity=4-7`. M5 measured it as 0.1.1 with that line in a drop-in file.
+- **Left to the scheduler on all eight cores,** as 0.1.0 and 0.1.1 installed it, it used 38.5% less than B and 39.8% more than C. Close to half of its CPU time was spent on the A55 cores. [M6](report/M6.md) saw a rise of the same size in the benchmark itself when only its pinning was removed (47.8%).
+- **0.1.2 itself was not measured.** It differs from 0.1.1 in that one line of the unit; it was built, installed and checked to run on cpu4–7 on the board.
+- **To use every core again:** one drop-in file, `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`, with the two lines `[Service]` and `CPUAffinity=` (empty, which clears the list), then `sudo systemctl daemon-reload` and a restart of the service. For other cores, add a third line `CPUAffinity=` with the list.
+- **Only the service is pinned.** A program of your own that uses the library runs where it is started; `taskset -c 4-7 <program>` gives it the service's placement.
 - **Latency:** the report draws no conclusion. The service's latency is not taken at the same point as the benchmark's, and 3 runs give wide intervals.
 - The report says what these numbers mix and what they do not cover.
 
 ## Install
 
 ```sh
-wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.1/rkzc_0.1.1-1_arm64.deb
-sudo apt install ./rkzc_0.1.1-1_arm64.deb
+wget https://github.com/eunkyo3/rk3588s-zero-copy/releases/download/rkzc-v0.1.2/rkzc_0.1.2-1_arm64.deb
+sudo apt install ./rkzc_0.1.2-1_arm64.deb
 ```
 
 - **The install needs the network:** it downloads Rockchip's NPU runtime (`librknnrt.so` 2.3.2) from Rockchip's repository and checks its SHA-256. The package cannot carry that file, since its licence does not allow passing it on. If the board is offline, the install still succeeds and says so; run `sudo rkzc-fetch-runtime` later. The download gives up after three tries of 20 s. It uses `wget`, which takes a proxy from the environment (`https_proxy`), not from apt's configuration.
