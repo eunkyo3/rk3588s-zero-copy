@@ -34,7 +34,7 @@ sudo COOLING="heatsink + always-on fan" AMBIENT_C=25 setsid nohup scripts/reprod
 ```
 
 - **The commit:** M3's runs use the code registered at `freeze-m3`, from a checkout that also has `freeze-m3`'s row in [env.md](env.md#registration). That row comes in the commit after the tag `freeze-m3`, so clone the release tag `v0.3-m3`, which has both. Both scripts check that `src/`, `tools/`, `scripts/`, `tests/` and `CMakeLists.txt` equal `freeze-m3`'s.
-  - **Not `main`:** M6 added arms to the registered code ([prereg/M6.md](../../prereg/M6.md) §8), so `main` no longer equals `freeze-m3` in those paths, and the scripts refuse it. M5's measurement, whose tool imports `tools/stream_session.py`, runs from its tag `v0.5-m5` for the same reason.
+  - **Not `main`:** M6 added arms to the registered code ([prereg/M6.md](../../prereg/M6.md) §8), so `main` no longer equals `freeze-m3` in those paths, and the scripts refuse it. M5's measurement, whose tool imports `tools/stream_session.py`, runs from its tag `v0.5-m5` for the same reason. M7 added two options to the registered code in its turn ([prereg/M7.md](../../prereg/M7.md) §8), so `main` no longer equals `freeze-m6` either: M6's sweep, whose session tool checks that the code is `freeze-m6`'s, runs from its tag `v0.6-m6`.
 - **The repository must be at `/home/pi/rk3588s-zero-copy`.** M1's inventory names that path in the build's include paths, and the session compares them (M3 §4).
 - **Logs outside the repository:** a file in it would make the commit read `-dirty` in every record.
 - **`setsid nohup`** keeps each job running if the login ends. A setup cut short cannot be resumed: the board must be reset again (M3 §5).

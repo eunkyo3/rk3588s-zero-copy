@@ -7,6 +7,8 @@
 //                 with --time-rknn on, the rknn_run_* rows of M6 §3
 //   threads.csv   CPU seconds in the window per thread that was alive at its end, with its affinity
 //   env.json      arguments, every thread's affinity, library versions, binding paths
+// With --snapshot on (M7 §1) also the files of core/snapshot.h, and with --thread-counters on those of
+// core/perf_counters.h. The files above are then what they are without the options.
 #pragma once
 
 #include <string>
@@ -25,6 +27,8 @@ constexpr const char* kPreregM2Commit = "5d9d6d04e50f17d52980dc5b958c7071d710717
 constexpr const char* kPreregM4Commit = "8638685d9ef806a85e5042d7cc10febdd5ae93a9";
 // Tag prereg-m6 (Release created_at 2026-11-23T23:47:43Z, docs/notes/env.md).
 constexpr const char* kPreregM6Commit = "5a17d375d9aab77a302ec2295df886ee1257f3fd";
+// Tag prereg-m7 (Release created_at 2026-11-25T08:33:00Z, docs/notes/env.md).
+constexpr const char* kPreregM7Commit = "c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb";
 // M4's two INT8 models (prereg/M4.md §1, models/README.md): every m4 run checks its model file.
 constexpr const char* kYolov8nSha256 = "04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee";
 constexpr const char* kYolov10nSha256 = "6a6442e1addbd1f08dbdb0772aeea1a992233b4f1db3bd451d20823522246f81";

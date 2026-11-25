@@ -33,11 +33,13 @@ find_library(RKNNRT rknnrt REQUIRED)
 add_library(core STATIC
     src/core/metrics.cpp
     src/core/npu.cpp
+    src/core/perf_counters.cpp
     src/core/pipeline.cpp
     src/core/pipeline_post.cpp
     src/core/report.cpp
     src/core/run_rules.cpp
     src/core/slot_pool.cpp
+    src/core/snapshot.cpp
     src/core/video_source.cpp
     src/core/yolov8_post.cpp
     src/core/yolov8_post_neon.cpp
@@ -177,8 +179,25 @@ target_link_libraries(m6_by_check PRIVATE core_by core)
 target_compile_definitions(m6_by_check PRIVATE
     CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
 
+# M7's tools (prereg/M7.md §4, §8 step 3): the idle pair of snapshots, and the check of cpu0's counter.
+add_executable(m7_idle_snapshot tools/m7_idle_snapshot.cpp)
+target_link_libraries(m7_idle_snapshot PRIVATE core)
+target_compile_definitions(m7_idle_snapshot PRIVATE
+    CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
+
+add_executable(m7_cpu0_check tools/m7_cpu0_check.cpp)
+target_link_libraries(m7_cpu0_check PRIVATE core)
+target_compile_definitions(m7_cpu0_check PRIVATE
+    CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
+
+# The probe of the output bindings (prereg/M7.md §3): one configuration per process, driven by tools/m7_probe.py.
+add_executable(m7_output_probe tools/m7_output_probe.cpp)
+target_link_libraries(m7_output_probe PRIVATE core)
+target_compile_definitions(m7_output_probe PRIVATE
+    CODE_COMMIT="${CODE_COMMIT}" LATEST_AMENDMENT="${LATEST_AMENDMENT}")
+
 add_executable(test_core tests/test_core.cpp)
 target_link_libraries(test_core PRIVATE m4map core)
 
 set_target_properties(bench_main spike_fd_chain compare_prepare rga_probe rga_kernel inputs_set_probe
-    equivalence_dump dump_tensor calib_npu demo_detect bdirect_check output_probe first_runs_probe post_probe m2_equivalence m4_probe m4_accuracy m6_arms_dump m6_by_check test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)
+    equivalence_dump dump_tensor calib_npu demo_detect bdirect_check output_probe first_runs_probe post_probe m2_equivalence m4_probe m4_accuracy m6_arms_dump m6_by_check m7_idle_snapshot m7_cpu0_check m7_output_probe test_core PROPERTIES BUILD_RPATH ${FFMPEG_PREFIX}/lib)

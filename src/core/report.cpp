@@ -295,6 +295,35 @@ Header write_results(const std::string& dir, const Header& header, const Pipelin
         for (const auto& [k, v] : s)
             f << k << ',' << v << '\n';
     }
+    if (cfg.snapshot || cfg.thread_counters) {  // M7 §1: files of their own
+        std::string lines;
+        for (const auto& [k, v] : header)
+            lines += "# " + k + ": " + v + "\n";
+        if (cfg.snapshot) {
+            const CpuCycleCounter& c = r.cpu0;
+            char config[32];
+            std::snprintf(config, sizeof config, "0x%llx", static_cast<unsigned long long>(c.event.config));
+            write_snapshots(dir, lines, r.t_start, r.snap1, r.snap2,
+                            {{"window_start_ns", std::to_string(r.t_w - r.t_start)},
+                             {"window_end_ns", std::to_string(r.t_e - r.t_start)},
+                             {"snapshot1_tick_wake_ns", std::to_string(r.t_snap1_wake - r.t_start)},
+                             {"end_tick_wake_ns", std::to_string(r.t_end_wake - r.t_start)},
+                             {"cpu0_counter_cpu", std::to_string(c.cpu)},
+                             {"cpu0_counter_event_found", c.event.found ? "1" : "0"},
+                             {"cpu0_counter_pmu_type", std::to_string(c.event.type)},
+                             {"cpu0_counter_config", config},
+                             {"cpu0_counter_open_errno", std::to_string(c.open_errno)},
+                             {"cpu0_counter_enabled", c.enabled ? "1" : "0"},
+                             {"cpu0_counter_read_ok", c.read_ok ? "1" : "0"},
+                             {"cpu0_counter_enable_ns", std::to_string(c.enabled ? c.t_enable - r.t_start : 0)},
+                             {"cpu0_counter_read_ns", std::to_string(c.read_ok ? c.t_read - r.t_start : 0)},
+                             {"cpu0_counter_cycles", std::to_string(c.cycles)},
+                             {"cpu0_counter_time_enabled_ns", std::to_string(c.time_enabled)},
+                             {"cpu0_counter_time_running_ns", std::to_string(c.time_running)}});
+        }
+        if (cfg.thread_counters && r.counters)
+            write_thread_counters(dir, lines, r.t_start, *r.counters);
+    }
     {
         std::ofstream f(dir + "/env.json");
         CHECK(f.good(), "cannot write env.json");

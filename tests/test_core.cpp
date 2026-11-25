@@ -1,6 +1,6 @@
 // Unit tests for the pipeline's queue, slot pool, receive checks and percentile, the /proc/schedstat
 // parser, arm Cp's post-processing against M1's on random outputs, M4's YOLOv10 selection, the
-// shared choice of post-processing, and M4's run rules.
+// shared choice of post-processing, M4's, M6's and M7's run rules, and M7's snapshots and counters.
 // Run: build/test_core
 #include <algorithm>
 #include <atomic>
@@ -14,13 +14,19 @@
 #include <thread>
 #include <vector>
 
+#include <sys/syscall.h>
+#include <unistd.h>
+
 #include "core/metrics.h"
+#include "core/perf_counters.h"
 #include "core/pipeline_post.h"
 #include "core/report.h"
 #include "core/run_rules.h"
 #include "core/slot_pool.h"
+#include "core/snapshot.h"
 #include "core/stage_queue.h"
 #include "core/stream_checks.h"
+#include "core/util.h"
 #include "core/yolov8_post.h"
 #include "core/yolov8_post_neon.h"
 #include "core/yolov10_post.h"
@@ -889,6 +895,306 @@ void m6_run_rules() {
     expect(right == static_cast<int>(cases.size()), what);
 }
 
+// ---- M7 (prereg/M7.md §1) ----
+
+void m7_run_rules() {
+    struct ArmCase {
+        const char* variant;
+        PostKind post;
+        const char* cores;
+        bool time_rknn, snapshot, counters;
+        const char* arm;
+    };
+    const ArmCase arms[] = {
+        {"B", PostKind::M1, "a76", false, true, false, "B"},     {"Bd", PostKind::M1, "a76", false, true, false, "Bd"},
+        {"Rc", PostKind::M1, "a76", false, true, false, "Rc"},   {"C", PostKind::M1, "a76", false, true, false, "C"},
+        {"B", PostKind::M1, "a76", false, true, true, "Bk"},     {"Bd", PostKind::M1, "a76", false, true, true, "Bdk"},
+        {"Rc", PostKind::M1, "a76", false, true, true, "Rck"},   {"C", PostKind::M1, "a76", false, true, true, "Ck"},
+        {"C", PostKind::M1, "a76", true, true, false, "Ct"},     {"C", PostKind::Neon, "a76", true, true, false, "Cpt"},
+        // not arms: no snapshot, the counters with Ct, other variants, other cores, other post-processings
+        {"C", PostKind::M1, "a76", false, false, false, ""},     {"C", PostKind::M1, "a76", false, false, true, ""},
+        {"C", PostKind::M1, "a76", true, true, true, ""},        {"C", PostKind::Neon, "a76", true, true, true, ""},
+        {"By", PostKind::M1, "a76", false, true, false, ""},     {"A", PostKind::M1, "a76", false, true, false, ""},
+        {"none", PostKind::M1, "a76", false, true, false, ""},   {"C", PostKind::M1, "all", false, true, false, ""},
+        {"C", PostKind::M1, "a55", false, true, false, ""},      {"C", PostKind::Neon, "a76", false, true, false, ""},
+        {"C", PostKind::V10, "a76", true, true, false, ""},      {"B", PostKind::M1, "a76", true, true, false, ""},
+        {"B", PostKind::Neon, "a76", false, true, false, ""},
+    };
+    int arms_right = 0, arms_total = 0;
+    for (const auto& a : arms) {
+        arms_total++;
+        arms_right += m7_arm(a.variant, a.post, a.cores, a.time_rknn, a.snapshot, a.counters) == a.arm;
+    }
+    expect(arms_right == arms_total, "run_rules: m7_arm names the ten arms and nothing else");
+
+    int at_right = 0, at_total = 0;
+    for (const char* arm : {"B", "Bd", "Rc", "C"}) {
+        at_total += 2;
+        at_right += m7_arm_at(arm, "main") + m7_arm_at(arm, "aux");
+    }
+    for (const char* arm : {"Bk", "Bdk", "Rck", "Ck"}) {
+        at_total += 2;
+        at_right += m7_arm_at(arm, "main") + !m7_arm_at(arm, "aux");
+    }
+    for (const char* arm : {"Ct", "Cpt"}) {
+        at_total += 2;
+        at_right += !m7_arm_at(arm, "main") + m7_arm_at(arm, "aux");
+    }
+    at_total += 2;
+    at_right += !m7_arm_at("", "main") + !m7_arm_at("C", "other");
+    expect(at_right == at_total, "run_rules: each arm of M7 at its points only");
+
+    const std::string sha(40, 'a');
+    auto base = [&](const char* variant, const char* condition, int channels) {
+        M7Choice c;
+        c.kind = "m7";
+        c.variant = variant;
+        c.snapshot = true;
+        c.freeze_m7 = sha;
+        c.channels = channels;
+        c.condition = condition;
+        c.warmup_s = 20;
+        c.duration_s = 120;
+        c.model_path = "models/yolov8n_i8.rknn";
+        c.model_sha = kYolov8nSha256;
+        return c;
+    };
+    struct Case {
+        const char* what;
+        M7Choice c;
+        bool ok;
+    };
+    std::vector<Case> cases;
+    for (const char* v : {"B", "Bd", "Rc", "C"}) {
+        cases.push_back({"a cell at the main point", base(v, "main", 8), true});
+        cases.push_back({"a cell at the auxiliary point", base(v, "aux", 5), true});
+        M7Choice k = base(v, "main", 8);
+        k.thread_counters = true;
+        cases.push_back({"a counted arm at the main point", k, true});
+        k = base(v, "aux", 5);
+        k.thread_counters = true;
+        cases.push_back({"a counted arm at the auxiliary point", k, false});
+    }
+    {
+        M7Choice c = base("C", "aux", 5);
+        c.time_rknn = true;
+        cases.push_back({"Ct at the auxiliary point", c, true});
+        c.post = PostKind::Neon;
+        cases.push_back({"Cpt at the auxiliary point", c, true});
+        c = base("C", "main", 8);
+        c.time_rknn = true;
+        cases.push_back({"Ct at the main point", c, false});
+        c = base("C", "main", 8);
+        c.snapshot = false;
+        cases.push_back({"an m7 run without the snapshots", c, false});
+        c = base("C", "main", 8);
+        c.freeze_m7 = "none";
+        cases.push_back({"an m7 run without freeze-m7's commit", c, false});
+        c = base("C", "main", 8);
+        c.freeze_m7 = "abc";
+        cases.push_back({"a freeze-m7 commit that is not a SHA", c, false});
+        c = base("C", "main", 5);
+        cases.push_back({"5 channels at the main condition", c, false});
+        c = base("C", "aux", 8);
+        cases.push_back({"8 channels at the auxiliary condition", c, false});
+        c = base("C", "main", 8);
+        c.warmup_s = 10;
+        cases.push_back({"another warm-up", c, false});
+        c = base("C", "main", 8);
+        c.duration_s = 10;
+        cases.push_back({"another window", c, false});
+        c = base("C", "main", 8);
+        c.stagger = true;
+        cases.push_back({"the staggered sampler", c, false});
+        c = base("C", "main", 8);
+        c.prep_threads = 4;
+        cases.push_back({"K = 4", c, false});
+        c = base("C", "main", 8);
+        c.model_sha = kYolov10nSha256;
+        cases.push_back({"another model", c, false});
+        c = base("C", "main", 8);
+        c.model_path = "models/other.rknn";
+        cases.push_back({"another model path", c, false});
+        c = base("C", "main", 8);
+        c.other_freeze = true;
+        cases.push_back({"another freeze commit", c, false});
+        c = base("C", "main", 8);
+        c.cores = "all";
+        cases.push_back({"the pipeline not pinned", c, false});
+        c = base("By", "main", 8);
+        cases.push_back({"By", c, false});
+        // the options outside M7
+        c = base("C", "main", 8);
+        c.kind = "check";
+        c.freeze_m7 = "none";
+        c.duration_s = 10;
+        c.thread_counters = true;
+        cases.push_back({"a check run with both options and a 10 s window", c, true});
+        c.warmup_s = 2;
+        cases.push_back({"the options with a 2 s warm-up", c, false});
+        c.warmup_s = 3;
+        cases.push_back({"the options with a 3 s warm-up", c, true});
+        for (const char* kind : {"m6", "m3", "m4", "m2", "m1.1", "comparison", "calibration", "reference"}) {
+            c = base("C", "main", 8);
+            c.kind = kind;
+            c.freeze_m7 = "none";
+            cases.push_back({"--snapshot on in another run kind", c, false});
+            c.snapshot = false;
+            c.thread_counters = true;
+            cases.push_back({"--thread-counters on in another run kind", c, false});
+            c.thread_counters = false;
+            cases.push_back({"another run kind without the options", c, true});
+        }
+    }
+    int right = 0;
+    for (const auto& k : cases) {
+        const std::string problem = m7_rule_problem(k.c);
+        if (problem.empty() == k.ok)
+            right++;
+        else
+            std::printf("     %s: %s\n", k.what, problem.empty() ? "accepted" : problem.c_str());
+    }
+    char what[96];
+    std::snprintf(what, sizeof what, "run_rules: %zu combinations accepted or rejected as M7 says", cases.size());
+    expect(right == static_cast<int>(cases.size()), what);
+
+    // M6's rule lets run kind m7 use Rc and --time-rknn on; what an m7 run is stays M7's rule.
+    M6Choice m6;
+    m6.kind = "m7";
+    m6.variant = "Rc";
+    m6.time_rknn = true;
+    expect(m6_rule_problem(m6).empty(), "run_rules: M6's rule leaves an m7 run to M7's");
+    m6.kind = "m3";
+    expect(!m6_rule_problem(m6).empty(), "run_rules: Rc stays out of the other run kinds");
+}
+
+void snapshot_helpers() {
+    expect(stat_ppid("12 (kworker/0:1) I 2 0 0 0") == 2, "snapshot: ppid of a kernel thread's stat");
+    expect(stat_ppid("345 (a b) c) S 1 345 345") == 1, "snapshot: ppid after a name with spaces and parentheses");
+    expect(stat_ppid("no parenthesis") == -1 && stat_ppid("7 (x)") == -1, "snapshot: no ppid in a broken stat");
+    expect(csv_field("npu-0") == "npu-0" && csv_field("a,b") == "\"a,b\"" && csv_field("a\"b") == "\"a\"\"b\"",
+           "snapshot: a name with a comma or a quote is quoted");
+    uint64_t config = 0;
+    expect(parse_event_config("event=0x0011\n", &config) && config == 0x11, "counters: an event's code from sysfs");
+    expect(parse_event_config("event=0x08,long=1\n", &config) && config == 0x8, "counters: a code with more terms");
+    expect(!parse_event_config("", &config) && !parse_event_config("config=1", &config),
+           "counters: no code without an event= term");
+}
+
+void snapshot_reads_the_system() {
+    std::atomic<bool> stop{false};
+    std::thread other([&] {
+        while (!stop)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    });
+    int hook_calls = 0;
+    const SystemSnapshot s = take_system_snapshot(0, [&] { hook_calls++; });
+    stop = true;
+    other.join();
+    expect(s.taken && s.complete && hook_calls == 1, "snapshot: complete, and the hook ran once");
+    expect(s.t_begin <= s.t_schedstat && s.t_schedstat <= s.t_end, "snapshot: its three times are in order");
+    expect(s.schedstat.rfind("version", 0) == 0 && s.stat.rfind("cpu", 0) == 0 && !s.interrupts.empty() &&
+               !s.softirqs.empty(),
+           "snapshot: the four /proc files were read");
+    const int self = getpid();
+    bool own_has_self = false, own_complete = s.own.size() >= 2;
+    for (const auto& t : s.own) {
+        own_has_self |= t.tid == self;
+        own_complete &= t.run_ns >= 0 && t.timeslices >= 0 && t.voluntary_cs >= 0 && t.involuntary_cs >= 0 &&
+                        !t.comm.empty();
+    }
+    expect(own_has_self && own_complete, "snapshot: this process's threads, each with its five values");
+    bool none_is_self = true, has_init = false, has_kthreadd = false, kernel_right = true;
+    for (const auto& t : s.others) {
+        none_is_self &= t.pid != self;
+        has_init |= t.pid == 1 && !t.kernel;
+        has_kthreadd |= t.pid == 2 && t.kernel;
+        kernel_right &= t.pid != 2 || t.kernel;
+    }
+    expect(none_is_self, "snapshot: no thread of this process among the other tasks");
+    expect(has_init && has_kthreadd && kernel_right, "snapshot: pid 1 is not a kernel thread, pid 2 is");
+
+    const SystemSnapshot late = take_system_snapshot(now_ns() - 1, nullptr);
+    expect(late.taken && !late.complete && late.others.empty() && !late.schedstat.empty(),
+           "snapshot: past its deadline it stops, incomplete");
+
+    int64_t run = -1, wait = -1, slices = -1;
+    expect(read_task_schedstat(self, self, &run, &wait, &slices) && run > 0 && slices > 0,
+           "snapshot: a thread's schedstat");
+    expect(!read_task_schedstat(self, 0x7ffffff0, &run, nullptr, nullptr), "snapshot: no schedstat for a thread that is not there");
+}
+
+// The counters need the PMU and root (perf_event_paranoid is 2 on the board, and the groups count in
+// kernel mode): run build/test_core as root to cover them.
+void thread_counters_count() {
+    if (geteuid() != 0) {
+        std::printf("note counters: not run as root, the groups are not opened here\n");
+        return;
+    }
+    std::atomic<bool> go{false}, stop{false};
+    std::atomic<int> busy_tid{0};
+    std::atomic<uint64_t> sink{0};
+    std::thread busy([&] {
+        busy_tid = static_cast<int>(syscall(SYS_gettid));
+        while (!go)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        uint64_t x = 1;
+        while (!stop)
+            x = x * 6364136223846793005ull + 1442695040888963407ull;
+        sink = x;
+    });
+    while (!busy_tid)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    ThreadCounters counters;
+    counters.open_all();
+    counters.enable_all();
+    go = true;
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    counters.disable_all();
+    stop = true;
+    busy.join();
+
+    bool events_found = counters.events().size() == static_cast<size_t>(kThreadCounterEventCount);
+    for (const auto& e : counters.events())
+        events_found &= e.found;
+    expect(events_found, "counters: every event of the group is in sysfs");
+    bool all_open = counters.threads().size() >= 2, all_read = true, never_multiplexed = true;
+    const ThreadCount* b = nullptr;
+    for (const auto& t : counters.threads()) {
+        all_open &= t.opened;
+        all_read &= t.enable_ok && t.disable_ok && t.read_ok && t.values.size() == counters.events().size();
+        never_multiplexed &= t.time_running == t.time_enabled;
+        if (t.tid == busy_tid)
+            b = &t;
+        if (!t.opened)
+            std::printf("     tid %d (%s): %s, errno %d\n", t.tid, t.comm.c_str(), t.failed_event.c_str(), t.open_errno);
+    }
+    expect(all_open && all_read, "counters: a group on every thread, each enabled, disabled and read");
+    expect(never_multiplexed, "counters: time_running equals time_enabled");
+    if (!b || !b->read_ok) {
+        expect(false, "counters: the busy thread has its group");
+        return;
+    }
+    const double run_s = (b->run_ns_disable - b->run_ns_enable) / 1e9, enabled_s = b->time_enabled / 1e9;
+    std::printf("     busy thread: run %.3f s, enabled %.3f s, cycles %llu, instructions %llu\n", run_s, enabled_s,
+                static_cast<unsigned long long>(b->values[0]), static_cast<unsigned long long>(b->values[1]));
+    expect(run_s > 0.2 && run_s < 0.4 && std::fabs(enabled_s - run_s) < 0.2 * run_s,
+           "counters: the busy thread ran about 0.3 s by its schedstat and by its group");
+    // 0.3 s at 408 MHz or more, and more than one instruction per ten cycles
+    expect(b->values[0] > 100000000ull && b->values[1] > b->values[0] / 10,
+           "counters: the busy thread's cycles and instructions");
+
+    CpuCycleCounter cpu;
+    cpu.open(0);
+    cpu.enable();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    cpu.read_now();
+    cpu.close();
+    expect(cpu.open_errno == 0 && cpu.enabled && cpu.read_ok && cpu.time_running == cpu.time_enabled &&
+               cpu.time_enabled > 90000000ull,
+           "counters: cpu0's cycle counter opens, runs for 0.1 s and reads");
+}
+
 }  // namespace
 
 int main() {
@@ -910,6 +1216,10 @@ int main() {
     commit_sha_form();
     m4_run_rules();
     m6_run_rules();
+    m7_run_rules();
+    snapshot_helpers();
+    snapshot_reads_the_system();
+    thread_counters_count();
     std::printf("%d failure(s)\n", failures);
     return failures ? 1 : 0;
 }

@@ -59,8 +59,46 @@ std::string m6_arm(const std::string& variant, PostKind post, const std::string&
 
 // The first rule c breaks, as a message for die(); empty when it breaks none.
 //   - freeze-m6's commit is none or a full commit SHA.
-//   - Variants Rc and By, --cores all and --time-rknn on are M6's: run kind check or m6.
+//   - Variants Rc and By, --cores all and --time-rknn on are M6's: run kind check or m6. Run kind m7 may
+//     use them too, and M7's own rules then say which (M7 §1: Rc, and --time-rknn on for Ct and Cpt).
 //   - An m6 run names freeze-m6's commit, is one of the eight arms, and runs at H1's point with the
 //     defaults: 8 channels, main condition, 20 s warm-up and a 120 s window, no stagger, K = 2, the
 //     YOLOv8n model at its default path, and no commit of freeze-m2, freeze-m4 or freeze-m3.
 std::string m6_rule_problem(const M6Choice& c);
+
+// M7's rules (prereg/M7.md §1, §8 step 2), which bench_main calls with what its command line gave.
+struct M7Choice {
+    std::string kind;                 // the run kind
+    std::string variant;              // --variant
+    PostKind post = PostKind::M1;     // --post
+    std::string cores = "a76";        // --cores
+    bool time_rknn = false;           // --time-rknn on
+    bool snapshot = false;            // --snapshot on
+    bool thread_counters = false;     // --thread-counters on
+    std::string freeze_m7 = "none";   // --freeze-m7-commit
+    // The point, and the options an m7 run leaves at their defaults.
+    int channels = 0;
+    std::string condition;            // main or aux
+    int warmup_s = 0, duration_s = 0;
+    bool stagger = false;
+    int prep_threads = 2;
+    std::string model_path, model_sha;
+    bool other_freeze = false;        // a commit given for freeze-m2, freeze-m4, freeze-m3 or freeze-m6
+};
+
+// The arm of M7 §1 that these options select: B, Bd, Rc, C (the four cells with the snapshots), Bk, Bdk,
+// Rck, Ck (the same with the counters), Ct or Cpt; empty for anything else.
+std::string m7_arm(const std::string& variant, PostKind post, const std::string& cores, bool time_rknn,
+                   bool snapshot, bool thread_counters);
+// Whether an arm of M7 runs at a point: the four cells and the counted arms at the main condition, the
+// four cells, Ct and Cpt at the auxiliary one (M7 §1).
+bool m7_arm_at(const std::string& arm, const std::string& condition);
+
+// The first rule c breaks, as a message for die(); empty when it breaks none.
+//   - freeze-m7's commit is none or a full commit SHA.
+//   - --snapshot on and --thread-counters on are M7's: run kind check or m7, and a warm-up of at least 3 s.
+//   - An m7 run names freeze-m7's commit, is one of the ten arms at one of its points (8 channels at the
+//     main condition, or 5 channels at the auxiliary one), and runs with the defaults: 20 s warm-up and a
+//     120 s window, no stagger, K = 2, the YOLOv8n model at its default path, and no commit of freeze-m2,
+//     freeze-m4, freeze-m3 or freeze-m6.
+std::string m7_rule_problem(const M7Choice& c);
