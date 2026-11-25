@@ -16,7 +16,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 - 다채널 검출 데모: [docs/notes/demo.ko.md](docs/notes/demo.ko.md)
 - 결과를 다시 만드는 스크립트
 
-실험이 먼저였고, 코드는 실험을 재현할 수 있도록 여기에 둔다. 제로카피가 아무것도 절약하지 못한다는 결과였어도 유효한 답이었다. 패키지는 그 뒤에 만들었고, 실험이 그것을 쟀다(M5).
+실험이 먼저였고, 코드는 실험을 재현할 수 있도록 여기에 둔다. 제로카피가 아무것도 절약하지 못한다는 결과였어도 유효한 답이었다. 패키지는 그 뒤에 만들었고, 실험이 그것을 한 번 쟀다(M5: 0.1.1 버전, 한 지점).
 
 ## 제로카피 경로를 쓰려면
 
@@ -28,12 +28,12 @@ sudo apt install ./rkzc_0.1.2-1_arm64.deb
 sudo rkzc-fetch-model yolov8n                 # 모델은 패키지에 없다
 sudoedit /etc/rkzc/detect.toml                # 카메라의 RTSP URL
 sudo systemctl enable --now rkzc-detect
-nc -U /run/rkzc/detect.sock                   # 프레임마다 JSON 객체 하나
+nc -U /run/rkzc/detect.sock                   # 프레임마다 JSON 객체 하나. video 그룹의 사용자가 읽을 수 있다
 ```
 
 - **그 밖의 것**(설치가 내려받는 것, 시작 전 점검, Python과 C++에서 쓰기, 제거, 라이선스)은 [docs/install.ko.md](docs/install.ko.md)에 있다. 라이브러리가 무엇이고 한계가 무엇인지는 [lib/README.ko.md](lib/README.ko.md)에 있다.
 - **시험한 환경**은 FriendlyElec의 Ubuntu 24.04 이미지를 올린 NanoPi R6C 한 대다. 다른 보드, 카메라, 모델에서 이 페이지의 수치가 나온다고 약속하지 않는다.
-- **측정한 것**은 한 지점, 곧 1080p 8채널에 채널당 초당 5회 추론이다([M5](docs/report/M5.ko.md)). 0.1.2부터 패키지가 돌리는 방식인 A76 코어에서 서비스의 프로세스 CPU는 CPU 경로 B보다 58.6% 낮았고 C와 비슷했다. 여덟 코어 전부에 두면 C보다 39.8% 더 썼다.
+- **측정한 것**은 한 지점, 곧 1080p 8채널에 채널당 초당 5회 추론이다([M5](docs/report/M5.ko.md)). 0.1.2부터 패키지가 돌리는 방식인 A76 코어에서 서비스의 프로세스 CPU는 CPU 경로 B보다 58.6% 낮았고 C와 비슷했다. 여덟 코어 전부에 두면 C보다 39.8% 더 썼다. M5는 0.1.1에 그 줄을 드롭인으로 넣어 쟀고, 0.1.2 자체는 재지 않았다.
 
 ## 비교 대상
 
@@ -67,9 +67,9 @@ nc -U /run/rkzc/detect.sock                   # 프레임마다 JSON 객체 하�
 - **§13의 설계, 탐색용(M1.1):** 2026-11-04에 26회를 실행했고 모두 유효했다. 설계마다 자기 B와 C를 다시 돌렸다. B의 마지막 복사만 없앤 B-direct는 8채널에서 B의 프로세스 CPU를 2.8% 줄였다. C는 55.7%다. 그러니 C의 절감은 대부분 C와 B-direct를 가르는 것, 주로 RGA3에서의 변환에 있다. 전처리 스레드 네 개는 B의 지연을 낮추지 않았고, A55 코어에서 두 변형 모두 8채널을 유지했다. 사후에 발견한 것: 채널들의 프레임이 얼마나 몰려 도착하는지는 프로토콜이 통제하지 않는데, 여러 채널의 측정점에서 지연이 이와 함께 움직였다. 아무것도 판정하지 않는다. [M1.1 보고서](docs/report/M1.1.ko.md)를 보라.
 - **M2, C의 더 빠른 후처리(사전 등록):** 2026-11-05에 12회를 실행했고 모두 유효했다. 검출이 M1과 같은 NEON 후처리를 넣은 갈래 Cp는 C보다 프로세스 CPU를 8채널에서 6.07%, 5채널 × 30 fps에서 14.73% 적게 썼다. 두 가설(기준 3%와 5%, 프로토타입을 본 뒤 정했고 이를 공개함)이 모두 채택됐다. 차이의 대부분은 후처리가 도는 NPU 워커 스레드에 있다(탐색). [M2 리포트](docs/report/M2.ko.md)를 보라.
 - **M4, NMS 없는 모델(등록한 부록, 가설 없음):** 2026-11-18에 COCO val2017 5,000장에 대한 정확도 패스 4개와 보드 실행 24회를 했고, 모두 유효했다. AP@[.5:.95]는 YOLOv8n이 36.8(INT8, 보드)과 37.3(FP32), YOLOv10n이 37.8과 38.4였다. YOLOv10n의 NPU 용량은 16% 낮아서(초당 161.8회 대 193.2회) 5채널 × 30 fps에서 포화다. C 파이프라인에서 그 `rknn_run`은 약 3 ms 길었고, 프로세스 CPU 차이는 +1.7%와 +5.4%였으며 구간은 0을 걸친다. 아무것도 판정하지 않는다. [M4 리포트](docs/report/M4.ko.md)를 보라.
-- **M3, 재현(사전 등록):** 2026-11-19에 보드를 기본 이미지로 초기화하고 명령 하나로 설정한 뒤 H1의 지점을 쟀더니 B 44.4초, C 19.5초였다. 등록한 네 값 모두 M1의 ±10% 안이었다. [M3 리포트](docs/report/M3.ko.md)를 보라.
-- **M5, 패키지로 만든 경로(사전 등록):** 2026-11-23에 12회, 모두 유효. `rkzc` 0.1.1의 서비스는 설치 그대로일 때 B보다 프로세스 CPU를 38.5% 덜 썼고, A76 코어로 제한하면 58.6% 덜 썼다. 두 가설(임계값 25%) 모두 채택됐다. C에 비해서는 설치 그대로일 때 39.8% 더 썼고 A76 코어에서는 비슷했다. [M5 리포트](docs/report/M5.ko.md)를 보라.
-- **M6, C의 절감이 어디서 오는가(사전 등록):** 2026-11-24에 24회, 모두 유효. 세 가설 모두 채택됐다. RGA3가 변환하고 CPU가 모든 텐서를 여전히 복사해도 B 대비 C의 절감 중 93.5%가 남았다. 임계값 90%를 작은 여유로 넘었다. CPU 고정만 풀어도 프로세스 CPU가 47.8% 늘었다. OpenCV 대신 libyuv를 쓴 B는 B보다 28.8% 덜 썼고, C는 그보다 38.4% 낮다. [M6 리포트](docs/report/M6.ko.md)를 보라.
+- **M3, 재현(사전 등록):** 2026-11-19에 보드를 기본 이미지로 초기화하고 명령 하나로 설정한 뒤 H1의 지점을 쟀더니 프로세스 CPU가 B 44.4초, C 19.5초였다. 등록한 네 값 모두 M1의 ±10% 안이었다. [M3 리포트](docs/report/M3.ko.md)를 보라.
+- **M5, 패키지로 만든 경로(사전 등록):** 2026-11-23에 12회, 모두 유효. `rkzc` 0.1.1의 서비스는 그 버전이 설치하던 대로 여덟 코어 전부에서 돌 때 B보다 프로세스 CPU를 38.5% 덜 썼고, A76 코어로 제한하면 58.6% 덜 썼다. 두 가설(임계값 25%) 모두 채택됐다. C에 비해서는 여덟 코어 전부에서 39.8% 더 썼고 A76 코어에서는 비슷했다. [M5 리포트](docs/report/M5.ko.md)를 보라.
+- **M6, C의 절감이 어디서 오는가(사전 등록):** 2026-11-24에 24회, 모두 유효. 세 가설 모두 채택됐다. RGA3가 변환하고 CPU가 모든 텐서를 여전히 복사해도 B 대비 C의 절감 중 93.5%가 남았다. 임계값 90%를 작은 여유로 넘었다. 패키지의 후처리를 쓴 C에 다른 것은 그대로 두고 모든 CPU를 허용하자 프로세스 CPU가 47.8% 늘었다. OpenCV 대신 libyuv를 쓴 B는 B보다 28.8% 덜 썼고, C는 그보다 38.4% 낮다. [M6 리포트](docs/report/M6.ko.md)를 보라.
 - **데모:** 8채널에서 C가 검출한 결과를 오프라인으로 렌더했다([docs/notes/demo.ko.md](docs/notes/demo.ko.md)). 영상은 `v0.1-m1` Release에 첨부하며, 그 속 원본 영상은 Apache-2.0이 아니다([라이선스](#라이선스)).
 
 ![검출 데모의 한 프레임](docs/report/demo/demo_m1.jpg)
@@ -184,7 +184,7 @@ flowchart TB
 | M2 | 후처리 최적화, 동일 모델 | 공개, CPU 가설 두 개 모두 채택 | [`prereg-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m2), [`freeze-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m2)([`amend-A13`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A13)과 함께) | [`v0.2-m2`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.2-m2) | [M2](docs/report/M2.ko.md) |
 | M4 | 부록: NMS 없는 모델, mAP와 처리량 | 보고함, 판정 없음(가설 없음) | [`prereg-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m4), [`freeze-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m4)([`amend-A14`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A14)와 함께) | [`v0.4-m4`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.4-m4) | [M4](docs/report/M4.ko.md) |
 | M3 | 초기화한 보드에서 H1 지점을 명령 하나로 재현 | 공개: 재현됨, 네 값 모두 M1의 ±10% 안([prereg/M3.md](prereg/M3.ko.md)) | [`prereg-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m3), [`freeze-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m3) ([`amend-A15`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A15) 포함) | [`v0.3-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.3-m3) | [M3](docs/report/M3.ko.md) |
-| M5 | 패키지로 만든 경로(`rkzc`)를 H1 지점에서 B, C와 비교 | 공개: 두 가설 모두 채택. 서비스의 프로세스 CPU는 B보다 설치 그대로일 때 38.5%, A76 코어에 고정했을 때 58.6% 낮았다. C와 비교하면 설치 그대로일 때 39.8% 높았고, A76 코어로 제한했을 때는 비슷했다([prereg/M5.md](prereg/M5.ko.md)) | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5), [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) ([`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) 포함) | [`v0.5-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.5-m5) | [M5](docs/report/M5.ko.md) |
+| M5 | 패키지로 만든 경로(`rkzc`)를 H1 지점에서 B, C와 비교 | 공개: 두 가설 모두 채택. 서비스의 프로세스 CPU는 B보다 0.1.1이 설치하던 대로(여덟 코어 전부)일 때 38.5%, A76 코어에 고정했을 때 58.6% 낮았다. C와 비교하면 0.1.1이 설치하던 대로일 때 39.8% 높았고, A76 코어로 제한했을 때는 비슷했다([prereg/M5.md](prereg/M5.ko.md)) | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5), [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) ([`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) 포함) | [`v0.5-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.5-m5) | [M5](docs/report/M5.ko.md) |
 | M6 | C의 절감이 어디서 오는지를 H1 지점에서 측정: RGA 변환 + CPU 복사, libyuv를 쓴 B, CPU 고정을 푼 C, `rknn_run` 안의 CPU 시간 | 공개: 세 가설 모두 채택. RGA 변환 + CPU 복사는 B 대비 C의 절감 중 93.5%를 유지했다. 스레드에 모든 CPU를 허용한 Cp는 고정한 Cp보다 프로세스 CPU를 47.8% 더 썼다. libyuv를 쓴 B는 B보다 28.8% 덜 썼고, C는 그보다 38.4% 낮다([prereg/M6.md](prereg/M6.ko.md)) | [`prereg-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m6), [`freeze-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m6) ([`amend-A17`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A17) 포함) | [`v0.6-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.6-m6) | [M6](docs/report/M6.ko.md) |
 
 - **순서:** M4를 M3보다 먼저 한다.

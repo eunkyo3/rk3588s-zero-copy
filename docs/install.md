@@ -6,14 +6,14 @@
 
 **What it was tested on:** one NanoPi R6C with FriendlyElec's Ubuntu 24.04 image (`rom-version` 20251222, kernel 6.1.141, NPU driver 0.9.8). The package refuses a board that is not an RK3588 or lacks the kernel's devices, and says so when the image or the NPU driver is another one.
 
-**What it does not promise:** the numbers of [M1](report/M1.md) on your board, cameras or model.
+**What it does not promise:** the numbers of [M1](report/M1.md) or [M5](report/M5.md) on your board, cameras or model.
 
 **What was measured,** on this repository's board, at one point (8 channels of 1080p RTSP, 5 inferences per second each): the [M5 report](report/M5.md).
 
 - **Restricted to the A76 cores (cpu4–7),** the service used 58.6% less process CPU than the benchmark's CPU path (B), and about as much as its zero-copy variant (C). From 0.1.2 that is how the package installs it: the service's unit has the line `CPUAffinity=4-7`. M5 measured it as 0.1.1 with that line in a drop-in file.
-- **Left to the scheduler on all eight cores,** as 0.1.0 and 0.1.1 installed it, it used 38.5% less than B and 39.8% more than C. Close to half of its CPU time was spent on the A55 cores. [M6](report/M6.md) saw a rise of the same size in the benchmark itself when only its pinning was removed (47.8%).
-- **0.1.2 itself was not measured.** It differs from 0.1.1 in that one line of the unit; it was built and installed on the board, where every thread of the running service was allowed cpu4–7 only, and cpu0–7 again with the drop-in below.
-- **To use every core again:** one drop-in file, `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`, with the two lines `[Service]` and `CPUAffinity=` (empty, which clears the list), then `sudo systemctl daemon-reload` and a restart of the service. For other cores, add a third line `CPUAffinity=` with the list.
+- **Left to the scheduler on all eight cores,** as 0.1.0 and 0.1.1 installed it, it used 38.5% less than B, 39.8% more than C, and 48.5% more than restricted to the A76 cores. Close to half of its CPU time was spent on the A55 cores. [M6](report/M6.md) saw about the same rise (47.8%), in another session, when only the benchmark's pinning was removed.
+- **0.1.2 itself was not measured.** It differs from 0.1.1 in that one line of the unit and in its version number; it was built and installed on the board, where every thread of the running service was allowed cpu4–7 only, and cpu0–7 again with the drop-in below.
+- **To use every core again:** one drop-in file, `/etc/systemd/system/rkzc-detect.service.d/affinity.conf`, with the two lines `[Service]` and `CPUAffinity=` (empty, which clears the list), then `sudo systemctl daemon-reload` and a restart of the service. For other cores, keep the empty line and add a third such as `CPUAffinity=6-7`: without the empty line systemd merges the lists. If a load saturates the A76 cores, the same drop-in lets the service use the A55 cores too; no such load was measured.
 - **Only the service is pinned.** A program of your own that uses the library runs where it is started; `taskset -c 4-7 <program>` gives it the service's placement.
 - **Latency:** the report draws no conclusion. The service's latency is not taken at the same point as the benchmark's, and 3 runs give wide intervals.
 - The report says what these numbers mix and what they do not cover.
@@ -128,4 +128,5 @@ It writes the `.deb`, the FFmpeg source archive and `SHA256SUMS` into `dist/`, a
 - **One board and one image were tested.** Another RK3588 board or image may work; the package only says when it sees another image or NPU driver.
 - **The install depends on Rockchip's repository** staying where it is. If the tag moves or the file changes, `rkzc-fetch-runtime` fails with a clear message, and the file must be placed by hand.
 - **Upgrades from one version of the package to the next** were tried once, from 0.1.1 to 0.1.2 with the service running on two channels: the service was restarted with the new unit, and the runtime, the model and the edited configuration stayed. No other pair of versions was tried.
+- **If none of cpu4–7 is online** (a kernel started with fewer CPUs, for instance), the service cannot start and systemd retries it every 5 s; the drop-in above mends it.
 - The library's and the program's own limits are in [lib/README.md](../lib/README.md#known-limits).
