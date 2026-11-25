@@ -1,0 +1,31 @@
+# start_time_utc: 2026-11-24T06:57:20Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m6_commit: 5a17d375d9aab77a302ec2295df886ee1257f3fd
+# freeze_m6_commit: b3381dcfe7e09e43bd9be3528c5977f63a9951cc
+# libyuv_commit: 0ec9f68d82634f6f3414aaaf780e03f9edf002b3
+# run_kind: m6
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: fa0c9a1910b46369cc0e093df485ef0b6b4d2b13
+# amendment: A17
+# session: 20261124T064707Z_m6
+# cooling: heatsink + always-on fan
+# ambient_c: 27
+key,value
+sweep,m6
+session_status,completed
+channel_order,8
+earlier_sessions,none
+repetitions_run_here,8ch_r1 8ch_r2 8ch_r3
+repetitions_left,none
+arms,B Bd Rc C By Cp Cpf Ct
+arms_not_run,none
+order_r1,B Bd Rc C By Cp Cpf Ct
+order_r2,Ct Cpf Cp By C Rc Bd B
+order_r3,By B Rc C Bd Cpf Cp Ct
+inventory_same_as_m1,no
+inventory_changed_lines,22
+invalid_x2_runs,none
+protocol_settings,yes

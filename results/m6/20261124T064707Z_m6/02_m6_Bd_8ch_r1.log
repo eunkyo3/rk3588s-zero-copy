@@ -1,0 +1,271 @@
+mpp[110525]: mpp_platform: client 18 driver is not ready!
+bench: Bd, 8 channels, warm-up 20 s, window 120 s -> results/m6/20261124T064707Z_m6/02_m6_Bd_8ch_r1
+[h264 @ 0x7f64005110] reference picture missing during reorder
+[h264 @ 0x7f64005110] reference picture missing during reorder
+[h264 @ 0x7f64005110] reference picture missing during reorder
+[h264 @ 0x7f64005110] reference picture missing during reorder
+[h264 @ 0x7f64005110] Missing reference picture, default is 0
+[h264 @ 0x7f64005110] decode_slice_header error
+[h264 @ 0x7f64005110] reference picture missing during reorder
+[h264 @ 0x7f64005110] reference picture missing during reorder
+[h264 @ 0x7f64005110] Missing reference picture, default is 0
+[h264 @ 0x7f64005110] Missing reference picture, default is 0
+[h264 @ 0x7f64005110] reference picture missing during reorder
+[h264 @ 0x7f64005110] Missing reference picture, default is 2
+mpp[110525]: mpp_info: mpp version: c1f1c12d author: Yandong Lin   2025-09-30 fix[h265d]: Fix rps data update issue
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+mpp[110525]: h264d_sei: seq_parameter_set_id 0 may be invalid
+window_s: 120
+warmup_start_utc: 2026-11-24T07:00:44.508Z
+window_start_utc: 2026-11-24T07:01:04.508Z
+window_end_utc: 2026-11-24T07:03:04.508Z
+process_cpu_s: 42.210
+process_cpu_a76_s: 42.110
+process_cpu_a55_s: 0.100
+process_cpu_unattributed_s: -0.000
+system_cpu0_s: 1.040
+system_cpu1_s: 0.670
+system_cpu2_s: 0.490
+system_cpu3_s: 0.950
+system_cpu4_s: 8.220
+system_cpu5_s: 8.750
+system_cpu6_s: 8.910
+system_cpu7_s: 9.320
+system_cpu0-3_s: 3.150
+system_cpu4-5_s: 16.970
+system_cpu6-7_s: 18.230
+system_cpu_total_s: 38.350
+schedstat_version: 15
+schedstat_cpu0_s: 0.921
+schedstat_cpu1_s: 0.184
+schedstat_cpu2_s: 0.371
+schedstat_cpu3_s: 0.827
+schedstat_cpu4_s: 10.088
+schedstat_cpu5_s: 10.639
+schedstat_cpu6_s: 10.801
+schedstat_cpu7_s: 10.716
+schedstat_cpu0-3_s: 2.302
+schedstat_cpu4-5_s: 20.727
+schedstat_cpu6-7_s: 21.517
+schedstat_cpu_total_s: 44.546
+decode_fps_min: 30.000
+decode_fps_max: 30.000
+drift_max_s: 0.000
+decoder_drops: 0
+input_ended_early: 0
+sampled_in_window: 4800
+q1_drops_in_window: 0
+drop_rate: 0.00000
+processed_in_window: 4800
+latency_p50_ms: 21.483
+latency_p99_ms: 35.197
+mpp_hold_p50_ms: 5.257
+mpp_hold_p99_ms: 8.247
+slot_wait_p99_ms: 0.001
+rss_window_start_kb: 224712
+rss_window_end_kb: 225672
+rss_window_max_kb: 225672
+rss_growth_pct: 0.43
+freq_min_policy0_khz: 1800000
+freq_max_policy0_khz: 1800000
+freq_min_policy4_khz: 2208000
+freq_max_policy4_khz: 2208000
+freq_min_policy6_khz: 2208000
+freq_max_policy6_khz: 2208000
+freq_min_dmc_hz: 2112000000
+freq_max_dmc_hz: 2112000000
+freq_min_npu_hz: 1000000000
+freq_max_npu_hz: 1000000000
+temp_max_mc: 47153
+results: results/m6/20261124T064707Z_m6/02_m6_Bd_8ch_r1
