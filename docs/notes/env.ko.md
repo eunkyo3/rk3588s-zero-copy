@@ -27,6 +27,7 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 | [`prereg-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m6) | `5a17d375d9aab77a302ec2295df886ee1257f3fd` | 2026-11-23T23:47:43Z |
 | [`amend-A17`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A17) | `b3381dcfe7e09e43bd9be3528c5977f63a9951cc` | 2026-11-24T05:36:55Z |
 | [`freeze-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m6) | `b3381dcfe7e09e43bd9be3528c5977f63a9951cc` | 2026-11-24T05:36:55Z |
+| [`prereg-m7`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m7) | `c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb` | 2026-11-25T08:33:00Z |
 
 기준 시각은 `created_at`이다(PROTOCOL §1). 태그가 가리키는 커밋은 PR #1의 머지 커밋이며, 그 커미터 날짜(2026-10-30T01:58:11Z)는 쓰지 않는다. `amend-A8`은 `freeze-m1` 전에 만든 수정 기록의 Release로, 그 항목이 등록하는 검사에 기준 시각을 주기 위한 것이다([A8](../../prereg/AMENDMENTS.ko.md)). 태그가 가리키는 커밋은 PR #12의 머지 커밋이다. GitHub는 그 커밋의 시각을 Release의 `created_at`으로 주며, Release는 2026-11-03T01:40:12Z에 공개됐다. 검사는 둘 다 지난 02:19:49Z에 시작했다.
 
@@ -51,6 +52,8 @@ M1-0에서 기록한 보드와 툴체인의 기준선이다. 참고용이다. �
 `prereg-m6`는 M6 사전 등록의 1단계인 [prereg/M6.md](../../prereg/M6.ko.md)다. PR #103의 머지 커밋을 가리키며, 그 앞에 PR #102(H1의 문턱값에 관한 노트)의 머지가 있다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-23T23:49:30Z에 공개됐다. 머리말에 `prereg-m6`를 적는 모든 M6 점검 실행은 둘 다 지난 뒤에 시작한다. 2단계가 `tools/check_prereg_order.py`에 실행 종류 `m6`를 더하면 그 도구가 이를 검사한다(M6 §8).
 
 `amend-A17`과 `freeze-m6`는 둘 다 PR #105의 머지 커밋을 가리키며, 그 PR이 A17, M6의 구성, M6의 도구를 더한다. M6 등록의 2단계다(M6 §8 4단계). 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-24T05:40:51Z와 05:40:56Z에 공개됐다. M6 스윕의 모든 실행은 둘 다 지난 뒤에 시작하며 `tools/check_prereg_order.py`가 이를 검사한다. 세션 도구는 `freeze-m6`의 행이 이 표에 있고, 체크아웃의 `src/`, `tools/`, `tests/`, `CMakeLists.txt`가 그 커밋의 것과 같아야 스윕을 시작한다.
+
+`prereg-m7`은 M7 사전 등록의 1단계인 [prereg/M7.md](../../prereg/M7.ko.md)다. PR #111의 머지 커밋을 가리킨다. 여기서도 GitHub는 커밋의 시각을 `created_at`으로 주며, Release는 2026-11-25T08:34:20Z에 공개됐다. 머리말에 `prereg-m7`을 적는 모든 M7 점검 실행은 둘 다 지난 뒤에 시작한다. 2단계가 `tools/check_prereg_order.py`에 실행 종류 `m7`을 더하면 그 도구가 이를 검사한다(M7 §8).
 
 ## 보드 기준선
 
