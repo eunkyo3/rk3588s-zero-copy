@@ -794,3 +794,93 @@ Each entry has this form:
 - Reason: M6 §8 step 4. The checks of step 3 passed before `freeze-m6`, and the readings are stated before any run of the sweep.
 - Affected data: none. The check records of the earlier rounds are kept and listed above; no run of the sweep has been made.
 - Release: `amend-A17`. `freeze-m6` tags the same commit, the merge of the pull request that adds this entry; its `created_at` is the reference time for M6's runs.
+
+## A18 — 2026-11-27 — M7: the values fixed before `freeze-m7`
+- Change: fixes the values of [M7.md](M7.md) §8 step 4, records that the counters' check failed and what follows from it by M7 §5, and states the readings of its text. Nothing in M7.md changes.
+  - **The code (§8 step 2):** commit `e2a6b7f4b8fc3913b06247c24e37c60860abc182`. `freeze-m7`'s commit is the merge of the pull request that adds this entry; its `src/`, `tools/`, `tests/` and `CMakeLists.txt` equal that commit's.
+    - **Its diff from `freeze-m6`** in the registered paths: 26 files, 7,803 lines added and 84 removed.
+      - **New:** `src/core/snapshot.cpp` and `.h` (the snapshots), `src/core/perf_counters.cpp` and `.h` (the counters); `tools/m7_idle_snapshot.cpp`, `m7_cpu0_check.cpp`, `m7_output_probe.cpp`, `m7_probe.py`, `m7_unchanged.sh`, `m7_checks.py`, `m7_report.py`; `tests/test_m7.py`, `test_m7_checks.py`, `test_m7_probe.py`, `test_m7_report.py`.
+      - **Changed, as §8 step 2 lists:** `src/app/bench_main.cpp`, `src/core/pipeline.cpp` and `.h`, `report.cpp` and `.h`, `run_rules.cpp` and `.h`, `CMakeLists.txt`, `tools/stream_session.py`, `tools/check_prereg_order.py`, `tests/test_core.cpp`.
+      - **`scripts/` and `lib/` are not changed by M7's commits.** M6's sweep runs from `v0.6-m6` ([reproduce.md](../docs/notes/reproduce.md)).
+    - **What changes for the earlier arms with the new options at their defaults:**
+      - every header gains `prereg_m7_commit` and `freeze_m7_commit`, and `env.json` a key `m7` with the arm's name, empty outside M7's runs, and the two options, in every run;
+      - the metrics thread takes a few more branches per tick, on the two options;
+      - `frames.csv`, `summary.csv` and `threads.csv` are as before. The options write files of their own (§1).
+    - **The 15 objects of §8 step 2** have the same SHA-256 in this build and in a build of `freeze-m6`'s commit (`b3381dc`) made on the board with the same compiler and flags ([20261127T023424Z_m7_unchanged](../results/check/20261127T023424Z_m7_unchanged)). One list, since both sets are equal:
+
+      | Source | SHA-256 of its object, both builds |
+      |---|---|
+      | `src/preprocess/cpu_common.cpp` | `19c900cd0840c36283a85e0c07b7fe34bbc3c91d1dd7235234411056bb29cc96` |
+      | `src/preprocess/cpu_copy.cpp` | `e99d168f8074409d14c5b0ab89c0de9d1a15e8c77f1a071850227bd4eb4bb2a7` |
+      | `src/preprocess/cpu_direct.cpp` | `ee2d7443b5d9e013f44618e993ccbdd2f217e9af93507f21060686299aff93ab` |
+      | `src/preprocess/cpu_sw.cpp` | `496ca33bed61058b4911338e624fe477b5870b87193a7b50157d3cd1a4d7c84b` |
+      | `src/preprocess/rga_copy.cpp` | `7933762d2bf16d3c4386f02efe6fe6824a1932b4ee08bf546e290e3e149d4d12` |
+      | `src/preprocess/zero_copy_rga.cpp` | `7ddd5060afe89910654feddc79ad0211cdb469b10971cbf59456b437613fab06` |
+      | `src/preprocess/cpu_yuv.cpp` | `c42bef79df9e758390c4278149fe6a78ddf19a55fd4505636e5ed3d2b691c3a1` |
+      | `src/core/npu.cpp` | `01db03a89aeeefa94e4ca84ea9fc2da1fef2519ff469cdc926b6a9020f929c14` |
+      | `src/core/video_source.cpp` | `99f57937d8fc579899aa735dc4feda4417782325e2708a1ca338162d59499e3a` |
+      | `src/core/slot_pool.cpp` | `08173a21643a49ee88027aef5c6efc26258fe359e7b47aad14fbd6c34f2d35da` |
+      | `src/core/metrics.cpp` | `dd8bc752ab0c405aaa8226060e9ed1a7a05bcb2e1b39b29b2addc9deeb8e0e2d` |
+      | `src/core/pipeline_post.cpp` | `28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a` |
+      | `src/core/yolov8_post.cpp` | `536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2` |
+      | `src/core/yolov8_post_neon.cpp` | `3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555` |
+      | `src/core/yolov10_post.cpp` | `b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8` |
+
+      The reference build is a git worktree of `freeze-m6`, as that commit has it, with libyuv's source copied from this checkout (the same pinned commit); nothing else of it differs.
+  - **The counters' events and their codes:** none was left out. All five opened on every thread and counted above zero in the decoder's group. From the board's sysfs, PMU `armv8_pmuv3` (type 7): `cpu_cycles` 0x11, `inst_retired` 0x8, `l2d_cache_refill` 0x17, `l3d_cache_refill` 0x2a, `stall_backend` 0x24. They count user and kernel mode. `perf_event_open` works as root on the board's kernel with nothing installed.
+  - **The counters' check failed in its second part. Bk, Bdk, Rck and Ck are not run (§5).** One run of Ck at 8 channels with a 10 s window, valid, both snapshots complete ([20261127T003302Z_m7_check_counters](../results/check/20261127T003302Z_m7_check_counters)):
+    - **Part 1, passed:** each of the 31 threads in `threads.csv` has its group, every `ioctl` on it succeeded, and `time_running` equals `time_enabled` for each.
+    - **Part 2, failed:** the NPU workers' cycles are 5.6% below their run time, outside the 5%.
+
+      | Group | Threads | Run time (s) | Cycles ÷ 2208 MHz (s) | Ratio | |
+      |---|---|---|---|---|---|
+      | Decoder | 24 | 0.9999 | 0.9499 | 0.9501 | within 5% |
+      | NPU workers | 3 | 0.6778 | 0.6396 | 0.9436 | **not within 5%** |
+      | Preprocessing | 2 | 0.0270 | 0.0253 | 0.936 | below 0.2 s: not judged |
+      | Metrics | 1 | 0.0126 | 0.0099 | 0.785 | pinned to cpu0 at 1800 MHz: not compared |
+      | The main thread | 1 | 0.0000 | 0.0000 | | did not run |
+
+    - **Part 3, passed:** every event counts above zero on a thread of the decoder's group.
+    - **What follows, by §5:** the four counted arms are not run in either the 10 s runs of the arms or `m7_main`, which is then 4 arms × 3 repetitions = 12 runs, in the registered orders with the counted arms taken out. Question 2's description by counters is missing, and with it `Xk − X` and §5's 2% rule. M7-H2 is not affected. `tools/stream_session.py` names the four arms and the reason (`M7_NOT_RUN`), and the report says so.
+    - **The cause is not established.** The cycles of every group that ran are below its run time, the decoder's by 5.0%. The criterion was not changed and the check was not run again.
+  - **cpu0's counter: passed. Its value is reported** ([20261125T095023Z_m7_cpu0_check](../results/check/20261125T095023Z_m7_cpu0_check)). Over 10 s of idle 86,069,291 cycles, 0.048 s at 1800 MHz and 0.48% of 10 s × 1800 MHz; over 10 s with a 2.0 s loop on cpu0 3,727,782,079; the difference is 2.023 s at 1800 MHz, 1.2% above 2.0 s.
+  - **Results of the other checks of step 3,** all of run kind `check`, judged by `tools/m7_checks.py` ([20261127T030600Z_m7_checks](../results/check/20261127T030600Z_m7_checks)): every one passes.
+    - **Unchanged arms:** the objects above. For B, Bd, Rc, C and Cp, the input tensors, the NPU's outputs and the detections on the first 100 frames of video ① have the same SHA-256 from this build and from the reference build. The run of C with every option at its default, at 2 channels, has the threads, affinities and queues of M1's `32_main_C_2ch_r1`.
+    - **The snapshots,** in a run of C at 2 channels with `--snapshot on`: both exist and parse; no thread of `bench_main` is among the 505 other threads; the first took 35.2 ms and ended 964 ms before the window's start; `frames.csv`, `channels.csv` and `threads.csv` have the columns, `channels.csv` the number of rows, and `summary.csv` the keys, of the default run of the same session.
+    - **Cpt: passed. Cpt is run.** At the auxiliary condition, 1,500 timed calls for 1,500 inferences in the window, the smallest 0.977 ms of thread CPU; 1.654 s inside `rknn_run`, 60.4% of the run's process CPU; 1.103 ms per call against 15.3 ms of wall time.
+    - **The probe's tool starts:** configuration 1 ran on one frame ([20261127T023501Z_m7_probe_smoke](../results/check/20261127T023501Z_m7_probe_smoke)). Configurations 2 to 6 were not run.
+    - **One run of each arm that is run** with a 10 s window ([20261127T023509Z_m7_check_rest](../results/check/20261127T023509Z_m7_check_rest)), after the default, snapshot and Cpt runs: all valid at the first attempt, no drop, both snapshots complete in each. Nothing M7.md fixes changes because of these values (§5):
+
+      | Point | Arm | Process CPU (s) | Latency p50 (ms) | Latency p99 (ms) |
+      |---|---|---|---|---|
+      | 8 ch, main | B | 3.68 | 36.1 | 53.0 |
+      | | Bd | 3.62 | 21.2 | 26.0 |
+      | | Rc | 1.74 | 30.1 | 44.8 |
+      | | C | 1.66 | 29.7 | 44.5 |
+      | 5 ch, auxiliary | B | 10.93 | 22.5 | 31.4 |
+      | | Bd | 10.87 | 21.1 | 22.4 |
+      | | Rc | 3.30 | 17.9 | 25.2 |
+      | | C | 3.02 | 17.8 | 25.8 |
+      | | Ct | 3.03 | 18.0 | 28.3 |
+      | | Cpt | 2.72 | 18.9 | 25.7 |
+
+    - **The order of step 3:** cpu0's check started at 2026-11-25T09:50:23Z and the counters' run at 2026-11-27T00:43:14Z; their records, with the events' set, were committed at 02:32:15Z (`e2a6b7f`). The unchanged arms' check started at 02:34:25Z, the probe's start at 02:35:01Z and the session of the other runs at 02:35:09Z, its first run at 02:45:21Z.
+    - **Two builds.** The two first checks ran from the build `28b09bf`, the others from `e2a6b7f`. Between the two, in the registered paths, only `tools/stream_session.py`, `tools/m7_checks.py` and files under `tests/` differ: the list of the arms not run and its reason, and the judge's rule that lets the two first checks name an earlier commit when nothing but those two files, `src/core/perf_counters.h` and tests differ. `src/` is the same, so the binary that was checked is the one frozen but for its commit stamp.
+  - **Readings of M7.md** where its text leaves a choice:
+    - **"One run of each arm" (§8 step 3) after the counters' check failed.** §5 says the counted arms are not run; the 10 s runs are then of the ten other arm-point pairs. The only run of a counted arm ever made is the check's own run of Ck.
+    - **"Every pipeline thread … has its group" (§8 step 3, §4's rule 5).** The metrics thread, which opens the groups, is not a pipeline thread here, as in PROTOCOL §9.3: rule 5 does not ask for its group, and it is not compared with 2208 MHz, being pinned to cpu0, which runs at 1800 MHz. Its group is still opened, and every opened group must have `time_running` equal to `time_enabled`. A group that did not open, that could not be read, whose `ioctl` failed, or that was enabled for 0 ns on a thread that used CPU, counts as no group.
+    - **When the groups are opened and stopped.** They are opened at the tick 2 s before the window's start, enabled at the window's start right after the window's CPU reading, and disabled at its end right after the end's CPU reading, before the second snapshot; disabling took about 1 ms in the check's run, which the time before the second snapshot includes in a counted arm.
+    - **The snapshots' moments.** The first is taken at the tick 1 s before the window's start and stops 50 ms before it if it is not finished; the second right after the window's end. cpu0's counter is enabled, and read, right after each snapshot's read of `/proc/schedstat`.
+    - **The idle pair (§4)** is taken once per session, 121 s apart, from second 329 of the 600 s idle period: it ends 30 s before the period's last 120 s, over which the idle baselines are read. "During the idle baseline" is read as during the 10 minutes of idle: 121 s do not fit in the 120 s, and the pair's own reads then stay out of the baselines' values.
+    - **M7-H2's scaling (§2, §3):** a value from the snapshots is scaled to the window by the span from the first snapshot's start to the second's start. cpu0's counter covers the span from its enabling to its reading, and the report corrects both ends with the recorded times of the ticks. The per-inference `Rc − C` and `B − Bd` use the nominal 4,800 (main) and 18,000 (auxiliary) inferences of a window; the NPU workers' CPU per inference of Ct and Cpt divides by the run's own number of timed calls.
+    - **Kernel threads in the report** are grouped by name at the second snapshot, the NPU's before `kworker`. A `kworker`'s name carries its current work item, so one whose name holds `npu` at the second snapshot counts in the NPU's group (§3's order); the time of the other `kworker` threads is not attributed to a driver.
+    - **The snapshot check's "columns and rows"** are compared with the default 2-channel run of the same session: the columns of `frames.csv`, `channels.csv` and `threads.csv`, the number of rows of `channels.csv`, and the keys of `summary.csv`.
+    - **The probe (§3).** Configurations 1 to 4 keep the dimensions the query returns and change only the format and the type; for FLOAT32 the size is the number of elements × 4, and the size with stride × 4. The header does not say whether a requested layout must come with reordered dimensions; a refusal is a result (§5). Each configuration makes 40 untimed runs before its 20 timed ones, an addition to §3: the earlier output probe timed each context after its 40 correctness runs, and a context here is timed after as many; its value is the mean per round. The full probe is refused unless its run kind is `m7`.
+    - **"Each naming `prereg-m7`" (§8 step 3).** The runs and the tools new in M7 write `prereg_m7_commit`. The unchanged arms' record does not: its dumps are made by `freeze-m6`'s `tools/m6_arms_dump`, which must be the same in both builds and writes M6's header. That record is tied to M7 by its `code_commit` in `reference.txt`.
+    - **A threshold met exactly** counts as met, as in A17: the 5% and 0.2 s of the checks and §2's thresholds are compared without tolerance.
+  - **Fixed for a rerun (§5, §9):** as A17, with `M7_SUPERSEDED` and `M7_CODE_TAG` (`freeze-m7`).
+  - **Tries during development, and a failed start.** Before the checks above, the tools were tried on the board from a separate copy of the working tree: cpu0's counter (idle 0.052 s, difference 1.987 s), a snapshot run from a local file, and the unit tests of the snapshots and the counters as root. No record of them is kept; none was a run of kind `check` from a committed build. The first start of the unchanged arms' check, at 02:33:44Z, built both trees and then stopped while it recorded the environment, because `sudo` could not ask for its password; it hashed and dumped nothing, wrote part of one `env.txt` and judged nothing ([20261127T023344Z_m7_unchanged](../results/check/20261127T023344Z_m7_unchanged)).
+  - **Library versions, clocks and cooling:** as A7, A9, A10 and A15. Every key M3 §4 pins equals `docs/notes/inventory_m1.txt`; the same 22 other lines differ as in A17.
+- Reason: M7 §8 step 4. The checks of step 3 were made before `freeze-m7`; the one that failed has the consequence M7 §5 registered for it, and the readings are stated before any run of the sweeps.
+- Affected data: none. No run of the sweeps has been made. The check records are listed above.
+- Release: `amend-A18`. `freeze-m7` tags the same commit, the merge of the pull request that adds this entry; its `created_at` is the reference time for M7's runs.

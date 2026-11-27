@@ -1,0 +1,34 @@
+2026-11-27T02:35:13Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-27T02:35:14Z starting the stream server
+2026-11-27T02:35:20Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261127T023516Z-519668, clock offset 0.3 ms
+2026-11-27T02:35:20Z idle for 600 s
+2026-11-27T02:40:49Z idle pair of snapshots (M7 §4): build/m7_idle_snapshot results/check/20261127T023509Z_m7_check_rest/idle_snapshot --span 121 --run-kind check
+2026-11-27T02:43:20Z idle pair of snapshots: complete
+2026-11-27T02:45:20Z soc-thermal baseline 36076 m°C
+2026-11-27T02:45:21Z 01_m7_default_C_2ch: C, 2 ch, main
+2026-11-27T02:45:54Z 01_m7_default_C_2ch: valid
+2026-11-27T02:46:54Z 02_m7_snapshot_C_2ch: C, 2 ch, main
+2026-11-27T02:47:27Z 02_m7_snapshot_C_2ch: valid
+2026-11-27T02:48:27Z 03_m7_cpt_Cpt_5ch: Cpt, 5 ch, aux
+2026-11-27T02:49:00Z 03_m7_cpt_Cpt_5ch: valid
+2026-11-27T02:50:01Z 04_m7_check_B_8ch: B, 8 ch, main
+2026-11-27T02:50:34Z 04_m7_check_B_8ch: valid
+2026-11-27T02:51:35Z 05_m7_check_Bd_8ch: Bd, 8 ch, main
+2026-11-27T02:52:08Z 05_m7_check_Bd_8ch: valid
+2026-11-27T02:53:08Z 06_m7_check_Rc_8ch: Rc, 8 ch, main
+2026-11-27T02:53:41Z 06_m7_check_Rc_8ch: valid
+2026-11-27T02:54:41Z 07_m7_check_C_8ch: C, 8 ch, main
+2026-11-27T02:55:14Z 07_m7_check_C_8ch: valid
+2026-11-27T02:56:14Z 08_m7_check_B_5ch: B, 5 ch, aux
+2026-11-27T02:56:47Z 08_m7_check_B_5ch: valid
+2026-11-27T02:57:46Z 09_m7_check_Bd_5ch: Bd, 5 ch, aux
+2026-11-27T02:58:19Z 09_m7_check_Bd_5ch: valid
+2026-11-27T02:59:19Z 10_m7_check_Rc_5ch: Rc, 5 ch, aux
+2026-11-27T02:59:52Z 10_m7_check_Rc_5ch: valid
+2026-11-27T03:00:53Z 11_m7_check_C_5ch: C, 5 ch, aux
+2026-11-27T03:01:26Z 11_m7_check_C_5ch: valid
+2026-11-27T03:02:26Z 12_m7_check_Ct_5ch: Ct, 5 ch, aux
+2026-11-27T03:02:59Z 12_m7_check_Ct_5ch: valid
+2026-11-27T03:04:00Z 13_m7_check_Cpt_5ch: Cpt, 5 ch, aux
+2026-11-27T03:04:33Z 13_m7_check_Cpt_5ch: valid
+2026-11-27T03:04:33Z stopping the stream server

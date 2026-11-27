@@ -1,0 +1,8 @@
+start_time_utc: 2026-11-27T02:34:25Z
+run_kind: check
+code_commit: e2a6b7f4b8fc3913b06247c24e37c60860abc182
+reference_tag: freeze-m6
+reference_commit: b3381dcfe7e09e43bd9be3528c5977f63a9951cc
+reference_dir: /home/pi/m7_freeze_m6
+reference_status:
+reference_diff_stat:

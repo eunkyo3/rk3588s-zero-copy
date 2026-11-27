@@ -1,0 +1,100 @@
+# start_time_utc: 2026-11-27T03:06:09Z
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# run_kind: check
+# code_commit: e2a6b7f4b8fc3913b06247c24e37c60860abc182
+# measurement: the checks of prereg/M7.md §8 step 3, judged from their records; not a run
+key,value
+record_m7_cpu0_check,20261125T095023Z_m7_cpu0_check
+record_m7_check_counters,20261127T003302Z_m7_check_counters
+record_m7_unchanged,20261127T023424Z_m7_unchanged
+record_m7_check_rest,20261127T023509Z_m7_check_rest
+record_m7_probe_smoke,20261127T023501Z_m7_probe_smoke
+cpu0_idle_cycles,86069291
+cpu0_loop_cycles,3727782079
+cpu0_idle_cycles_as_s,0.0478163
+cpu0_difference_as_s,2.02317
+cpu0_idle_cpu0_schedstat_s,0.00146008
+cpu0_loop_cpu0_schedstat_s,2.00204
+cpu0_idle_time_enabled_ns,9999844129
+cpu0_idle_time_running_ns,9999844129
+cpu0_loop_time_enabled_ns,9999871545
+cpu0_loop_time_running_ns,9999871545
+cpu0_counter,pass
+cpu0_counter_is_reported,yes
+m7_check_counters_session_status,completed
+m7_check_counters_invalid_attempts,none
+m7_check_counters_session,pass
+counter_events,cpu_cycles=0x11 inst_retired=0x8 l2d_cache_refill=0x17 l3d_cache_refill=0x2a stall_backend=0x24
+counter_pmu_type,7
+counters_dec,24 threads, run 0.9999 s, cycles as 0.9499 s, cpu_cycles 2097469875, inst_retired 2566628367, l2d_cache_refill 22778315, l3d_cache_refill 8384745, stall_backend 439431439
+counters_metrics,1 threads, run 0.0126 s, cycles as 0.0099 s, cpu_cycles 21871068, inst_retired 8828538, l2d_cache_refill 219661, l3d_cache_refill 41621, stall_backend 7591143
+counters_npu,3 threads, run 0.6778 s, cycles as 0.6396 s, cpu_cycles 1412219955, inst_retired 1525611811, l2d_cache_refill 10476388, l3d_cache_refill 21326532, stall_backend 737262714
+counters_pre,2 threads, run 0.0270 s, cycles as 0.0253 s, cpu_cycles 55787313, inst_retired 21835313, l2d_cache_refill 981343, l3d_cache_refill 212277, stall_backend 31259297
+counters_rest,1 threads, run 0.0000 s, cycles as 0.0000 s, cpu_cycles 0, inst_retired 0, l2d_cache_refill 0, l3d_cache_refill 0, stall_backend 0
+counter_events_to_leave_out,none
+counter_event_set,pass
+counters,FAIL: npu: 1412219955 cycles are 0.6396 s at 2208 MHz, not within 5% of the run time 0.6778 s
+counted_arms_are_run,no (M7 §5: the counters' check failed)
+counted_arm_list,pass
+code_commit,e2a6b7f4b8fc3913b06247c24e37c60860abc182
+objects_compared,15
+object_src/preprocess/cpu_common.cpp,19c900cd0840c36283a85e0c07b7fe34bbc3c91d1dd7235234411056bb29cc96
+object_src/preprocess/cpu_copy.cpp,e99d168f8074409d14c5b0ab89c0de9d1a15e8c77f1a071850227bd4eb4bb2a7
+object_src/preprocess/cpu_direct.cpp,ee2d7443b5d9e013f44618e993ccbdd2f217e9af93507f21060686299aff93ab
+object_src/preprocess/cpu_sw.cpp,496ca33bed61058b4911338e624fe477b5870b87193a7b50157d3cd1a4d7c84b
+object_src/preprocess/rga_copy.cpp,7933762d2bf16d3c4386f02efe6fe6824a1932b4ee08bf546e290e3e149d4d12
+object_src/preprocess/zero_copy_rga.cpp,7ddd5060afe89910654feddc79ad0211cdb469b10971cbf59456b437613fab06
+object_src/preprocess/cpu_yuv.cpp,c42bef79df9e758390c4278149fe6a78ddf19a55fd4505636e5ed3d2b691c3a1
+object_src/core/npu.cpp,01db03a89aeeefa94e4ca84ea9fc2da1fef2519ff469cdc926b6a9020f929c14
+object_src/core/video_source.cpp,99f57937d8fc579899aa735dc4feda4417782325e2708a1ca338162d59499e3a
+object_src/core/slot_pool.cpp,08173a21643a49ee88027aef5c6efc26258fe359e7b47aad14fbd6c34f2d35da
+object_src/core/metrics.cpp,dd8bc752ab0c405aaa8226060e9ed1a7a05bcb2e1b39b29b2addc9deeb8e0e2d
+object_src/core/pipeline_post.cpp,28a471ca0bfa158e34d320c05c6d68950e665b62c9c43d38f7d03baec9c9a14a
+object_src/core/yolov8_post.cpp,536b9351e78e815c09ba6e8c4f643e06e2e06454028163362ed5eaeaa4adbfa2
+object_src/core/yolov8_post_neon.cpp,3956c1ba1f541bfe6ebd44b67cef4b67403eb1c1deb31cd842354d034bae7555
+object_src/core/yolov10_post.cpp,b7642a3b11681ac79c4d0f0bb494f04988eb444bfdc9361f195983560f7cbeb8
+unchanged_arms,pass
+m7_check_rest_session_status,completed
+m7_check_rest_invalid_attempts,none
+m7_check_rest_session,pass
+default_path,pass
+snapshot_first_took_ms,35.2
+snapshot_first_ended_before_window_ms,964.0
+snapshot_other_threads,505
+snapshot_cpu0_counter_read,yes
+snapshots,pass
+cpt_rknn_run_calls,1500
+cpt_rknn_run_cpu_s,1.654
+cpt_rknn_run_cpu_share,0.6038
+cpt_rknn_run_cpu_mean_ms,1.1030
+cpt_rknn_run_cpu_min_ns,977086
+cpt_rknn_run_wall_mean_ms,15.3219
+cpt_timing,pass
+cpt_is_run,yes
+cpt_arm_list,pass
+arms_not_run,Bk Bdk Rck Ck
+run_m7_main_B,04_m7_check_B_8ch: process CPU 3.680 s in 10 s, latency p50 36.132 ms, p99 53.032 ms, drop rate 0.00000, snapshots complete
+run_m7_main_Bd,05_m7_check_Bd_8ch: process CPU 3.620 s in 10 s, latency p50 21.241 ms, p99 25.989 ms, drop rate 0.00000, snapshots complete
+run_m7_main_Rc,06_m7_check_Rc_8ch: process CPU 1.740 s in 10 s, latency p50 30.073 ms, p99 44.798 ms, drop rate 0.00000, snapshots complete
+run_m7_main_C,07_m7_check_C_8ch: process CPU 1.660 s in 10 s, latency p50 29.702 ms, p99 44.539 ms, drop rate 0.00000, snapshots complete
+run_m7_aux_B,08_m7_check_B_5ch: process CPU 10.930 s in 10 s, latency p50 22.470 ms, p99 31.384 ms, drop rate 0.00000, snapshots complete
+run_m7_aux_Bd,09_m7_check_Bd_5ch: process CPU 10.870 s in 10 s, latency p50 21.072 ms, p99 22.354 ms, drop rate 0.00000, snapshots complete
+run_m7_aux_Rc,10_m7_check_Rc_5ch: process CPU 3.300 s in 10 s, latency p50 17.945 ms, p99 25.233 ms, drop rate 0.00000, snapshots complete
+run_m7_aux_C,11_m7_check_C_5ch: process CPU 3.020 s in 10 s, latency p50 17.840 ms, p99 25.794 ms, drop rate 0.00000, snapshots complete
+run_m7_aux_Ct,12_m7_check_Ct_5ch: process CPU 3.030 s in 10 s, latency p50 18.043 ms, p99 28.279 ms, drop rate 0.00000, snapshots complete
+run_m7_aux_Cpt,13_m7_check_Cpt_5ch: process CPU 2.720 s in 10 s, latency p50 18.861 ms, p99 25.691 ms, drop rate 0.00000, snapshots complete
+arms_runs,pass
+probe_smoke,1:ran 2:not run 3:not run 4:not run 5:not run 6:not run
+probe_starts,pass
+start_m7_cpu0_check,2026-11-25T09:50:23Z
+start_m7_check_counters,2026-11-27T00:43:14Z
+start_m7_unchanged,2026-11-27T02:34:25Z
+start_m7_check_rest,2026-11-27T02:45:21Z
+start_m7_probe_smoke,2026-11-27T02:35:01Z
+order,pass
+committed_m7_cpu0_check,2026-11-27T02:32:15Z
+committed_m7_check_counters,2026-11-27T02:32:15Z
+committed_before_the_runs,pass
+one_build,pass
+passed,1
