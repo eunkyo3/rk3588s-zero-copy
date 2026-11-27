@@ -1,0 +1,27 @@
+# start_time_utc: 2026-11-27T02:40:49Z
+# ntp_synchronized: yes
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: none
+# run_kind: check
+# code_commit: e2a6b7f4b8fc3913b06247c24e37c60860abc182
+# amendment: A17
+# tool: m7_idle_snapshot
+# span_s: 121
+key,value
+snapshot1_taken,1
+snapshot1_complete,1
+snapshot1_begin_ns,25085
+snapshot1_schedstat_read_ns,128046
+snapshot1_end_ns,33218113
+snapshot1_own_threads,1
+snapshot1_other_threads,505
+snapshot1_ended_while_read,0
+snapshot2_taken,1
+snapshot2_complete,1
+snapshot2_begin_ns,121000119175
+snapshot2_schedstat_read_ns,121000232637
+snapshot2_end_ns,121033186220
+snapshot2_own_threads,1
+snapshot2_other_threads,506
+snapshot2_ended_while_read,0
+span_s,121

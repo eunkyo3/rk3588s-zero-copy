@@ -1,0 +1,34 @@
+# start_time_utc: 2026-11-25T09:50:23Z
+# ntp_synchronized: yes
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: none
+# run_kind: check
+# code_commit: 28b09bfcd255e94721614914dbd73fdfccb1db5c
+# amendment: A17
+# tool: m7_cpu0_check
+key,value
+span_s,10
+loop_s,2
+clock_hz,1800000000
+idle_read_ok,1
+idle_cycles,86069291
+idle_time_enabled_ns,9999844129
+idle_time_running_ns,9999844129
+idle_cycles_as_s,0.0478163
+idle_cpu0_schedstat_s,0.00146008
+idle_wall_s,10.0002
+loop_read_ok,1
+loop_cycles,3727782079
+loop_time_enabled_ns,9999871545
+loop_time_running_ns,9999871545
+loop_cycles_as_s,2.07099
+loop_cpu0_schedstat_s,2.00204
+loop_wall_s,10.0002
+loop_thread_cpu_s,2
+idle_limit_cycles,900000000
+difference_cycles,3641712788
+difference_as_s,2.02317
+difference_wanted_cycles,3600000000
+idle_below_limit,1
+difference_within_5pct,1
+passed,1

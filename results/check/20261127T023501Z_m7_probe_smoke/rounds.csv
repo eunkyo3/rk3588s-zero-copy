@@ -1,0 +1,17 @@
+# start_time_utc: 2026-11-27T02:35:01Z
+# ntp_synchronized: yes
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: none
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# code_commit: e2a6b7f4b8fc3913b06247c24e37c60860abc182
+# amendment: A17
+# tool: m7_probe
+# configuration: 1, one run on one frame (M7 §8 step 3)
+# dump_runs: 1
+# rounds: 0
+# timed_runs_per_round: 20
+# untimed_runs_per_process: 40
+# statistic: per round, the mean per run over its timed runs; over the rounds, the median and the range (tools/output_probe's)
+# dumps: removed once compared
+round,position,config,thread_cpu_ms_mean,process_cpu_ms_mean,timed_runs,outcome

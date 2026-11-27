@@ -6,12 +6,15 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "core/metrics.h"
 #include "core/npu.h"
+#include "core/perf_counters.h"
 #include "core/pipeline_post.h"
+#include "core/snapshot.h"
 #include "preprocess/backend.h"
 
 constexpr int kQ2Depth = 6;
@@ -29,6 +32,11 @@ struct PipelineConfig {
     bool stagger = false;              // M2 §3.1: channel i samples the frames with counter % stride == i % stride
     const PipelinePost* post = nullptr;   // required with a backend: M1's, arm Cp's (M2 §1) or C10's (M4 §1)
     bool time_rknn = false;            // arm Ct (M6 §1): the worker's thread CPU time around each rknn_run
+    // M7 §1. snapshot: the metrics thread reads the system's tasks and interrupts one second before the
+    // window and right after it, with a cycle counter on cpu0 between the two. thread_counters: a group of
+    // PMU counters on every thread of the process over the window. Both need a warm-up of at least 3 s.
+    bool snapshot = false;
+    bool thread_counters = false;
 };
 
 struct FrameRecord {
@@ -56,6 +64,12 @@ struct RunResult {
     std::vector<FrameRecord> frames;       // every processed frame, warm-up included
     std::vector<Sample> samples;           // one per second from t_start to t_e
     CpuSnapshot cpu_w, cpu_e;              // at t_w and t_e
+    // M7 §1, with their options; otherwise not taken, not open and null.
+    SystemSnapshot snap1, snap2;           // at the tick one second before t_w, and after cpu_e
+    CpuCycleCounter cpu0;                  // enabled inside snap1, read inside snap2
+    int64_t t_snap1_wake = 0, t_end_wake = 0;  // when the metrics thread woke for snap1's tick and for t_e's
+    std::shared_ptr<ThreadCounters> counters;  // opened two seconds before t_w, enabled after cpu_w,
+                                               // disabled after cpu_e
 };
 
 // npu and backend are null for variant "none".

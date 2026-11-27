@@ -1,0 +1,2 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	start_utc
+1	01_m7_counters_Ck_8ch	m7_counters	Ck	8	main	1	1	2026-11-27T00:43:14Z

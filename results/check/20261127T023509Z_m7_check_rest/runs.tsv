@@ -1,0 +1,14 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc	replaces	snapshots
+1	01_m7_default_C_2ch	m7_default	C	2	main	1	1	0	1				0	37000	0.2	2026-11-27T02:45:21Z	2026-11-27T02:45:53Z		off
+2	02_m7_snapshot_C_2ch	m7_snapshot	C	2	main	1	1	0	1				0	36076	0.3	2026-11-27T02:46:54Z	2026-11-27T02:47:26Z		complete
+3	03_m7_cpt_Cpt_5ch	m7_cpt	Cpt	5	aux	1	1	0	1				0	36076	0.4	2026-11-27T02:48:27Z	2026-11-27T02:48:59Z		complete
+4	04_m7_check_B_8ch	m7_check	B	8	main	1	1	0	1				0	37000	0.2	2026-11-27T02:50:01Z	2026-11-27T02:50:33Z		complete
+5	05_m7_check_Bd_8ch	m7_check	Bd	8	main	1	1	0	1				0	37000	0.2	2026-11-27T02:51:35Z	2026-11-27T02:52:07Z		complete
+6	06_m7_check_Rc_8ch	m7_check	Rc	8	main	1	1	0	1				0	37000	0.2	2026-11-27T02:53:08Z	2026-11-27T02:53:40Z		complete
+7	07_m7_check_C_8ch	m7_check	C	8	main	1	1	0	1				0	37000	0.2	2026-11-27T02:54:41Z	2026-11-27T02:55:13Z		complete
+8	08_m7_check_B_5ch	m7_check	B	5	aux	1	1	0	1				0	37000	0.2	2026-11-27T02:56:14Z	2026-11-27T02:56:46Z		complete
+9	09_m7_check_Bd_5ch	m7_check	Bd	5	aux	1	1	0	1				0	37923	0.2	2026-11-27T02:57:46Z	2026-11-27T02:58:18Z		complete
+10	10_m7_check_Rc_5ch	m7_check	Rc	5	aux	1	1	0	1				0	37923	0.2	2026-11-27T02:59:19Z	2026-11-27T02:59:51Z		complete
+11	11_m7_check_C_5ch	m7_check	C	5	aux	1	1	0	1				0	37923	0.2	2026-11-27T03:00:53Z	2026-11-27T03:01:25Z		complete
+12	12_m7_check_Ct_5ch	m7_check	Ct	5	aux	1	1	0	1				0	37923	0.1	2026-11-27T03:02:26Z	2026-11-27T03:02:58Z		complete
+13	13_m7_check_Cpt_5ch	m7_check	Cpt	5	aux	1	1	0	1				0	37923	0.2	2026-11-27T03:04:00Z	2026-11-27T03:04:32Z		complete

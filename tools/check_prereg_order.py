@@ -20,10 +20,14 @@ reference times.
     before it, which passed on a fresh board (result ok, fresh yes), had ended;
   - every run of kind m6 starts after freeze-m6, and every run whose header names prereg-m6 or freeze-m6
     (prereg_m6_commit or freeze_m6_commit other than none) starts after it (prereg/M6.md §8);
+  - every run or record of kind m7 starts after freeze-m7, and every one whose header names prereg-m7 or
+    freeze-m7 (prereg_m7_commit or freeze_m7_commit other than none) starts after it (prereg/M7.md §8): bench_main's
+    runs, and the other records of an M7 session, the idle pair of snapshots (build/m7_idle_snapshot) and the
+    probe's records (tools/m7_probe.py), whose headers carry the same fields;
   - every run whose header names an amendment with a Release amend-A<n> starts after that Release;
   - every commit a header gives for a stage (prereg_v1_commit, freeze_m1_commit, prereg_m2_commit,
     freeze_m2_commit, prereg_m4_commit, freeze_m4_commit, freeze_m3_commit, prereg_m6_commit,
-    freeze_m6_commit; "none" gives none) is that stage's tag commit
+    freeze_m6_commit, prereg_m7_commit, freeze_m7_commit; "none" gives none) is that stage's tag commit
     in the Registration table.
 
 The reference times are the Releases' created_at, and the tag commits the Releases' commits, as the
@@ -55,16 +59,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import m4_order  # noqa: E402  (M4 §8 step 5: the accuracy passes)
 
 KINDS = {"check", "calibration", "equivalence", "comparison", "reference", "m1.1", "m2", "m3", "m4",
-         "m6"}  # PROTOCOL §1.4
+         "m6", "m7"}  # PROTOCOL §1.4
 AFTER_FREEZE = {"comparison": "freeze-m1", "reference": "freeze-m1", "m1.1": "freeze-m1",
                 "m2": "freeze-m2", "m3": "freeze-m3", "m4": "freeze-m4",
-                "m6": "freeze-m6"}  # run kind -> the stage its runs start after (M2 §5.1, M3 §4, M4 §4, M6 §8)
+                "m6": "freeze-m6",  # run kind -> the stage its runs start after (M2 §5.1, M3 §4, M4 §4, M6 §8,
+                "m7": "freeze-m7"}  # M7 §8)
 # Header field -> the stage whose tag commit it gives (PROTOCOL §1.4, M2 §5.1, M4 §4).
 COMMITS = {"prereg_v1_commit": "prereg-v1", "freeze_m1_commit": "freeze-m1", "prereg_m2_commit": "prereg-m2",
            "freeze_m2_commit": "freeze-m2", "prereg_m4_commit": "prereg-m4", "freeze_m4_commit": "freeze-m4",
-           "freeze_m3_commit": "freeze-m3", "prereg_m6_commit": "prereg-m6", "freeze_m6_commit": "freeze-m6"}
-# The stages that a header naming them (any commit other than none) starts after (M2 §5.1, M3 §4, M4 §4).
-NAMED = {"prereg-m2", "prereg-m4", "freeze-m4", "freeze-m3", "prereg-m6", "freeze-m6"}
+           "freeze_m3_commit": "freeze-m3", "prereg_m6_commit": "prereg-m6", "freeze_m6_commit": "freeze-m6",
+           "prereg_m7_commit": "prereg-m7", "freeze_m7_commit": "freeze-m7"}
+# The stages that a header naming them (any commit other than none) starts after (M2 §5.1, M3 §4, M4 §4, M6 §8,
+# M7 §8).
+NAMED = {"prereg-m2", "prereg-m4", "freeze-m4", "freeze-m3", "prereg-m6", "freeze-m6", "prereg-m7", "freeze-m7"}
 M4_SESSION = re.compile(r"\d{8}T\d{6}Z_(m4_calib|m4_main|m4_aux)")  # M4 §8 step 5, after the passes
 M3_RECORD = re.compile(r"\d{8}T\d{6}Z_(m3_before|setup|m3_after)")  # M3 §3: before, the setup, after
 TAG_ROW = re.compile(r"^\|\s*\[?`([^`]+)`\]?(?:\([^)]*\))?\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*$")

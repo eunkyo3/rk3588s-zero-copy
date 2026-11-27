@@ -1,0 +1,2 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc	replaces	snapshots
+1	01_m7_counters_Ck_8ch	m7_counters	Ck	8	main	1	1	0	1				0	36076	0.2	2026-11-27T00:43:14Z	2026-11-27T00:43:46Z		complete

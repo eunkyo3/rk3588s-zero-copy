@@ -74,6 +74,22 @@ Subcommands:
   m6-check     the check runs of prereg/M6.md §8 step 3, run kind check, before freeze-m6: one run of C with
                every option at its default at 2 channels, then one run of each arm at 8 channels main, all
                with windows of 10 s (--duration, default 10 here). tools/m6_checks.py judges them.
+  sweep m7_main, m7_aux
+               M7's sweeps of prereg/M7.md §1 and §4, run kind m7, each in sessions of its own: m7_main's eight arms
+               (B, Bd, Rc, C, and the same with the PMU's counters, Bk, Bdk, Rck, Ck) at 8 channels main, and
+               m7_aux's six (B, Bd, Rc, C, Ct, Cpt) at 5 channels aux, 3 repetitions in M7 §4's orders (M7_ORDERS),
+               without the arms the amendment of M7 §8 step 4 says are not run (M7_NOT_RUN). Every arm runs with
+               --snapshot on. As M6's sweep: each run passes freeze-m7's commit, a session starts only once freeze-m7
+               has its row in docs/notes/env.md and the checkout's code equals it, built at the checkout's commit,
+               it stands outside the others' order, and its inventory check stops only for M3 §4's keys. m7_aux
+               starts once m7_main is complete (M7 §4: m7_main first). The idle period holds the idle pair of
+               snapshots (build/m7_idle_snapshot, M7 §4), and the session that runs m7_aux's last run then runs the
+               probe of the output bindings (tools/m7_probe.py, M7 §3). Neither decides a run's validity (M7 §4, §5).
+  m7-check     the check runs of prereg/M7.md §8 step 3, run kind check, before freeze-m7, with windows of 10 s,
+               in two parts (--part): counters, one run of Ck at 8 channels main, which comes first; rest, C with
+               every option at its default at 2 channels, C with --snapshot on at 2 channels, Cpt at 5 channels
+               aux, then one run of each arm at its point, m7_main's then m7_aux's. Its runs pass no freeze-m7
+               commit. Its idle period holds the idle pair of snapshots too. tools/m7_checks.py judges them.
   h3           the H3 search and confirmation of §10 for B and C (M1-6), run kind comparison, with the
                method of docs/notes/comparison.md. Like a sweep, it spans as many sessions as it needs:
                each session replays the earlier sessions' runs through the same schedule and goes on.
@@ -107,6 +123,11 @@ Which rules apply:
   - m6 sweep and m6-check runs: rules 1, 2, 3 and 4, and for arm Cpf M6 §4's rule 5: at the window's start
     (env.json) and at its end (threads.csv), every pipeline thread is allowed cpu0-7 and the metrics thread
     cpu0 only. A run whose env.json does not name its arm stops the session, as for M4.
+  - m7 sweep and m7-check runs: rules 1, 2, 3 and 4, and for the counted arms (Bk, Bdk, Rck, Ck) M7 §4's rule 5:
+    every pipeline thread of threads.csv has a group of counters in counters.csv that opened and was read, and
+    every group that opened ran as long as it was enabled. A run whose env.json does not name its arm stops the
+    session, as for M6. Snapshots never decide validity (M7 §4): the snapshots column of runs.tsv says whether a
+    run's two are there and complete, or why its snapshot values are missing.
   - m4 sweep and m4-check runs: rules 1, 2 and 4, and rule 3 only for an arm whose label at the point is
     unsaturated (M4 §3.2). A saturated or unknown label leaves rule 3 out, and the runs are still made. A run
     whose header is not its arm's, or that bench_main refuses before it makes the run's directory, stops the
@@ -149,6 +170,8 @@ from the login session (setsid nohup):
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py m4-check [--calib DIR] [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep m6
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py m6-check [--out DIR]
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py sweep {m7_main,m7_aux}
+  COOLING=... AMBIENT_C=... python3 tools/stream_session.py m7-check --part {counters,rest} [--out DIR]
   COOLING=... AMBIENT_C=... python3 tools/stream_session.py h3
 Options for smoke tests only (recorded, and flagged in the result): --idle-s, --warmup, --duration,
 --gate-s, for limit and h3 --start and --cap, for sweep --counts, and for an m4 sweep --calib DIR, the
@@ -213,7 +236,8 @@ FREEZE_M1_COMMIT = "2eec964d27545e081a44bc5ead01bbfcd2905a54"  # docs/notes/env.
 PREREG_M2_COMMIT = "5d9d6d04e50f17d52980dc5b958c7071d7107176"  # docs/notes/env.md; M2's headers carry it (M2 §5.1)
 PREREG_M4_COMMIT = "8638685d9ef806a85e5042d7cc10febdd5ae93a9"  # docs/notes/env.md; M4's headers carry it (M4 §4)
 PREREG_M6_COMMIT = "5a17d375d9aab77a302ec2295df886ee1257f3fd"  # docs/notes/env.md; M6's headers carry it (M6 §8)
-ENV_MD = "docs/notes/env.md"  # its Registration table gives freeze-m2's, freeze-m4's, freeze-m3's and freeze-m6's commits
+PREREG_M7_COMMIT = "c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb"  # docs/notes/env.md; M7's headers carry it (M7 §8)
+ENV_MD = "docs/notes/env.md"  # its Registration table gives the freeze commits of M2, M4, M3, M6 and M7
 M3_SETUP = "setup"  # results/m3/<UTC>_setup: a record of scripts/setup_board.sh (prereg/M3.md §3)
 M3_PINNED = (  # prereg/M3.md §4: the inventory keys (tools/inventory.sh) that must equal inventory_m1.txt's
     # the image's kernel, drivers and boot firmware
@@ -260,6 +284,47 @@ M6_SUPERSEDED = ()
 # under an amendment that changes the code, that amendment's Release (amend-A<n>), which the amendment puts here.
 M6_CODE_TAG = "freeze-m6"
 M6_CODE_PATHS = ("src", "tools", "tests", "CMakeLists.txt")  # M6 §9: what an m6 run's code is
+# prereg/M7.md §1: each sweep's arms. Bk, Bdk, Rck and Ck are B, Bd, Rc and C with the PMU's counters on every
+# pipeline thread; Ct is C with every rknn_run timed, Cpt Ct with the package's post-processing. Every arm of M7
+# runs with the snapshots (SWEEP_OPTIONS).
+M7_COUNTED = ("Bk", "Bdk", "Rck", "Ck")
+M7_ORDERS = {  # M7 §4: {sweep: {repetition: arms in run order}}; the second is the first reversed
+    "m7_main": {1: ("B", "Bd", "Rc", "C", "Bk", "Bdk", "Rck", "Ck"),
+                2: ("Ck", "Rck", "Bdk", "Bk", "C", "Rc", "Bd", "B"),
+                3: ("Bdk", "Bd", "C", "Ck", "Rc", "Rck", "B", "Bk")},
+    "m7_aux": {1: ("B", "Bd", "Rc", "C", "Ct", "Cpt"), 2: ("Cpt", "Ct", "C", "Rc", "Bd", "B"),
+               3: ("Rc", "C", "B", "Bd", "Cpt", "Ct")},
+}
+M7_POINTS = {"m7_main": (8, "main"), "m7_aux": (5, "aux")}  # M7 §1: each sweep's channels and condition
+# M7 §5: the arms that are not run, as the amendment of M7 §8 step 4 says (Bk, Bdk, Rck and Ck if the counters' check
+# fails; Cpt if its check fails). They are left out of the sweeps and of m7-check's runs of the arms, and the order of
+# the others stands.
+M7_NOT_RUN = ("Bk", "Bdk", "Rck", "Ck")
+# arm -> why it is not run, in one sentence that names the check's record; the report gives it
+M7_NOT_RUN_WHY = dict.fromkeys(M7_NOT_RUN, (
+    "the counters' check failed in its second part (results/check/20261127T003302Z_m7_check_counters): the NPU "
+    "workers' cycles divided by 2208 MHz were 0.6396 s against a run time of 0.6778 s, 5.6% apart and not within "
+    "5% (M7 §5, §8 step 3)"))
+# M7 §5, §9: after a defect an amendment fixes, the sweep it affects is rerun whole (both, for a defect in what both
+# use). The amendment names the sessions it supersedes here (results/m7/<name>). They stay where they are and are
+# reported, and neither the session tool nor the report counts their runs.
+M7_SUPERSEDED = ()
+# The stage in docs/notes/env.md whose commit an m7 session's code must equal, as M6_CODE_TAG: freeze-m7, or the
+# Release of an amendment that changes the code (amend-A<n>), which the amendment puts here.
+M7_CODE_TAG = "freeze-m7"
+M7_CODE_PATHS = ("src", "tools", "tests", "CMakeLists.txt")  # M7 §9: what an m7 run's code is
+M7_CHECK_DURATION = 10  # M7 §8 step 3: windows of 10 s
+M7_CHECK_PARTS = ("counters", "rest")  # M7 §8 step 3: the counters' check comes first, the 10 s runs of the arms last
+M7_IDLE_SNAPSHOT = "build/m7_idle_snapshot"  # M7 §4: the idle pair, built from the source of --snapshot on (M7 §1)
+IDLE_SNAPSHOT_SPAN_S = 121  # M7 §4: 121 s apart, the span of a run's snapshots (M7 §1)
+IDLE_SNAPSHOT_MARGIN_S = 30  # for the tool's start, its two reads and its files, before the idle baseline begins
+M7_PROBE = "tools/m7_probe.py"  # M7 §3: the probe of the output bindings
+M7_PROBE_TIMEOUT_S = 3600
+SNAPSHOT_COLUMNS = {  # core/snapshot.h: the snapshots' tables and their columns
+    "snapshot_own.csv": "snapshot,tid,comm,run_ns,wait_ns,timeslices,voluntary_cs,involuntary_cs",
+    "snapshot_tasks.csv": "snapshot,pid,tid,kernel,comm,run_ns"}
+SNAPSHOT_FILES = ("snapshot_meta.csv", *SNAPSHOT_COLUMNS) + tuple(  # core/snapshot.h: every file of the two snapshots
+    f"snapshot{k}_{name}.txt" for k in (1, 2) for name in ("schedstat", "stat", "interrupts", "softirqs"))
 SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, results/<kind>/<UTC>_<sweep>
     "main": ((1, 2, 4, 8, 12, 16, 32), "main", ("B", "C"), "comparison"),
     "aux": ((1, 2, 3, 4, 5), "aux", ("B", "C"), "comparison"),
@@ -281,22 +346,35 @@ SWEEPS = {  # §12 with §6.3 and A9: counts, condition, variants, run kind, res
     "m3_after": ((8,), "main", ("B", "C"), "m3"),
     # prereg/M6.md §1 and §4: eight arms at H1's point, in M6_ORDERS
     "m6": ((8,), "main", M6_ARMS, "m6"),
+    # prereg/M7.md §1 and §4: two sweeps, each in sessions of its own, in M7_ORDERS
+    "m7_main": ((M7_POINTS["m7_main"][0],), M7_POINTS["m7_main"][1], M7_ORDERS["m7_main"][1], "m7"),
+    "m7_aux": ((M7_POINTS["m7_aux"][0],), M7_POINTS["m7_aux"][1], M7_ORDERS["m7_aux"][1], "m7"),
 }
 ARMS = {"Bd": ["--variant", "Bd"], "Bk4": ["--variant", "B", "--prep-threads", "4"],  # A12
         "Cp": ["--variant", "C", "--post", "neon"],  # M2 §1
         "C8": ["--variant", "C", "--post", "neon", "--model", M4_MODELS["C8"][0]],  # M4 §3.2
         "C10": ["--variant", "C", "--post", "v10", "--model", M4_MODELS["C10"][0]],
         "Cpf": ["--variant", "C", "--post", "neon", "--cores", "all"],  # M6 §1: Cp with the pipeline not pinned
-        "Ct": ["--variant", "C", "--time-rknn", "on"]}  # M6 §1; else --variant <arm>
+        "Ct": ["--variant", "C", "--time-rknn", "on"],  # M6 §1
+        # M7 §1: the four cells with the PMU's counters, and Ct with the package's post-processing
+        "Bk": ["--variant", "B", "--thread-counters", "on"], "Bdk": ["--variant", "Bd", "--thread-counters", "on"],
+        "Rck": ["--variant", "Rc", "--thread-counters", "on"], "Ck": ["--variant", "C", "--thread-counters", "on"],
+        "Cpt": ["--variant", "C", "--post", "neon", "--time-rknn", "on"]}  # else --variant <arm>
 SWEEP_OPTIONS = {"a55": ["--cores", "a55"],  # A12; on every run of the sweep or phase
                  "m2_main": ["--stagger", "on"], "m2_check": ["--stagger", "on"],  # M2 §3.1, both arms
-                 "m4_main": ["--stagger", "on"], "m4_check": ["--stagger", "on"]}  # M4 §3.2, both arms
+                 "m4_main": ["--stagger", "on"], "m4_check": ["--stagger", "on"],  # M4 §3.2, both arms
+                 # M7 §1: every arm of M7 with the snapshots; m7-check's default run (m7_default) has none
+                 **{p: ["--snapshot", "on"] for p in ("m7_main", "m7_aux", "m7_counters", "m7_snapshot", "m7_cpt",
+                                                      "m7_check")}}
 M2_CHECK = (8, "main", ("C", "Cp"))  # M2 §7 step 3: channels, condition, arms in run order, one run each
 M4_CHECK = (8, "main", ("C8", "C10"))  # M4 §8 step 3, "Arms": the same
 M6_CHECK = (8, "main")  # M6 §8 step 3: one run of each arm at the point
 M6_DEFAULT = (2, "main", "C")  # M6 §8 step 3: C with every option at its default, as M1's 32_main_C_2ch_r1
 M6_CHECK_DURATION = 10  # M6 §8 step 3: windows of 10 s
 M6_PHASES = ("m6", "m6_check", "m6_default")  # the phases whose runs are M6's arms
+# The phases of M7's sessions (M7 §4, §8 step 3): its two sweeps, and m7-check's counters run (Ck), default run (C
+# with every option at its default), snapshots run (C with --snapshot on), Cpt's check and the 10 s runs of the arms.
+M7_PHASES = ("m7_main", "m7_aux", "m7_counters", "m7_default", "m7_snapshot", "m7_cpt", "m7_check")
 M4_POINTS = {"m4_main": "main", "m4_aux": "aux", "m4_check": "main"}  # M4 §3.2: the point of each M4 phase
 SWEEP_REPETITIONS = {"a55": 1}  # A12 (§13: × 1); the other sweeps have REPETITIONS
 IDLE_BASELINE_S = 120  # §7.2
@@ -523,6 +601,18 @@ def m6_session(args):
     return is_m6(getattr(args, "sweep", None)) or getattr(args, "command", None) == "m6-check"
 
 
+def is_m7(name):
+    """Whether name is one of M7's sweeps (run kind m7, M7 §4)."""
+    return name in SWEEPS and SWEEPS[name][3] == "m7"
+
+
+def m7_session(args):
+    """Whether a session is M7's, one of its sweeps or m7-check: its headers carry M7's commits, its idle baseline
+    has /proc/schedstat (M2 §3.2), its idle period holds the idle pair of snapshots, and its inventory check keeps
+    to M3 §4 (M7 §4)."""
+    return is_m7(getattr(args, "sweep", None)) or getattr(args, "command", None) == "m7-check"
+
+
 def m3_session(args):
     """Whether a session is M3's: its runs pass freeze-m3's commit, and its inventory check keeps to M3 §4."""
     return is_m3(getattr(args, "sweep", None))
@@ -571,7 +661,7 @@ def rule3_applies(phase, variant, channels, condition, limit, labels):
     arm's saturation label at the point (M4 §3.2): only "unsaturated" applies it. For the others, §6.2."""
     if m4_phase(phase):
         return labels.get(variant) == "unsaturated"
-    return phase in ("thermal", "m2_check", "m6_check", "m6_default") + tuple(SWEEPS) and \
+    return phase in ("thermal", "m2_check", "m6_check", "m6_default") + M7_PHASES + tuple(SWEEPS) and \
         unsaturated(channels, condition, limit)
 
 
@@ -771,9 +861,157 @@ def m6_arms():
     return tuple(a for a in M6_ARMS if a not in M6_NOT_RUN)
 
 
+def m7_arms(sweep):
+    """The arms of one of M7's sweeps that are run, in the first repetition's order (M7 §4)."""
+    return tuple(a for a in M7_ORDERS[sweep][1] if a not in M7_NOT_RUN)
+
+
 def sweep_variants(sweep):
-    """The arms a sweep runs: SWEEPS', and for m6 without the arms that are not run (M6 §4)."""
-    return m6_arms() if sweep == "m6" else SWEEPS[sweep][2]
+    """The arms a sweep runs: SWEEPS', and for m6 and M7's sweeps without the arms that are not run (M6 §4, M7 §4)."""
+    if sweep == "m6":
+        return m6_arms()
+    return m7_arms(sweep) if is_m7(sweep) else SWEEPS[sweep][2]
+
+
+def registered_orders(sweep):
+    """(its orders {repetition: arms in run order}, the arms not run) of a sweep whose plan gives each repetition's
+    order (M6 §4, M7 §4), or None for the others, whose order variant_order gives."""
+    if sweep == "m6":
+        return M6_ORDERS, M6_NOT_RUN
+    return (M7_ORDERS[sweep], M7_NOT_RUN) if is_m7(sweep) else None
+
+
+def superseded(sweep):
+    """The sessions of a sweep that an amendment superseded (M6 §5, M7 §5): kept, and not counted."""
+    if sweep == "m6":
+        return M6_SUPERSEDED
+    return M7_SUPERSEDED if is_m7(sweep) else ()
+
+
+def m7_check_plan(part):
+    """[(phase, arm, channels, condition)] of m7-check's part, in run order (M7 §8 step 3). counters: one run of Ck at
+    8 channels main, the counters' check, which comes first. rest: C with every option at its default at 2 channels
+    (m7_default, as M1's 32_main_C_2ch_r1), C with the snapshots at 2 channels (m7_snapshot), Cpt's check at 5
+    channels aux (m7_cpt), then one run of each arm that is run at its point (m7_check), m7_main's then m7_aux's."""
+    if part == "counters":
+        return [("m7_counters", "Ck", *M7_POINTS["m7_main"])]
+    return ([("m7_default", "C", 2, "main"), ("m7_snapshot", "C", 2, "main"), ("m7_cpt", "Cpt", *M7_POINTS["m7_aux"])]
+            + [("m7_check", arm, *M7_POINTS[sweep]) for sweep in M7_ORDERS for arm in m7_arms(sweep)])
+
+
+def counter_problems(threads_rows, counter_rows):
+    """M7 §4's rule 5 for the counted arms: why a run is invalid, as a list. threads_rows: the rows of its threads.csv
+    (the window's end); counter_rows: the rows of its counters.csv (core/perf_counters.h), or None if it cannot be
+    read. The run is invalid if some pipeline thread of threads.csv (every thread but the metrics thread, M6 §1) has no
+    group of counters (one that opened, was enabled and disabled, and was read; a group enabled for 0 ns on a thread
+    that used CPU in the window is none either), or if for some group that opened time_running differs from
+    time_enabled."""
+    if counter_rows is None:
+        return ["no readable counters.csv (rule 5, M7 §4)"]
+    groups = {r.get("tid"): r for r in counter_rows}
+    pipeline = [t for t in threads_rows if t.get("comm") != "metrics"]
+    if not pipeline:
+        return ["threads.csv lists no pipeline thread (rule 5, M7 §4)"]
+    problems = []
+    def counted(tid):  # the group opened, both ioctls on it succeeded, and it was read
+        g = groups.get(tid, {})
+        return all(g.get(k) == "1" for k in ("opened", "enable_ok", "disable_ok", "read_ok"))
+    without = [f"{t.get('comm')} ({t.get('tid')})" for t in pipeline if not counted(t.get("tid"))]
+    if without:
+        problems.append(f"pipeline threads without a group of counters that opened and was read: {', '.join(without)} "
+                        "(rule 5, M7 §4)")
+    for r in counter_rows:
+        if r.get("opened") != "1":
+            continue
+        try:
+            enabled, running = int(r["time_enabled_ns"]), int(r["time_running_ns"])
+        except (KeyError, TypeError, ValueError):
+            problems.append(f"the group of {r.get('comm')} ({r.get('tid')}) has no readable times (rule 5, M7 §4)")
+            continue
+        used = next((t.get("cpu_s_in_window") for t in threads_rows if t.get("tid") == r.get("tid")), "0")
+        if enabled == 0 and float(used or 0) > 0:  # it ran in the window, and its group never counted
+            problems.append(f"the group of {r.get('comm')} ({r.get('tid')}) was enabled for 0 ns, and the thread "
+                            f"used {used} s in the window (rule 5, M7 §4)")
+        if running != enabled:
+            problems.append(f"the group of {r.get('comm')} ({r.get('tid')}) ran {running} ns of the {enabled} ns it "
+                            "was enabled (rule 5, M7 §4)")
+    return problems
+
+
+def m7_run_problems(phase, variant, env, threads_rows, counter_rows):
+    """(reasons, external) for a finished run of an M7 phase. env: its env.json as a dict, or None if it cannot be
+    read. A run whose env.json does not name its arm (M7 §1: bench_main's m7 arm, which is none for m7-check's default
+    run, whose options are all at their defaults) is the setup's fault and stops the session, as for M6. For the
+    counted arms, rule 5 gives the reasons (counter_problems); snapshots give none (M7 §4)."""
+    want = "" if phase == "m7_default" else variant
+    got = "unreadable env.json" if env is None else env.get("m7", {}).get("arm")
+    if got != want:
+        return [f"the run's env.json names M7 arm {got!r}, not {want!r} (M7 §1)"], "a run's options are not its arm's"
+    if variant in M7_COUNTED:
+        return counter_problems(threads_rows, counter_rows), None
+    return [], None
+
+
+def snapshot_problems(meta, files):
+    """M7 §1, §4: why the snapshot values of a run, or of the idle pair, are missing, as a list; empty when both
+    snapshots were taken and are complete and every file core/snapshot.h names is there and can be read. meta:
+    snapshot_meta.csv's {key: value}, or None if it cannot be read; files: the names of the snapshot files that are
+    there and can be read. Snapshots never decide a run's validity (M7 §4): the session records these, and the
+    report lists the run."""
+    if meta is None:
+        return ["no readable snapshot_meta.csv"]
+    problems = []
+    for k in (1, 2):
+        if meta.get(f"snapshot{k}_taken") != "1":
+            problems.append(f"snapshot {k} was not taken")
+        elif meta.get(f"snapshot{k}_complete") != "1":
+            problems.append(f"snapshot {k} is incomplete")
+    absent = [f for f in SNAPSHOT_FILES if f not in files]
+    if absent:
+        problems.append(f"no readable {', '.join(absent)}")
+    return problems
+
+
+def snapshots_state(d):
+    """What a run's or the idle pair's snapshot files in directory d give, as runs.tsv and result.csv record it:
+    "complete", or "missing: " and snapshot_problems' reasons."""
+    try:
+        meta = {r["key"]: r["value"] for r in read_csv(d / "snapshot_meta.csv")[1]}
+    except (OSError, KeyError, UnicodeDecodeError, csv.Error):
+        meta = None
+    files = set()
+    for name in SNAPSHOT_FILES:
+        try:
+            text = (d / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        table = [line for line in text.splitlines() if not line.startswith("# ")]
+        if name in SNAPSHOT_COLUMNS and (not table or table[0] != SNAPSHOT_COLUMNS[name]):
+            continue
+        files.add(name)
+    problems = snapshot_problems(meta, files)
+    return "missing: " + "; ".join(problems) if problems else "complete"
+
+
+def idle_snapshot_second(idle_s):
+    """The second of the idle period at which M7 §4's idle pair of snapshots starts, or None if the period cannot hold
+    it. It ends before §7.2's idle baseline (the period's last 120 s, which holds the soc-thermal one's 60 s) begins,
+    so that no baseline holds its reads, and the period is not lengthened: no run overlaps it."""
+    at = max(0, idle_s - IDLE_BASELINE_S) - IDLE_SNAPSHOT_SPAN_S - IDLE_SNAPSHOT_MARGIN_S
+    return at if at >= 0 else None
+
+
+def idle_snapshot_command(out_dir, run_kind, freeze_m7):
+    """build/m7_idle_snapshot's command line for a session's idle pair (M7 §4): its run kind, and freeze-m7's commit
+    when the session has one."""
+    return ([M7_IDLE_SNAPSHOT, str(out_dir), "--span", str(IDLE_SNAPSHOT_SPAN_S), "--run-kind", run_kind]
+            + (["--freeze-m7-commit", freeze_m7] if freeze_m7 != "none" else []))
+
+
+def m7_probe_command(out_dir, run_kind, freeze_m7):
+    """tools/m7_probe.py's command line for the probe of M7 §3, with a session's run kind and freeze-m7's commit."""
+    return [sys.executable, M7_PROBE, "run", "--out", str(out_dir), "--run-kind", run_kind,
+            "--freeze-m7-commit", freeze_m7]
 
 
 def cpf_affinity_problems(window_start, window_end):
@@ -809,12 +1047,14 @@ def m6_run_problems(variant, env, threads_rows):
 
 
 def sweep_plan(sweep, counts=None):
-    """[(channels, repetition, variants in run order)] of a sweep, in run order. M6's orders are its own
-    (M6 §4), without the arms that are not run."""
+    """[(channels, repetition, variants in run order)] of a sweep, in run order. M6's and M7's orders are their own
+    (M6 §4, M7 §4), without the arms that are not run."""
     all_counts, _, variants, _ = SWEEPS[sweep]
-    if sweep == "m6":
-        return [(c, r, tuple(a for a in M6_ORDERS[r] if a not in M6_NOT_RUN))
-                for c in (counts or all_counts) for r in sorted(M6_ORDERS)]
+    registered = registered_orders(sweep)
+    if registered is not None:  # M6 §4, M7 §4
+        orders, not_run = registered
+        return [(c, r, tuple(a for a in orders[r] if a not in not_run))
+                for c in (counts or all_counts) for r in sorted(orders)]
     return [(c, r, variant_order(variants, r)) for c in channel_order(counts or all_counts)
             for r in range(1, SWEEP_REPETITIONS.get(sweep, REPETITIONS) + 1)]
 
@@ -1146,6 +1386,22 @@ def read_optional(path):
         return None
 
 
+def optional_rows(path):
+    """The table rows of a results CSV (read_csv), or None if it cannot be read."""
+    try:
+        return read_csv(path)[1]
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return None
+
+
+def run_env(run_dir):
+    """A run's env.json as a dict, or None if it cannot be read (M6 §1, M7 §1: it names the run's arm)."""
+    try:
+        return json.loads((Path(run_dir) / "env.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 class Outcome:
     def __init__(self):
         self.reasons, self.warnings = [], []
@@ -1153,6 +1409,7 @@ class Outcome:
         self.code = None
         self.trip_samples = ""
         self.offset_ms = ""
+        self.snapshots = ""  # M7 §4: whether its snapshots are there and complete (snapshots_state), never a reason
 
 
 class Session:
@@ -1178,6 +1435,9 @@ class Session:
         self.server_started = False
         self.freeze_m3 = "none"  # start() sets freeze-m3's commit for an m3 session (M3 §4)
         self.freeze_m6 = "none"  # start() sets freeze-m6's commit for an M6 session; none before it (M6 §8)
+        self.freeze_m7 = "none"  # start() sets freeze-m7's commit for an M7 sweep; m7-check passes none (M7 §8)
+        self.snapshot_proc = None  # M7 §4: build/m7_idle_snapshot while it runs in the idle period
+        self.idle_snapshot = "not taken"  # M7 §4: what result.csv records of the idle pair
         self.last_end = None
         self.invalid_x2 = []
         self.run_header = None  # the first run's header, for result.csv
@@ -1187,7 +1447,7 @@ class Session:
         self.runs = open(self.out / "runs.tsv", "w", encoding="utf-8")
         self.runs.write("seq\tname\tphase\tvariant\tchannels\tcondition\trepetition\tattempt\texit\tvalid\t"
                         "passed\treasons\twarnings\ttrip_samples\tgate_soc_mc\tclock_offset_ms\tstart_utc\tend_utc\t"
-                        "replaces\n")
+                        "replaces" + ("\tsnapshots" if m7_session(args) else "") + "\n")  # M7 §4: snapshots
         self.started = open(self.out / "started.tsv", "w", encoding="utf-8")
         self.started.write("seq\tname\tphase\tvariant\tchannels\tcondition\trepetition\tattempt\tstart_utc\n")
         for f in (self.runs, self.started):
@@ -1298,8 +1558,8 @@ class Session:
             with open(self.out / "dpkg.tsv", "w", encoding="utf-8") as f:
                 subprocess.run(["dpkg-query", "-W", "-f", "${Package}\t${Version}\t${db:Status-Abbrev}\n"],
                                stdout=f, check=False)
-        if diff and (m3_session(a) or m6_session(a)):  # M3 §4, M6 §4: only the pinned keys stop it; the rest is
-            problems = m3_inventory_problems(now, reference)  # recorded and reported
+        if diff and (m3_session(a) or m6_session(a) or m7_session(a)):  # M3 §4, M6 §4, M7 §4: only the pinned keys
+            problems = m3_inventory_problems(now, reference)  # stop it; the rest is recorded and reported
             if problems:
                 (self.out / "inventory_pinned.txt").write_text("".join(f"{p}\n" for p in problems))
                 raise Stop(f"a key that M3 §4 pins differs from {INVENTORY}: " + "; ".join(problems))
@@ -1320,12 +1580,21 @@ class Session:
         self.freeze_m2, self.freeze_m4 = session_freezes(a)
         self.freeze_m3 = freeze_m3_commit() if m3_session(a) else "none"  # M3 §4; none before it (smoke tests)
         self.freeze_m6 = registered_commit("freeze-m6") if m6_session(a) else "none"  # M6 §8; none before it
+        # M7 §8: a sweep's runs pass freeze-m7's commit (none before it: smoke tests); m7-check's pass none
+        self.freeze_m7 = registered_commit("freeze-m7") if is_m7(getattr(a, "sweep", None)) else "none"
         self.start_server()
         self.say(f"idle for {a.idle_s} s")
         temps = []
         from_s = max(0, a.idle_s - IDLE_BASELINE_S)  # §7.2's idle baseline: the idle period's last 120 s
+        snapshot_at = idle_snapshot_second(a.idle_s) if m7_session(a) else None  # M7 §4: the idle pair
+        if m7_session(a) and snapshot_at is None:
+            self.idle_snapshot = f"not taken: an idle period of {a.idle_s} s cannot hold it before the idle baseline"
+            self.say(f"idle pair of snapshots (M7 §4): {self.idle_snapshot}")
         for i in range(a.idle_s):
+            if i == snapshot_at:
+                self.start_idle_snapshot()
             if i == from_s:
+                self.finish_idle_snapshot()
                 self.idle = [dt.datetime.now(dt.timezone.utc), time.monotonic(), Path("/proc/stat").read_text(),
                              read_optional("/proc/schedstat")]  # M2 §3.2
             time.sleep(1)
@@ -1336,6 +1605,37 @@ class Session:
         (self.out / "baseline.txt").write_text(f"idle_s: {a.idle_s}\nsoc_thermal_baseline_mc: {self.baseline}\n")
         self.say(f"soc-thermal baseline {self.baseline} m°C")
         self.last_end = time.monotonic() - a.gate_s  # no bench ran during the idle period
+
+    def start_idle_snapshot(self):
+        """M7 §4: starts the idle pair of snapshots (build/m7_idle_snapshot), which reads what the idle board does in a
+        span like a run's, into idle_snapshot/. A failure is recorded, and the session goes on: snapshots do not
+        decide validity (M7 §4)."""
+        cmd = idle_snapshot_command(self.out / "idle_snapshot", self.run_kind, self.freeze_m7)
+        self.say(f"idle pair of snapshots (M7 §4): {' '.join(cmd)}")
+        try:
+            with open(self.out / "idle_snapshot.log", "w", encoding="utf-8") as log:
+                self.snapshot_proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
+        except OSError as e:
+            self.idle_snapshot = f"failed: {e}"
+            self.say(f"idle pair of snapshots: {self.idle_snapshot}")
+
+    def finish_idle_snapshot(self):
+        """M7 §4: records how the idle pair of snapshots ended, before the idle baseline begins. One that still runs
+        then is stopped, so that no baseline holds its reads."""
+        p, self.snapshot_proc = self.snapshot_proc, None
+        if p is None:
+            return
+        code = p.poll()
+        if code is None:
+            p.kill()
+            p.wait()
+            self.idle_snapshot = ("failed: it still ran when the idle baseline began, and was stopped "
+                                  "(idle_snapshot.log)")
+        elif code != 0:
+            self.idle_snapshot = f"failed: exit {code} (idle_snapshot.log)"
+        else:
+            self.idle_snapshot = snapshots_state(self.out / "idle_snapshot")
+        self.say(f"idle pair of snapshots: {self.idle_snapshot}")
 
     def start_server(self):
         self.say("starting the stream server")
@@ -1398,6 +1698,10 @@ class Session:
         # A second signal must not cut the cleanup short.
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
+        if self.snapshot_proc is not None and self.snapshot_proc.poll() is None:  # the session stopped in its idle
+            self.snapshot_proc.kill()  # period (M7 §4)
+            self.snapshot_proc.wait()
+            self.say("stopped the idle pair of snapshots")
         if self.server_launched:
             self.say("stopping the stream server")
             steps = []
@@ -1458,6 +1762,7 @@ class Session:
                *(["--freeze-m4-commit", self.freeze_m4] if m4_phase(phase) else []),  # M4 §4
                *(["--freeze-m3-commit", self.freeze_m3] if is_m3(phase) else []),  # M3 §4
                *(["--freeze-m6-commit", self.freeze_m6] if phase in M6_PHASES else []),  # M6 §8
+               *(["--freeze-m7-commit", self.freeze_m7] if phase in M7_PHASES else []),  # M7 §8
                "--out", str(run_dir)]
         start = dt.datetime.now(dt.timezone.utc)
         # Just before the bench, after the gate and the checks: if the session dies during the run,
@@ -1516,14 +1821,17 @@ class Session:
         if not alive:
             o.reasons.append("stream server down after the run (external failure)")
             o.external = o.external or "the stream server is down"
+        if phase in M7_PHASES:  # M7 §4: recorded with every attempt, valid or not; never a reason
+            o.snapshots = "off" if phase == "m7_default" else snapshots_state(run_dir)
 
         summary_path, channels_path = run_dir / "summary.csv", run_dir / "channels.csv"
         if o.code != 0 or not summary_path.exists() or not channels_path.exists():  # rule 2
             o.reasons.append(f"bench exit {o.code}")
-            if (m4_phase(phase) or phase in M6_PHASES) and not made and o.code != 0:  # it refused the run: the
-                o.reasons[-1] += " before it made its directory: it refused the run's options (see its log)"  # setup
-                o.external = o.external or ("bench_main refused an M4 run's options" if m4_phase(phase) else
-                                            "bench_main refused an M6 run's options")
+            if (m4_phase(phase) or phase in M6_PHASES + M7_PHASES) and not made and o.code != 0:  # it refused the
+                o.reasons[-1] += " before it made its directory: it refused the run's options (see its log)"  # run:
+                o.external = o.external or ("bench_main refused an M4 run's options" if m4_phase(phase) else  # setup
+                                            "bench_main refused an M6 run's options" if phase in M6_PHASES else
+                                            "bench_main refused an M7 run's options")
         else:
             header, rows = read_csv(summary_path)
             self.run_header = self.run_header or header
@@ -1537,11 +1845,17 @@ class Session:
                     return
                 self.arm_headers.setdefault(variant, header)
             if phase in M6_PHASES:  # M6 §1: the run is its arm's; M6 §4: rule 5 for Cpf
-                try:
-                    env = json.loads((run_dir / "env.json").read_text(encoding="utf-8"))
-                except (OSError, ValueError):
-                    env = None
-                reasons, external = m6_run_problems(variant, env, read_csv(run_dir / "threads.csv")[1])
+                reasons, external = m6_run_problems(variant, run_env(run_dir), read_csv(run_dir / "threads.csv")[1])
+                o.reasons += reasons
+                if external:
+                    o.external = external
+                    return
+            if phase in M7_PHASES:  # M7 §1: the run is its arm's; M7 §4: rule 5 for the counted arms
+                threads, counters = [], None
+                if variant in M7_COUNTED:
+                    threads, counters = optional_rows(run_dir / "threads.csv") or [], \
+                        optional_rows(run_dir / "counters.csv")
+                reasons, external = m7_run_problems(phase, variant, run_env(run_dir), threads, counters)
                 o.reasons += reasons
                 if external:
                     o.external = external
@@ -1593,7 +1907,8 @@ class Session:
             self.runs.write("\t".join(map(str, [
                 self.seq, name, phase, variant, channels, condition, repetition, attempt, o.code, int(valid), passed,
                 "; ".join(o.reasons), "; ".join(o.warnings), o.trip_samples, temp, o.offset_ms,
-                f"{start:%Y-%m-%dT%H:%M:%SZ}", f"{end:%Y-%m-%dT%H:%M:%SZ}", replaces])) + "\n")
+                f"{start:%Y-%m-%dT%H:%M:%SZ}", f"{end:%Y-%m-%dT%H:%M:%SZ}", replaces,
+                *([o.snapshots] if phase in M7_PHASES else [])])) + "\n")  # M7 §4: an M7 session's column
             durable(self.runs)
             self.say(f"{name}: " + ("valid" if valid else "invalid: " + "; ".join(o.reasons))
                      + (f", passed {passed}" if passed else ""))
@@ -1607,7 +1922,8 @@ class Session:
 
     def write_result(self, rows, run_kind):
         a = self.args
-        protocol = {**PROTOCOL, "duration": M6_CHECK_DURATION} if getattr(a, "command", None) == "m6-check"             else PROTOCOL  # M6 §8 step 3: m6-check's windows are 10 s
+        check_duration = {"m6-check": M6_CHECK_DURATION, "m7-check": M7_CHECK_DURATION}.get(getattr(a, "command", None))
+        protocol = {**PROTOCOL, "duration": check_duration} if check_duration else PROTOCOL  # M6, M7 §8 step 3: 10 s
         off = [f"{k} {getattr(a, k)} (protocol {v})" for k, v in protocol.items() if getattr(a, k) != v]
         if getattr(a, "counts", None):
             off.append(f"counts {' '.join(map(str, a.counts))} (protocol: all of the sweep)")
@@ -1626,10 +1942,12 @@ class Session:
         m3 = {"freeze_m3_commit": self.freeze_m3} if m3_session(a) else {}  # M3 §4
         m6 = {"prereg_m6_commit": PREREG_M6_COMMIT, "freeze_m6_commit": self.freeze_m6,  # M6 §8
               "libyuv_commit": h.get("libyuv_commit", "")} if m6_session(a) else {}
+        m7 = {"prereg_m7_commit": PREREG_M7_COMMIT,  # M7 §8
+              "freeze_m7_commit": self.freeze_m7} if m7_session(a) else {}
         header = {"start_time_utc": min(starts) if starts else "", "ntp_synchronized": h.get("ntp_synchronized", ""),
                   "prereg_v1_commit": h.get("prereg_v1_commit", ""), "freeze_m1_commit": h.get("freeze_m1_commit", ""),
                   **{k: h.get(k, "") for k in m2},  # M2 §5.1, from the first run's header
-                  **m4, **m3, **m6, "run_kind": run_kind, **models, "decoder": h.get("decoder", ""),
+                  **m4, **m3, **m6, **m7, "run_kind": run_kind, **models, "decoder": h.get("decoder", ""),
                   "code_commit": self.code_commit, "amendment": h.get("amendment", ""), "session": self.out.name,
                   "cooling": os.environ["COOLING"], "ambient_c": os.environ["AMBIENT_C"]}
         rows = rows + [("invalid_x2_runs", " ".join(self.invalid_x2) or "none"),
@@ -1667,7 +1985,7 @@ def sweep_sessions(sweep, current=None):
     current."""
     pattern = re.compile(SESSION_NAME + re.escape(sweep) + "$")
     return sorted(d for d in Path("results", session_kind(sweep)).glob(f"*_{sweep}")
-                  if d.is_dir() and pattern.match(d.name) and not (sweep == "m6" and d.name in M6_SUPERSEDED)
+                  if d.is_dir() and pattern.match(d.name) and d.name not in superseded(sweep)
                   and (current is None or d.resolve() != Path(current).resolve()))
 
 
@@ -1771,44 +2089,72 @@ def registered_commit(tag):
     return registration_rows(text).get(tag, ("none", None))[0]
 
 
-def m6_code_problem(freeze, git=None):
-    """M6 §9: why this checkout is not freeze-m6's code built at its own commit, or None. git(args) -> (exit
-    code, stdout); the default runs git in the repository."""
+def code_problem(freeze, kind, tag, paths, git=None):
+    """M6 §9, M7 §9: why this checkout is not the code of a stage (tag, at commit freeze) built at its own commit, or
+    None. kind: the sessions' run kind (m6, m7); paths: what a run's code is. git(args) -> (exit code, stdout); the
+    default runs git in the repository."""
     def run(args):  # the session runs as root, and git refuses a checkout another user owns unless it is named safe
         r = subprocess.run(["git", "-c", f"safe.directory={Path.cwd()}", *args], capture_output=True, text=True)
         return r.returncode, r.stdout.strip()
     git = git or run
+    section = f"M{kind[1:]} §9"
     code, head = git(["rev-parse", "HEAD"])
     if code != 0:
-        return "git cannot read the checkout's commit: an m6 session runs from a git checkout (M6 §9)"
+        return f"git cannot read the checkout's commit: an {kind} session runs from a git checkout ({section})"
     built = build_commit()
     if built != head:
-        return f"build/ was built at {built}, and the checkout is at {head}: build this commit (M6 §9)"
-    code, _ = git(["diff", "--quiet", freeze, "HEAD", "--", *M6_CODE_PATHS])
+        return f"build/ was built at {built}, and the checkout is at {head}: build this commit ({section})"
+    code, _ = git(["diff", "--quiet", freeze, "HEAD", "--", *paths])
     if code != 0:
-        return (f"the checkout's {', '.join(M6_CODE_PATHS)} differ from {M6_CODE_TAG}'s ({freeze}), or git cannot "
-                "compare them (M6 §9)")
-    code, changed = git(["status", "--porcelain", "--", *M6_CODE_PATHS])
+        return (f"the checkout's {', '.join(paths)} differ from {tag}'s ({freeze}), or git cannot compare them "
+                f"({section})")
+    code, changed = git(["status", "--porcelain", "--", *paths])
     if code != 0 or changed:
-        return f"the checkout has local changes in {', '.join(M6_CODE_PATHS)} (M6 §9)"
+        return f"the checkout has local changes in {', '.join(paths)} ({section})"
     return None
 
 
-def m6_order_problem(name):
-    """Why an M6 protocol session cannot start now (M6 §8, §9), or None."""
-    freeze = registered_commit("freeze-m6")
-    if freeze == "none":
-        return (f"freeze-m6 comes before M6's runs, and {ENV_MD} has no row for it with its commit and created_at "
-                "(M6 §8)")
-    code = registered_commit(M6_CODE_TAG)
+def m6_code_problem(freeze, git=None):
+    """M6 §9: why this checkout is not freeze-m6's code built at its own commit, or None (code_problem)."""
+    return code_problem(freeze, "m6", M6_CODE_TAG, M6_CODE_PATHS, git)
+
+
+def m7_code_problem(freeze, git=None):
+    """M7 §9: why this checkout is not freeze-m7's code built at its own commit, or None (code_problem)."""
+    return code_problem(freeze, "m7", M7_CODE_TAG, M7_CODE_PATHS, git)
+
+
+def frozen_order_problem(name, kind, code_tag, check_code):
+    """Why a protocol session of a sweep whose runs use a frozen stage's code cannot start now, or None (M6 §8, §9;
+    M7 §8, §9): the stage freeze-<kind> has its row in docs/notes/env.md, so has code_tag, whose commit the checkout's
+    code equals (check_code), and the sweep is not complete."""
+    milestone = f"M{kind[1:]}"
+    if registered_commit(f"freeze-{kind}") == "none":
+        return (f"freeze-{kind} comes before {milestone}'s runs, and {ENV_MD} has no row for it with its commit and "
+                f"created_at ({milestone} §8)")
+    code = registered_commit(code_tag)
     if code == "none":
-        return f"{ENV_MD} has no row for {M6_CODE_TAG}, whose code M6's runs use (M6 §9)"
-    problem = m6_code_problem(code)
+        return f"{ENV_MD} has no row for {code_tag}, whose code {milestone}'s runs use ({milestone} §9)"
+    problem = check_code(code)
     if problem:
         return problem
     if progress(name) == "complete":
         return f"{name} is complete"
     return None
+
+
+def m6_order_problem(name):
+    """Why an M6 protocol session cannot start now (M6 §8, §9), or None."""
+    return frozen_order_problem(name, "m6", M6_CODE_TAG, m6_code_problem)
+
+
+def m7_order_problem(name):
+    """Why a protocol session of one of M7's sweeps cannot start now (M7 §4, §8, §9), or None: as M6's, and m7_aux
+    only once m7_main is complete (M7 §4: m7_main is run first)."""
+    problem = frozen_order_problem(name, "m7", M7_CODE_TAG, m7_code_problem)
+    if problem is None and name == "m7_aux" and progress("m7_main") != "complete":
+        return "m7_main comes before m7_aux and is not complete (M7 §4)"
+    return problem
 
 
 def m3_setup_records(root=Path("results", "m3")):
@@ -1932,7 +2278,7 @@ def write_idle_baseline(s, run_kind):
     rows = [("window_s", f"{t1 - t0:.1f}")] + idle_rows(proc_stat_nonidle(stat0), proc_stat_nonidle(stat1),
                                                        1.0 / os.sysconf("SC_CLK_TCK"))
     # M2 §3.2, M4 §3.3, M3 §6; none without /proc/schedstat. M1's sessions keep their rows.
-    if m2_session(s.args) or m4_session(s.args) or m3_session(s.args) or m6_session(s.args):
+    if m2_session(s.args) or m4_session(s.args) or m3_session(s.args) or m6_session(s.args) or m7_session(s.args):
         rows += schedstat_rows(sched0, sched1)
     amendments = re.findall(r"^## (A\d+) ", Path("prereg/AMENDMENTS.md").read_text(encoding="utf-8"), re.M)
     ntp = subprocess.run(["timedatectl", "show", "-p", "NTPSynchronized", "--value"], capture_output=True,
@@ -1942,6 +2288,8 @@ def write_idle_baseline(s, run_kind):
     m3 = {"freeze_m3_commit": s.freeze_m3} if m3_session(s.args) else {}
     if m6_session(s.args):  # M6 §8: its commits, in the same fields as the runs' headers
         m3 = {**m3, "prereg_m6_commit": PREREG_M6_COMMIT, "freeze_m6_commit": s.freeze_m6}
+    if m7_session(s.args):  # M7 §8: the same
+        m3 = {**m3, "prereg_m7_commit": PREREG_M7_COMMIT, "freeze_m7_commit": s.freeze_m7}
     header = {"start_time_utc": f"{start:%Y-%m-%dT%H:%M:%SZ}", "ntp_synchronized": ntp,
               "prereg_v1_commit": PREREG_V1_COMMIT, "freeze_m1_commit": FREEZE_M1_COMMIT, **m2, **m4, **m3,
               "run_kind": run_kind,
@@ -1965,6 +2313,7 @@ def cmd_sweep(s):
     s.say(f"{a.sweep}: {len(complete)} of {len(plan)} repetitions complete in earlier sessions, "
           f"{len(pending)} to redo, {len(todo)} to run")
     done_here, status = [], "stopped"
+    probe = "not run: the session stopped before m7_aux's last run"  # M7 §4
     try:
         for channels, repetition, order in todo:
             first, replaced = pending.get((channels, repetition), ({}, []))
@@ -1973,6 +2322,10 @@ def cmd_sweep(s):
                       first_attempt=first.get(variant, 1), replaces=" ".join(replaced))
             done_here.append(f"{channels}ch_r{repetition}")
         status = "completed"
+        if a.sweep == "m7_aux":  # M7 §4: the probe once, after m7_aux's last run, in the same session
+            probe = "started; the session stopped during it"
+            complete, _ = sweep_state(load_records(earlier + [s.out], (a.sweep,)), variants)
+            probe = m7_probe(s, all((c, r) in complete for c, r, _ in plan))
     finally:  # also when the session stops: what it ran and what is left
         complete, _ = sweep_state(load_records(earlier + [s.out], (a.sweep,)), variants)
         left = [f"{c}ch_r{r}" for c, r, _ in plan if (c, r) not in complete]
@@ -1984,7 +2337,31 @@ def cmd_sweep(s):
                        + (list(post_object_hashes().items()) if is_m2(a.sweep) else [])  # M2 §4
                        + (m4_rows(s) if is_m4(a.sweep) else [])
                        + (m3_rows(s) if is_m3(a.sweep) else [])
-                       + (m6_rows(s) if is_m6(a.sweep) else []), s.run_kind)
+                       + (m6_rows(s) if is_m6(a.sweep) else [])
+                       + (m7_rows(s) if is_m7(a.sweep) else [])
+                       + ([("probe", probe)] if a.sweep == "m7_aux" else []), s.run_kind)
+
+
+def m7_probe(s, sweep_complete):
+    """M7 §3, §4: the probe of the output bindings (tools/m7_probe.py), once, after m7_aux's last run, in the same
+    session, into probe/. Returns what result.csv records of it: its exit code, or why it did not run. A smoke test
+    runs no probe (M7 §8 step 3: not before freeze-m7). A probe that fails does not invalidate the sweep (M7 §5)."""
+    if s.smoke:
+        return "not run: a smoke test runs no probe (M7 §8 step 3)"
+    if not sweep_complete:
+        return "not run: m7_aux is not complete"
+    cmd = m7_probe_command(s.out / "probe", s.run_kind, s.freeze_m7)
+    s.say(f"the probe of the output bindings (M7 §3): {' '.join(cmd)}")
+    try:
+        code = s.sh(cmd, s.out / "probe.log", timeout=M7_PROBE_TIMEOUT_S)
+    except Interrupted:
+        raise
+    except Stop as e:
+        result = f"failed: {e} (M7 §5: the sweep's runs stand)"
+    else:
+        result = "exit 0" if code == 0 else f"failed: exit {code}, see probe.log (M7 §5: the sweep's runs stand)"
+    s.say(f"probe: {result}")
+    return result
 
 
 def m3_rows(s):
@@ -1999,16 +2376,48 @@ def m3_rows(s):
             ("inventory_changed_lines", str(changed))]
 
 
-def m6_rows(s):
-    """M6's rows of result.csv: the arms run and not run, each repetition's order (M6 §4), and whether the
-    inventory equals M1's (M6 §4, as M3's sessions record it)."""
+def inventory_rows(s):
+    """Whether the session's inventory equals M1's, and how many of its lines differ (M3 §4's check, which M6 §4 and
+    M7 §4 keep to)."""
     diff = s.out / "inventory.diff"
     changed = sum(1 for line in diff.read_text().splitlines()
                   if line[:1] in "+-" and line[:3] not in ("+++", "---")) if diff.exists() else 0
+    return [("inventory_same_as_m1", "no" if diff.exists() else "yes"), ("inventory_changed_lines", str(changed))]
+
+
+def m6_rows(s):
+    """M6's rows of result.csv: the arms run and not run, each repetition's order (M6 §4), and whether the
+    inventory equals M1's (M6 §4, as M3's sessions record it)."""
     return ([("arms", " ".join(m6_arms())), ("arms_not_run", " ".join(M6_NOT_RUN) or "none")]
             + [(f"order_r{r}", " ".join(order)) for _, r, order in sweep_plan("m6")]
-            + [("inventory_same_as_m1", "no" if diff.exists() else "yes"),
-               ("inventory_changed_lines", str(changed))])
+            + inventory_rows(s))
+
+
+def m7_rows(s):
+    """M7's rows of result.csv: the arms run and not run, a sweep's orders (M7 §4), whether the inventory equals M1's
+    (as M6's sessions record it), and the idle pair of snapshots: "complete", or why it is missing (M7 §4)."""
+    sweep = getattr(s.args, "sweep", None)
+    if is_m7(sweep):
+        rows = [("arms", " ".join(m7_arms(sweep)))] + [(f"order_r{r}", " ".join(order))
+                                                         for _, r, order in sweep_plan(sweep)]
+    else:  # m7-check: the arms of both sweeps
+        rows = [(f"arms_{w}", " ".join(m7_arms(w))) for w in M7_ORDERS]
+    return (rows + [("arms_not_run", " ".join(M7_NOT_RUN) or "none")] + inventory_rows(s)
+            + [("idle_snapshot", s.idle_snapshot)])
+
+
+def cmd_m7_check(s):
+    """M7 §8 step 3: m7-check's part (m7_check_plan), with windows of 10 s, before freeze-m7. tools/m7_checks.py judges
+    the runs. result.csv names each run by its phase, arm and condition."""
+    write_idle_baseline(s, "check")
+    rows, status = [], "stopped"
+    try:
+        for phase, arm, channels, condition in m7_check_plan(s.args.part):
+            valid, run_dir = s.run(phase, arm, channels, condition, "check")
+            rows.append((f"{phase}_{arm}_{condition}_run", run_dir.name if valid else "invalid_x2"))
+        status = "completed"
+    finally:  # also when the session stops: what it ran
+        s.write_result([("part", s.args.part), ("session_status", status)] + rows + m7_rows(s), "check")
 
 
 def cmd_m6_check(s):
@@ -2143,14 +2552,15 @@ def cmd_thermal(s):
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("command", choices=["limit", "loop-check", "thermal", "sweep", "h3", "m2-check", "m4-check",
-                                        "m6-check"])
+                                        "m6-check", "m7-check"])
     ap.add_argument("sweep", nargs="?", choices=list(SWEEPS), help="sweep: which one")
     ap.add_argument("--out")
     ap.add_argument("--limit", type=int, help="thermal: L, which gives the largest main count")
     ap.add_argument("--idle-s", type=int, default=PROTOCOL["idle_s"])
     ap.add_argument("--warmup", type=int, default=PROTOCOL["warmup"])
     ap.add_argument("--duration", type=int, help=f"the window, s (default {PROTOCOL['duration']}; m6-check: "
-                                                 f"{M6_CHECK_DURATION}, M6 §8 step 3)")
+                                                 f"{M6_CHECK_DURATION}, M6 §8 step 3; m7-check: {M7_CHECK_DURATION}, "
+                                                 "M7 §8 step 3)")
     ap.add_argument("--gate-s", type=int, default=PROTOCOL["gate_s"])
     ap.add_argument("--start", type=int, default=PROTOCOL["start"])
     ap.add_argument("--cap", type=int, default=PROTOCOL["cap"])
@@ -2158,11 +2568,16 @@ def main(argv):
     ap.add_argument("--set", choices=list(VIDEO_SETS), help="loop-check: the video set (default m1)")
     ap.add_argument("--calib", help="m4-check, and an m4 sweep as a smoke test: the tools/m4_calib.sh session whose "
                                     "saturation labels decide rule 3 (M4 §3.2)")
+    ap.add_argument("--part", choices=M7_CHECK_PARTS, help="m7-check: counters (Ck's run, which comes first) or rest "
+                                                           "(M7 §8 step 3)")
     args = ap.parse_args(argv)
     if args.duration is None:
-        args.duration = M6_CHECK_DURATION if args.command == "m6-check" else PROTOCOL["duration"]
+        args.duration = {"m6-check": M6_CHECK_DURATION, "m7-check": M7_CHECK_DURATION}.get(args.command,
+                                                                                         PROTOCOL["duration"])
     if (args.command == "sweep") != (args.sweep is not None):
         ap.error(f"sweep needs one of {', '.join(SWEEPS)}; the other commands take none")
+    if (args.command == "m7-check") != (args.part is not None):
+        ap.error(f"m7-check needs --part {' or '.join(M7_CHECK_PARTS)}; the other commands take none")
     if args.counts and (args.command != "sweep" or not set(args.counts) <= set(SWEEPS[args.sweep][0])
                         or len(set(args.counts)) != len(args.counts)):
         ap.error("--counts is for sweep, with distinct counts of that sweep")
@@ -2197,8 +2612,10 @@ def main(argv):
         args.out = args.out or f"results/{run_kind}/{now}_{name}" + ("_smoke" if smoke else "")
     else:
         kind = {"limit": "limit", "loop-check": "loop", "thermal": "thermal", "m2-check": "m2_check",
-                "m4-check": "m4_check", "m6-check": "m6_check"}[args.command]
-        run_kind = "check" if kind in ("loop", "m2_check", "m4_check", "m6_check") else "calibration"
+                "m4-check": "m4_check", "m6-check": "m6_check",
+                "m7-check": f"m7_check_{args.part}"}[args.command]  # M7 §8 step 3: one record per part
+        run_kind = "check" if kind in ("loop", "m2_check", "m4_check", "m6_check") or args.command == "m7-check" \
+            else "calibration"
         args.out = args.out or f"results/{run_kind}/{now}_{kind}" + (f"_{video_set}" if video_set != "m1" else "")
 
     def on_signal(signum, _frame):
@@ -2209,15 +2626,15 @@ def main(argv):
     try:
         this = (args.sweep or "h3") if args.command in ("sweep", "h3") and not smoke else None
         # M3's sweeps stand outside the others' order (M3 §3): they do not wait for the others' redos.
-        # So does M6's sweep (M6 §4), and m6-check.
-        outside = is_m3(args.sweep) or m6_session(args)
+        # So do M6's sweep (M6 §4), and m6-check, and M7's sweeps and m7-check (M7 §4: as M6 §4).
+        outside = is_m3(args.sweep) or m6_session(args) or m7_session(args)
         waiting = [] if outside else [w for w in redo_pending() if w != this]
         if waiting:
             raise Stop(f"not starting: {', '.join(waiting)} has a repetition to redo, so its next session comes "
                        "first (docs/notes/comparison.md)")
         if this:
             problem = m3_order_problem(this) if is_m3(this) else m6_order_problem(this) if is_m6(this) else \
-                order_problem(this)
+                m7_order_problem(this) if is_m7(this) else order_problem(this)
             if problem:
                 raise Stop(f"not starting: {problem} (docs/notes/comparison.md)")
         # Not freeze-m2 or freeze-m4: the checks come before them.
@@ -2255,7 +2672,7 @@ def main(argv):
         s.start()
         {"limit": cmd_limit, "loop-check": cmd_loop_check, "thermal": cmd_thermal, "sweep": cmd_sweep,
          "h3": cmd_h3, "m2-check": cmd_m2_check, "m4-check": cmd_m4_check,
-         "m6-check": cmd_m6_check}[args.command](s)
+         "m6-check": cmd_m6_check, "m7-check": cmd_m7_check}[args.command](s)
         status = 0
     except Stop as e:
         s.say(f"stopped: {e}")

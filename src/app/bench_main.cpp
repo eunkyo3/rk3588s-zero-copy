@@ -3,7 +3,7 @@
 // Usage: bench_main --variant none|A|B|C|Bd|Rc|By --channels N --source URL [options]
 //   --variant Bd        B-direct of PROTOCOL §13 (M1.1, AMENDMENTS A12)
 //   --variant Rc|By     M6's arms (prereg/M6.md §1): RGA3's conversion with B's copy, and B with libyuv;
-//                       run kind check or m6
+//                       run kind check, m6 or m7
 //   --source URL        rtsp://host:8554/ch{n} or a local file; {n} becomes the channel number 1..N
 //   --condition main|aux  sample every 6th frame (5 fps, default) or every frame (30 fps)
 //   --warmup S          warm-up seconds (default 20)
@@ -11,15 +11,16 @@
 //   --model PATH        RKNN model (default models/yolov8n_i8.rknn)
 //   --out DIR           result directory (default results/<run kind>/<UTC time>_<variant>_<N>ch)
 //   --run-kind KIND     check | calibration | equivalence | comparison | reference | m1.1 | m2 | m3 | m4 | m6
-//                       (default check). What an m4 or m6 run may be is in core/run_rules.h (M4 §3.2,
-//                       M6 §1). An m3 run is M1's B or C with the defaults, at the main condition
-//                       (prereg/M3.md §1).
+//                       | m7 (default check). What an m4, m6 or m7 run may be is in core/run_rules.h
+//                       (M4 §3.2, M6 §1, M7 §1). An m3 run is M1's B or C with the defaults, at the main
+//                       condition (prereg/M3.md §1).
 //   --repetition R      repetition index (default 1)
 //   --freeze-commit SHA freeze-m1 commit, "none" before the freeze (default none)
 //   --freeze-m2-commit SHA  freeze-m2 commit, "none" before it (default none; prereg/M2.md §5.1)
 //   --freeze-m4-commit SHA  freeze-m4 commit, "none" before it (default none; prereg/M4.md §4)
 //   --freeze-m3-commit SHA  freeze-m3 commit, "none" before it (default none; prereg/M3.md §4)
 //   --freeze-m6-commit SHA  freeze-m6 commit, "none" before it (default none; prereg/M6.md §8)
+//   --freeze-m7-commit SHA  freeze-m7 commit, "none" before it (default none; prereg/M7.md §8)
 //   --post m1|neon|v10  post-processing: M1's yolov8_post (default), arm Cp's NeonPost (M2 §1), or
 //                       yolov10_post for the YOLOv10n export (arm C10, prereg/M4.md §3.2); neon and v10
 //                       with variant C only (core/pipeline_post.h). v10 and the YOLOv10n model are M4's:
@@ -31,6 +32,13 @@
 //                       Cpf, M6 §1); with a55 the metrics thread moves from cpu0 to cpu4
 //   --time-rknn off|on  on: each NPU worker reads its thread CPU time before and after each rknn_run (arm
 //                       Ct, M6 §1; default off)
+//   --snapshot off|on   on: the metrics thread reads what the board's other tasks, its interrupts and this
+//                       process's threads have used, one second before the window and right after it,
+//                       with a cycle counter on cpu0 between the two (prereg/M7.md §1; default off). The
+//                       files are core/snapshot.h's.
+//   --thread-counters off|on  on: a group of PMU counters on every thread of the process over the window
+//                       (the counted arms, M7 §1; default off). The files are core/perf_counters.h's.
+//                       Both are M7's: run kind check or m7, with a warm-up of at least 3 s.
 // Run as root: the NPU load is read from debugfs (PROTOCOL §7.7).
 #include <exception>
 #include <filesystem>
@@ -70,8 +78,8 @@ void usage() {
     die("usage: bench_main --variant none|A|B|C|Bd|Rc|By --channels N --source URL [--condition main|aux] [--warmup S] "
         "[--duration S] [--model PATH] [--out DIR] [--run-kind KIND] [--repetition R] [--freeze-commit SHA] "
         "[--prep-threads K] [--cores a76|a55|all] [--freeze-m2-commit SHA] [--freeze-m4-commit SHA] "
-        "[--freeze-m3-commit SHA] [--freeze-m6-commit SHA] [--post m1|neon|v10] [--stagger off|on] "
-        "[--time-rknn off|on]");
+        "[--freeze-m3-commit SHA] [--freeze-m6-commit SHA] [--freeze-m7-commit SHA] [--post m1|neon|v10] "
+        "[--stagger off|on] [--time-rknn off|on] [--snapshot off|on] [--thread-counters off|on]");
 }
 
 }  // namespace
@@ -81,7 +89,8 @@ int main(int argc, char** argv) {
         {"condition", "main"}, {"warmup", "20"}, {"duration", "120"}, {"model", "models/yolov8n_i8.rknn"},
         {"run-kind", "check"}, {"repetition", "1"}, {"freeze-commit", "none"}, {"prep-threads", "2"},
         {"cores", "a76"}, {"freeze-m2-commit", "none"}, {"freeze-m4-commit", "none"}, {"post", "m1"},
-        {"stagger", "off"}, {"freeze-m3-commit", "none"}, {"freeze-m6-commit", "none"}, {"time-rknn", "off"}};
+        {"stagger", "off"}, {"freeze-m3-commit", "none"}, {"freeze-m6-commit", "none"}, {"time-rknn", "off"},
+        {"freeze-m7-commit", "none"}, {"snapshot", "off"}, {"thread-counters", "off"}};
     const std::set<std::string> known = {"variant", "channels", "source", "out"};
     std::string args_json = "[";
     for (int i = 1; i < argc; i++) {
@@ -114,13 +123,16 @@ int main(int argc, char** argv) {
     CHECK(a["condition"] == "main" || a["condition"] == "aux", "condition must be main or aux");
     const std::string kind = a["run-kind"];  // PROTOCOL §1: check_prereg_order relies on these
     CHECK(kind == "check" || kind == "calibration" || kind == "equivalence" || kind == "comparison" ||
-              kind == "reference" || kind == "m1.1" || kind == "m2" || kind == "m3" || kind == "m4" || kind == "m6",
+              kind == "reference" || kind == "m1.1" || kind == "m2" || kind == "m3" || kind == "m4" || kind == "m6" ||
+              kind == "m7",
           "unknown run kind %s", kind.c_str());
     PostKind post_kind;
     CHECK(parse_post_kind(a["post"], &post_kind), "post must be m1, neon or v10");
     CHECK(a["stagger"] == "off" || a["stagger"] == "on", "stagger must be off or on");
     CHECK(a["stagger"] == "off" || a["condition"] == "main", "stagger is for the main condition (M2 §3.1)");
     CHECK(a["time-rknn"] == "off" || a["time-rknn"] == "on", "time-rknn must be off or on");
+    CHECK(a["snapshot"] == "off" || a["snapshot"] == "on", "snapshot must be off or on");
+    CHECK(a["thread-counters"] == "off" || a["thread-counters"] == "on", "thread-counters must be off or on");
     CHECK(kind != "m2" || (variant == "C" && is_commit_sha(a["freeze-m2-commit"])),
           "run kind m2 is variant C with freeze-m2's commit (M2 §5.1)");
     // prereg/M3.md §1 and §4: M1's B or C at H1's point (8 channels, main condition, 20 s and 120 s), with every
@@ -131,7 +143,8 @@ int main(int argc, char** argv) {
                            a["model"] == "models/yolov8n_i8.rknn" && a["prep-threads"] == "2" &&
                            a["cores"] == "a76" && a["freeze-m2-commit"] == "none" &&
                            a["freeze-m4-commit"] == "none" && a["freeze-m6-commit"] == "none" &&
-                           a["time-rknn"] == "off"),
+                           a["time-rknn"] == "off" && a["freeze-m7-commit"] == "none" &&
+                           a["snapshot"] == "off" && a["thread-counters"] == "off"),
           "run kind m3 is M1's B or C at 8 channels, main condition, 20 s warm-up and 120 s window, with the "
           "defaults and freeze-m3's commit (M3 §1, §4)");
     const int channels = std::stoi(a["channels"]);
@@ -148,6 +161,8 @@ int main(int argc, char** argv) {
     cfg.metrics_cpu = a55 ? 4 : 0;
     cfg.stagger = a["stagger"] == "on";
     cfg.time_rknn = a["time-rknn"] == "on";
+    cfg.snapshot = a["snapshot"] == "on";
+    cfg.thread_counters = a["thread-counters"] == "on";
     for (int i = 1; i <= channels; i++) {
         std::string url = a["source"];
         if (auto p = url.find("{n}"); p != std::string::npos)
@@ -185,8 +200,29 @@ int main(int argc, char** argv) {
     m6.model_path = a["model"];
     m6.model_sha = model_sha;
     m6.other_freeze = a["freeze-m2-commit"] != "none" || a["freeze-m4-commit"] != "none" ||
-                      a["freeze-m3-commit"] != "none";
+                      a["freeze-m3-commit"] != "none" || a["freeze-m7-commit"] != "none";
     if (const std::string problem = m6_rule_problem(m6); !problem.empty())
+        die("%s", problem.c_str());
+    M7Choice m7;  // M7's rules, as M6's
+    m7.kind = kind;
+    m7.variant = variant;
+    m7.post = post_kind;
+    m7.cores = a["cores"];
+    m7.time_rknn = cfg.time_rknn;
+    m7.snapshot = cfg.snapshot;
+    m7.thread_counters = cfg.thread_counters;
+    m7.freeze_m7 = a["freeze-m7-commit"];
+    m7.channels = channels;
+    m7.condition = a["condition"];
+    m7.warmup_s = cfg.warmup_s;
+    m7.duration_s = cfg.duration_s;
+    m7.stagger = cfg.stagger;
+    m7.prep_threads = cfg.preprocess_threads;
+    m7.model_path = a["model"];
+    m7.model_sha = model_sha;
+    m7.other_freeze = a["freeze-m2-commit"] != "none" || a["freeze-m4-commit"] != "none" ||
+                      a["freeze-m3-commit"] != "none" || a["freeze-m6-commit"] != "none";
+    if (const std::string problem = m7_rule_problem(m7); !problem.empty())
         die("%s", problem.c_str());
     const std::string out = a.count("out") ? a["out"]
                                            : "results/" + a["run-kind"] + "/" + utc_now("%Y%m%dT%H%M%SZ") + "_" +
@@ -205,6 +241,8 @@ int main(int argc, char** argv) {
         {"freeze_m3_commit", a["freeze-m3-commit"]},
         {"prereg_m6_commit", kPreregM6Commit},
         {"freeze_m6_commit", a["freeze-m6-commit"]},
+        {"prereg_m7_commit", kPreregM7Commit},
+        {"freeze_m7_commit", a["freeze-m7-commit"]},
         {"libyuv_commit", libyuv_commit()},
         {"run_kind", a["run-kind"]},
         {"model_sha256", model_sha},
@@ -279,6 +317,10 @@ int main(int argc, char** argv) {
     }
     env += "  \"m6\": {\"arm\": " + json_string(m6_arm(variant, post_kind, a["cores"], cfg.time_rknn)) +
            ", \"time_rknn\": " + (cfg.time_rknn ? "true" : "false") + "},\n";
+    env += "  \"m7\": {\"arm\": " +
+           json_string(m7_arm(variant, post_kind, a["cores"], cfg.time_rknn, cfg.snapshot, cfg.thread_counters)) +
+           ", \"snapshot\": " + (cfg.snapshot ? "true" : "false") + ", \"thread_counters\": " +
+           (cfg.thread_counters ? "true" : "false") + "},\n";
     env += "  \"variant\": " + json_string(variant);
 
     if (backend) {

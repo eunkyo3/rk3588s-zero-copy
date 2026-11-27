@@ -21,6 +21,8 @@ namespace {
 
 constexpr int kNominalFps = 30;
 constexpr int64_t kSecond = 1000000000;
+// M7 §1: the first snapshot stops reading this long before the window's start if it has not finished.
+constexpr int64_t kSnapshotMargin = 50000000;
 
 struct Sampled {
     AVFrame* frame;
@@ -214,20 +216,43 @@ RunResult run_pipeline(const PipelineConfig& cfg, NpuContexts* npu, Backend* bac
     }
 
     // ---- metrics thread on cpu0 (or cfg.metrics_cpu): one sample per second, CPU snapshots at t_w and t_e ----
+    // With M7's options (M7 §1) the same thread also opens the counters and takes the snapshots. Nothing of
+    // them is read between cpu_w and cpu_e, and those two are taken as they are without the options.
     std::thread metrics([&] {
         name_current_thread("metrics");
         pin_current_thread({cfg.metrics_cpu});
+        if (cfg.snapshot)
+            res.cpu0.open(0);
+        if (cfg.thread_counters)
+            res.counters = std::make_shared<ThreadCounters>();
         for (int64_t tick = res.t_start + kSecond;; tick += kSecond) {
             sleep_until_ns(tick);
+            if (cfg.snapshot && tick == res.t_w - kSecond)
+                res.t_snap1_wake = now_ns();
+            if (cfg.snapshot && tick == res.t_e)
+                res.t_end_wake = now_ns();
             // Frame counts first, at the window's start and end alike, then the CPU snapshot.
             std::vector<int64_t> decoded(n);
             for (int i = 0; i < n; i++)
                 decoded[i] = ch[i]->decoded.load();
             res.samples.push_back(take_sample(decoded));
-            if (tick == res.t_w)
+            if (cfg.thread_counters && tick == res.t_w - 2 * kSecond)
+                res.counters->open_all();
+            if (cfg.snapshot && tick == res.t_w - kSecond)
+                res.snap1 = take_system_snapshot(res.t_w - kSnapshotMargin, [&] { res.cpu0.enable(); });
+            if (tick == res.t_w) {
                 res.cpu_w = take_cpu_snapshot();
+                if (cfg.thread_counters)
+                    res.counters->enable_all();
+            }
             if (tick == res.t_e) {
                 res.cpu_e = take_cpu_snapshot();
+                if (cfg.thread_counters)
+                    res.counters->disable_all();
+                if (cfg.snapshot) {
+                    res.snap2 = take_system_snapshot(0, [&] { res.cpu0.read_now(); });
+                    res.cpu0.close();
+                }
                 break;
             }
         }

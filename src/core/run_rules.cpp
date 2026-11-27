@@ -56,11 +56,12 @@ std::string m6_arm(const std::string& variant, PostKind post, const std::string&
 }
 
 std::string m6_rule_problem(const M6Choice& c) {
-    const bool check_or_m6 = c.kind == "check" || c.kind == "m6";
+    const bool check_or_m6 = c.kind == "check" || c.kind == "m6" || c.kind == "m7";  // m7: m7_rule_problem
     if (c.freeze_m6 != "none" && !is_commit_sha(c.freeze_m6))
         return "freeze-m6-commit must be none or a full commit SHA";
     if ((c.variant == "Rc" || c.variant == "By" || c.cores == "all" || c.time_rknn) && !check_or_m6)
-        return "variants Rc and By, --cores all and --time-rknn on are M6's: run kind check or m6";
+        return "variants Rc and By, --cores all and --time-rknn on are M6's: run kind check or m6 (or m7, by M7's "
+               "rules)";
     if (c.kind != "m6")
         return "";
 
@@ -73,5 +74,55 @@ std::string m6_rule_problem(const M6Choice& c) {
         c.other_freeze)
         return "run kind m6 runs at H1's point with the defaults: 8 channels, main condition, 20 s warm-up and a "
                "120 s window, no stagger, K = 2, the YOLOv8n model, and no other freeze commit (M6 §1)";
+    return "";
+}
+
+std::string m7_arm(const std::string& variant, PostKind post, const std::string& cores, bool time_rknn,
+                   bool snapshot, bool thread_counters) {
+    if (!snapshot || cores != "a76")
+        return "";
+    const bool cell = variant == "B" || variant == "Bd" || variant == "Rc" || variant == "C";
+    if (cell && post == PostKind::M1 && !time_rknn)
+        return variant + (thread_counters ? "k" : "");
+    if (variant != "C" || !time_rknn || thread_counters)
+        return "";
+    return post == PostKind::M1 ? "Ct" : post == PostKind::Neon ? "Cpt" : "";
+}
+
+bool m7_arm_at(const std::string& arm, const std::string& condition) {
+    const bool cell = arm == "B" || arm == "Bd" || arm == "Rc" || arm == "C";
+    if (condition == "main")
+        return cell || arm == "Bk" || arm == "Bdk" || arm == "Rck" || arm == "Ck";
+    if (condition == "aux")
+        return cell || arm == "Ct" || arm == "Cpt";
+    return false;
+}
+
+std::string m7_rule_problem(const M7Choice& c) {
+    const bool check_or_m7 = c.kind == "check" || c.kind == "m7";
+    if (c.freeze_m7 != "none" && !is_commit_sha(c.freeze_m7))
+        return "freeze-m7-commit must be none or a full commit SHA";
+    if ((c.snapshot || c.thread_counters) && !check_or_m7)
+        return "--snapshot on and --thread-counters on are M7's: run kind check or m7";
+    if ((c.snapshot || c.thread_counters) && c.warmup_s < 3)
+        return "--snapshot on and --thread-counters on need a warm-up of at least 3 s (M7 §1)";
+    if (c.kind != "m7")
+        return "";
+
+    if (!is_commit_sha(c.freeze_m7))
+        return "run kind m7 needs freeze-m7's commit (M7 §8)";
+    const std::string arm = m7_arm(c.variant, c.post, c.cores, c.time_rknn, c.snapshot, c.thread_counters);
+    if (arm.empty())
+        return "run kind m7 is one of M7's ten arms: B, Bd, Rc, C, Bk, Bdk, Rck, Ck, Ct or Cpt, each with "
+               "--snapshot on (M7 §1)";
+    const bool main_point = c.condition == "main" && c.channels == 8;
+    const bool aux_point = c.condition == "aux" && c.channels == 5;
+    if (!(main_point || aux_point) || !m7_arm_at(arm, c.condition))
+        return "run kind m7 runs the four cells and the counted arms at 8 channels, main condition, and the four "
+               "cells, Ct and Cpt at 5 channels, auxiliary condition (M7 §1)";
+    if (c.warmup_s != 20 || c.duration_s != 120 || c.stagger || c.prep_threads != 2 ||
+        c.model_path != "models/yolov8n_i8.rknn" || c.model_sha != kYolov8nSha256 || c.other_freeze)
+        return "run kind m7 runs with the defaults: 20 s warm-up and a 120 s window, no stagger, K = 2, the "
+               "YOLOv8n model, and no other freeze commit (M7 §1)";
     return "";
 }

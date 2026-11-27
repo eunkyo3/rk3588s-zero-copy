@@ -1,0 +1,12 @@
+# start_time_utc: 2026-11-27T00:38:42Z
+# ntp_synchronized: yes
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: none
+# run_kind: check
+# code_commit: 28b09bfcd255e94721614914dbd73fdfccb1db5c
+# amendment: A17
+# tool: m7_idle_snapshot
+# span_s: 121
+snapshot,tid,comm,run_ns,wait_ns,timeslices,voluntary_cs,involuntary_cs
+1,125285,m7_idle_snapsho,3686958,0,4,3,0
+2,125285,m7_idle_snapsho,37273250,0,5,4,0

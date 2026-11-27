@@ -1,0 +1,10 @@
+2026-11-27T00:33:06Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-27T00:33:07Z starting the stream server
+2026-11-27T00:33:13Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261127T003309Z-517518, clock offset 0.2 ms
+2026-11-27T00:33:13Z idle for 600 s
+2026-11-27T00:38:42Z idle pair of snapshots (M7 §4): build/m7_idle_snapshot results/check/20261127T003302Z_m7_check_counters/idle_snapshot --span 121 --run-kind check
+2026-11-27T00:41:13Z idle pair of snapshots: complete
+2026-11-27T00:43:13Z soc-thermal baseline 35199 m°C
+2026-11-27T00:43:14Z 01_m7_counters_Ck_8ch: Ck, 8 ch, main
+2026-11-27T00:43:47Z 01_m7_counters_Ck_8ch: valid
+2026-11-27T00:43:47Z stopping the stream server

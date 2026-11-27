@@ -1,0 +1,26 @@
+# start_time_utc: 2026-11-27T00:43:14Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: none
+# run_kind: check
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: 28b09bfcd255e94721614914dbd73fdfccb1db5c
+# amendment: A17
+# session: 20261127T003302Z_m7_check_counters
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 26
+key,value
+part,counters
+session_status,completed
+m7_counters_Ck_main_run,01_m7_counters_Ck_8ch
+arms_m7_main,B Bd Rc C Bk Bdk Rck Ck
+arms_m7_aux,B Bd Rc C Ct Cpt
+arms_not_run,none
+inventory_same_as_m1,no
+inventory_changed_lines,22
+idle_snapshot,complete
+invalid_x2_runs,none
+protocol_settings,yes

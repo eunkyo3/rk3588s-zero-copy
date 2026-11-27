@@ -1,0 +1,8 @@
+== core
+defines: 
+includes: -I<repo>/src -I/opt/rknpu2/include -isystem /opt/ffmpeg-rockchip/include -isystem /usr/include/rga -isystem /usr/include/libdrm -isystem /usr/include/opencv4
+flags: -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls -pthread
+== core_by
+defines: -DLIBYUV_COMMIT=\"0ec9f68d82634f6f3414aaaf780e03f9edf002b3\"
+includes: -I<repo>/third_party/libyuv/include -I<repo>/src -I/opt/rknpu2/include -isystem /opt/ffmpeg-rockchip/include -isystem /usr/include/rga -isystem /usr/include/libdrm -isystem /usr/include/opencv4
+flags: -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -fno-omit-frame-pointer -fno-optimize-sibling-calls -pthread
