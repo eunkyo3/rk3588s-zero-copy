@@ -256,6 +256,12 @@ def write_session(d_, sweep, runs, idle=True, pair=True, probe=None):
     return d_
 
 
+def full_plan():
+    """For a test of the registered plan: every arm of M7 §1 is run, whatever stream_session.M7_NOT_RUN now holds
+    (M7 §5)."""
+    return mock.patch.multiple(ss, M7_NOT_RUN=(), M7_NOT_RUN_WHY={})
+
+
 def repetition(sweep, rep, **options):
     return [(a, rep, 1, True, options.get(a, {})) for a in ss.M7_ORDERS[sweep][rep] if a not in m7r.not_run()]
 
@@ -625,6 +631,7 @@ class Rules(unittest.TestCase):
         self.assertAlmostEqual(m7r.per_inference_ms(6.0, "m7_aux"), 6.0 / 18)
         self.assertIsNone(m7r.per_inference_ms(None, "m7_aux"))
 
+    @full_plan()
     def test_orders(self):
         self.assertEqual(ss.M7_ORDERS["m7_main"][2], ("Ck", "Rck", "Bdk", "Bk", "C", "Rc", "Bd", "B"))
         self.assertEqual(ss.M7_ORDERS["m7_aux"][2], ("Cpt", "Ct", "C", "Rc", "Bd", "B"))
@@ -644,6 +651,7 @@ class Sweeps(TempDir):
                                    ("5", "native", "INT8", "refused: rknn_run failed", "")])
         return main, aux
 
+    @full_plan()
     def test_collect_and_values(self):
         main, aux = self.sessions()
         c = m7r.collect([main], "m7_main")
@@ -690,6 +698,7 @@ class Sweeps(TempDir):
         self.assertAlmostEqual(x["arrival_spread_ms"], 1000 / 30 - 10, 6)
         self.assertAlmostEqual(x["arrival_drift_ms"], 0.0, 6)
 
+    @full_plan()
     def test_snapshots_missing_in_a_run_that_counts(self):
         runs = sweep_runs("m7_main", C=[{}, {"snap": "incomplete"}, {}])
         main = write_session(self.root / "20261201T000000Z_m7_main", "m7_main", runs)
@@ -703,6 +712,7 @@ class Sweeps(TempDir):
         self.assertIn("| `20261201T000000Z_m7_main/13_m7_main_C_8ch_r2` | C | yes | snapshot 1 is incomplete: it "
                       "stopped at its deadline (§1) |", section)
 
+    @full_plan()
     def test_cost_and_description_from_records(self):
         ck = [{"cpu": 20.5, "counters": {"dec_inst": i}} for i in (31 * 10**9, 31_100_000_000, 30_900_000_000)]
         main = write_session(self.root / "20261201T000000Z_m7_main", "m7_main", sweep_runs("m7_main", Ck=ck))
@@ -716,6 +726,7 @@ class Sweeps(TempDir):
                       "(§5) |", section)
         self.assertIn("| Bk − B | 0.400 | 0.800 | not above 2% |", section)
 
+    @full_plan()
     def test_report(self):
         main, aux = self.sessions()
         out = Path(self.tmp.name) / "M7_tables.md"

@@ -230,5 +230,37 @@ class Order(unittest.TestCase):
         self.assertEqual(len(mc.committed_problems(dict(ok, m7_cpu0_check=None), t["m7_check_rest"])), 1)
 
 
+class Builds(unittest.TestCase):
+    A, B = "a" * 40, "b" * 40
+
+    def commits(self, early, late):
+        return {"m7_cpu0_check": early, "m7_check_counters session": early, "m7_check_counters Ck": early,
+                "m7_unchanged dump": late, "m7_check_rest session": late, "m7_probe_smoke": late}
+
+    def judge(self, commits, files=()):
+        return mc.build_problems(commits, same_code=lambda c: c == self.B, changed=lambda a, b: list(files))
+
+    def test_one_build(self):
+        self.assertEqual(self.judge(self.commits(self.B, self.B)), [])
+        self.assertTrue(self.judge(self.commits(self.A, self.A)))  # not the checkout's code
+        self.assertTrue(self.judge(self.commits(self.B, self.B + "-dirty")))
+
+    def test_the_counters_checks_from_an_earlier_build(self):
+        allowed = ["tools/stream_session.py", "tools/m7_checks.py", "src/core/perf_counters.h", "tests/test_m7.py"]
+        self.assertEqual(self.judge(self.commits(self.A, self.B), allowed), [])
+        problems = self.judge(self.commits(self.A, self.B), allowed + ["src/core/pipeline.cpp"])
+        self.assertEqual(len(problems), 1)
+        self.assertIn("src/core/pipeline.cpp", problems[0])
+
+    def test_what_is_not_allowed(self):
+        mixed = dict(self.commits(self.A, self.B), m7_cpu0_check="c" * 40)
+        self.assertTrue(self.judge(mixed))  # the two counters' checks from two builds
+        self.assertTrue(self.judge(self.commits(self.A + "-dirty", self.B)))
+        late = dict(self.commits(self.A, self.B), m7_probe_smoke=self.A)
+        self.assertTrue(self.judge(late))  # a later record from the earlier build
+        self.assertTrue(mc.build_problems(self.commits(self.A, self.B), same_code=lambda c: True,
+                                          changed=lambda a, b: None))  # git cannot compare
+
+
 if __name__ == "__main__":
     unittest.main()

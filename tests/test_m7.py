@@ -45,6 +45,17 @@ class InTmp(unittest.TestCase):
         self.tmp.cleanup()
 
 
+class FullPlan(InTmp):
+    """A test of the registered plan: every arm of M7 §1 is run, whatever M7_NOT_RUN now holds (M7 §5)."""
+
+    def setUp(self):
+        super().setUp()
+        for name, value in (("M7_NOT_RUN", ()), ("M7_NOT_RUN_WHY", {})):
+            patch = mock.patch.object(ss, name, value)
+            patch.start()
+            self.addCleanup(patch.stop)
+
+
 def session(d, **attrs):
     """A Session without __init__, as tests/test_stream_session.py makes one, with M7's attributes."""
     s = tss.OperatorStop.session(None, d)
@@ -167,8 +178,8 @@ class Sweeps(InTmp):
             self.assertEqual(ss.progress("m7_main"), "complete")
 
 
-class CheckPlan(InTmp):
-    """m7-check's two parts (M7 §8 step 3)."""
+class CheckPlan(FullPlan):
+    """m7-check's two parts (M7 §8 step 3), as registered."""
 
     def test_the_counters_part(self):
         self.assertEqual(ss.m7_check_plan("counters"), [("m7_counters", "Ck", 8, "main")])
@@ -249,6 +260,21 @@ THREADS = [("100", "bench_main"), ("101", "dec-1"), ("102", "npu-0"), ("103", "p
 def threads_csv(threads=THREADS):
     return [{"tid": t, "comm": c, "affinity": "0" if c == "metrics" else "4-7", "cpu_s_in_window": "1.0"}
             for t, c in threads]
+
+
+class NotRunNow(unittest.TestCase):
+    """The arms not run as tools/stream_session.py has them now: the counters' check failed (M7 §5), so Bk, Bdk, Rck
+    and Ck are left out and the order of the others stands; Cpt is run."""
+
+    def test_the_current_state(self):
+        self.assertEqual(ss.m7_arms("m7_main"), ("B", "Bd", "Rc", "C"))
+        self.assertEqual([order for _, _, order in ss.sweep_plan("m7_main")],
+                         [("B", "Bd", "Rc", "C"), ("C", "Rc", "Bd", "B"), ("Bd", "C", "Rc", "B")])
+        self.assertEqual(ss.m7_arms("m7_aux"), AUX)
+        self.assertEqual(ss.sweep_plan("m7_aux"), [(5, r, ss.M7_ORDERS["m7_aux"][r]) for r in (1, 2, 3)])
+        self.assertEqual(ss.m7_check_plan("counters"), [("m7_counters", "Ck", 8, "main")])
+        self.assertFalse({arm for _, arm, _, _ in ss.m7_check_plan("rest")} & set(ss.M7_COUNTED))
+        self.assertEqual(set(ss.M7_NOT_RUN_WHY), set(ss.M7_NOT_RUN))  # each arm not run has its reason
 
 
 class Rule5(unittest.TestCase):
@@ -759,7 +785,7 @@ class IdleSnapshot(InTmp):
         self.assertEqual(s.freeze_m7, "none")
 
 
-class Probe(InTmp):
+class Probe(FullPlan):
     """M7 §3, §4: the probe once, after m7_aux's last run, in the same session."""
 
     def test_the_command(self):

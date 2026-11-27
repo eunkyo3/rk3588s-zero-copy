@@ -32,7 +32,10 @@ Records, each the latest of its name (<UTC>_<name>):
   m7_probe_smoke      tools/m7_probe.py run --only-config-1-one-frame. The probe's tool starts: configuration 1
                       on one frame (M7 §8 step 3, last line).
 Every record must come from one build: the same commit in each, a full commit and not "-dirty", whose code
-(src, tools, tests, CMakeLists.txt) equals the checkout's that this tool runs in.
+(src, tools, tests, CMakeLists.txt) equals the checkout's that this tool runs in. The two records of the counters'
+checks may come from an earlier build: M7 §8 step 3 has the events' set committed after them, and M7 §5 the arms
+that are not run. That build is one full commit too, and what differs between it and the later one is only where
+those two outcomes are written (AFTER_COUNTERS) and tests/.
 The order M7 §8 step 3 gives is checked on the records' start times: m7_cpu0_check and m7_check_counters before
 m7_unchanged, m7_check_rest and m7_probe_smoke; and m7_check_rest, which ends with the arms' 10 s runs, last.
 That the counters' outcome was committed before any other run of a counted arm is shown by the commits' times:
@@ -50,6 +53,7 @@ import csv
 import datetime as dt
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -73,6 +77,10 @@ A76_HZ = float(A76_HZ_INT)
 GROUP_MIN_NS = 200 * 10**6  # M7 §8 step 3: any other group that ran at least 0.2 s (within 5%: counters_problems)
 NEEDED_GROUPS = ("dec", "npu")  # the decoder's group and the NPU workers', whatever they ran
 NEEDED_EVENTS = ("cpu_cycles", "inst_retired")  # M7 §1: without either, the counted arms are not run
+# What a commit made after the counters' checks may change: the group's events (M7 §1), the arms that are not run
+# (M7 §5) with this tool's reading of them, and tests.
+AFTER_COUNTERS = ("src/core/perf_counters.h", "tools/stream_session.py", "tools/m7_checks.py")
+EARLY_RECORDS = ("m7_cpu0_check", "m7_check_counters")
 SAME_COLUMNS = ("frames.csv", "channels.csv", "threads.csv")  # with summary.csv's keys: "columns and rows"
 
 
@@ -275,6 +283,33 @@ def committed_problems(commit_times, start):
     return problems
 
 
+def changed_files(a, b):
+    """The files of the code that differ between two commits, or None if git cannot compare them."""
+    r = subprocess.run(["git", "-c", f"safe.directory={Path.cwd()}", "diff", "--name-only", a, b, "--",
+                        *ss.M7_CODE_PATHS], capture_output=True, text=True)
+    return r.stdout.split() if r.returncode == 0 else None
+
+
+def build_problems(commits, same_code=None, changed=changed_files):
+    """Why the records are not shown to come from the build under check; [] if they are. commits: {where:
+    code_commit}. The records of the counters' checks (EARLY_RECORDS) may name an earlier commit, if only
+    AFTER_COUNTERS and tests/ differ between it and the others' (M7 §8 step 3); the others are judged as M6's."""
+    early = {w: c for w, c in commits.items() if w.split(" ")[0] in EARLY_RECORDS}
+    late = {w: c for w, c in commits.items() if w not in early}
+    problems = m6_checks.commit_problems(late, same_code)
+    if problems or set(early.values()) <= set(late.values()):
+        return problems
+    values = sorted(set(early.values()))
+    if len(values) != 1 or not re.fullmatch(r"[0-9a-f]{40}", values[0]):
+        return ["the counters' checks do not name one full commit: " + "; ".join(f"{w} {c}" for w, c in sorted(early.items()))]
+    files = changed(values[0], next(iter(late.values())))
+    if files is None:
+        return [f"git cannot compare the counters' checks' build ({values[0]}) with the others'"]
+    other = sorted(f for f in files if f not in AFTER_COUNTERS and not f.startswith("tests/"))
+    return [f"between the counters' checks' build ({values[0]}) and the others', more than the events' set and the "
+            f"arms that are not run changed: {', '.join(other)}"] if other else []
+
+
 def session(d, part, rows, judge):
     """An m7-check session's result.csv, judged as a session; returns its {key: value} and its header."""
     head, result = keyed_csv(d / "result.csv")
@@ -458,7 +493,7 @@ def check(results, m1_default=m2_checks.M1_DEFAULT_RUN, commit_time=m6_checks.fi
     committed = {n: commit_time(dirs[n]) for n in ("m7_cpu0_check", "m7_check_counters")}
     rows += [(f"committed_{n}", f"{t:%Y-%m-%dT%H:%M:%SZ}" if t else "not committed") for n, t in committed.items()]
     judge("committed_before_the_runs", committed_problems(committed, starts["m7_check_rest"]))
-    judge("one_build", m6_checks.commit_problems(commits, same_code))
+    judge("one_build", build_problems(commits, same_code))
     rows.append(("passed", "0" if failed else "1"))
     return rows, not failed
 

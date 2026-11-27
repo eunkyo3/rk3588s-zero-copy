@@ -299,8 +299,12 @@ M7_POINTS = {"m7_main": (8, "main"), "m7_aux": (5, "aux")}  # M7 §1: each sweep
 # M7 §5: the arms that are not run, as the amendment of M7 §8 step 4 says (Bk, Bdk, Rck and Ck if the counters' check
 # fails; Cpt if its check fails). They are left out of the sweeps and of m7-check's runs of the arms, and the order of
 # the others stands.
-M7_NOT_RUN = ()
-M7_NOT_RUN_WHY = {}  # arm -> why it is not run, in one sentence that names the check's record; the report gives it
+M7_NOT_RUN = ("Bk", "Bdk", "Rck", "Ck")
+# arm -> why it is not run, in one sentence that names the check's record; the report gives it
+M7_NOT_RUN_WHY = dict.fromkeys(M7_NOT_RUN, (
+    "the counters' check failed in its second part (results/check/20261127T003302Z_m7_check_counters): the NPU "
+    "workers' cycles divided by 2208 MHz were 0.6396 s against a run time of 0.6778 s, 5.6% apart and not within "
+    "5% (M7 §5, §8 step 3)"))
 # M7 §5, §9: after a defect an amendment fixes, the sweep it affects is rerun whole (both, for a defect in what both
 # use). The amendment names the sessions it supersedes here (results/m7/<name>). They stay where they are and are
 # reported, and neither the session tool nor the report counts their runs.
