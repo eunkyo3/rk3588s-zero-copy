@@ -28,6 +28,8 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 | [`amend-A17`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A17) | `b3381dcfe7e09e43bd9be3528c5977f63a9951cc` | 2026-11-24T05:36:55Z |
 | [`freeze-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m6) | `b3381dcfe7e09e43bd9be3528c5977f63a9951cc` | 2026-11-24T05:36:55Z |
 | [`prereg-m7`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m7) | `c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb` | 2026-11-25T08:33:00Z |
+| [`amend-A18`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A18) | `bfc6858638966876b280c5094cd828fb32ac38ed` | 2026-11-27T04:20:50Z |
+| [`freeze-m7`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m7) | `bfc6858638966876b280c5094cd828fb32ac38ed` | 2026-11-27T04:20:50Z |
 
 `created_at` is the reference time (PROTOCOL §1). The tagged commit is the merge of PR #1, whose committer date (2026-10-30T01:58:11Z) is not used. `amend-A8` is the Release of an amendment made before `freeze-m1`, so that the check it registers has a reference time ([A8](../../prereg/AMENDMENTS.md)). Its tagged commit is the merge of PR #12. GitHub gives that commit's time as the Release's `created_at`; the Release was published at 2026-11-03T01:40:12Z. The check started at 02:19:49Z, after both.
 
@@ -54,6 +56,8 @@ Baseline of the board and toolchain, taken in M1-0. It is informative: the value
 `amend-A17` and `freeze-m6` both tag the merge of PR #105, which adds A17, M6's arms and its tools: stage 2 of M6's registration (M6 §8 step 4). Here too GitHub gives the commit's time as `created_at`; the Releases were published at 2026-11-24T05:40:51Z and 05:40:56Z. Every run of M6's sweep starts after both, which `tools/check_prereg_order.py` checks. The session tool starts the sweep only once `freeze-m6` has its row in this table, from a checkout whose `src/`, `tools/`, `tests/` and `CMakeLists.txt` equal that commit's.
 
 `prereg-m7` is stage 1 of M7's pre-registration, [prereg/M7.md](../../prereg/M7.md). It tags the merge of PR #111. Here too GitHub gives the commit's time as `created_at`; the Release was published at 2026-11-25T08:34:20Z. Every M7 check run that names `prereg-m7` in its header starts after both, which `tools/check_prereg_order.py` checks once stage 2 has added run kind `m7` to it (M7 §8).
+
+`amend-A18` and `freeze-m7` both tag the merge of PR #113, which adds A18, M7's options and its tools: stage 2 of M7's registration (M7 §8 step 4). Here too GitHub gives the commit's time as `created_at`; the Releases were published at 2026-11-27T04:21:57Z and 04:22:00Z. Every run of M7's sweeps starts after both, which `tools/check_prereg_order.py` checks. The session tool starts a sweep only once `freeze-m7` has its row in this table, from a checkout whose `src/`, `tools/`, `tests/` and `CMakeLists.txt` equal that commit's.
 
 ## Board baseline
 
