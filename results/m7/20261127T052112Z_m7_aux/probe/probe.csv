@@ -1,0 +1,23 @@
+# start_time_utc: 2026-11-27T06:44:47Z
+# ntp_synchronized: yes
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: bfc6858638966876b280c5094cd828fb32ac38ed
+# run_kind: m7
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# code_commit: 1081430ee40639ad38e997ecb851d0b3ede9da7f
+# amendment: A18
+# tool: m7_probe
+# configuration: 1-6
+# dump_runs: 40
+# rounds: 15
+# timed_runs_per_round: 20
+# untimed_runs_per_process: 40
+# statistic: per round, the mean per run over its timed runs; over the rounds, the median and the range (tools/output_probe's)
+# dumps: removed once compared
+config,binding,outcome,reason,rounds,thread_cpu_ms_median,thread_cpu_ms_min,thread_cpu_ms_max,process_cpu_ms_median,process_cpu_ms_min,process_cpu_ms_max,thread_cpu_ms_median_minus_config1,process_cpu_ms_median_minus_config1
+1,NCHW INT8 from RKNN_QUERY_OUTPUT_ATTR (the pipeline's binding; the reference),accepted,,15,0.8396,0.8289,0.8509,0.8405,0.8298,0.8518,0.0000,0.0000
+2,NHWC INT8 from RKNN_QUERY_OUTPUT_ATTR,accepted,,15,5.6334,5.4859,5.6533,5.6343,5.4867,5.6541,4.7938,4.7939
+3,NCHW FLOAT32 from RKNN_QUERY_OUTPUT_ATTR,accepted,,15,2.0694,2.0516,2.0819,2.0707,2.0528,2.0830,1.2298,1.2302
+4,NHWC FLOAT32 from RKNN_QUERY_OUTPUT_ATTR,accepted,,15,5.9314,5.8497,6.0975,5.9324,5.8505,6.0985,5.0918,5.0919
+5,RKNN_QUERY_NATIVE_OUTPUT_ATTR unchanged,accepted,,15,0.4457,0.4425,0.4561,0.4466,0.4434,0.4569,-0.3939,-0.3938
+6,RKNN_QUERY_NATIVE_NHWC_OUTPUT_ATTR unchanged,accepted,,15,5.6352,5.4886,5.6549,5.6360,5.4895,5.6558,4.7956,4.7956

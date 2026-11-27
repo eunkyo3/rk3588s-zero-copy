@@ -1,0 +1,91 @@
+# start_time_utc: 2026-11-27T06:11:50Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# freeze_m3_commit: none
+# prereg_m6_commit: 5a17d375d9aab77a302ec2295df886ee1257f3fd
+# freeze_m6_commit: none
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: bfc6858638966876b280c5094cd828fb32ac38ed
+# libyuv_commit: 0ec9f68d82634f6f3414aaaf780e03f9edf002b3
+# run_kind: m7
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: Bd
+# channels: 5
+# condition: aux
+# post: m1
+# stagger: off
+# repetition: 2
+# code_commit: 1081430ee40639ad38e997ecb851d0b3ede9da7f
+# amendment: A18
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+key,value
+window_s,120
+warmup_start_utc,2026-11-27T06:11:52.583Z
+window_start_utc,2026-11-27T06:12:12.583Z
+window_end_utc,2026-11-27T06:14:12.583Z
+process_cpu_s,131.580
+process_cpu_a76_s,131.410
+process_cpu_a55_s,0.160
+process_cpu_unattributed_s,0.010
+system_cpu0_s,0.990
+system_cpu1_s,0.730
+system_cpu2_s,0.920
+system_cpu3_s,1.650
+system_cpu4_s,38.040
+system_cpu5_s,39.290
+system_cpu6_s,36.810
+system_cpu7_s,36.150
+system_cpu0-3_s,4.290
+system_cpu4-5_s,77.330
+system_cpu6-7_s,72.960
+system_cpu_total_s,154.580
+schedstat_version,15
+schedstat_cpu0_s,0.394
+schedstat_cpu1_s,0.494
+schedstat_cpu2_s,0.866
+schedstat_cpu3_s,1.199
+schedstat_cpu4_s,33.186
+schedstat_cpu5_s,35.042
+schedstat_cpu6_s,32.388
+schedstat_cpu7_s,31.107
+schedstat_cpu0-3_s,2.953
+schedstat_cpu4-5_s,68.228
+schedstat_cpu6-7_s,63.495
+schedstat_cpu_total_s,134.677
+decode_fps_min,30.000
+decode_fps_max,30.008
+drift_max_s,0.033
+decoder_drops,0
+input_ended_early,0
+sampled_in_window,18001
+q1_drops_in_window,0
+drop_rate,0.00000
+processed_in_window,18000
+latency_p50_ms,24.975
+latency_p99_ms,36.040
+mpp_hold_p50_ms,9.097
+mpp_hold_p99_ms,10.255
+slot_wait_p99_ms,0.001
+rss_window_start_kb,160872
+rss_window_end_kb,164208
+rss_window_max_kb,164208
+rss_growth_pct,2.07
+freq_min_policy0_khz,1800000
+freq_max_policy0_khz,1800000
+freq_min_policy4_khz,2208000
+freq_max_policy4_khz,2208000
+freq_min_policy6_khz,2208000
+freq_max_policy6_khz,2208000
+freq_min_dmc_hz,2112000000
+freq_max_dmc_hz,2112000000
+freq_min_npu_hz,1000000000
+freq_max_npu_hz,1000000000
+temp_max_mc,58230

@@ -1,0 +1,61 @@
+# start_time_utc: 2026-11-27T06:21:15Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m2_commit: 5d9d6d04e50f17d52980dc5b958c7071d7107176
+# freeze_m2_commit: none
+# prereg_m4_commit: 8638685d9ef806a85e5042d7cc10febdd5ae93a9
+# freeze_m4_commit: none
+# freeze_m3_commit: none
+# prereg_m6_commit: 5a17d375d9aab77a302ec2295df886ee1257f3fd
+# freeze_m6_commit: none
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: bfc6858638966876b280c5094cd828fb32ac38ed
+# libyuv_commit: 0ec9f68d82634f6f3414aaaf780e03f9edf002b3
+# run_kind: m7
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# variant: Rc
+# channels: 5
+# condition: aux
+# post: m1
+# stagger: off
+# repetition: 3
+# code_commit: 1081430ee40639ad38e997ecb851d0b3ede9da7f
+# amendment: A18
+# warmup_s: 20
+# duration_s: 120
+# source: rtsp://10.88.0.1:8554/ch{n}
+key,value
+snapshot1_taken,1
+snapshot1_complete,1
+snapshot1_begin_ns,19001180388
+snapshot1_schedstat_read_ns,19001429771
+snapshot1_end_ns,19044002004
+snapshot1_own_threads,22
+snapshot1_other_threads,505
+snapshot1_ended_while_read,0
+snapshot2_taken,1
+snapshot2_complete,1
+snapshot2_begin_ns,140004100673
+snapshot2_schedstat_read_ns,140004208594
+snapshot2_end_ns,140046430922
+snapshot2_own_threads,22
+snapshot2_other_threads,504
+snapshot2_ended_while_read,0
+window_start_ns,20000000000
+window_end_ns,140000000000
+snapshot1_tick_wake_ns,19000077850
+end_tick_wake_ns,140000079610
+cpu0_counter_cpu,0
+cpu0_counter_event_found,1
+cpu0_counter_pmu_type,7
+cpu0_counter_config,0x11
+cpu0_counter_open_errno,0
+cpu0_counter_enabled,1
+cpu0_counter_read_ok,1
+cpu0_counter_enable_ns,19001429480
+cpu0_counter_read_ns,140004208302
+cpu0_counter_cycles,19431177727
+cpu0_counter_time_enabled_ns,120998524330
+cpu0_counter_time_running_ns,120998524330
