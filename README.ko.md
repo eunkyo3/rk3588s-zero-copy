@@ -12,6 +12,7 @@ RK3588S에서 제로카피 영상 파이프라인은 실제로 얼마나 절약�
 - 초기화한 보드에서 명령 하나로 H1의 지점을 재현한 M3의 리포트: [docs/report/M3.ko.md](docs/report/M3.ko.md)
 - 패키지로 만든 경로를 B, C와 비교해 잰 M5의 리포트: [docs/report/M5.ko.md](docs/report/M5.ko.md)
 - C의 절감이 어디서 오는지를 본 M6의 리포트: [docs/report/M6.ko.md](docs/report/M6.ko.md)
+- 보조 조건의 네 칸, 디코더 스레드, 커널 쪽을 본 M7의 리포트: [docs/report/M7.ko.md](docs/report/M7.ko.md)
 - NanoPi R6C용 서비스와 라이브러리인 패키지 `rkzc`: [docs/install.ko.md](docs/install.ko.md)
 - 다채널 검출 데모: [docs/notes/demo.ko.md](docs/notes/demo.ko.md)
 - 결과를 다시 만드는 스크립트
@@ -70,6 +71,7 @@ nc -U /run/rkzc/detect.sock                   # 프레임마다 JSON 객체 하�
 - **M3, 재현(사전 등록):** 2026-11-19에 보드를 기본 이미지로 초기화하고 명령 하나로 설정한 뒤 H1의 지점을 쟀더니 프로세스 CPU가 B 44.4초, C 19.5초였다. 등록한 네 값 모두 M1의 ±10% 안이었다. [M3 리포트](docs/report/M3.ko.md)를 보라.
 - **M5, 패키지로 만든 경로(사전 등록):** 2026-11-23에 12회, 모두 유효. `rkzc` 0.1.1의 서비스는 그 버전이 설치하던 대로 여덟 코어 전부에서 돌 때 B보다 프로세스 CPU를 38.5% 덜 썼고, A76 코어로 제한하면 58.6% 덜 썼다. 두 가설(임계값 25%) 모두 채택됐다. C에 비해서는 여덟 코어 전부에서 39.8% 더 썼고 A76 코어에서는 비슷했다. [M5 리포트](docs/report/M5.ko.md)를 보라.
 - **M6, C의 절감이 어디서 오는가(사전 등록):** 2026-11-24에 24회, 모두 유효. 세 가설 모두 채택됐다. RGA3가 변환하고 CPU가 모든 텐서를 여전히 복사해도 B 대비 C의 절감 중 93.5%가 남았다. 임계값 90%를 작은 여유로 넘었다. 패키지의 후처리를 쓴 C에 다른 것은 그대로 두고 모든 CPU를 허용하자 프로세스 CPU가 47.8% 늘었다. OpenCV 대신 libyuv를 쓴 B는 B보다 28.8% 덜 썼고, C는 그보다 38.4% 낮다. [M6 리포트](docs/report/M6.ko.md)를 보라.
+- **M7, 보조 조건의 네 칸, 디코더 스레드, 커널 쪽(사전 등록):** 2026-11-27에 두 세션으로 30회, 모두 유효. 두 가설 모두 채택됐다. 5채널 × 30 fps에서 RGA3가 변환하고 CPU가 여전히 복사해도 B 대비 C의 절감 중 96.2%가 남았다(임계값 90%). 8채널에서 C의 디코더 스레드는 Bd의 것보다 CPU를 1.74초 더 썼고, 이 차이를 보인 세 번째 세션이다(임계값 0.50초). 왜인지는 모른다. 명령어가 더 많이 돌았는지 같은 명령어가 더 느리게 돌았는지를 보였을 하드웨어 카운터가 동결 전 점검에서 실패해서, 카운터를 단 구성은 돌리지 않았다. 커널 쪽에서는 RGA3의 인터럽트 스레드와 kworker가 121초당 C에서 B보다 8채널에서 0.20초, 5채널 × 30 fps에서 0.77초 더 돌았다. [M7 리포트](docs/report/M7.ko.md)를 보라.
 - **데모:** 8채널에서 C가 검출한 결과를 오프라인으로 렌더했다([docs/notes/demo.ko.md](docs/notes/demo.ko.md)). 영상은 `v0.1-m1` Release에 첨부하며, 그 속 원본 영상은 Apache-2.0이 아니다([라이선스](#라이선스)).
 
 ![검출 데모의 한 프레임](docs/report/demo/demo_m1.jpg)
@@ -186,11 +188,12 @@ flowchart TB
 | M3 | 초기화한 보드에서 H1 지점을 명령 하나로 재현 | 공개: 재현됨, 네 값 모두 M1의 ±10% 안([prereg/M3.md](prereg/M3.ko.md)) | [`prereg-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m3), [`freeze-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m3) ([`amend-A15`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A15) 포함) | [`v0.3-m3`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.3-m3) | [M3](docs/report/M3.ko.md) |
 | M5 | 패키지로 만든 경로(`rkzc`)를 H1 지점에서 B, C와 비교 | 공개: 두 가설 모두 채택. 서비스의 프로세스 CPU는 B보다 0.1.1이 설치하던 대로(여덟 코어 전부)일 때 38.5%, A76 코어에 고정했을 때 58.6% 낮았다. C와 비교하면 0.1.1이 설치하던 대로일 때 39.8% 높았고, A76 코어로 제한했을 때는 비슷했다([prereg/M5.md](prereg/M5.ko.md)) | [`prereg-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m5), [`freeze-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m5) ([`amend-A16`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A16) 포함) | [`v0.5-m5`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.5-m5) | [M5](docs/report/M5.ko.md) |
 | M6 | C의 절감이 어디서 오는지를 H1 지점에서 측정: RGA 변환 + CPU 복사, libyuv를 쓴 B, CPU 고정을 푼 C, `rknn_run` 안의 CPU 시간 | 공개: 세 가설 모두 채택. RGA 변환 + CPU 복사는 B 대비 C의 절감 중 93.5%를 유지했다. 스레드에 모든 CPU를 허용한 Cp는 고정한 Cp보다 프로세스 CPU를 47.8% 더 썼다. libyuv를 쓴 B는 B보다 28.8% 덜 썼고, C는 그보다 38.4% 낮다([prereg/M6.md](prereg/M6.ko.md)) | [`prereg-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m6), [`freeze-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m6) ([`amend-A17`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A17) 포함) | [`v0.6-m6`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/v0.6-m6) | [M6](docs/report/M6.ko.md) |
+| M7 | 보조 조건에서 M6의 네 칸, H1 지점에서 디코더 스레드, 커널 쪽과 `rknn_run` | 측정: 두 가설 모두 채택. RGA 변환 + CPU 복사는 5채널 × 30 fps에서 B 대비 C의 절감 중 96.2%를 유지했다. 8채널에서 C의 디코더 스레드는 Bd의 것보다 CPU를 1.74초 더 썼다. 카운터를 단 구성은 그 점검이 실패해서 돌리지 않았다([prereg/M7.md](prereg/M7.ko.md)) | [`prereg-m7`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/prereg-m7), [`freeze-m7`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/freeze-m7) ([`amend-A18`](https://github.com/eunkyo3/rk3588s-zero-copy/releases/tag/amend-A18) 포함) | | [M7](docs/report/M7.ko.md) |
 
 - **순서:** M4를 M3보다 먼저 한다.
 - **결과:** M1의 결과는 위의 [M1 결과](#m1-결과)에, 각 마일스톤의 결과는 그 보고서에 있다.
 - **등록 시각:** 각 단계의 기준 시각은 그 Release의 `created_at`이며, [docs/notes/env.ko.md](docs/notes/env.ko.md#등록)의 등록 표에 있다.
-- **이후 마일스톤의 계획:** M2는 [prereg/M2.md](prereg/M2.ko.md)에, M4는 [prereg/M4.md](prereg/M4.ko.md)에, M3는 [prereg/M3.md](prereg/M3.ko.md)에, M5는 [prereg/M5.md](prereg/M5.ko.md)에, M6는 [prereg/M6.md](prereg/M6.ko.md)에 있다.
+- **이후 마일스톤의 계획:** M2는 [prereg/M2.md](prereg/M2.ko.md)에, M4는 [prereg/M4.md](prereg/M4.ko.md)에, M3는 [prereg/M3.md](prereg/M3.ko.md)에, M5는 [prereg/M5.md](prereg/M5.ko.md)에, M6는 [prereg/M6.md](prereg/M6.ko.md)에, M7은 [prereg/M7.md](prereg/M7.ko.md)에 있다.
 - **M1 비교 실행 전:** M1-3 캘리브레이션([docs/notes/calibration.ko.md](docs/notes/calibration.ko.md))과 M1-4 동등성([docs/notes/equivalence.ko.md](docs/notes/equivalence.ko.md)).
 - **M4 노트:** 탐색([docs/notes/m4_exploration.ko.md](docs/notes/m4_exploration.ko.md)), 그리고 정확도 도구와 점검([docs/notes/m4_accuracy.ko.md](docs/notes/m4_accuracy.ko.md)).
 - **배경:** 디코딩된 프레임을 RKNN NPU에 넣는 기존 방법, 공개된 측정값, 이 프로젝트가 겪은 런타임 동작이 다른 곳에 문서화돼 있는지([docs/notes/background.ko.md](docs/notes/background.ko.md)).
