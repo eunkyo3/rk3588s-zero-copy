@@ -1,0 +1,33 @@
+2026-11-27T04:27:48Z the inventory differs from docs/notes/inventory_m1.txt in lines that M3 §4 does not pin: see inventory.diff
+2026-11-27T04:27:50Z starting the stream server
+2026-11-27T04:27:55Z stream server up, logs in /home/eunkyo/rk3588s-zero-copy/stream-server/logs/20261127T042751Z-524384, clock offset 0.3 ms
+2026-11-27T04:27:55Z idle for 600 s
+2026-11-27T04:33:24Z idle pair of snapshots (M7 §4): build/m7_idle_snapshot results/m7/20261127T042744Z_m7_main/idle_snapshot --span 121 --run-kind m7 --freeze-m7-commit bfc6858638966876b280c5094cd828fb32ac38ed
+2026-11-27T04:35:55Z idle pair of snapshots: complete
+2026-11-27T04:37:55Z soc-thermal baseline 36091 m°C
+2026-11-27T04:37:55Z m7_main: 0 of 3 repetitions complete in earlier sessions, 0 to redo, 3 to run
+2026-11-27T04:37:56Z 01_m7_main_B_8ch_r1: B, 8 ch, main
+2026-11-27T04:40:19Z 01_m7_main_B_8ch_r1: valid
+2026-11-27T04:41:19Z 02_m7_main_Bd_8ch_r1: Bd, 8 ch, main
+2026-11-27T04:43:42Z 02_m7_main_Bd_8ch_r1: valid
+2026-11-27T04:44:42Z 03_m7_main_Rc_8ch_r1: Rc, 8 ch, main
+2026-11-27T04:47:05Z 03_m7_main_Rc_8ch_r1: valid
+2026-11-27T04:48:05Z 04_m7_main_C_8ch_r1: C, 8 ch, main
+2026-11-27T04:50:28Z 04_m7_main_C_8ch_r1: valid
+2026-11-27T04:51:29Z 05_m7_main_C_8ch_r2: C, 8 ch, main
+2026-11-27T04:53:52Z 05_m7_main_C_8ch_r2: valid
+2026-11-27T04:54:52Z 06_m7_main_Rc_8ch_r2: Rc, 8 ch, main
+2026-11-27T04:57:15Z 06_m7_main_Rc_8ch_r2: valid
+2026-11-27T04:58:16Z 07_m7_main_Bd_8ch_r2: Bd, 8 ch, main
+2026-11-27T05:00:39Z 07_m7_main_Bd_8ch_r2: valid
+2026-11-27T05:01:39Z 08_m7_main_B_8ch_r2: B, 8 ch, main
+2026-11-27T05:04:02Z 08_m7_main_B_8ch_r2: valid
+2026-11-27T05:05:02Z 09_m7_main_Bd_8ch_r3: Bd, 8 ch, main
+2026-11-27T05:07:25Z 09_m7_main_Bd_8ch_r3: valid
+2026-11-27T05:08:26Z 10_m7_main_C_8ch_r3: C, 8 ch, main
+2026-11-27T05:10:49Z 10_m7_main_C_8ch_r3: valid
+2026-11-27T05:11:50Z 11_m7_main_Rc_8ch_r3: Rc, 8 ch, main
+2026-11-27T05:14:12Z 11_m7_main_Rc_8ch_r3: valid
+2026-11-27T05:15:13Z 12_m7_main_B_8ch_r3: B, 8 ch, main
+2026-11-27T05:17:36Z 12_m7_main_B_8ch_r3: valid
+2026-11-27T05:17:36Z stopping the stream server

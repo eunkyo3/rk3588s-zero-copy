@@ -1,0 +1,32 @@
+# start_time_utc: 2026-11-27T05:31:24Z
+# ntp_synchronized: yes
+# prereg_v1_commit: 87fe874b4f196dafd48f6a175b2d7604625aedba
+# freeze_m1_commit: 2eec964d27545e081a44bc5ead01bbfcd2905a54
+# prereg_m7_commit: c40d1a05eadb5b9bb5ed93c592e3d339ca1aa2fb
+# freeze_m7_commit: bfc6858638966876b280c5094cd828fb32ac38ed
+# run_kind: m7
+# model_sha256: 04a76611a785802b08703192455994e07bbfe4531821ae7ed35faf78fe1ec1ee
+# decoder: h264_rkmpp, ffmpeg 8b4385e9
+# code_commit: 1081430ee40639ad38e997ecb851d0b3ede9da7f
+# amendment: A18
+# session: 20261127T052112Z_m7_aux
+# cooling: heatsink + always-on mini fan (unbranded, AliExpress)
+# ambient_c: 27
+key,value
+sweep,m7_aux
+session_status,completed
+channel_order,5
+earlier_sessions,none
+repetitions_run_here,5ch_r1 5ch_r2 5ch_r3
+repetitions_left,none
+arms,B Bd Rc C Ct Cpt
+order_r1,B Bd Rc C Ct Cpt
+order_r2,Cpt Ct C Rc Bd B
+order_r3,Rc C B Bd Cpt Ct
+arms_not_run,Bk Bdk Rck Ck
+inventory_same_as_m1,no
+inventory_changed_lines,22
+idle_snapshot,complete
+probe,exit 0
+invalid_x2_runs,none
+protocol_settings,yes

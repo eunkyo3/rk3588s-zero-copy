@@ -1,0 +1,13 @@
+seq	name	phase	variant	channels	condition	repetition	attempt	exit	valid	passed	reasons	warnings	trip_samples	gate_soc_mc	clock_offset_ms	start_utc	end_utc	replaces	snapshots
+1	01_m7_main_B_8ch_r1	m7_main	B	8	main	1	1	0	1				0	37000	0.2	2026-11-27T04:37:56Z	2026-11-27T04:40:18Z		complete
+2	02_m7_main_Bd_8ch_r1	m7_main	Bd	8	main	1	1	0	1				0	37923	-1.5	2026-11-27T04:41:19Z	2026-11-27T04:43:41Z		complete
+3	03_m7_main_Rc_8ch_r1	m7_main	Rc	8	main	1	1	0	1				0	37923	-0.6	2026-11-27T04:44:42Z	2026-11-27T04:47:04Z		complete
+4	04_m7_main_C_8ch_r1	m7_main	C	8	main	1	1	0	1				0	37000	-0.0	2026-11-27T04:48:05Z	2026-11-27T04:50:27Z		complete
+5	05_m7_main_C_8ch_r2	m7_main	C	8	main	2	1	0	1				0	37923	0.2	2026-11-27T04:51:29Z	2026-11-27T04:53:51Z		complete
+6	06_m7_main_Rc_8ch_r2	m7_main	Rc	8	main	2	1	0	1				0	37000	0.2	2026-11-27T04:54:52Z	2026-11-27T04:57:14Z		complete
+7	07_m7_main_Bd_8ch_r2	m7_main	Bd	8	main	2	1	0	1				0	37923	-0.4	2026-11-27T04:58:16Z	2026-11-27T05:00:38Z		complete
+8	08_m7_main_B_8ch_r2	m7_main	B	8	main	2	1	0	1				0	37923	-0.1	2026-11-27T05:01:39Z	2026-11-27T05:04:01Z		complete
+9	09_m7_main_Bd_8ch_r3	m7_main	Bd	8	main	3	1	0	1				0	37923	-0.0	2026-11-27T05:05:02Z	2026-11-27T05:07:24Z		complete
+10	10_m7_main_C_8ch_r3	m7_main	C	8	main	3	1	0	1				0	37923	0.0	2026-11-27T05:08:26Z	2026-11-27T05:10:48Z		complete
+11	11_m7_main_Rc_8ch_r3	m7_main	Rc	8	main	3	1	0	1				0	37923	0.1	2026-11-27T05:11:50Z	2026-11-27T05:14:11Z		complete
+12	12_m7_main_B_8ch_r3	m7_main	B	8	main	3	1	0	1				0	37923	0.0	2026-11-27T05:15:13Z	2026-11-27T05:17:35Z		complete
